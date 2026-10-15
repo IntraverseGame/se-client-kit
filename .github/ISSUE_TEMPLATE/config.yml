@@ -1,0 +1,4 @@
+contact_links:
+  - name: Report a vulnerability (private)
+    url: https://github.com/IntraverseGame/se-client-kit/security/advisories/new
+    about: Do not open a public issue for a vulnerability.

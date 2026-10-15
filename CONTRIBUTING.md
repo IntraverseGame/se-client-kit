@@ -1,0 +1,279 @@
+# Contributing to se-client-kit
+
+## Welcome and scope
+
+This is the onboarding guide for `se-client-kit`, the public TypeScript monorepo
+for everything the player's browser runs in SuperEngine. It is written for
+engineers (and AI agents) who change this repository. It covers the development
+flow, the role agents, branching and pull requests, and how knowledge is
+organized.
+
+- Product orientation: [`README.md`](./README.md).
+- Binding rules for agents (and a good checklist for humans):
+  [`AGENTS.md`](./AGENTS.md).
+
+This guide links to canonical sources instead of repeating them. When the two
+disagree, the linked source wins; please fix this file.
+
+**This repository is public.** Everything you write here, including issues,
+pull requests, and commit messages, is world-readable. Read
+[Public repository](./AGENTS.md#public-repository) before your first change.
+
+## Prerequisites and quickstart
+
+The toolchain is not installed yet; it arrives in the next pull request
+<!-- TODO(toolchain PR): Node and pnpm versions, `pnpm install`, and the scripts below -->
+
+Intended scripts:
+
+```sh
+pnpm install --frozen-lockfile   # install exactly what the lockfile says
+pnpm check                       # format check, lint, typecheck, unit tests, contracts check
+pnpm test                        # unit and component tests
+pnpm test:e2e                    # Playwright, against the in-repo fake Play API
+pnpm lint
+pnpm format
+```
+
+## Repository at a glance
+
+```text
+packages/    contracts (data only), signing, snapshot, play-client, shell (planned)
+apps/        wrapper (the UI) and a reference game                        (planned)
+e2e/         Playwright suite and the fake Play API                       (planned)
+specs/       current behavior and contracts (source of truth)
+decisions/   accepted decisions (ADRs)
+rfcs/        proposals: active/, archived/
+runbook/     how to develop, release, and operate
+.ai/         agent knowledge layer (memories, skills, agents, templates)
+.github/     PR template, issue templates, CODEOWNERS, dependabot
+```
+
+Dependency direction between packages is one way: `contracts` (data only) is a
+leaf; `snapshot` and `play-client` depend on it; `signing` has no kit dependency
+at run time; `shell` depends on `signing`, `snapshot`, and `play-client`; the
+`wrapper` app depends on `shell`. See [`.ai/memories/architecture.md`](./.ai/memories/architecture.md).
+
+## Development flow
+
+The canonical lifecycle for turning a rough product requirement into shipped,
+verified code. `AGENTS.md`, `.ai/memories/`, and the role agents link here
+rather than restating it.
+
+A **rough PRD is an input, not a repo artifact.** It lives where the product
+team keeps it. Distill it into this repository; never paste it in wholesale, and
+never copy private material into this public repository.
+
+```text
+rough PRD / raw requirement          external: issue tracker / product docs
+        │  frame problem, scope, non-goals, acceptance criteria
+        ▼
+  SPEC   specs/<contract>.md          accepted contract = source of truth
+        │
+        │  significant, cross-cutting, or contested?
+        ├── yes ──▶ RFC  rfcs/active/RFC-NNN-<slug>.md
+        │                 │ accepted: fold into a spec (+ ADR), move to rfcs/archived/
+        ▼                 ▼
+  DECIDE  decisions/ADR-NNN-<slug>.md only for hard-to-reverse choices
+        │
+        ▼
+  IMPLEMENT  code + tests (unit, vector replay, component, e2e)
+        │
+        ▼
+  SYNCHRONIZE  drift-sync code ↔ specs; memories, runbooks, telemetry docs
+        │
+        ▼
+  REVIEW  human review → reviewer agent gate; resolve working memories
+        │
+        ▼
+  COMMIT & MERGE  only after both approvals, when a human asks
+        │
+        ▼
+  OPERATE  runbook/; feedback becomes the next PRD
+```
+
+**Route.**
+
+- Small, well-understood change → update the relevant spec, then implement.
+- Significant, cross-cutting, or uncertain change → write an **RFC** first.
+- A choice that is hard to reverse (new dependency, package structure, protocol,
+  supply-chain tooling) → record an **ADR**.
+- Accepted RFCs never stay canonical: their durable content moves into
+  `specs/` and `decisions/`, and the RFC is archived.
+
+**Stages and where their artifacts live.**
+
+| Stage       | Artifact                                          | Home                                    |
+| ----------- | ------------------------------------------------- | --------------------------------------- |
+| Frame       | rough PRD                                         | external (issue tracker / product docs) |
+| Specify     | spec                                              | `specs/`                                |
+| Propose     | RFC (when needed)                                 | `rfcs/active/` → `rfcs/archived/`       |
+| Decide      | ADR (when needed)                                 | `decisions/`                            |
+| Implement   | code + tests                                      | `packages/**`, `apps/**`, `e2e/**`      |
+| Synchronize | updated specs, memories, runbooks, telemetry docs | `specs/`, `.ai/memories/`, `runbook/`   |
+| Review      | pull request                                      | GitHub                                  |
+| Operate     | procedures                                        | `runbook/`                              |
+
+**Gates.**
+
+- _Definition of ready_ (before implementation): the problem is framed; the spec
+  is agreed or the RFC accepted; acceptance criteria are written down, including
+  anything the component logs or emits.
+- _Definition of done_ (before merge): code matches the spec (Spec Drift
+  Synchronization); tests pass, including vector replay; memories and runbooks
+  are updated; no secrets, and no key or token can reach a log, URL, or storage;
+  a human approved and then the reviewer agent approved.
+
+**Roles.**
+
+| Role                                               | Responsibility                                                 |
+| -------------------------------------------------- | -------------------------------------------------------------- |
+| Product / PRD author                               | Owns the rough PRD and acceptance criteria.                    |
+| [`documenter`](./.ai/agents/documenter.md) agent   | PRD → specs, RFCs, ADRs; keeps knowledge in sync.              |
+| [`implementer`](./.ai/agents/implementer.md) agent | Code and tests written to the spec.                            |
+| [`reviewer`](./.ai/agents/reviewer.md) agent       | The gate: package boundaries, spec drift, tests, key handling. |
+| [`pr-shepherd`](./.ai/agents/pr-shepherd.md) agent | Pull request reviews, follow-ups, and replies on GitHub.       |
+
+Humans can play any role; the agent definitions describe the expected behavior.
+
+### Using the role agents
+
+The agents are defined once in [`.ai/agents/`](./.ai/agents/) and exposed to
+each tool through pointer-only adapters (ADR-003):
+
+| Tool           | Where it finds the agents         | How to invoke                                                      |
+| -------------- | --------------------------------- | ------------------------------------------------------------------ |
+| Claude Code    | `.claude/agents` → `.ai/agents`   | Ask for it by name ("use the reviewer agent") or `@agent-reviewer` |
+| OpenCode       | `.opencode/agents` → `.ai/agents` | `@reviewer` (or switch to the agent)                               |
+| Codex / others | — (no agent folder)               | "Act as the reviewer defined in `.ai/agents/reviewer.md`"          |
+
+Skills are found through `.claude/skills`, `.opencode/skills`, and
+`.agents/skills`, all pointing to `.ai/skills`.
+
+A typical change:
+
+1. **documenter** — frame the PRD, update the spec (or open an RFC/ADR). A human
+   agrees the spec (definition of ready).
+2. **implementer** — implement to the spec with tests; `pnpm check` green; stop
+   and hand the diff to a human.
+3. **Human review** — approve or request changes.
+4. **reviewer** — run on the human-approved diff; approve or request changes
+   (changes go back to step 2).
+5. **Stage and commit** — only after steps 3 and 4 approve, and only when a
+   human asks. **No agent stages or commits on its own**, and none opens a
+   pull request (`gh pr create`) before a human confirms it.
+
+Once the change is a pull request, the **pr-shepherd** works the conversation
+on GitHub when asked: it reviews another person's pull request with inline
+comments and follows up after new pushes, or answers the review comments on
+your own. It posts under the account your `gh` CLI is logged in as, only after
+you confirm the exact draft, and it never approves. A fix it makes for a review
+comment goes through steps 3 to 5 again. Its review is not the step 4 gate.
+
+**Where knowledge lives.**
+
+| Artifact  | Home                                    | Answers                                         |
+| --------- | --------------------------------------- | ----------------------------------------------- |
+| rough PRD | external (issue tracker / product docs) | What does the product want?                     |
+| spec      | `specs/`                                | What must the system do?                        |
+| RFC       | `rfcs/active/`                          | What are we proposing, and why?                 |
+| ADR       | `decisions/`                            | Why did we choose this (as a lasting decision)? |
+| tests     | beside the code, and `e2e/`             | Does the behavior hold?                         |
+| runbook   | `runbook/`                              | How do we develop, release, and operate it?     |
+| memory    | `.ai/memories/`                         | How does an agent orient quickly?               |
+
+### Asking the human
+
+At any step of the flow, an agent that hits an open question, a remaining item
+to decide, or a spec gap asks the human instead of guessing. The binding rule
+is in [`AGENTS.md`](./AGENTS.md#asking-the-human) and the procedure in the
+[ask-the-human](./.ai/skills/ask-the-human/SKILL.md) skill. An answer is not an
+approval: it does not replace the human review, the reviewer agent, or a
+human's request to commit.
+
+## Branching, commits, and pull requests
+
+**Parallel work.** Several people and agents work in one clone at the same
+time. Each task has its own branch in its own git worktree beside the clone
+(`git worktree add -b feat/<slug> ../se-client-kit-worktrees/feat-<slug> origin/main`);
+the main checkout stays on `main`. Procedure:
+[`runbook/development/parallel-work.md`](./runbook/development/parallel-work.md).
+
+1. Branch from `main`, in a worktree of its own: `feat/<slug>`, `fix/<slug>`,
+   `chore/<slug>`, `docs/<slug>`, `refactor/<slug>`.
+2. Commit with [Conventional Commits](https://www.conventionalcommits.org/):
+   `feat(signing): recover the signer`, `fix(shell): clear the token on expiry`.
+3. One logical change per PR. Keep generated code in its own commit where
+   practical.
+4. Run `pnpm check` before opening a PR; CI runs the same gates once it lands.
+5. **Approval gate before staging/committing:** a human reviews and approves,
+   then the reviewer agent approves. Agents never `git add`/`commit`/`push`
+   without both approvals (see [Using the role agents](#using-the-role-agents)),
+   and open a pull request (`gh pr create`) only after a human confirms it.
+   **Interim control:** `.github/CODEOWNERS` stays comment-only until the org
+   owners give their handles, so the control on `main` is branch protection: a
+   pull request is required and nobody approves their own change.
+6. Fill in the [PR template](./.github/PULL_REQUEST_TEMPLATE.md) and complete
+   the **mandatory Spec-Driven Development actions** listed in
+   [`AGENTS.md`](./AGENTS.md).
+7. Reviews focus on the spec, the package boundaries, tests, and key handling.
+   Address or explicitly answer every comment before merging.
+8. Outside contributors: fork, branch, and open a pull request. Do not include
+   secrets or private material; see [SECURITY.md](./SECURITY.md) to report a
+   vulnerability instead of opening an issue.
+
+## Code style
+
+Formatting and lint are automated once the toolchain lands
+<!-- TODO(toolchain PR): formatter and linter -->
+
+Conventions and the proposals
+awaiting a decision: [`.ai/memories/conventions.md`](./.ai/memories/conventions.md).
+In short: strict TypeScript, no `any`, money as strings or `bigint`, secrets
+in memory only, typed errors, injected time and randomness.
+
+## Testing
+
+Levels and rules: [`.ai/memories/testing.md`](./.ai/memories/testing.md); the
+authoritative testing sections are [`specs/client-kit.md`](./specs/client-kit.md#testing-and-ci)
+and [`specs/wrapper.md`](./specs/wrapper.md#test-plan). New behavior
+needs tests; tests are deterministic and hermetic.
+
+## Generated code and contract copies
+
+Never edit generated files; regenerate and commit the output. Contract files in
+the `contracts` package are copies with a lock entry (source commit and hash); they change
+only in a reviewed pull request that shows the diff. Vector files of a released
+version are never edited.
+
+## Knowledge architecture
+
+| Location        | Holds                                                             | Update it when...                                 |
+| --------------- | ----------------------------------------------------------------- | ------------------------------------------------- |
+| `specs/`        | Current behavior and contracts (source of truth)                  | behavior or a contract changes                    |
+| `decisions/`    | Decisions (ADRs) and rationale; status shows accepted or proposed | you make a hard-to-reverse choice                 |
+| `rfcs/`         | Proposals before acceptance                                       | a change is significant, cross-cutting, contested |
+| `runbook/`      | How to develop, release, operate                                  | operations or developer workflow change           |
+| `.ai/memories/` | Durable orientation for agents                                    | architecture, conventions, testing, ops change    |
+| `.ai/skills/`   | Reusable agent workflows                                          | a repeatable task's procedure changes             |
+| `.ai/agents/`   | Role definitions                                                  | a role's responsibilities change                  |
+| `AGENTS.md`     | Binding rules for agents                                          | a non-negotiable changes                          |
+
+The four role agents (AI role definitions, not people) live in
+[`.ai/agents/`](./.ai/agents/): `implementer` (staff-level TypeScript
+engineer), `reviewer` (the review gate), `documenter` (PRDs to specs, RFCs, and
+ADRs), and `pr-shepherd` (pull requests on GitHub, posted only on
+confirmation).
+
+If you change behavior, update the spec in the same change. If you change
+operations, update the runbook. If you make a non-obvious choice, add an ADR.
+
+## Non-Negotiables
+
+See [`AGENTS.md`](./AGENTS.md#non-negotiables) — the list is kept there only.
+
+## Getting help
+
+- File bugs and proposals as GitHub issues in this repository; significant
+  proposals become RFCs in `rfcs/active/`.
+- Security issues: see [`SECURITY.md`](./SECURITY.md).

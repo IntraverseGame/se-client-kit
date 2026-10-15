@@ -1,0 +1,38 @@
+name: Bug report
+description: Report something that does not work as documented.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. This repository is public. Do not include secrets,
+        keys, tokens, or personal data. **A suspected vulnerability is not a bug
+        report**: follow [SECURITY.md](https://github.com/IntraverseGame/se-client-kit/security/policy) instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The smallest set of steps, or a failing test.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: The package version, bundle version, or commit you saw it on.
+    validations:
+      required: false
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Browser and version, operating system, Node version if relevant.
+    validations:
+      required: false
