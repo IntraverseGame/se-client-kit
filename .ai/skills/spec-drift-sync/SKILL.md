@@ -48,7 +48,7 @@ description: Use before merging any non-trivial change. Reconciles code with spe
 ```sh
 git diff --stat main...HEAD
 git grep -n "TODO"
-pnpm check   # <!-- TODO(toolchain PR): available once the toolchain lands -->
+pnpm check
 ```
 
 ## Expected output

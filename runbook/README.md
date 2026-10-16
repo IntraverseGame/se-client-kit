@@ -1,9 +1,9 @@
 # Runbook
 
 How to develop, release, and operate the kit: procedures a human can follow with
-no AI tooling. Each file follows [the runbook template](../.ai/templates/runbook.md):
-when to use, prerequisites, steps, verification, troubleshooting, escalation,
-references.
+no AI tooling. Each file follows
+[the runbook template](../.ai/templates/runbook.md): when to use, prerequisites,
+steps, verification, troubleshooting, escalation, references.
 
 ## Conventions
 

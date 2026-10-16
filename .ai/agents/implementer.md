@@ -54,11 +54,9 @@ description: Use when writing or changing TypeScript code and its tests to satis
 ## Expected outputs
 
 - Code + tests + regenerated artifacts, one logical change per PR.
-- `pnpm check` green; `pnpm test:e2e` run when user-visible behavior changed.
+- `pnpm check` green (format, lint for TypeScript and CSS, typecheck, tests, checks); `pnpm test:e2e` run when user-visible behavior changed.
 - A PR description listing the spec sections implemented and how it was verified.
 - The decisions the human made along the way (question, answer, where recorded).
-
-<!-- TODO(toolchain PR): the commands exist once the toolchain lands. -->
 
 ## References
 

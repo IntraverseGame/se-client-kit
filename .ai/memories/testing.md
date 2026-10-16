@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-15 (commit 8630f95, bootstrap; the levels are planned, no tests exist yet)
+last-verified: 2026-10-16 (toolchain pull request; only the tooling tests and a jsdom smoke test exist)
 ---
 
 # Testing (agent context)
@@ -9,7 +9,7 @@ Rules: [specs/client-kit.md](../../specs/client-kit.md#testing-and-ci) and the
 [Wrapper test plan](../../specs/wrapper.md#test-plan); procedure for adding
 tests: [write-tests skill](../skills/write-tests/SKILL.md).
 
-## Orientation (planned)
+## Orientation
 
 - **Unit** (Vitest) beside the code of each package: no real network, disk,
   timers, or clock; inject a clock and a random source; one behavior per test.
@@ -41,4 +41,29 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - Never weaken a vector assertion to go green.
 - A test never prints or snapshots a key or token.
 
-<!-- TODO(toolchain PR): commands and CI job names land with the toolchain. -->
+## Commands and CI jobs
+
+- `pnpm test` runs the `vitest run` of every workspace that has tests (today only `apps/wrapper`; a package gets a `test` script with its first real test) plus the tooling tests in
+  `tools/` (`test:tools`); `pnpm test:e2e` runs the Playwright suite (none yet,
+  so it passes with no tests). `pnpm check` is everything below.
+- `tools/import-direction.test.ts` is the proof that the dependency-direction
+  and other lint rules fail on a violation: it runs the real oxlint binary and
+  `.oxlintrc.json` over scratch files, with the cases in
+  `tools/fixtures/import-direction-cases.ts`. Add a case there with every new
+  package or rule; write the expectation from the spec, not from the config.
+- `tools/css-lint.test.ts` does the same for `stylelint.config.mjs` with CSS
+  snippets (the stylelint API with the real config). Add a case with a new CSS
+  rule.
+- `tools/dependency-allowlist.test.ts` covers the allow-list check and keeps
+  `tools/allowed-dependencies.json` equal to the ADR-001 table.
+  `tools/test-only-entry.test.ts` covers the `contracts` test-only entry check.
+- The jsdom smoke test is `apps/wrapper/src/environment.test.ts`; component
+  tests set `environment: "jsdom"` through `apps/wrapper/vite.config.ts`.
+- **Cache.** Tests are wireit scripts; a passing run is cached by its declared
+  `files`. A test that reads a file outside the package's `files` (a vector, a
+  schema, an ADR) must list it, or depend on the task that produces it. `e2e`
+  has no `files`, so it always runs. `pnpm clean:cache` forgets every
+  cached result.
+- CI jobs (`.github/workflows/ci.yml`): `lint`, `format`, `typecheck`, `unit`,
+  `allow-list`, `contracts`, `build`, `e2e-fake`, `audit` (fails only on high and critical advisories; the weekly `audit.yml` reports every severity), `dependency-review` (pull requests only),
+  and the aggregate `ci-ok`. `contracts-drift` and `release` are not defined yet.

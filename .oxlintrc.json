@@ -1,0 +1,872 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "import",
+    "oxc",
+    "unicorn",
+    "promise",
+    "node",
+    "vitest"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error"
+  },
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "@superengine/contracts",
+              "@superengine/contracts/**",
+              "@superengine/signing",
+              "@superengine/signing/**",
+              "@superengine/snapshot",
+              "@superengine/snapshot/**",
+              "@superengine/play-client",
+              "@superengine/play-client/**",
+              "@superengine/shell",
+              "@superengine/shell/**",
+              "wrapper",
+              "wrapper/**",
+              "@superengine/wrapper",
+              "@superengine/wrapper/**",
+              "reference-game",
+              "reference-game/**",
+              "@superengine/reference-game",
+              "@superengine/reference-game/**"
+            ],
+            "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+          },
+          {
+            "group": [
+              "@superengine/*/src",
+              "@superengine/*/src/**",
+              "@superengine/*/dist",
+              "@superengine/*/dist/**"
+            ],
+            "message": "public entry points only (ADR-001)"
+          },
+          {
+            "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
+            "message": "no relative import into another package (ADR-001)"
+          }
+        ]
+      }
+    ],
+    "typescript/no-explicit-any": "error",
+    "typescript/ban-ts-comment": [
+      "error",
+      {
+        "ts-expect-error": "allow-with-description",
+        "ts-ignore": true,
+        "ts-nocheck": true,
+        "minimumDescriptionLength": 10
+      }
+    ],
+    "eslint/no-eval": "error",
+    "eslint/no-new-func": "error",
+    "eslint/no-implied-eval": "error",
+    "eslint/eqeqeq": ["error", "always"],
+    "eslint/no-var": "error",
+    "eslint/prefer-const": "error",
+    "import/no-cycle": "error",
+    "eslint/max-lines-per-function": "off",
+    "unicorn/require-module-specifiers": "off",
+    "eslint/default-case": "error",
+    "eslint/object-shorthand": "error",
+    "eslint/no-promise-executor-return": "error",
+    "eslint/no-unmodified-loop-condition": "error",
+    "eslint/no-alert": "error",
+    "eslint/no-duplicate-imports": [
+      "error",
+      {
+        "includeExports": true
+      }
+    ],
+    "eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "import/extensions": [
+      "error",
+      "always",
+      {
+        "ignorePackages": true,
+        "checkTypeImports": true,
+        "ts": true,
+        "tsx": true,
+        "json": true
+      }
+    ],
+    "import/no-unassigned-import": "error",
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "fixStyle": "inline-type-imports"
+      }
+    ],
+    "typescript/no-import-type-side-effects": "error",
+    "typescript/no-non-null-assertion": "error",
+    "vitest/no-focused-tests": "error",
+    "vitest/no-disabled-tests": "error"
+  },
+  "overrides": [
+    {
+      "files": ["packages/contracts/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/signing",
+                  "@superengine/signing/**",
+                  "@superengine/snapshot",
+                  "@superengine/snapshot/**",
+                  "@superengine/play-client",
+                  "@superengine/play-client/**",
+                  "@superengine/shell",
+                  "@superengine/shell/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/contracts/testing",
+                  "@superengine/contracts/testing/**"
+                ],
+                "message": "contracts/testing is for tests only (ADR-001)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(signing|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/contracts/**/*.test.ts",
+        "packages/contracts/**/*.spec.ts",
+        "packages/contracts/**/test/**",
+        "packages/contracts/**/tests/**",
+        "packages/contracts/**/__tests__/**",
+        "packages/contracts/**/fixtures/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/signing",
+                  "@superengine/signing/**",
+                  "@superengine/snapshot",
+                  "@superengine/snapshot/**",
+                  "@superengine/play-client",
+                  "@superengine/play-client/**",
+                  "@superengine/shell",
+                  "@superengine/shell/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/contracts/testing",
+                  "@superengine/contracts/testing/**"
+                ],
+                "message": "contracts/testing is for tests only (ADR-001)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(signing|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/signing/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/contracts",
+                  "@superengine/contracts/**",
+                  "@superengine/snapshot",
+                  "@superengine/snapshot/**",
+                  "@superengine/play-client",
+                  "@superengine/play-client/**",
+                  "@superengine/shell",
+                  "@superengine/shell/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/signing/**/*.test.ts",
+        "packages/signing/**/*.spec.ts",
+        "packages/signing/**/test/**",
+        "packages/signing/**/tests/**",
+        "packages/signing/**/__tests__/**",
+        "packages/signing/**/fixtures/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/snapshot",
+                  "@superengine/snapshot/**",
+                  "@superengine/play-client",
+                  "@superengine/play-client/**",
+                  "@superengine/shell",
+                  "@superengine/shell/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/snapshot/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/signing",
+                  "@superengine/signing/**",
+                  "@superengine/play-client",
+                  "@superengine/play-client/**",
+                  "@superengine/shell",
+                  "@superengine/shell/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/contracts/testing",
+                  "@superengine/contracts/testing/**"
+                ],
+                "message": "contracts/testing is for tests only (ADR-001)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/snapshot/**/*.test.ts",
+        "packages/snapshot/**/*.spec.ts",
+        "packages/snapshot/**/test/**",
+        "packages/snapshot/**/tests/**",
+        "packages/snapshot/**/__tests__/**",
+        "packages/snapshot/**/fixtures/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/signing",
+                  "@superengine/signing/**",
+                  "@superengine/play-client",
+                  "@superengine/play-client/**",
+                  "@superengine/shell",
+                  "@superengine/shell/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/play-client/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/signing",
+                  "@superengine/signing/**",
+                  "@superengine/snapshot",
+                  "@superengine/snapshot/**",
+                  "@superengine/shell",
+                  "@superengine/shell/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/contracts/testing",
+                  "@superengine/contracts/testing/**"
+                ],
+                "message": "contracts/testing is for tests only (ADR-001)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|shell|wrapper|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/play-client/**/*.test.ts",
+        "packages/play-client/**/*.spec.ts",
+        "packages/play-client/**/test/**",
+        "packages/play-client/**/tests/**",
+        "packages/play-client/**/__tests__/**",
+        "packages/play-client/**/fixtures/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/signing",
+                  "@superengine/signing/**",
+                  "@superengine/snapshot",
+                  "@superengine/snapshot/**",
+                  "@superengine/shell",
+                  "@superengine/shell/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/contracts/testing",
+                  "@superengine/contracts/testing/**"
+                ],
+                "message": "contracts/testing is for tests only (ADR-001)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|shell|wrapper|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/shell/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/contracts",
+                  "@superengine/contracts/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|wrapper|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/shell/**/*.test.ts",
+        "packages/shell/**/*.spec.ts",
+        "packages/shell/**/test/**",
+        "packages/shell/**/tests/**",
+        "packages/shell/**/__tests__/**",
+        "packages/shell/**/fixtures/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|wrapper|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/wrapper/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/contracts",
+                  "@superengine/contracts/**",
+                  "@superengine/signing",
+                  "@superengine/signing/**",
+                  "@superengine/snapshot",
+                  "@superengine/snapshot/**",
+                  "@superengine/play-client",
+                  "@superengine/play-client/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "apps/wrapper/**/*.test.ts",
+        "apps/wrapper/**/*.spec.ts",
+        "apps/wrapper/**/test/**",
+        "apps/wrapper/**/tests/**",
+        "apps/wrapper/**/__tests__/**",
+        "apps/wrapper/**/fixtures/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/signing",
+                  "@superengine/signing/**",
+                  "@superengine/snapshot",
+                  "@superengine/snapshot/**",
+                  "@superengine/play-client",
+                  "@superengine/play-client/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/reference-game/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/contracts",
+                  "@superengine/contracts/**",
+                  "@superengine/signing",
+                  "@superengine/signing/**",
+                  "@superengine/snapshot",
+                  "@superengine/snapshot/**",
+                  "@superengine/play-client",
+                  "@superengine/play-client/**",
+                  "@superengine/shell",
+                  "@superengine/shell/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "apps/reference-game/**/*.test.ts",
+        "apps/reference-game/**/*.spec.ts",
+        "apps/reference-game/**/test/**",
+        "apps/reference-game/**/tests/**",
+        "apps/reference-game/**/__tests__/**",
+        "apps/reference-game/**/fixtures/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/contracts",
+                  "@superengine/contracts/**",
+                  "@superengine/signing",
+                  "@superengine/signing/**",
+                  "@superengine/snapshot",
+                  "@superengine/snapshot/**",
+                  "@superengine/play-client",
+                  "@superengine/play-client/**",
+                  "@superengine/shell",
+                  "@superengine/shell/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["e2e/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@superengine/signing",
+                  "@superengine/signing/**",
+                  "@superengine/snapshot",
+                  "@superengine/snapshot/**",
+                  "@superengine/play-client",
+                  "@superengine/play-client/**",
+                  "@superengine/shell",
+                  "@superengine/shell/**",
+                  "wrapper",
+                  "wrapper/**",
+                  "@superengine/wrapper",
+                  "@superengine/wrapper/**",
+                  "reference-game",
+                  "reference-game/**",
+                  "@superengine/reference-game",
+                  "@superengine/reference-game/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+              },
+              {
+                "group": [
+                  "@superengine/*/src",
+                  "@superengine/*/src/**",
+                  "@superengine/*/dist",
+                  "@superengine/*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/*/src/**"],
+      "rules": {
+        "import/no-default-export": "error",
+        "eslint/no-console": "error"
+      }
+    }
+  ],
+  "ignorePatterns": ["**/dist/**", "**/.wireit/**", "**/node_modules/**"],
+  "options": {
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error"
+  }
+}

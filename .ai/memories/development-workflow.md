@@ -1,6 +1,6 @@
 ---
-description: Approvals, worktrees, intended scripts, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-15 (commit 8630f95, bootstrap; scripts are intended, not yet present)
+description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
+last-verified: 2026-10-16 (toolchain pull request; the scripts exist)
 ---
 
 # Development workflow
@@ -33,12 +33,35 @@ Several agents and people work in one clone at once. Rules:
 
 ## Day-to-day
 
-<!-- TODO(toolchain PR): the scripts exist once the toolchain lands. -->
-
-- Intended scripts: `pnpm install --frozen-lockfile`, `pnpm check` (format check,
-  lint, typecheck, unit tests, contracts check), `pnpm test`, `pnpm test:e2e`,
-  `pnpm lint`, `pnpm format`, `pnpm build`. Never an ad-hoc equivalent once they
-  exist.
+- Scripts: `pnpm install --frozen-lockfile`, `pnpm check` (format check, lint,
+  typecheck, unit tests, dependency allow-list, contracts check), `pnpm test`,
+  `pnpm test:e2e`, `pnpm lint` (oxlint and stylelint), `pnpm format` (writes; oxfmt is the only formatter, for code, Markdown, and
+  YAML), `pnpm format:check`,
+  `pnpm typecheck`, `pnpm build`, `pnpm changeset`. Never an ad-hoc equivalent.
+- **tsx** runs the TypeScript scripts under `tools/`; stylelint lints CSS
+  (`pnpm lint:css`); both are root-only dev dependencies.
+- **wireit** runs the scripts. Each is declared in the `wireit` section of the
+  `package.json` that owns it (`command`, `files`, `output`, `dependencies`,
+  `packageLocks`); the root scripts fan out to the workspace ones, so a new
+  package is added to the root `build` and `typecheck` dependencies, and to `test`
+  when it gets its first real test (a package has no `test` script before that;
+  a script that passes with no tests proves nothing).
+  Unchanged tasks are skipped from the local cache in `.wireit/` (git-ignored,
+  **per worktree**, as is `node_modules`: run `pnpm install --frozen-lockfile`
+  once in each worktree). A script with no `files` is never cached
+  (`format`, `test:e2e`). If a result looks stale, `pnpm clean:cache`.
+- **CI cache.** Workflows set `WIREIT_CACHE=github` and the local composite
+  action `.github/actions/setup` starts `google/wireit`'s caching helper (pinned
+  by commit SHA). It uses the job's own Actions cache credentials, which are not
+  a repository secret; there is no remote cache. A cache hit may only replace a
+  run whose inputs are all declared, so the gating scripts (`check:deps`,
+  `check:contracts`, `lint`, `test:tools`) list every file they read; add to
+  `files` whenever a check reads a new file.
+- **Supply chain.** `pnpm-workspace.yaml` sets `minimumReleaseAge` (7 days),
+  `allowBuilds` with no `true` entry (no lifecycle script runs), `trustPolicy: no-downgrade`, and
+  exact saves. Dependabot's cooldown (npm and github-actions) matches the age. Every Action is pinned by
+  full commit SHA with a version comment; resolve a SHA with `gh api`, never by
+  hand.
 - Generated code: never edit; regenerate and commit.
 - Contract copies: change the `contracts` package only with its lock entry (source
   commit and hash), in a pull request that shows the diff; it holds data only, no

@@ -1,0 +1,62 @@
+{
+  "name": "wrapper",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Wrapper UI, built by Vite into a release bundle.",
+  "type": "module",
+  "scripts": {
+    "build": "wireit",
+    "typecheck": "wireit",
+    "test": "wireit"
+  },
+  "wireit": {
+    "build": {
+      "command": "vite build",
+      "files": [
+        "index.html",
+        "src/**/*.ts",
+        "!src/**/*.test.ts",
+        "tsconfig.json",
+        "vite.config.ts",
+        "../../tsconfig.base.json"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "clean": "if-file-deleted",
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json",
+      "files": [
+        "index.html",
+        "src/**/*.ts",
+        "tsconfig.json",
+        "vite.config.ts",
+        "../../tsconfig.base.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "test": {
+      "command": "vitest run",
+      "files": [
+        "src/**/*.ts",
+        "tsconfig.json",
+        "vite.config.ts",
+        "../../tsconfig.base.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
+  },
+  "devDependencies": {
+    "vite": "8.3.4"
+  }
+}

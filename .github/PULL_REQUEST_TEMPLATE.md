@@ -8,9 +8,10 @@
 
 ## Checklist
 
-- [ ] `pnpm check` passes locally (format, lint, typecheck, unit tests, contracts
-      check). <!-- TODO(toolchain PR): scripts land with the toolchain -->
-- [ ] Generated code regenerated and committed; no generated file edited by hand.
+- [ ] `pnpm check` passes locally (format, lint for TypeScript and CSS,
+      typecheck, unit tests, dependency allow-list, contracts check).
+- [ ] Generated code regenerated and committed; no generated file edited by
+      hand.
 - [ ] **Spec Drift Synchronization:** code and `specs/` agree; any behavior
       change updates the spec in this PR.
 - [ ] Memories in `.ai/memories/` updated if architecture, conventions, testing,
@@ -39,4 +40,5 @@
       committed (ADR-003).
 
 See [`AGENTS.md`](../AGENTS.md) for the mandatory actions and
-[`CONTRIBUTING.md`](../CONTRIBUTING.md#development-flow) for the development flow.
+[`CONTRIBUTING.md`](../CONTRIBUTING.md#development-flow) for the development
+flow.

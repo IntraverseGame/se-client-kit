@@ -47,13 +47,15 @@ description: Use when adding or changing behavior, signing code, contracts, or t
 
 ## Useful commands
 
-<!-- TODO(toolchain PR): scripts land with the toolchain -->
-
 ```sh
-pnpm test                  # unit and component
+pnpm test                  # unit and component (wireit skips what did not change)
 pnpm test:e2e              # Playwright against the fake Play API
 pnpm check                 # everything the CI runs
 ```
+
+A test that reads files outside its own package (a vector, the schema) must
+have those files in its wireit `files`, or depend on the task that produces
+them; otherwise a cached pass could hide a failure.
 
 ## Expected output
 

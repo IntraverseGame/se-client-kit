@@ -1,0 +1,53 @@
+{
+  "name": "@superengine/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Data only: the contracts vendored from the backend, generated types and the lock file.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "scripts": {
+    "build": "wireit",
+    "typecheck": "wireit"
+  },
+  "wireit": {
+    "build": {
+      "command": "tsc -p tsconfig.build.json",
+      "files": [
+        "src/**/*.ts",
+        "!src/**/*.test.ts",
+        "tsconfig.json",
+        "tsconfig.build.json",
+        "../../tsconfig.base.json"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "clean": "if-file-deleted",
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json",
+      "files": [
+        "src/**/*.ts",
+        "tsconfig.json",
+        "../../tsconfig.base.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
+  }
+}

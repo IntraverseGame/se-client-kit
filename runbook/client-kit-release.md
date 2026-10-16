@@ -20,7 +20,7 @@ source of truth for what is configured.
 - The change reviewed and approved by CODEOWNERS (the two org owners), because
   this repository is public.
 - Node and `pnpm` at the versions the repository pins (`.node-version` and
-  `packageManager`), once the toolchain exists.
+  `packageManager`).
 - For a contract sync: access to the private source of the contract (a person,
   never a CI job of this repository).
 
@@ -34,30 +34,35 @@ org owners apply the settings; ask them for each.
 
 1. **Scaffolding pull request** (review every file before it is merged, per the
    [never-public checklist](../specs/client-kit.md#never-in-the-public-repository)):
-   - `pnpm-workspace.yaml`, the root `package.json` with `packageManager`,
-     `.node-version`, `pnpm-lock.yaml`, and a project `.npmrc` that turns
-     dependency lifecycle scripts off;
+   - `pnpm-workspace.yaml` (with `minimumReleaseAge`, an `allowBuilds` with no
+     `true` entry that keeps dependency lifecycle scripts off, and
+     `trustPolicy`), the root `package.json` with `packageManager` and the
+     wireit scripts, `.node-version`, and `pnpm-lock.yaml`;
    - the packages and apps (`contracts` as data only, `signing`, `snapshot`,
-     `play-client`, `shell`, the
-     `wrapper` app) and the reference game, each empty but building;
-   - the lint, format, and type-check configuration, the import-direction
-     rule that enforces the dependency direction of the packages, and the rule
-     that only tests import the `contracts` test-only entry;
-   - `.github/workflows` (CI and release, Actions pinned by full commit SHA),
-     `.github/dependabot.yml` (github-actions today; the `npm` ecosystem is added
-     here, see the next item), `.github/CODEOWNERS` naming the two org owners;
-   - the real script list in `AGENTS.md` (replacing its placeholder block);
-     add the `npm` ecosystem to `.github/dependabot.yml` once the first
-     `package.json` exists, with `directories: ["/", "/packages/*", "/apps/*"]`
-     and a cooldown that matches the "minimum release age" rule.
+     `play-client`, `shell`, the `wrapper` app) and the reference game, each
+     empty but building;
+   - the lint, format, and type-check configuration, the import-direction rule
+     that enforces the dependency direction of the packages, and the rule that
+     only tests import the `contracts` test-only entry;
+   - `.github/workflows` (CI, and later release, with every Action pinned by
+     full commit SHA and `permissions` set per job), the local setup action
+     under `.github/actions/setup`, `.github/dependabot.yml` (github-actions and
+     `npm`, each with a 7-day cooldown that matches `minimumReleaseAge`),
+     `.github/CODEOWNERS` naming the two org owners;
+   - the real script list in `AGENTS.md`, `CONTRIBUTING.md`, and the memories.
+
+   Landed by the toolchain pull request: everything above except the release
+   workflow and the real CODEOWNERS. Nothing in it needs a repository secret:
+   the CI cache is wireit's GitHub Actions cache mode, which uses the job's own
+   cache credentials.
 
    `.github/CODEOWNERS` stays comment-only until the org owners give their
    handles; branch protection (below) is the interim control.
 
 2. **Branch protection or a ruleset** on `main`: require a pull request and
-   approvals; require review from code owners; block direct and force pushes;
-   no self-approval; do not allow administrators to bypass; require the
-   `ci-ok` check.
+   approvals; require review from code owners; block direct and force pushes; no
+   self-approval; do not allow administrators to bypass; require the `ci-ok`
+   check.
 3. **Secret scanning and push protection** on. Dependabot alerts and security
    updates on.
 4. **Actions settings:** read-only default workflow token; Actions may not
@@ -65,8 +70,8 @@ org owners apply the settings; ask them for each.
    workflows need approval (GitHub's "Fork pull request workflows" setting).
 5. **The publishing environment**, for example `npm-publish`: required reviewers
    designated by the org owners, a deployment-branch restriction to `main`. The
-   publishing credential, if one is needed, is a secret of this environment only,
-   never a repository-level secret.
+   publishing credential, if one is needed, is a secret of this environment
+   only, never a repository-level secret.
    <!-- TODO(infrastructure owner): the form of the npm credential (trusted publishing from the release workflow needs no stored token), the npm organization, and its scope. -->
 6. **npm:** create the organization once the scope is chosen
    <!-- TODO(TPO): the npm scope -->; owned by the org owners; two-factor
@@ -79,9 +84,9 @@ source (the drift check says so):
 
 A sync touches **one package**, `contracts` (`packages/contracts/`).
 
-1. Copy the files named in `packages/contracts/contracts.lock.json` from their sources:
-   the Play and verify OpenAPI documents only, the Snapshot schema and vectors,
-   the signing vectors. Never copy another surface's document.
+1. Copy the files named in `packages/contracts/contracts.lock.json` from their
+   sources: the Play and verify OpenAPI documents only, the Snapshot schema and
+   vectors, the signing vectors. Never copy another surface's document.
 2. Update the lock: source (by name), source commit, SHA-256 per file. The sync
    script writes it.
 3. Regenerate the types in `contracts` (`pnpm` script of the package). Vectors
@@ -96,9 +101,9 @@ The kit uses changesets.
 
 1. A pull request that changes a published package or the Wrapper includes a
    changeset (`pnpm changeset`) naming the packages and the bump (major for a
-   break, minor for an addition, patch for a fix) and a note for the release.
-   A change to a contract's version (a new Play prefix, a new Snapshot schema)
-   is a **major**.
+   break, minor for an addition, patch for a fix) and a note for the release. A
+   change to a contract's version (a new Play prefix, a new Snapshot schema) is
+   a **major**.
 2. On merge to `main`, the release workflow opens or updates a **version pull
    request** that applies the changesets (versions and changelogs). Review it:
    the versions, the changelogs, and that the lock file's contract entries match
@@ -115,12 +120,13 @@ The kit uses changesets.
 
 Before publishing (in the version pull request's CI): all required jobs green;
 the contract hashes match the lock; the bundle's size budget holds; the bundle
-is the unmodified bundle (no test or per-environment build) and contains no vector.
+is the unmodified bundle (no test or per-environment build) and contains no
+vector.
 
 After publishing:
 
-1. **npm provenance:** for each package, the version's page shows the
-   provenance statement linking the commit and the workflow run; or run
+1. **npm provenance:** for each package, the version's page shows the provenance
+   statement linking the commit and the workflow run; or run
    `npm audit signatures` against the installed package.
 2. **Bundle:** download the release bundle, recompute the SHA-256 of every file
    and compare with the manifest; verify the attestation with the GitHub CLI
@@ -130,17 +136,17 @@ After publishing:
 4. **Compatibility:** the release notes' contract versions match what the
    backend serves in the target environment. Do not promote a Wrapper whose Play
    prefix or Snapshot schema the backend does not serve.
-5. **Promotion** to an environment is done on the SuperEngine side, by its deploy
-   job, which pulls the released digest
+5. **Promotion** to an environment is done on the SuperEngine side, by its
+   deploy job, which pulls the released digest
    <!-- TODO(infrastructure owner): the repository, protected environment, and procedure of the deploy job; the hosting. -->
    After it, play one round in that environment from a test launch, and check
    there is no console error.
 
 ### Roll back or deprecate
 
-- **A bad Wrapper release:** the SuperEngine side repoints the environment to the
-  previous released digest. The bundle store is content-addressed, so the old
-  digest is still there. Then fix forward here.
+- **A bad Wrapper release:** the SuperEngine side repoints the environment to
+  the previous released digest. The bundle store is content-addressed, so the
+  old digest is still there. Then fix forward here.
 - **A bad npm version:** do not unpublish a version others may depend on. Run
   `npm deprecate` on the version with a message that names the fix, publish a
   patch, and record both in the changelog. Unpublish only a version that
@@ -174,9 +180,20 @@ If the release uses a stored npm token (rather than trusted publishing):
 
 ## Troubleshooting
 
-- **A pull request cannot merge: code-owner review missing.** The two org
-  owners are the owners; an author cannot approve their own change, so the
-  other org owner reviews.
+- **A check passes locally or in CI but should fail (or the reverse).** wireit
+  may have restored a cached result. Run `pnpm clean:cache && pnpm check`; then
+  fix the script's `files` so every input is declared. In CI, a changed lockfile
+  or any declared input already changes the cache key.
+- **`pnpm install --frozen-lockfile` fails on a fresh worktree.** `node_modules`
+  and `.wireit` are per worktree; the lockfile is out of date only if
+  `package.json` changed without `pnpm install`.
+- **A new dependency version cannot be resolved.** It is younger than seven days
+  (`minimumReleaseAge`); wait, or pick the previous version. Do not lower the
+  age.
+
+- **A pull request cannot merge: code-owner review missing.** The two org owners
+  are the owners; an author cannot approve their own change, so the other org
+  owner reviews.
 - **`contracts` job fails on a hash.** A file differs from the lock: re-run the
   sync, or the file was edited by hand; restore it from its source.
 - **`contracts` job fails on the generated client.** The OpenAPI document and
@@ -190,10 +207,10 @@ If the release uses a stored npm token (rather than trusted publishing):
 ## Escalation
 
 A compromised publishing credential, a published version that contains a secret
-or malicious code, a bundle that does not match its manifest, or a leaked file in
-this public repository is a **security incident**: tell the two org owners and
-the infrastructure owner at once; deprecate the affected versions; revoke and
-rotate the credential; have the SuperEngine side repoint environments to a
+or malicious code, a bundle that does not match its manifest, or a leaked file
+in this public repository is a **security incident**: tell the two org owners
+and the infrastructure owner at once; deprecate the affected versions; revoke
+and rotate the credential; have the SuperEngine side repoint environments to a
 known-good digest; and consider anything that was committed as published (it
 cannot be taken back once cloned). An outside finding is reported through
 `SECURITY.md`.

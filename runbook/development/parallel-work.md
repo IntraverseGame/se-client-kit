@@ -30,11 +30,14 @@ git worktree add -b feat/<slug> ../se-client-kit-worktrees/feat-<slug> origin/ma
 cd ../se-client-kit-worktrees/feat-<slug>
 ```
 
-Worktrees live beside the clone, in `../se-client-kit-worktrees/<branch with / as ->`,
-never inside it. Work only in your task's worktree; the main checkout stays on
-`main`. Never edit, reset, or clean another worktree.
+Worktrees live beside the clone, in
+`../se-client-kit-worktrees/<branch with / as ->`, never inside it. Work only in
+your task's worktree; the main checkout stays on `main`. Never edit, reset, or
+clean another worktree.
 
-<!-- TODO(toolchain PR): once the toolchain lands, note that `node_modules` is per worktree and that `pnpm install --frozen-lockfile` runs once in each. -->
+`node_modules` and the wireit cache (`.wireit`) are per worktree. Run
+`pnpm install --frozen-lockfile` once in each new worktree before `pnpm check`;
+pnpm's content-addressable store is shared, so it is fast.
 
 ### 3. Finish a task
 

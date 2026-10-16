@@ -1,0 +1,24 @@
+{
+  "runtime": {
+    "@noble/curves": ["packages/signing"],
+    "@noble/hashes": ["packages/signing"]
+  },
+  "development": [
+    "@axe-core/playwright",
+    "@changesets/cli",
+    "@playwright/test",
+    "@types/node",
+    "jsdom",
+    "json-schema-to-typescript",
+    "openapi-typescript",
+    "oxfmt",
+    "oxlint",
+    "pnpm",
+    "stylelint",
+    "tsx",
+    "typescript",
+    "vite",
+    "vitest",
+    "wireit"
+  ]
+}

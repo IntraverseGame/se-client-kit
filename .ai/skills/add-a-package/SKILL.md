@@ -10,8 +10,10 @@ description: Use when adding a new package under packages/ (or an app under apps
 - An agreed spec (or accepted RFC) for the capability — see
   [prd-to-spec](../prd-to-spec/SKILL.md).
 - Read [.ai/memories/architecture.md](../../memories/architecture.md).
-- The toolchain exists
-  (<!-- TODO(toolchain PR): workspace, build, lint, and test configuration land with the toolchain -->).
+- The toolchain exists (pnpm workspace, wireit scripts, oxlint and stylelint, Vitest, tsx for `tools/`). Copy
+  the shape of an existing package under `packages/`: `package.json` with the
+  `build` and `typecheck` wireit scripts (and `test` once it has its first real
+  test), `tsconfig.json`, and `tsconfig.build.json`.
 
 ## Workflow
 
@@ -39,9 +41,13 @@ description: Use when adding a new package under packages/ (or an app under apps
    an ADR first; a development tool needs a recorded decision. Pin per the
    lockfile policy; never add a lifecycle script.
 4. **Enforce the direction:** add the package to the import-restriction rules of
-   the lint configuration so a forbidden import fails
-   (<!-- TODO(toolchain PR): the rule format depends on the lint tool -->). Add a
-   negative fixture proving the rule fires.
+   the lint configuration so a forbidden import fails: a pair of `overrides`
+   entries in `.oxlintrc.json` (one for the package, one for its test files)
+   carrying a `no-restricted-imports` rule, and the package's name added to the
+   restricted groups of the others. Add a negative case to
+   `tools/fixtures/import-direction-cases.ts` proving the rule fires, and add the package
+   to the root `build` and `typecheck` wireit dependencies (and `test` when it
+   gets its first test).
 5. **API and types:** strict TypeScript, no `any`, named exports (ADR-001), no
    side effects at import. Money amounts are strings or `bigint`. Errors are
    typed. Nothing in the package logs or stores a key or token.
@@ -64,7 +70,7 @@ description: Use when adding a new package under packages/ (or an app under apps
 ## Useful commands
 
 ```sh
-pnpm check   # <!-- TODO(toolchain PR): available once the toolchain lands -->
+pnpm check
 pnpm lint
 ```
 

@@ -7,8 +7,8 @@ and the libraries it is built from. See [README.md](./README.md).
 
 AI knowledge layer: [.ai/README.md](./.ai/README.md).
 
-**This repository is public.** Everything committed here, including issues,
-pull requests, and agent output, is world-readable. See
+**This repository is public.** Everything committed here, including issues, pull
+requests, and agent output, is world-readable. See
 [Public repository](#public-repository).
 
 ## Approvals — never stage or commit on your own
@@ -21,8 +21,8 @@ change is eligible to be staged and committed only after:
    has approved it.
 
 Even then, stage and commit only when a human asks, and open a pull request
-(`gh pr create`) only after a human confirms it. An approval covers the
-reviewed diff only; any further edit needs review again (ADR-003).
+(`gh pr create`) only after a human confirms it. An approval covers the reviewed
+diff only; any further edit needs review again (ADR-003).
 
 Merging into `main` is a separate control: until `.github/CODEOWNERS` names the
 org owners, branch protection (a pull request is required, no self-approval) is
@@ -42,7 +42,8 @@ Several agents and people work in this clone at the same time.
 - **Clean up only when a human asks** (worktree and branch), after the task is
   merged or abandoned. Never delete a branch that has unmerged work on your own.
 
-Procedure: [`runbook/development/parallel-work.md`](./runbook/development/parallel-work.md).
+Procedure:
+[`runbook/development/parallel-work.md`](./runbook/development/parallel-work.md).
 
 ## Agent workflow
 
@@ -75,28 +76,37 @@ above. Procedure:
 
 ## Commands
 
-The toolchain (pnpm workspace, TypeScript, Vite, Vitest, Playwright, oxlint,
-oxfmt) is not installed yet. These are the intended scripts; use them once they
-exist and never an ad-hoc equivalent.
-
-<!-- TODO(toolchain PR): scripts land with the toolchain; replace this block with the real list and delete this marker. Also add the `npm` ecosystem back to `.github/dependabot.yml` with `directories: ["/", "/packages/*", "/apps/*"]`, and consider a cooldown that matches the "minimum release age" rule. -->
+The toolchain is pnpm workspaces, TypeScript, Vite, Vitest, Playwright, oxlint,
+oxfmt, stylelint (CSS), tsx (the `tools/` scripts), changesets, and wireit for
+task orchestration and caching (ADR-001). Use these scripts and never an ad-hoc
+equivalent; Node and pnpm are pinned in `.node-version` and `packageManager`.
 
 - `pnpm install --frozen-lockfile` · `pnpm check` (format check, lint,
-  typecheck, unit tests, contracts check)
+  typecheck, unit tests, the dependency allow-list, the contracts check)
 - `pnpm test` (unit and component) · `pnpm test:e2e` (Playwright, against the
   in-repo fake Play API)
-- `pnpm lint` · `pnpm format` · `pnpm build`
+- `pnpm lint` (oxlint and stylelint; also `pnpm lint:ts` and `pnpm lint:css`) ·
+  `pnpm format` (writes) · `pnpm format:check` · `pnpm typecheck` · `pnpm build`
+- `pnpm check:deps` (every `package.json` dependency is on the ADR-001
+  allow-list) · `pnpm check:contracts` (only tests import the `contracts`
+  test-only entry) · `pnpm changeset` (add release notes) · `pnpm clean:cache`
+  (forget cached task results)
+
+The scripts are wireit scripts: each declares its inputs and outputs, and a
+script whose inputs did not change is skipped from the cache in `.wireit/`.
+`pnpm clean:cache && pnpm check` runs everything. See
+[CONTRIBUTING.md](./CONTRIBUTING.md#prerequisites-and-quickstart).
 
 ## Architecture rules
 
-Until the toolchain lands these are enforced by review; afterwards by lint
-import-direction rules and CI.
+Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
+`tools/import-direction.test.ts`) and CI, and by review.
 
-- **Packages** live under `packages/`, apps under `apps/`. Dependency
-  direction is one way: `contracts` (data only, no logic) is a leaf;
-  `snapshot` and `play-client` depend on it; `signing` has no kit dependency at
-  run time and reads vectors from `contracts` in tests only; `shell` depends on
-  `signing`, `snapshot`, and `play-client`; the `wrapper` app depends on `shell`;
+- **Packages** live under `packages/`, apps under `apps/`. Dependency direction
+  is one way: `contracts` (data only, no logic) is a leaf; `snapshot` and
+  `play-client` depend on it; `signing` has no kit dependency at run time and
+  reads vectors from `contracts` in tests only; `shell` depends on `signing`,
+  `snapshot`, and `play-client`; the `wrapper` app depends on `shell`;
   `reference-game` depends on nothing but the controller protocol's types. No
   cycles; a package never imports an app. `contracts` has a runtime entry
   (schemas and generated types) and a test-only entry (vectors): only tests may
@@ -110,11 +120,11 @@ import-direction rules and CI.
   secret.
 - **A Snapshot is untrusted until validated.** `play-client` returns it as
   `unknown`; only the `snapshot` validator turns it into a typed value.
-- Strict TypeScript (`strict`, no implicit `any`); no `any` and no
-  `@ts-ignore` / `@ts-expect-error` without a reason on the same line.
+- Strict TypeScript (`strict`, no implicit `any`); no `any` and no `@ts-ignore`
+  / `@ts-expect-error` without a reason on the same line.
 - Named exports only in libraries; no default exports (ADR-001).
-- Imports of another package go through its public entry point
-  (`package.json` `exports`), never its internals (ADR-001).
+- Imports of another package go through its public entry point (`package.json`
+  `exports`), never its internals (ADR-001).
 - Public packages are tree-shakeable ESM with no import-time side effects
   (ADR-001).
 - Standard platform APIs first (`fetch`, Web Crypto where it fits, Web Locks).
@@ -126,18 +136,18 @@ import-direction rules and CI.
 
 - **Secrets stay in memory.** Never log, serialize, or persist the action key,
   the play token, or anything derived from them beyond the session. The
-  redacting types and logger of the shell are the only way to log near them.
-  No secrets, keys, tokens, or connection strings in code, tests, fixtures,
-  issues, or comments. The test keys in the vectors are public by design and
-  are the only exception.
+  redacting types and logger of the shell are the only way to log near them. No
+  secrets, keys, tokens, or connection strings in code, tests, fixtures, issues,
+  or comments. The test keys in the vectors are public by design and are the
+  only exception.
 - **Money amounts are strings or `bigint`, never JS `number`**, at every
   boundary and in every type. Arithmetic on amounts uses `bigint` in base units.
   A decimal value (a rate, a fee) is never a ledger amount; converting one to
   base units uses an explicit, specified rounding mode.
 - **No new runtime dependency without an ADR.** The runtime dependencies of
-  published packages are an allow-list kept in the kit's ADRs; a new
-  development tool needs a recorded decision too. Dependency lifecycle scripts
-  are off by default; only an explicit allow-list may run one.
+  published packages are an allow-list kept in the kit's ADRs; a new development
+  tool needs a recorded decision too. Dependency lifecycle scripts are off by
+  default; only an explicit allow-list may run one.
 - **Contracts are documents, never code.** The Play API document, the Snapshot
   schema and vectors, and the signing vectors are copied into the `contracts`
   package, not imported from another repository. Each copy is pinned in a lock
@@ -172,8 +182,8 @@ add, in any file, commit, issue, pull request, log, or agent output:
   vectors), connection strings, npm or deploy credentials;
 - internal hostnames or URLs, dashboard links, cloud account or resource
   identifiers;
-- unpublished backend internals: only the player-facing contracts (the Play
-  API document at `/play/v1`, the Snapshot schema bundle, the signed-action
+- unpublished backend internals: only the player-facing contracts (the Play API
+  document at `/play/v1`, the Snapshot schema bundle, the signed-action
   specification, and the signing vectors) are shared, and only as copies;
 - personal data, or the names, emails, or handles of people unless they are
   already public as maintainers or authors;
@@ -200,8 +210,8 @@ every non-trivial change:
    `rfcs/active/`; accepted decisions become ADRs in `decisions/`.
 4. **Create/Update and sync runbooks** in `runbook/`.
 5. **Telemetry docs, where applicable** — the Wrapper emits no telemetry unless
-   a spec says so; anything that emits logs, metrics, or events is documented
-   in its spec, with what is and is not allowed in them (never a secret).
+   a spec says so; anything that emits logs, metrics, or events is documented in
+   its spec, with what is and is not allowed in them (never a secret).
 
 ## Knowledge maintenance
 

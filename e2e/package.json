@@ -1,0 +1,36 @@
+{
+  "name": "e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Playwright suite and the fake Play API.",
+  "type": "module",
+  "scripts": {
+    "test": "wireit",
+    "typecheck": "wireit"
+  },
+  "wireit": {
+    "test": {
+      "command": "playwright test --pass-with-no-tests",
+      "dependencies": [
+        "../apps/wrapper:build"
+      ]
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json",
+      "files": [
+        "**/*.ts",
+        "!node_modules/**",
+        "tsconfig.json",
+        "../tsconfig.base.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.64.0"
+  }
+}

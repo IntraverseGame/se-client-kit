@@ -5,17 +5,19 @@ The public TypeScript monorepo for **everything the player's browser runs** in
 libraries it is built from.
 
 > **Status: bootstrapping.** The repository holds the license, the contribution
-> and agent-workflow documents, and the first specs and decisions (the client kit,
-> the Wrapper, as drafts; and the first three ADRs, accepted). There is no
-> product code and no toolchain yet. Nothing here is released.
+> and agent-workflow documents, and the first specs and decisions (the client
+> kit, the Wrapper, as drafts; and the first three ADRs, accepted). There is no
+> product code yet: the toolchain (pnpm workspace, TypeScript, oxc, Vitest,
+> Playwright, wireit, CI) is in place and the packages are empty skeletons.
+> Nothing here is released.
 
 ## Why this repository is public
 
 The Wrapper's headless `shell` package holds the player's key and signs every
-action the player takes, including the one that cashes out a round. Whoever holds
-that key can move the player's money, so a player, an operator, or an auditor should be
-able to read exactly what holds it, build it, and compare it with what is
-served. Closed code asks you to trust; open code lets you check.
+action the player takes, including the one that cashes out a round. Whoever
+holds that key can move the player's money, so a player, an operator, or an
+auditor should be able to read exactly what holds it, build it, and compare it
+with what is served. Closed code asks you to trust; open code lets you check.
 
 Because everything here is world-readable, there are rules about what may be
 committed: no secrets, no internal hostnames, no unpublished backend internals.
@@ -37,9 +39,10 @@ Package names and the npm scope are working names.
 | `wrapper`        | app     | the UI, built into a release bundle                                         |
 | `reference-game` | app     | a minimal sandboxed game for tests and as a sample                          |
 
-Dependencies point one way: `contracts` (data only) ← `snapshot` and `play-client`
-← `shell` ← `wrapper`; `signing` ← `shell`; `signing`'s tests read the vectors from
-`contracts`' test-only entry (read only by tests; the consumers are listed in the
+Dependencies point one way: `contracts` (data only) ← `snapshot` and
+`play-client` ← `shell` ← `wrapper`; `signing` ← `shell`; `signing`'s tests read
+the vectors from `contracts`' test-only entry (read only by tests; the consumers
+are listed in the
 [client kit spec](./specs/client-kit.md#the-contracts-package)). No cycles. The
 design lives in `specs/` ([client kit](./specs/client-kit.md) and
 [Wrapper](./specs/wrapper.md)) and `decisions/`.
@@ -75,6 +78,7 @@ MIT, see [`LICENSE`](./LICENSE).
 `.opencode/agents` are symlinks to `.ai/agents` (the implementer, reviewer,
 documenter, and pr-shepherd role agents).
 
-On Windows, clone with symlink support (`git config --global core.symlinks true`,
-Developer Mode enabled). Without it the symlinks check out as small text files
-containing the target path; read `.ai/skills/` and `.ai/agents/` directly.
+On Windows, clone with symlink support
+(`git config --global core.symlinks true`, Developer Mode enabled). Without it
+the symlinks check out as small text files containing the target path; read
+`.ai/skills/` and `.ai/agents/` directly.
