@@ -1,5 +1,6 @@
-// Checks of what a build put in `dist/` (specs/client-kit.md, "The `contracts`
-// package" and "Supply chain"): every `exports` target exists, only the
+// Checks of what a build put in `dist/`
+// (specs/client-kit/the-contracts-package.md and
+// specs/client-kit/supply-chain.md): every `exports` target exists, only the
 // intended file types, no test files or build state, and no vector (the
 // `contracts` test-only entry) reachable from the `contracts` runtime entry or
 // mentioned by another package's output.

@@ -137,7 +137,7 @@
         "e2e/package.json",
         "packages/*/README.md",
         "apps/*/README.md",
-        "specs/*.md",
+        "specs/**/*.md",
         "decisions/**",
         "CONTRIBUTING.md",
         "README.md",

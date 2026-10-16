@@ -9,7 +9,7 @@ description: Use when adding or changing behavior, signing code, contracts, or t
 
 - [.ai/memories/testing.md](../../memories/testing.md) (orientation) and the
   testing section of the kit's spec (the rules:
-  [`specs/client-kit.md`](../../../specs/client-kit.md#testing-and-ci) and the
+  [`specs/client-kit/testing-and-ci.md`](../../../specs/client-kit/testing-and-ci.md) and the
   [Wrapper test plan](../../../specs/wrapper.md#test-plan)).
 
 ## Workflow

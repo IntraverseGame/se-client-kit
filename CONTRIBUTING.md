@@ -71,7 +71,7 @@ repository root, `pnpm --filter @intraverse/se-client-<name> build` builds its
 its Vitest tests (a package has a `test` script only once it has a real test).
 `pnpm check` runs everything CI runs. The source layout of `contracts`, the
 build-output check, and the Vite guard of the Wrapper are described in
-[`specs/client-kit.md`](./specs/client-kit.md#the-contracts-package).
+[`specs/client-kit/the-contracts-package.md`](./specs/client-kit/the-contracts-package.md).
 
 Playwright browsers are not installed by `pnpm install` (lifecycle scripts are
 off). When a suite exists, run `pnpm exec playwright install chromium` once.
@@ -294,7 +294,7 @@ memory only, typed errors, injected time and randomness.
 
 Levels and rules: [`.ai/memories/testing.md`](./.ai/memories/testing.md); the
 authoritative testing sections are
-[`specs/client-kit.md`](./specs/client-kit.md#testing-and-ci) and
+[`specs/client-kit/testing-and-ci.md`](./specs/client-kit/testing-and-ci.md) and
 [`specs/wrapper.md`](./specs/wrapper.md#test-plan). New behavior needs tests;
 tests are deterministic and hermetic. The one exception is the preview-stack
 end-to-end run (T-10 to T-12), which the backend repository's job owns and which

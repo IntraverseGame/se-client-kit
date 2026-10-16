@@ -49,9 +49,9 @@ document.
 
 ## More
 
-- [The `contracts` package](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit.md#the-contracts-package)
+- [The `contracts` package](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit/the-contracts-package.md)
   and
-  [Packages](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit.md#packages)
+  [Packages](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit/packages.md)
   in the kit specification
 
 Contributing: see

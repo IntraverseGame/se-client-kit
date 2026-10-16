@@ -35,7 +35,11 @@ description: Use before merging any non-trivial change. Reconciles code with spe
 8. Resolve working memories linked to the branch.
 9. Added or resolved a `TODO` marker → check it is still accurate
    (`git grep -n "TODO"`).
-10. Report what was synchronized, or state "no drift" with the evidence.
+10. Added, renamed, moved, or split a spec section → the table of contents in
+    [`specs/README.md`](../../../specs/README.md#table-of-contents) matches the
+    headings, a long contract section lives in its own file as the
+    conventions there say, and no "above" or "below" points across files.
+11. Report what was synchronized, or state "no drift" with the evidence.
 
 ## Constraints
 

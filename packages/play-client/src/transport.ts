@@ -112,8 +112,8 @@ export type Transport = {
 /**
  * The `Authorization` header value for a play token. Provisional: the bearer
  * form is not confirmed by a published Play API document (W-3, marked in
- * specs/wrapper.md); `Bearer <token>` is assumed, and this is the one place to
- * change it.
+ * specs/wrapper/session-open-and-the-play-token.md); `Bearer <token>` is
+ * assumed, and this is the one place to change it.
  */
 export const bearerAuthorization = (token: string): string => `Bearer ${token}`;
 

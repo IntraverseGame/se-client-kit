@@ -5,7 +5,7 @@ last-verified: 2026-10-16 (signing pull request; the tooling tests, a jsdom smok
 
 # Testing (agent context)
 
-Rules: [specs/client-kit.md](../../specs/client-kit.md#testing-and-ci) and the
+Rules: [specs/client-kit/testing-and-ci.md](../../specs/client-kit/testing-and-ci.md) and the
 [Wrapper test plan](../../specs/wrapper.md#test-plan); procedure for adding
 tests: [write-tests skill](../skills/write-tests/SKILL.md).
 

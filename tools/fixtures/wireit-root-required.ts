@@ -131,6 +131,8 @@ export const rootRequirements = (
         "README.md",
         "specs/client-kit.md",
         "specs/probe.md",
+        "specs/client-kit/testing-and-ci.md",
+        "specs/client-kit/probe.md",
         "decisions/ADR-001-toolchain-and-signing.md",
         "runbook/development/probe.md",
         ...workspaces.flatMap(directory => [

@@ -1,6 +1,6 @@
 // Fixture values for the tests. The deadlines are the kind of value a redeem
 // or refresh response carries; tests read them from here, never from numbers
-// written in the test (specs/wrapper.md, "Session open and the play token").
+// written in the test (specs/wrapper/session-open-and-the-play-token.md).
 
 /** The local clock at the start of every test. */
 export const START_MS: number = Date.parse("2026-10-16T12:00:00.000Z");

@@ -18,9 +18,9 @@ the sample is specified to show.
 
 ## More
 
-- [The game iframe and the controller boundary](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper.md#the-game-iframe-and-the-controller-boundary)
+- [The game iframe and the controller boundary](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper/the-game-iframe-and-the-controller-boundary.md)
   in the Wrapper specification
-- [Packages](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit.md#packages)
+- [Packages](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit/packages.md)
   in the kit specification
 
 Contributing: see

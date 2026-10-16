@@ -5,8 +5,8 @@ import { normalizePath, textForms } from "./guard-text.ts";
 // The Wrapper bundle must never contain a vector. Vite inlines imported data
 // and drops the specifier, so the finished bundle cannot be inspected for it;
 // the guard fails the build the moment the module graph reaches the `contracts`
-// test-only entry or any vector (specs/client-kit.md, "The `contracts`
-// package", check 2).
+// test-only entry or any vector (specs/client-kit/the-contracts-package.md,
+// check 2).
 //
 // What it covers, in the build and for module requests of the dev server, in the
 // main pipeline and in the worker pipeline (vite.config.ts adds it to

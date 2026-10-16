@@ -37,7 +37,7 @@
               "@intraverse/se-client-reference-game",
               "@intraverse/se-client-reference-game/**"
             ],
-            "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+            "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
           },
           {
             "group": [
@@ -156,7 +156,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -216,7 +216,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -269,7 +269,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -320,7 +320,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -364,7 +364,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -422,7 +422,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -466,7 +466,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -524,7 +524,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -571,7 +571,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -616,7 +616,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -660,7 +660,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -709,7 +709,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -755,7 +755,7 @@
                   "@intraverse/se-client-wrapper",
                   "@intraverse/se-client-wrapper/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -808,7 +808,7 @@
                   "@intraverse/se-client-wrapper",
                   "@intraverse/se-client-wrapper/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [
@@ -854,7 +854,7 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**"
                 ],
-                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
               {
                 "group": [

@@ -1,5 +1,5 @@
-// Rules for the README.md of every package and app (specs/client-kit.md,
-// "Packages"). A package README is public documentation: npm renders it on the
+// Rules for the README.md of every package and app
+// (specs/client-kit/packages.md). A package README is public documentation: npm renders it on the
 // package page, and it is read by someone who has never seen this repository. It
 // is written for a consumer, its links stay inside this repository and work on
 // npm, and it holds no contributor or agent process. The check is hermetic: it

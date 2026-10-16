@@ -89,9 +89,9 @@ signer.destroy(); // at the end of the session
 
 ## More
 
-- [The cryptography](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit.md#the-cryptography)
+- [The cryptography](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit/the-cryptography.md)
   in the kit specification
-- [Signing start, move, cash-out, and cancel](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper.md#signing-start-move-cash-out-and-cancel)
+- [Signing start, move, cash-out, and cancel](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper/signing-start-move-cash-out-and-cancel.md)
   in the Wrapper specification
 
 Contributing: see

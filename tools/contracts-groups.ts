@@ -1,6 +1,7 @@
 // The contracts the kit vendors, and where each lands in packages/contracts.
-// The layout is pinned by specs/client-kit.md ("Source layout"); the public
-// names by "How the kit gets its contracts".
+// The layout is pinned by specs/client-kit/the-contracts-package.md ("Source
+// layout"); the public names by
+// specs/client-kit/how-the-kit-gets-its-contracts.md.
 
 export type Group = {
   readonly id: string;

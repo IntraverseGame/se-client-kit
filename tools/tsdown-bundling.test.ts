@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { base } from "../tsdown.base.ts";
 
-// Proof of the bundling rule (specs/client-kit.md, "Supply chain"): a package's
+// Proof of the bundling rule (specs/client-kit/supply-chain.md): a package's
 // own source is the only thing in its dist; nothing from node_modules is ever
 // bundled. A kit package stays an import even when it is a devDependency, a
 // `dependencies` entry stays an import, and any other package (a devDependency

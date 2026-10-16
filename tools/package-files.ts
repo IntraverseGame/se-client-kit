@@ -1,5 +1,6 @@
 // Checks of the `files` field of every library under `packages/`
-// (specs/client-kit.md, "The `contracts` package" and "Supply chain"): `files`
+// (specs/client-kit/the-contracts-package.md and
+// specs/client-kit/supply-chain.md): `files`
 // restricts what `npm pack` puts in a tarball (npm always adds `package.json`
 // and the README), so each library lists only its `dist` output. `contracts`
 // lists an allow-list that fails closed: its runtime entry and the
