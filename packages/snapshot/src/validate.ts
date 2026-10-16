@@ -7,7 +7,7 @@ import {
   createEvaluator,
   type Evaluator,
   type ValidationIssue,
-} from "./evaluator/index.ts";
+} from "./evaluator/evaluator.ts";
 import type { ValidPlayProblem, ValidSnapshot } from "./narrowing.ts";
 
 /**

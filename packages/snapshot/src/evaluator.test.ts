@@ -5,7 +5,7 @@ import {
   createEvaluator,
   SUPPORTED_KEYWORDS,
   type ValidationIssue,
-} from "./evaluator/index.ts";
+} from "./evaluator/evaluator.ts";
 
 const issuesOf = (
   schema: unknown,

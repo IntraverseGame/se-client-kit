@@ -34,7 +34,8 @@ description: Use when adding a new package under packages/ (or an app under apps
    graph stays acyclic, a package never imports an app. Record the placement in
    the packages' spec and in the architecture memory.
 2. **Layout:** `packages/<name>/` with `src/` (internals), `src/index.ts` (the
-   only public entry point), `test/`, `package.json`, and a `tsconfig` that
+   only public entry point, holding only `export ... from` re-exports; no other
+   `index.ts` anywhere in the package), `test/`, `package.json`, and a `tsconfig` that
    extends the shared strict base. `package.json` has an `exports` map to the
    entry point only, `"type": "module"`, an explicit `files` list that selects
    only its `dist` output (`["dist"]`; never `src`, `.wireit`, `*.tsbuildinfo`,

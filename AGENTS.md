@@ -139,6 +139,10 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   `this` or `arguments`, and overloads. oxlint (`func-style`,
   `prefer-arrow-callback`) enforces it; a reason goes on any disable comment.
 - Named exports only in libraries; no default exports (ADR-001).
+- `index.ts` is only a package's or an app's entry point (`src/index.ts`) and
+  holds only re-exports (`export { ... } from "...";`): no import, declaration,
+  or logic. Internal directories have no `index.ts`; name the module after what
+  it holds. `tools/index-files.test.ts` enforces it.
 - Imports of another package go through its public entry point (`package.json`
   `exports`), never its internals (ADR-001).
 - Public packages are tree-shakeable ESM with no import-time side effects
