@@ -1,5 +1,5 @@
 {
-  "name": "reference-game",
+  "name": "@intraverse/se-client-reference-game",
   "version": "0.0.0",
   "private": true,
   "description": "A minimal sandboxed game for tests and as a sample.",
@@ -10,18 +10,19 @@
   },
   "wireit": {
     "build": {
-      "command": "tsc -p tsconfig.build.json",
+      "command": "tsdown",
       "files": [
-        "src/**/*.ts",
+        "src/**",
         "!src/**/*.test.ts",
+        "package.json",
         "tsconfig.json",
-        "tsconfig.build.json",
+        "tsdown.config.ts",
+        "../../tsdown.base.ts",
         "../../tsconfig.base.json"
       ],
       "output": [
         "dist/**"
       ],
-      "clean": "if-file-deleted",
       "packageLocks": [
         "pnpm-lock.yaml"
       ]
@@ -29,7 +30,8 @@
     "typecheck": {
       "command": "tsc -p tsconfig.json",
       "files": [
-        "src/**/*.ts",
+        "src/**",
+        "package.json",
         "tsconfig.json",
         "../../tsconfig.base.json"
       ],

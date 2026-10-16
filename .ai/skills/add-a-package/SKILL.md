@@ -12,8 +12,10 @@ description: Use when adding a new package under packages/ (or an app under apps
 - Read [.ai/memories/architecture.md](../../memories/architecture.md).
 - The toolchain exists (pnpm workspace, wireit scripts, oxlint and stylelint, Vitest, tsx for `tools/`). Copy
   the shape of an existing package under `packages/`: `package.json` with the
-  `build` and `typecheck` wireit scripts (and `test` once it has its first real
-  test), `tsconfig.json`, and `tsconfig.build.json`.
+  `build` (`tsdown`) and `typecheck` (`tsc -p tsconfig.json`) wireit scripts (and
+  `test` once it has its first real test), `tsconfig.json` (with `declaration`
+  and `isolatedDeclarations` for a library: every export needs an explicit type),
+  and `tsdown.config.ts` (see `tsdown.base.ts`; add each entry point).
 
 ## Workflow
 
@@ -45,20 +47,39 @@ description: Use when adding a new package under packages/ (or an app under apps
    entries in `.oxlintrc.json` (one for the package, one for its test files)
    carrying a `no-restricted-imports` rule, and the package's name added to the
    restricted groups of the others. Add a negative case to
-   `tools/fixtures/import-direction-cases.ts` proving the rule fires, and add the package
+   `tools/fixtures/import-direction-cases.ts` (the dependency-direction cases;
+   the other rule cases are in `lint-rule-cases.ts` and `style-rule-cases.ts`) proving the rule fires, and add the package
    to the root `build` and `typecheck` wireit dependencies (and `test` when it
-   gets its first test).
-5. **API and types:** strict TypeScript, no `any`, named exports (ADR-001), no
+   gets its first test), and to `packages/*/tsdown.config.ts` coverage of the
+   root `tsconfig.json`. **Wire the graph:** a package resolves another through
+   its `exports`, which point at `dist/`, so its `build`, `typecheck`, and `test`
+   wireit scripts list the `build` of every kit package it imports (and of
+   `contracts` when its tests import the test-only entry) in `dependencies`;
+   otherwise they may see a missing or stale `dist/`. Add the new package's
+   `build` to the `dependencies` of each package or app that will import it.
+5. **API and types:** strict TypeScript, no `any`, named exports (ADR-001), `type`
+   over `interface` and arrow functions over `function` (AGENTS.md), no
    side effects at import. Money amounts are strings or `bigint`. Errors are
    typed. Nothing in the package logs or stores a key or token.
-6. **Tests:** unit tests, vector replay for wire or crypto formats, and the
+6. **Build gotcha (`contracts`):** use named re-exports in its runtime source;
+   `export * as ns` makes rolldown emit an unmapped helper chunk that
+   `pnpm check:build-output` rejects.
+7. **Tests:** unit tests, vector replay for wire or crypto formats, and the
    check that the public entry point exports exactly what the spec lists.
-7. **Release:** a changeset; mark the package private until it is meant to be
+8. **Release:** a changeset; mark the package private until it is meant to be
    published; if it is published, its `exports`, provenance, and license are
    set per the release runbook (planned).
-8. **Docs:** a spec for its contract (with its **Boundary** section), the
-   package map in `.ai/memories/architecture.md` and `overview.md`, and the
-   README package list.
+9. **Docs:** a spec for its contract (with its **Boundary** section), the
+   package map in `.ai/memories/architecture.md` and `overview.md`, the README
+   package list, and the package's own `README.md`. The README is public
+   documentation that ships to npm: write it for a consumer (what it is, when to
+   use it, install line, entry points, guarantees), with links only into this repository
+   (absolute `https://github.com/IntraverseGame/se-client-kit/blob/main/...`; any
+   other host fails) and
+   no contributor material; copy the shape of an existing one. Add the npm
+   metadata to the library's `package.json` (`description`, `keywords`,
+   `license`, `repository` with `directory`, `bugs`, `homepage`).
+   `tools/readmes.test.ts` fails without the README or if it breaks the rules.
 
 ## Constraints
 

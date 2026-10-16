@@ -11,12 +11,12 @@ import { describe, expect, it } from "vitest";
 
 const configFile = join(import.meta.dirname, "..", "stylelint.config.mjs");
 
-interface Case {
+type Case = {
   readonly name: string;
   readonly code: string;
   /** The rule that must report, or undefined when the snippet must be clean. */
   readonly rule: string | undefined;
-}
+};
 
 const cases: readonly Case[] = [
   { name: "clean CSS", code: "a {\n  color: red;\n}\n", rule: undefined },
@@ -113,7 +113,7 @@ const cases: readonly Case[] = [
   },
 ];
 
-async function rulesReported(code: string): Promise<string[]> {
+const rulesReported = async (code: string): Promise<string[]> => {
   const result = await stylelint.lint({
     code,
     codeFilename: "fixture.css",
@@ -122,7 +122,7 @@ async function rulesReported(code: string): Promise<string[]> {
   return result.results.flatMap(entry =>
     entry.warnings.map(warning => warning.rule),
   );
-}
+};
 
 const clean = cases.filter(testCase => testCase.rule === undefined);
 const failing = cases.flatMap(testCase =>

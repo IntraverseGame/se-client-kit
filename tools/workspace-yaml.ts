@@ -7,10 +7,10 @@
 
 export type YamlValue = string | { [key: string]: YamlValue };
 
-export interface WorkspaceSections {
+export type WorkspaceSections = {
   readonly sections: Record<string, YamlValue>;
   readonly problems: string[];
-}
+};
 
 const SECTIONS: ReadonlySet<string> = new Set([
   "overrides",
@@ -18,7 +18,7 @@ const SECTIONS: ReadonlySet<string> = new Set([
   "catalogs",
 ]);
 
-function unquote(token: string): string {
+const unquote = (token: string): string => {
   const trimmed = token.trim();
   const first = trimmed.at(0);
   if (
@@ -29,10 +29,12 @@ function unquote(token: string): string {
     return trimmed.slice(1, -1);
   }
   return trimmed;
-}
+};
 
 /** Split `key: value` at the first colon that is outside quotes. */
-function splitEntry(text: string): { key: string; value: string } | undefined {
+const splitEntry = (
+  text: string,
+): { key: string; value: string } | undefined => {
   let quote = "";
   for (let index = 0; index < text.length; index += 1) {
     const char = text.charAt(index);
@@ -51,9 +53,9 @@ function splitEntry(text: string): { key: string; value: string } | undefined {
     }
   }
   return undefined;
-}
+};
 
-function stripComment(line: string): string {
+const stripComment = (line: string): string => {
   let quote = "";
   for (let index = 0; index < line.length; index += 1) {
     const char = line.charAt(index);
@@ -69,15 +71,15 @@ function stripComment(line: string): string {
     }
   }
   return line;
-}
+};
 
-interface Line {
+type Line = {
   readonly number: number;
   readonly indent: number;
   readonly text: string;
-}
+};
 
-function toLines(source: string[]): Line[] {
+const toLines = (source: string[]): Line[] => {
   const lines: Line[] = [];
   source.forEach((raw, index) => {
     const text = stripComment(raw).trimEnd();
@@ -90,13 +92,13 @@ function toLines(source: string[]): Line[] {
     }
   });
   return lines;
-}
+};
 
 /** Parse the block mapping made of `lines` (all indented deeper than the key). */
-function parseBlock(
+const parseBlock = (
   lines: readonly Line[],
   problems: string[],
-): Record<string, YamlValue> {
+): Record<string, YamlValue> => {
   const result: Record<string, YamlValue> = {};
   let index = 0;
   while (index < lines.length) {
@@ -136,9 +138,9 @@ function parseBlock(
     }
   }
   return result;
-}
+};
 
-export function readWorkspaceSections(text: string): WorkspaceSections {
+export const readWorkspaceSections = (text: string): WorkspaceSections => {
   const problems: string[] = [];
   const sections: Record<string, YamlValue> = {};
   const lines = toLines(text.split("\n"));
@@ -165,4 +167,4 @@ export function readWorkspaceSections(text: string): WorkspaceSections {
     }
   }
   return { sections, problems };
-}
+};

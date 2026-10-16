@@ -22,39 +22,39 @@
         "patterns": [
           {
             "group": [
-              "@superengine/contracts",
-              "@superengine/contracts/**",
-              "@superengine/signing",
-              "@superengine/signing/**",
-              "@superengine/snapshot",
-              "@superengine/snapshot/**",
-              "@superengine/play-client",
-              "@superengine/play-client/**",
-              "@superengine/shell",
-              "@superengine/shell/**",
-              "wrapper",
-              "wrapper/**",
-              "@superengine/wrapper",
-              "@superengine/wrapper/**",
-              "reference-game",
-              "reference-game/**",
-              "@superengine/reference-game",
-              "@superengine/reference-game/**"
+              "@intraverse/se-client-contracts",
+              "@intraverse/se-client-contracts/**",
+              "@intraverse/se-client-signing",
+              "@intraverse/se-client-signing/**",
+              "@intraverse/se-client-snapshot",
+              "@intraverse/se-client-snapshot/**",
+              "@intraverse/se-client-play-client",
+              "@intraverse/se-client-play-client/**",
+              "@intraverse/se-client-shell",
+              "@intraverse/se-client-shell/**",
+              "@intraverse/se-client-wrapper",
+              "@intraverse/se-client-wrapper/**",
+              "@intraverse/se-client-reference-game",
+              "@intraverse/se-client-reference-game/**"
             ],
             "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
           },
           {
             "group": [
-              "@superengine/*/src",
-              "@superengine/*/src/**",
-              "@superengine/*/dist",
-              "@superengine/*/dist/**"
+              "@intraverse/se-client-*/src",
+              "@intraverse/se-client-*/src/**",
+              "@intraverse/se-client-*/dist",
+              "@intraverse/se-client-*/dist/**"
             ],
             "message": "public entry points only (ADR-001)"
           },
           {
             "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
             "message": "no relative import into another package (ADR-001)"
+          },
+          {
+            "group": ["@superengine", "@superengine/**"],
+            "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
           }
         ]
       }
@@ -117,7 +117,21 @@
     "typescript/no-import-type-side-effects": "error",
     "typescript/no-non-null-assertion": "error",
     "vitest/no-focused-tests": "error",
-    "vitest/no-disabled-tests": "error"
+    "vitest/no-disabled-tests": "error",
+    "typescript/consistent-type-definitions": ["error", "type"],
+    "func-style": [
+      "error",
+      "expression",
+      {
+        "allowArrowFunctions": true
+      }
+    ],
+    "prefer-arrow-callback": [
+      "error",
+      {
+        "allowNamedFunctions": false
+      }
+    ]
   },
   "overrides": [
     {
@@ -129,44 +143,44 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/signing",
-                  "@superengine/signing/**",
-                  "@superengine/snapshot",
-                  "@superengine/snapshot/**",
-                  "@superengine/play-client",
-                  "@superengine/play-client/**",
-                  "@superengine/shell",
-                  "@superengine/shell/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/contracts/testing",
-                  "@superengine/contracts/testing/**"
+                  "@intraverse/se-client-contracts/testing",
+                  "@intraverse/se-client-contracts/testing/**"
                 ],
                 "message": "contracts/testing is for tests only (ADR-001)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(signing|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -189,44 +203,44 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/signing",
-                  "@superengine/signing/**",
-                  "@superengine/snapshot",
-                  "@superengine/snapshot/**",
-                  "@superengine/play-client",
-                  "@superengine/play-client/**",
-                  "@superengine/shell",
-                  "@superengine/shell/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/contracts/testing",
-                  "@superengine/contracts/testing/**"
+                  "@intraverse/se-client-contracts/testing",
+                  "@intraverse/se-client-contracts/testing/**"
                 ],
                 "message": "contracts/testing is for tests only (ADR-001)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(signing|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -242,37 +256,37 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/contracts",
-                  "@superengine/contracts/**",
-                  "@superengine/snapshot",
-                  "@superengine/snapshot/**",
-                  "@superengine/play-client",
-                  "@superengine/play-client/**",
-                  "@superengine/shell",
-                  "@superengine/shell/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-contracts",
+                  "@intraverse/se-client-contracts/**",
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -295,35 +309,35 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/snapshot",
-                  "@superengine/snapshot/**",
-                  "@superengine/play-client",
-                  "@superengine/play-client/**",
-                  "@superengine/shell",
-                  "@superengine/shell/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -339,42 +353,42 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/signing",
-                  "@superengine/signing/**",
-                  "@superengine/play-client",
-                  "@superengine/play-client/**",
-                  "@superengine/shell",
-                  "@superengine/shell/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/contracts/testing",
-                  "@superengine/contracts/testing/**"
+                  "@intraverse/se-client-contracts/testing",
+                  "@intraverse/se-client-contracts/testing/**"
                 ],
                 "message": "contracts/testing is for tests only (ADR-001)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|signing|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -397,35 +411,35 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/signing",
-                  "@superengine/signing/**",
-                  "@superengine/play-client",
-                  "@superengine/play-client/**",
-                  "@superengine/shell",
-                  "@superengine/shell/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|signing|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -441,42 +455,42 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/signing",
-                  "@superengine/signing/**",
-                  "@superengine/snapshot",
-                  "@superengine/snapshot/**",
-                  "@superengine/shell",
-                  "@superengine/shell/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/contracts/testing",
-                  "@superengine/contracts/testing/**"
+                  "@intraverse/se-client-contracts/testing",
+                  "@intraverse/se-client-contracts/testing/**"
                 ],
                 "message": "contracts/testing is for tests only (ADR-001)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|signing|snapshot|shell|wrapper|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -499,42 +513,42 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/signing",
-                  "@superengine/signing/**",
-                  "@superengine/snapshot",
-                  "@superengine/snapshot/**",
-                  "@superengine/shell",
-                  "@superengine/shell/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/contracts/testing",
-                  "@superengine/contracts/testing/**"
+                  "@intraverse/se-client-contracts/testing",
+                  "@intraverse/se-client-contracts/testing/**"
                 ],
                 "message": "contracts/testing is for tests only (ADR-001)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|signing|snapshot|shell|wrapper|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -550,31 +564,31 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/contracts",
-                  "@superengine/contracts/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-contracts",
+                  "@intraverse/se-client-contracts/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|wrapper|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -597,29 +611,29 @@
             "patterns": [
               {
                 "group": [
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|wrapper|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -635,33 +649,35 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/contracts",
-                  "@superengine/contracts/**",
-                  "@superengine/signing",
-                  "@superengine/signing/**",
-                  "@superengine/snapshot",
-                  "@superengine/snapshot/**",
-                  "@superengine/play-client",
-                  "@superengine/play-client/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-contracts",
+                  "@intraverse/se-client-contracts/**",
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -684,31 +700,33 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/signing",
-                  "@superengine/signing/**",
-                  "@superengine/snapshot",
-                  "@superengine/snapshot/**",
-                  "@superengine/play-client",
-                  "@superengine/play-client/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -724,35 +742,37 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/contracts",
-                  "@superengine/contracts/**",
-                  "@superengine/signing",
-                  "@superengine/signing/**",
-                  "@superengine/snapshot",
-                  "@superengine/snapshot/**",
-                  "@superengine/play-client",
-                  "@superengine/play-client/**",
-                  "@superengine/shell",
-                  "@superengine/shell/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**"
+                  "@intraverse/se-client-contracts",
+                  "@intraverse/se-client-contracts/**",
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -775,35 +795,37 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/contracts",
-                  "@superengine/contracts/**",
-                  "@superengine/signing",
-                  "@superengine/signing/**",
-                  "@superengine/snapshot",
-                  "@superengine/snapshot/**",
-                  "@superengine/play-client",
-                  "@superengine/play-client/**",
-                  "@superengine/shell",
-                  "@superengine/shell/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**"
+                  "@intraverse/se-client-contracts",
+                  "@intraverse/se-client-contracts/**",
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }
@@ -819,37 +841,37 @@
             "patterns": [
               {
                 "group": [
-                  "@superengine/signing",
-                  "@superengine/signing/**",
-                  "@superengine/snapshot",
-                  "@superengine/snapshot/**",
-                  "@superengine/play-client",
-                  "@superengine/play-client/**",
-                  "@superengine/shell",
-                  "@superengine/shell/**",
-                  "wrapper",
-                  "wrapper/**",
-                  "@superengine/wrapper",
-                  "@superengine/wrapper/**",
-                  "reference-game",
-                  "reference-game/**",
-                  "@superengine/reference-game",
-                  "@superengine/reference-game/**"
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**",
+                  "@intraverse/se-client-reference-game",
+                  "@intraverse/se-client-reference-game/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit.md)"
               },
               {
                 "group": [
-                  "@superengine/*/src",
-                  "@superengine/*/src/**",
-                  "@superengine/*/dist",
-                  "@superengine/*/dist/**"
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
                 ],
                 "message": "public entry points only (ADR-001)"
               },
               {
                 "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
               }
             ]
           }

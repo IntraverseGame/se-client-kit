@@ -55,7 +55,8 @@ pnpm check                 # everything the CI runs
 
 A test that reads files outside its own package (a vector, the schema) must
 have those files in its wireit `files`, or depend on the task that produces
-them; otherwise a cached pass could hide a failure.
+them; otherwise a cached pass could hide a failure. `tools/wireit-inputs.test.ts`
+checks the `files` of every script against the files on disk.
 
 ## Expected output
 

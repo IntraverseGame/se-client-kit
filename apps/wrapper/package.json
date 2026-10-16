@@ -1,5 +1,5 @@
 {
-  "name": "wrapper",
+  "name": "@intraverse/se-client-wrapper",
   "version": "0.0.0",
   "private": true,
   "description": "The Wrapper UI, built by Vite into a release bundle.",
@@ -14,11 +14,21 @@
       "command": "vite build",
       "files": [
         "index.html",
-        "src/**/*.ts",
+        "public/**",
+        "src/**",
         "!src/**/*.test.ts",
+        "!src/fixtures/guard-scratch.ts",
+        "*.ts",
+        "package.json",
         "tsconfig.json",
-        "vite.config.ts",
-        "../../tsconfig.base.json"
+        "../../tsconfig.base.json",
+        "postcss.config.*",
+        ".postcssrc",
+        ".postcssrc.*",
+        "../../package.json",
+        "../../pnpm-workspace.yaml",
+        ".env",
+        ".env.*"
       ],
       "output": [
         "dist/**"
@@ -26,33 +36,51 @@
       "clean": "if-file-deleted",
       "packageLocks": [
         "pnpm-lock.yaml"
+      ],
+      "dependencies": [
+        "../../packages/shell:build"
       ]
     },
     "typecheck": {
       "command": "tsc -p tsconfig.json",
       "files": [
         "index.html",
-        "src/**/*.ts",
+        "src/**",
+        "*.ts",
+        "package.json",
         "tsconfig.json",
-        "vite.config.ts",
         "../../tsconfig.base.json"
       ],
       "output": [],
       "packageLocks": [
         "pnpm-lock.yaml"
+      ],
+      "dependencies": [
+        "../../packages/shell:build"
       ]
     },
     "test": {
       "command": "vitest run",
       "files": [
-        "src/**/*.ts",
+        "index.html",
+        "public/**",
+        "src/**",
+        "*.ts",
+        "package.json",
         "tsconfig.json",
-        "vite.config.ts",
-        "../../tsconfig.base.json"
+        "../../tsconfig.base.json",
+        "../../package.json",
+        "../../pnpm-workspace.yaml",
+        ".env",
+        ".env.*"
       ],
       "output": [],
       "packageLocks": [
         "pnpm-lock.yaml"
+      ],
+      "dependencies": [
+        "../../packages/shell:build",
+        "../../packages/contracts:build"
       ]
     }
   },

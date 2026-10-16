@@ -18,7 +18,9 @@
     "check:deps": "wireit",
     "check:contracts": "wireit",
     "changeset": "changeset",
-    "clean:cache": "find . -name .wireit -type d -not -path '*/node_modules/*' -prune -exec rm -rf {} +"
+    "clean:cache": "find . -name .wireit -type d -not -path '*/node_modules/*' -prune -exec rm -rf {} +",
+    "check:build-output": "wireit",
+    "check:readmes": "wireit"
   },
   "wireit": {
     "check": {
@@ -28,7 +30,9 @@
         "typecheck",
         "test",
         "check:deps",
-        "check:contracts"
+        "check:contracts",
+        "check:build-output",
+        "check:readmes"
       ]
     },
     "build": {
@@ -86,8 +90,16 @@
       "files": [
         "tools/**",
         "vitest.config.ts",
+        "vitest.readmes.config.ts",
+        "tsdown.base.ts",
+        "packages/*/tsdown.config.ts",
+        "apps/*/tsdown.config.ts",
+        "tsconfig.json",
         "tsconfig.base.json",
-        "tsconfig.json"
+        "package.json",
+        "packages/*/package.json",
+        "apps/*/package.json",
+        "e2e/package.json"
       ],
       "output": [],
       "packageLocks": [
@@ -97,7 +109,8 @@
     "test": {
       "dependencies": [
         "./apps/wrapper:test",
-        "test:tools"
+        "test:tools",
+        "check:readmes"
       ]
     },
     "test:tools": {
@@ -105,11 +118,25 @@
       "files": [
         "tools/**",
         "vitest.config.ts",
+        "tsdown.base.ts",
         ".oxlintrc.json",
-        "decisions/ADR-001-toolchain-and-signing.md",
-        "tsconfig.base.json",
+        "stylelint.config.mjs",
+        ".gitignore",
+        ".changeset/config.json",
         "tsconfig.json",
-        "stylelint.config.mjs"
+        "tsconfig.base.json",
+        "package.json",
+        "pnpm-workspace.yaml",
+        "packages/*/package.json",
+        "apps/*/package.json",
+        "e2e/package.json",
+        "packages/*/README.md",
+        "apps/*/README.md",
+        "specs/*.md",
+        "decisions/**",
+        "CONTRIBUTING.md",
+        "README.md",
+        "runbook/**"
       ],
       "output": [],
       "packageLocks": [
@@ -125,8 +152,10 @@
       "command": "tsx tools/check-dependency-allowlist.ts",
       "files": [
         "**/package.json",
-        "tools/**",
         "pnpm-workspace.yaml",
+        "tools/**",
+        "tsconfig.json",
+        "tsconfig.base.json",
         "!**/dist/**"
       ],
       "output": [],
@@ -137,9 +166,15 @@
     "check:contracts": {
       "command": "tsx tools/check-contracts.ts",
       "files": [
-        "**/*.{ts,mts,cts,tsx,js,mjs,cjs}",
+        "**/*.{ts,mts,cts,tsx,js,mjs,cjs,jsx,cjsx,mjsx,ctsx,mtsx}",
         "!**/dist/**",
-        "tools/**"
+        "!**/coverage/**",
+        "!**/playwright-report/**",
+        "!**/test-results/**",
+        "tools/**",
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.base.json"
       ],
       "output": [],
       "packageLocks": [
@@ -147,14 +182,16 @@
       ]
     },
     "lint:ts": {
-      "command": "oxlint -c .oxlintrc.json packages apps e2e tools vitest.config.ts",
+      "command": "oxlint -c .oxlintrc.json packages apps e2e tools vitest.config.ts vitest.readmes.config.ts",
       "files": [
-        "**/*.{ts,mts,cts,tsx,js,mjs,cjs}",
+        "**/*.{ts,mts,cts,tsx,js,mjs,cjs,jsx,cjsx,mjsx,ctsx,mtsx}",
+        "**/*.json",
         "!**/dist/**",
+        "!**/coverage/**",
+        "!**/playwright-report/**",
+        "!**/test-results/**",
         ".oxlintrc.json",
-        "**/tsconfig*.json",
-        "**/package.json",
-        ".gitignore"
+        "**/.gitignore"
       ],
       "output": [],
       "packageLocks": [
@@ -166,24 +203,58 @@
       "files": [
         "**/*.css",
         "!**/dist/**",
+        "!**/coverage/**",
+        "!**/playwright-report/**",
+        "!**/test-results/**",
         "!**/.wireit/**",
         "!**/node_modules/**",
         "stylelint.config.mjs",
-        ".gitignore"
+        "**/stylelint.config.*",
+        "**/.stylelintrc*",
+        ".stylelintignore",
+        "**/.gitignore",
+        "**/package.json"
       ],
       "output": [],
       "packageLocks": [
         "pnpm-lock.yaml"
       ]
+    },
+    "check:build-output": {
+      "command": "tsx tools/check-build-output.ts",
+      "dependencies": [
+        "build"
+      ],
+      "files": [
+        "tools/**",
+        "!tools/**/*.test.ts",
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.base.json",
+        "packages/*/package.json",
+        "apps/*/package.json",
+        "packages/contracts/src/**",
+        "packages/*/dist/**",
+        "apps/*/dist/**"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "check:readmes": {
+      "command": "vitest run --config vitest.readmes.config.ts"
     }
   },
   "devDependencies": {
+    "@changesets/changelog-github": "1.0.1",
     "@changesets/cli": "3.0.3",
     "@types/node": "24.19.1",
     "jsdom": "30.1.2",
     "oxfmt": "0.72.0",
     "oxlint": "1.87.0",
     "stylelint": "17.16.0",
+    "tsdown": "0.23.0",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vitest": "5.0.3",

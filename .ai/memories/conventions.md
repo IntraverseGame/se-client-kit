@@ -21,7 +21,7 @@ This note records the patterns behind them.
   `@ts-expect-error` is checked by review, not by a rule.
   `unicorn/require-module-specifiers` is off only for the empty `export {};`
   skeletons; the first real package pull request re-enables it. Relative imports
-  carry the `.ts` extension; `tsc` rewrites it on build. Prefer
+  carry the `.ts` extension; tsdown bundles it on build (no extension is left in `dist/`). Prefer
   `unknown` at trust boundaries and narrow it with a validator.
 - **Tests:** a package gets a `test` script (and its entry in the root `test`
   wireit dependencies) with its first real test. Never add a placeholder test
@@ -29,10 +29,38 @@ This note records the patterns behind them.
 - **CSS:** stylelint with explicit rules (`stylelint.config.mjs`): no unknown
   names or values, no `!important`, no `@import`, no remote `url()` (strict CSP),
   no vendor prefixes, no stylistic rule (oxfmt formats).
+- **Declarations:** libraries set `isolatedDeclarations`, so every exported
+  value, function, and class member has an explicit type (re-exports of types use
+  `export type`); `tsc --noEmit` and tsdown's `oxc` generator both enforce it.
+  The `.d.ts` files are therefore exactly the declared API, never inferred.
+- **`type` over `interface`; arrow functions over `function`** (both enforced by
+  oxlint). Write `export const f = (a: number): number => { ... };`, not
+  `export function f(...)`. `interface` is only for a class to `implements` or
+  for declaration merging (global or module augmentation); `function` only for a
+  generator (`const g = function* (): Generator<T> { ... }`), a function with its
+  own `this` or `arguments`, and overloads. oxlint flags every `interface`
+  (even an implemented one) and every function declaration, so an exception
+  takes a disable comment such as
+  `// eslint-disable-next-line typescript/consistent-type-definitions -- a class implements it`;
+  oxlint cannot require the reason, so review enforces it. Known gaps: `export
+  default function` and a function expression assigned to a variable
+  (`const f = function () {}`) are not flagged; review catches them.
+- **README per package and app is public documentation** (it ships to npm and is
+  read by someone who has never seen the repository): consumer-facing (what, when
+  to use, install line, entry points, guarantees), only what is true and tested,
+  only absolute links into this repository
+  (`https://github.com/IntraverseGame/se-client-kit/blob/main/...`; any other host,
+  public or private, fails),
+  no contributor or agent material (tooling, lint, CI, review, internal issue
+  numbers), and the library `package.json` carries the npm metadata
+  (`description`, `keywords`, `license`, `repository` with `directory`, `bugs`,
+  `homepage`). Updated in the same change as the public API or role (spec drift
+  sync); `tools/readme-rules.ts` and `tools/readmes.test.ts` enforce it. `e2e/`
+  has none: it is neither an app nor a package.
 - **Exports** _(ADR-001)_: named exports only in libraries; a single public
   entry point per package; no import-time side effects.
-- **Money:** amounts are decimal **strings** on the wire and `bigint` in code,
-  in base units. Never `number`, never floating point. A decimal value (rate,
+- **Money:** an amount (`Amount.value`) is a **string** of base units on the wire
+  and a `bigint` in code. Never `number`, never floating point. A decimal value (rate,
   fee) is never a ledger amount; converting one to base units uses an explicit,
   specified rounding mode. Parse amounts in one place per package.
 - **Secrets:** the action key and play token live in the shell's memory for the

@@ -3,5 +3,12 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["tools", "vitest.config.ts"]
+  "include": [
+    "tools",
+    "vitest.config.ts",
+    "tsdown.base.ts",
+    "packages/*/tsdown.config.ts",
+    "apps/*/tsdown.config.ts",
+    "vitest.readmes.config.ts"
+  ]
 }

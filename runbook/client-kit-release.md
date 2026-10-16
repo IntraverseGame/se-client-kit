@@ -73,9 +73,10 @@ org owners apply the settings; ask them for each.
    publishing credential, if one is needed, is a secret of this environment
    only, never a repository-level secret.
    <!-- TODO(infrastructure owner): the form of the npm credential (trusted publishing from the release workflow needs no stored token), the npm organization, and its scope. -->
-6. **npm:** create the organization once the scope is chosen
-   <!-- TODO(TPO): the npm scope -->; owned by the org owners; two-factor
-   required.
+6. **npm:** claim the `intraverse` organization (intended scope `@intraverse`,
+   packages `@intraverse/se-client-<name>`, decided in ADR-001). It is not
+   claimed yet; this step is part of the publishing work (#12). It is owned by
+   the org owners, not a person; two-factor required.
 
 ### Sync a contract into the kit
 
@@ -107,7 +108,15 @@ The kit uses changesets.
 2. On merge to `main`, the release workflow opens or updates a **version pull
    request** that applies the changesets (versions and changelogs). Review it:
    the versions, the changelogs, and that the lock file's contract entries match
-   what the notes say.
+   what the notes say. The changelogs come from `@changesets/changelog-github`
+   (repository `IntraverseGame/se-client-kit`), which calls the GitHub API when
+   `changeset version` runs, so that job needs a `GITHUB_TOKEN`: the token the
+   Actions runtime provides to the release job, with the least permissions the
+   job needs (to open the version pull request), passed to the step as an
+   environment variable. It is never a stored secret or a personal token, and it
+   is never committed. Nothing else needs it: install, build, and
+   `changeset status` work offline. The release workflow does not exist yet
+   (#12).
 3. Merging the version pull request starts the **publish** job in the
    `npm-publish` environment. A required reviewer approves the deployment. The
    job builds from the lockfile with `--frozen-lockfile`, publishes each changed
@@ -119,6 +128,8 @@ The kit uses changesets.
 ### Verify before and after
 
 Before publishing (in the version pull request's CI): all required jobs green;
+the tarball content check (arriving with the first release build) shows each
+published package contains its `README.md` and `LICENSE` and no test-only entry;
 the contract hashes match the lock; the bundle's size budget holds; the bundle
 is the unmodified bundle (no test or per-environment build) and contains no
 vector.

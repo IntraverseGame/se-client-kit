@@ -30,6 +30,10 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   Preview-stack e2e runs elsewhere, against a pinned commit of this repository.
 - **Contracts check:** CI recomputes the hash of every file in the `contracts` package
   against its lock file, and regenerates the types to fail on a diff.
+- **Build output:** `pnpm check:build-output` (after `pnpm build`) inspects every
+  `dist/`: only `.js` (with its `.js.map`) and `.d.ts` (no declaration map, no `sourceMappingURL` comment), no test file or build state, and no
+  vector reachable from the `contracts` runtime entry (import graph plus source
+  maps), covered by `tools/build-output.test.ts`.
 - **Static:** lint, format check, `tsc --noEmit`, and the import-direction
   rules.
 
@@ -49,7 +53,8 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - `tools/import-direction.test.ts` is the proof that the dependency-direction
   and other lint rules fail on a violation: it runs the real oxlint binary and
   `.oxlintrc.json` over scratch files, with the cases in
-  `tools/fixtures/import-direction-cases.ts`. Add a case there with every new
+  `tools/fixtures/` (`import-direction-cases.ts`, `lint-rule-cases.ts`,
+  `style-rule-cases.ts`, merged by the test). Add a case there with every new
   package or rule; write the expectation from the spec, not from the config.
 - `tools/css-lint.test.ts` does the same for `stylelint.config.mjs` with CSS
   snippets (the stylelint API with the real config). Add a case with a new CSS

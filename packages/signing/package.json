@@ -1,8 +1,24 @@
 {
-  "name": "@superengine/signing",
+  "name": "@intraverse/se-client-signing",
   "version": "0.0.0",
   "private": true,
-  "description": "EIP-712 and secp256k1 signing.",
+  "description": "EIP-712 and secp256k1 signing for SuperEngine's signed actions, with canonical 65-byte signatures.",
+  "keywords": [
+    "superengine",
+    "eip-712",
+    "secp256k1",
+    "signing"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IntraverseGame/se-client-kit.git",
+    "directory": "packages/signing"
+  },
+  "bugs": {
+    "url": "https://github.com/IntraverseGame/se-client-kit/issues"
+  },
+  "homepage": "https://github.com/IntraverseGame/se-client-kit/tree/main/packages/signing#readme",
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -17,26 +33,31 @@
   },
   "wireit": {
     "build": {
-      "command": "tsc -p tsconfig.build.json",
+      "command": "tsdown",
       "files": [
-        "src/**/*.ts",
+        "src/**",
         "!src/**/*.test.ts",
+        "package.json",
         "tsconfig.json",
-        "tsconfig.build.json",
+        "tsdown.config.ts",
+        "../../tsdown.base.ts",
         "../../tsconfig.base.json"
       ],
       "output": [
         "dist/**"
       ],
-      "clean": "if-file-deleted",
       "packageLocks": [
         "pnpm-lock.yaml"
       ]
     },
     "typecheck": {
       "command": "tsc -p tsconfig.json",
+      "dependencies": [
+        "../contracts:build"
+      ],
       "files": [
-        "src/**/*.ts",
+        "src/**",
+        "package.json",
         "tsconfig.json",
         "../../tsconfig.base.json"
       ],

@@ -1,5 +1,5 @@
 {
-  "name": "e2e",
+  "name": "@intraverse/se-client-e2e",
   "version": "0.0.0",
   "private": true,
   "description": "Playwright suite and the fake Play API.",
@@ -12,20 +12,25 @@
     "test": {
       "command": "playwright test --pass-with-no-tests",
       "dependencies": [
-        "../apps/wrapper:build"
+        "../apps/wrapper:build",
+        "../packages/contracts:build"
       ]
     },
     "typecheck": {
       "command": "tsc -p tsconfig.json",
       "files": [
-        "**/*.ts",
-        "!node_modules/**",
+        "*.ts",
+        "tests/**",
+        "package.json",
         "tsconfig.json",
         "../tsconfig.base.json"
       ],
       "output": [],
       "packageLocks": [
         "pnpm-lock.yaml"
+      ],
+      "dependencies": [
+        "../packages/contracts:build"
       ]
     }
   },

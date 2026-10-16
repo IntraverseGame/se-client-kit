@@ -7,48 +7,48 @@
 const EXACT_VERSION =
   /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 
-export function isExactVersion(specifier: unknown): specifier is string {
+export const isExactVersion = (specifier: unknown): specifier is string => {
   return typeof specifier === "string" && EXACT_VERSION.test(specifier);
-}
+};
 
 /** Why a specifier is not acceptable for an external package, or undefined. */
-export function externalSpecifierProblem(
+export const externalSpecifierProblem = (
   specifier: unknown,
-): string | undefined {
+): string | undefined => {
   if (isExactVersion(specifier)) return undefined;
   if (typeof specifier !== "string")
     return "has a specifier that is not a string";
   if (specifier.startsWith("catalog:")) return undefined;
   return `has the specifier "${specifier}", which is not an exact registry version`;
-}
+};
 
 /**
  * The package a pnpm or npm override key targets: the last segment of a
  * `parent>child` selector, without its version selector.
  */
-export function overrideTarget(key: string): string {
+export const overrideTarget = (key: string): string => {
   const last = key.split(">").at(-1) ?? key;
   const at = last.indexOf("@", 1);
   return at === -1 ? last : last.slice(0, at);
-}
+};
 
-export interface SpecifierContext {
+export type SpecifierContext = {
   /** Names the allow-list accepts for an external package. */
   readonly allowedNames: ReadonlySet<string>;
   readonly workspaceNames: ReadonlySet<string>;
-}
+};
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+};
 
-function checkEntry(
+const checkEntry = (
   where: string,
   name: string,
   specifier: unknown,
   context: SpecifierContext,
   kind: "override" | "catalog",
-): string[] {
+): string[] => {
   if (context.workspaceNames.has(name)) {
     const isWorkspace =
       typeof specifier === "string" && specifier.startsWith("workspace:");
@@ -71,7 +71,7 @@ function checkEntry(
   const problem = reference ? undefined : externalSpecifierProblem(specifier);
   if (problem !== undefined) problems.push(`${where} ${problem}`);
   return problems;
-}
+};
 
 /**
  * Check an `overrides`-style map (`overrides`, `pnpm.overrides`,
@@ -79,11 +79,11 @@ function checkEntry(
  * version. Nested objects (npm's form) are checked recursively; their `.` key
  * is the parent's own value.
  */
-export function checkOverrides(
+export const checkOverrides = (
   where: string,
   overrides: unknown,
   context: SpecifierContext,
-): string[] {
+): string[] => {
   if (!isRecord(overrides)) return [`${where} is not an object`];
   const problems: string[] = [];
   for (const [key, value] of Object.entries(overrides)) {
@@ -108,28 +108,28 @@ export function checkOverrides(
     }
   }
   return problems;
-}
+};
 
 /** Check one catalog: name -> specifier. */
-export function checkCatalog(
+export const checkCatalog = (
   where: string,
   catalog: unknown,
   context: SpecifierContext,
-): string[] {
+): string[] => {
   if (!isRecord(catalog)) return [`${where} is not an object`];
   return Object.entries(catalog).flatMap(([name, specifier]) =>
     checkEntry(`${where}.${name}`, name, specifier, context, "catalog"),
   );
-}
+};
 
 /** Check `catalogs`: catalog name -> catalog. */
-export function checkCatalogs(
+export const checkCatalogs = (
   where: string,
   catalogs: unknown,
   context: SpecifierContext,
-): string[] {
+): string[] => {
   if (!isRecord(catalogs)) return [`${where} is not an object`];
   return Object.entries(catalogs).flatMap(([name, catalog]) =>
     checkCatalog(`${where}.${name}`, catalog, context),
   );
-}
+};

@@ -34,11 +34,23 @@ Several agents and people work in one clone at once. Rules:
 ## Day-to-day
 
 - Scripts: `pnpm install --frozen-lockfile`, `pnpm check` (format check, lint,
-  typecheck, unit tests, dependency allow-list, contracts check), `pnpm test`,
+  typecheck, unit tests, dependency allow-list, contracts check, build,
+  build-output check), `pnpm test`,
   `pnpm test:e2e`, `pnpm lint` (oxlint and stylelint), `pnpm format` (writes; oxfmt is the only formatter, for code, Markdown, and
   YAML), `pnpm format:check`,
   `pnpm typecheck`, `pnpm build`, `pnpm changeset`. Never an ad-hoc equivalent.
-- **tsx** runs the TypeScript scripts under `tools/`; stylelint lints CSS
+- **Watch at the next tsdown bump:** `pnpm install` reports 24 deprecated
+  sub-dependencies (the `@yuku-*` platform bindings, pulled in through
+  tsdown's toolchain). They block nothing; check whether the new version drops
+  them.
+- **Changesets** use `@changesets/changelog-github` (repository
+  `IntraverseGame/se-client-kit`). `pnpm changeset` and `changeset status` work
+  offline; only `changeset version` in the future release job needs a
+  `GITHUB_TOKEN`, the Actions-provided token with least privilege, never a stored
+  secret.
+- **tsdown** builds each package into `dist/` (`pnpm build`; shared options in
+  `tsdown.base.ts`, entries in the package's `tsdown.config.ts`); `tsc --noEmit`
+  only type-checks. **tsx** runs the TypeScript scripts under `tools/`; stylelint lints CSS
   (`pnpm lint:css`); both are root-only dev dependencies.
 - **wireit** runs the scripts. Each is declared in the `wireit` section of the
   `package.json` that owns it (`command`, `files`, `output`, `dependencies`,
@@ -56,7 +68,11 @@ Several agents and people work in one clone at once. Rules:
   a repository secret; there is no remote cache. A cache hit may only replace a
   run whose inputs are all declared, so the gating scripts (`check:deps`,
   `check:contracts`, `lint`, `test:tools`) list every file they read; add to
-  `files` whenever a check reads a new file.
+  `files` whenever a check reads a new file. `tools/wireit-inputs.test.ts` holds
+  every script's `files` to the files on disk and to probes (a schema or vector
+  of `contracts`, a Wrapper `public/` file); it fails for a missing input or for
+  a script that has a command and no `files` without being declared to run
+  every time. Use `src/**` (not `src/**/*.ts`) so JSON, CSS and assets count.
 - **Supply chain.** `pnpm-workspace.yaml` sets `minimumReleaseAge` (7 days),
   `allowBuilds` with no `true` entry (no lifecycle script runs), `trustPolicy: no-downgrade`, and
   exact saves. Dependabot's cooldown (npm and github-actions) matches the age. Every Action is pinned by

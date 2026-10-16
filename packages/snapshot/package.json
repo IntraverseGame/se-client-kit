@@ -1,8 +1,24 @@
 {
-  "name": "@superengine/snapshot",
+  "name": "@intraverse/se-client-snapshot",
   "version": "0.0.0",
   "private": true,
-  "description": "Validator and render helpers for se.snapshot/1.",
+  "description": "Validator and render helpers for the SuperEngine Snapshot (se.snapshot/1).",
+  "keywords": [
+    "superengine",
+    "snapshot",
+    "validator",
+    "json-schema"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IntraverseGame/se-client-kit.git",
+    "directory": "packages/snapshot"
+  },
+  "bugs": {
+    "url": "https://github.com/IntraverseGame/se-client-kit/issues"
+  },
+  "homepage": "https://github.com/IntraverseGame/se-client-kit/tree/main/packages/snapshot#readme",
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -17,26 +33,34 @@
   },
   "wireit": {
     "build": {
-      "command": "tsc -p tsconfig.build.json",
+      "command": "tsdown",
+      "dependencies": [
+        "../contracts:build"
+      ],
       "files": [
-        "src/**/*.ts",
+        "src/**",
         "!src/**/*.test.ts",
+        "package.json",
         "tsconfig.json",
-        "tsconfig.build.json",
+        "tsdown.config.ts",
+        "../../tsdown.base.ts",
         "../../tsconfig.base.json"
       ],
       "output": [
         "dist/**"
       ],
-      "clean": "if-file-deleted",
       "packageLocks": [
         "pnpm-lock.yaml"
       ]
     },
     "typecheck": {
       "command": "tsc -p tsconfig.json",
+      "dependencies": [
+        "../contracts:build"
+      ],
       "files": [
-        "src/**/*.ts",
+        "src/**",
+        "package.json",
         "tsconfig.json",
         "../../tsconfig.base.json"
       ],

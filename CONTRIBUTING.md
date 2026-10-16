@@ -29,14 +29,14 @@ less than seven days ago (`pnpm-workspace.yaml`).
 
 ```sh
 pnpm install --frozen-lockfile   # install exactly what the lockfile says
-pnpm check                       # format check, lint, typecheck, unit tests, allow-list, contracts check
+pnpm check                       # format check, lint, typecheck, unit tests, allow-list, contracts check, build, build-output check
 pnpm test                        # unit and component tests
 pnpm test:e2e                    # Playwright, against the in-repo fake Play API
 pnpm lint                        # oxlint (with the dependency-direction rules) and stylelint (CSS)
 pnpm format                      # writes: oxfmt formats everything it supports
 pnpm format:check                # the same, read-only
 pnpm typecheck
-pnpm build
+pnpm build                       # packages: tsdown (bundled ESM with .js.map, and .d.ts); the Wrapper: Vite
 pnpm changeset                   # add release notes for a change to a published package
 ```
 
@@ -51,6 +51,27 @@ is the GitHub Actions cache; there is no remote cache and no secret.
 cached result (also if you suspect a stale entry). When you add a file a script
 reads, add it to that script's `files`; a task that reads another package's
 output depends on that package's task.
+
+Every package under `packages/` and app under `apps/` has its own `README.md`,
+and it is **public documentation**: npm renders it on the package page, so it is
+written for a consumer who has never seen this repository (what it is, when to
+use it, the install line, entry points, the guarantees that matter to a user),
+says only what is true and tested today, and links only into this repository
+with absolute `https://github.com/IntraverseGame/se-client-kit/blob/main/...`
+URLs (any other host fails). Build, CI, lint, review, and agent material stays
+out of it and lives here and in the specification. Update it in the same change
+when the package's public API or role changes. `pnpm check` (its
+`pnpm check:readmes` step) fails if one is missing, has a relative, external,
+ignored, or broken link, or mentions a contributor-only term (the list is in
+`tools/readme-rules.ts`).
+
+**Working on a single package** (kept out of the package READMEs): from the
+repository root, `pnpm --filter @intraverse/se-client-<name> build` builds its
+`dist/` with tsdown, `... typecheck` runs `tsc --noEmit`, and `... test` runs
+its Vitest tests (a package has a `test` script only once it has a real test).
+`pnpm check` runs everything CI runs. The source layout of `contracts`, the
+build-output check, and the Vite guard of the Wrapper are described in
+[`specs/client-kit.md`](./specs/client-kit.md#the-contracts-package).
 
 Playwright browsers are not installed by `pnpm install` (lifecycle scripts are
 off). When a suite exists, run `pnpm exec playwright install chromium` once.
@@ -253,16 +274,17 @@ configuration (`.oxlintrc.json`) also enforces the package dependency direction,
 the public-entry-point rule, and the code rules of `AGENTS.md` that a linter can
 express (no `any`, no default exports in libraries, no side-effect imports, a
 reason on every `@ts-expect-error`). Every such rule has a fixture case in
-`tools/fixtures/import-direction-cases.ts`; add one with a new rule. A
-lint-disable comment that suppresses nothing is itself an error. **stylelint**
-(`stylelint.config.mjs`, explicit rules, no shared config) lints CSS for
-correctness and the Wrapper's constraints: no unknown properties, at-rules, or
-values, no duplicates, no `!important`, no `@import`, no remote `url()` (the CSP
-and the SuperEngine origin), no vendor prefixes; it has no stylistic rule,
-because oxfmt formats. The repository's own TypeScript scripts in `tools/` run
-with `tsx` (`pnpm check:deps`, `pnpm check:contracts`). The reason on a disable
-comment or a `@ts-expect-error` is enforced by review (the human reviewer and
-the reviewer agent), not by a rule.
+`tools/fixtures/` (`import-direction-cases.ts`, `lint-rule-cases.ts`, and
+`style-rule-cases.ts`, merged by `tools/import-direction.test.ts`); add one with
+a new rule. A lint-disable comment that suppresses nothing is itself an error.
+**stylelint** (`stylelint.config.mjs`, explicit rules, no shared config) lints
+CSS for correctness and the Wrapper's constraints: no unknown properties,
+at-rules, or values, no duplicates, no `!important`, no `@import`, no remote
+`url()` (the CSP and the SuperEngine origin), no vendor prefixes; it has no
+stylistic rule, because oxfmt formats. The repository's own TypeScript scripts
+in `tools/` run with `tsx` (`pnpm check:deps`, `pnpm check:contracts`). The
+reason on a disable comment or a `@ts-expect-error` is enforced by review (the
+human reviewer and the reviewer agent), not by a rule.
 
 Conventions: [`.ai/memories/conventions.md`](./.ai/memories/conventions.md). In
 short: strict TypeScript, no `any`, money as strings or `bigint`, secrets in

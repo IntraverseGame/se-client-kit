@@ -5,7 +5,8 @@ import { findIllegalImports, isTestPath } from "./test-only-entry.ts";
 const files = (entries: Record<string, string>): ReadonlyMap<string, string> =>
   new Map(Object.entries(entries));
 
-const IMPORT = 'import { vectors } from "@superengine/contracts/testing";\n';
+const IMPORT =
+  'import { vectors } from "@intraverse/se-client-contracts/testing";\n';
 
 describe("contracts test-only entry isolation", () => {
   it("accepts test files, test helpers, and the e2e suite", () => {
@@ -25,9 +26,9 @@ describe("contracts test-only entry isolation", () => {
       files({
         "packages/shell/src/index.ts": IMPORT,
         "apps/wrapper/src/main.ts":
-          "export * from '@superengine/contracts/testing/signing';\n",
+          "export * from '@intraverse/se-client-contracts/testing/signing';\n",
         "packages/snapshot/src/ok.ts":
-          'import {} from "@superengine/contracts";\n',
+          'import {} from "@intraverse/se-client-contracts";\n',
       }),
     );
     expect(result).toEqual([
@@ -57,7 +58,7 @@ describe("contracts test-only entry isolation", () => {
         "packages/contracts/src/testing.ts": "export {};\n",
         "packages/contracts/src/testing/index.ts":
           'export * from "./signing.ts";\n',
-        "README.md": "@superengine/contracts/testing",
+        "README.md": "@intraverse/se-client-contracts/testing",
       }),
     );
     expect(result).toEqual([]);

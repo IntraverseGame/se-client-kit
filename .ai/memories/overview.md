@@ -34,8 +34,8 @@ world-readable and cannot be taken back, so what may be committed is limited
 
 Dependency direction: `contracts` ← `snapshot` and `play-client` ← `shell` ←
 `wrapper`; `signing` ← `shell`; tests read vectors from `contracts`' test-only
-entry. The npm scope is undecided
-<!-- TODO: npm scope -->
+entry. The intended npm names are `@intraverse/se-client-<name>` (not claimed on
+npm yet; that is part of the publishing work, #12).
 
 Details: [architecture.md](./architecture.md).
 

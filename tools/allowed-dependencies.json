@@ -5,6 +5,7 @@
   },
   "development": [
     "@axe-core/playwright",
+    "@changesets/changelog-github",
     "@changesets/cli",
     "@playwright/test",
     "@types/node",
@@ -15,6 +16,7 @@
     "oxlint",
     "pnpm",
     "stylelint",
+    "tsdown",
     "tsx",
     "typescript",
     "vite",

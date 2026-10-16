@@ -77,20 +77,25 @@ above. Procedure:
 ## Commands
 
 The toolchain is pnpm workspaces, TypeScript, Vite, Vitest, Playwright, oxlint,
-oxfmt, stylelint (CSS), tsx (the `tools/` scripts), changesets, and wireit for
-task orchestration and caching (ADR-001). Use these scripts and never an ad-hoc
+oxfmt, stylelint (CSS), tsdown (the packages' `dist/`), tsx (the `tools/`
+scripts), changesets (with the GitHub changelog generator), and wireit for task
+orchestration and caching (ADR-001). Use these scripts and never an ad-hoc
 equivalent; Node and pnpm are pinned in `.node-version` and `packageManager`.
 
 - `pnpm install --frozen-lockfile` · `pnpm check` (format check, lint,
-  typecheck, unit tests, the dependency allow-list, the contracts check)
+  typecheck, unit tests, the dependency allow-list, the contracts check, then a
+  build and the build-output check)
 - `pnpm test` (unit and component) · `pnpm test:e2e` (Playwright, against the
   in-repo fake Play API)
 - `pnpm lint` (oxlint and stylelint; also `pnpm lint:ts` and `pnpm lint:css`) ·
   `pnpm format` (writes) · `pnpm format:check` · `pnpm typecheck` · `pnpm build`
+  (tsdown for packages, Vite for the Wrapper) · `pnpm check:build-output`
+  (inspect every `dist/`)
 - `pnpm check:deps` (every `package.json` dependency is on the ADR-001
-  allow-list) · `pnpm check:contracts` (only tests import the `contracts`
-  test-only entry) · `pnpm changeset` (add release notes) · `pnpm clean:cache`
-  (forget cached task results)
+  allow-list) · `pnpm check:readmes` (every package and app README follows the
+  public-README rules) · `pnpm check:contracts` (only tests import the
+  `contracts` test-only entry) · `pnpm changeset` (add release notes) ·
+  `pnpm clean:cache` (forget cached task results)
 
 The scripts are wireit scripts: each declares its inputs and outputs, and a
 script whose inputs did not change is skipped from the cache in `.wireit/`.
@@ -122,6 +127,17 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   `unknown`; only the `snapshot` validator turns it into a typed value.
 - Strict TypeScript (`strict`, no implicit `any`); no `any` and no `@ts-ignore`
   / `@ts-expect-error` without a reason on the same line.
+- Prefer `type` over `interface`: `interface` only when a class `implements` it,
+  or for declaration merging (global or module augmentation), with a
+  lint-disable comment that names the rule and gives the reason on the same
+  line; extension is an intersection (`type B = A & { ... }`).
+- Prefer arrow functions over `function`, exported ones included: write
+  `export const f = (a: number): number => { ... };`, not
+  `export function f(a: number): number { ... }`. `function` stays only where an
+  arrow cannot do the job: a generator (written as
+  `const g = function* (): Generator<T> { ... }`), a function that needs its own
+  `this` or `arguments`, and overloads. oxlint (`func-style`,
+  `prefer-arrow-callback`) enforces it; a reason goes on any disable comment.
 - Named exports only in libraries; no default exports (ADR-001).
 - Imports of another package go through its public entry point (`package.json`
   `exports`), never its internals (ADR-001).

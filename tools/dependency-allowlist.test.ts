@@ -15,7 +15,7 @@ const pkg = (directory: string, json: object): Manifest => ({
 });
 
 /** The package names in the first column of ADR-001's dependency table. */
-function adrTablePackages(): string[] {
+const adrTablePackages = (): string[] => {
   const adr = readFileSync(
     join(repoRoot, "decisions", "ADR-001-toolchain-and-signing.md"),
     "utf8",
@@ -32,13 +32,13 @@ function adrTablePackages(): string[] {
     }
   }
   return [...names];
-}
+};
 
 describe("dependency allow-list", () => {
   it("accepts the allowed runtime dependencies in signing", () => {
     const manifests = [
       pkg("packages/signing", {
-        name: "@superengine/signing",
+        name: "@intraverse/se-client-signing",
         dependencies: { "@noble/curves": "1.0.0", "@noble/hashes": "1.0.0" },
       }),
     ];
@@ -51,10 +51,10 @@ describe("dependency allow-list", () => {
         name: "root",
         devDependencies: { typescript: "7.0.2", wireit: "0.14.13" },
       }),
-      pkg("packages/snapshot", { name: "@superengine/snapshot" }),
+      pkg("packages/snapshot", { name: "@intraverse/se-client-snapshot" }),
       pkg("packages/shell", {
-        name: "@superengine/shell",
-        dependencies: { "@superengine/snapshot": "workspace:*" },
+        name: "@intraverse/se-client-shell",
+        dependencies: { "@intraverse/se-client-snapshot": "workspace:*" },
       }),
     ];
     expect(findViolations(manifests, allowlist)).toEqual([]);
@@ -101,13 +101,26 @@ describe("dependency allow-list", () => {
 
   it("fails on a kit package that does not use the workspace protocol", () => {
     const manifests = [
-      pkg("packages/snapshot", { name: "@superengine/snapshot" }),
+      pkg("packages/snapshot", { name: "@intraverse/se-client-snapshot" }),
       pkg("packages/shell", {
-        name: "@superengine/shell",
-        dependencies: { "@superengine/snapshot": "^1.0.0" },
+        name: "@intraverse/se-client-shell",
+        dependencies: { "@intraverse/se-client-snapshot": "^1.0.0" },
       }),
     ];
     expect(findViolations(manifests, allowlist)).toHaveLength(1);
+  });
+
+  it("rejects the old working scope as a dependency", () => {
+    const manifests = [
+      pkg("packages/shell", {
+        name: "@intraverse/se-client-shell",
+        dependencies: { "@superengine/signing": "workspace:*" },
+      }),
+    ];
+    expect(findViolations(manifests, allowlist)).toEqual([
+      "packages/shell/package.json: dependencies.@superengine/signing is not an allowed runtime dependency (ADR-001, decision 8)",
+      'packages/shell/package.json: dependencies.@superengine/signing has the specifier "workspace:*", which is not an exact registry version',
+    ]);
   });
 
   it("fails on bundled dependencies", () => {

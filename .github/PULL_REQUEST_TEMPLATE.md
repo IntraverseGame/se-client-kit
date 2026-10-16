@@ -4,12 +4,13 @@
 
 ## How it was verified
 
-<!-- Commands run (e.g. `pnpm check`, `pnpm test:e2e`) and results. -->
+<!-- Commands run (e.g. `pnpm check`, `pnpm build` when a package changed, `pnpm test:e2e`) and results. -->
 
 ## Checklist
 
 - [ ] `pnpm check` passes locally (format, lint for TypeScript and CSS,
-      typecheck, unit tests, dependency allow-list, contracts check).
+      typecheck, unit tests, dependency allow-list, contracts check, build and
+      build-output check).
 - [ ] Generated code regenerated and committed; no generated file edited by
       hand.
 - [ ] **Spec Drift Synchronization:** code and `specs/` agree; any behavior
@@ -25,6 +26,10 @@
       user-visible behavior.
 - [ ] Package boundaries hold: dependency direction respected, other packages
       imported through their public entry point only.
+- [ ] The `README.md` of each package or app I touched is current when its
+      public API or role changed; it is public documentation (it ships to npm):
+      written for a consumer, with links only into this repository and no
+      contributor material.
 - [ ] Money amounts are strings or `bigint`; no key or token is logged,
       serialized, or stored.
 - [ ] **Public repository:** no secrets, tokens, keys (other than the public

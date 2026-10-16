@@ -61,6 +61,15 @@ plan and flag any divergence.
 
 ## Things not to "fix"
 
+- **Packages build with tsdown, not tsc.** `exports` point at `dist/` (`index.js`
+  and `index.d.ts`; `contracts` also `testing.*`), so a package that imports
+  another sees its built `dist/`: the wireit `build`, `typecheck`, and `test`
+  scripts depend on the `build` of the kit packages they import. `contracts`
+  builds two entries, so the test-only entry is a separate chunk and the runtime
+  entry's import graph never reaches it (checked by `check:build-output`).
+  `isolatedDeclarations` is on for libraries; do not turn it off to avoid
+  writing a return type.
+
 - **Lifecycle scripts are off** (no `true` entry in `allowBuilds` of `pnpm-workspace.yaml`; `esbuild`, brought by
   `tsx`, is denied explicitly) and
   a version must be seven days old (`minimumReleaseAge`). Do not add a build
@@ -83,4 +92,4 @@ plan and flag any divergence.
 
 ## Known open items
 
-<!-- TODO: npm scope; hosting and deploy of the released Wrapper (credentials stay outside this repository); CODEOWNERS handles. -->
+<!-- TODO: hosting and deploy of the released Wrapper (credentials stay outside this repository); CODEOWNERS handles. -->

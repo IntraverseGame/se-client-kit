@@ -11,7 +11,14 @@ import { dirname, join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { type Case, cases } from "./fixtures/import-direction-cases.ts";
+import {
+  type Case,
+  cases as directionCases,
+} from "./fixtures/import-direction-cases.ts";
+import { ruleCases } from "./fixtures/lint-rule-cases.ts";
+import { styleCases } from "./fixtures/style-rule-cases.ts";
+
+const cases: readonly Case[] = [...directionCases, ...ruleCases, ...styleCases];
 
 // Proof that the dependency-direction lint rule (specs/client-kit.md,
 // "Dependency direction") fails on a violation. Each case writes a small file
@@ -23,11 +30,11 @@ import { type Case, cases } from "./fixtures/import-direction-cases.ts";
 const repoRoot = join(import.meta.dirname, "..");
 const oxlintBin = join(repoRoot, "node_modules", ".bin", "oxlint");
 
-interface Diagnostic {
+type Diagnostic = {
   readonly code: string;
   readonly filename: string;
   readonly message: string;
-}
+};
 
 // oxlint reports an unused disable directive without a rule code.
 const codeOf = (diagnostic: Diagnostic): string =>

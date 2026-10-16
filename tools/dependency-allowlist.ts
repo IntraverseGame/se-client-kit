@@ -15,20 +15,20 @@ import {
 } from "./dependency-specifiers.ts";
 import { readWorkspaceSections } from "./workspace-yaml.ts";
 
-export interface Allowlist {
+export type Allowlist = {
   /** Runtime dependency name -> the package directories allowed to use it. */
   readonly runtime: Readonly<Record<string, readonly string[]>>;
   readonly development: readonly string[];
-}
+};
 
-export interface Manifest {
+export type Manifest = {
   /**
    * Directory of the package.json relative to the repository root ("" for the
    * root).
    */
   readonly directory: string;
   readonly json: unknown;
-}
+};
 
 const RUNTIME_FIELDS = [
   "dependencies",
@@ -37,33 +37,33 @@ const RUNTIME_FIELDS = [
 ] as const;
 const DEVELOPMENT_FIELDS = ["devDependencies"] as const;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+};
 
-function label(manifest: Manifest): string {
+const label = (manifest: Manifest): string => {
   return manifest.directory === ""
     ? "package.json"
     : `${manifest.directory}/package.json`;
-}
+};
 
-function nameOf(manifest: Manifest): string | undefined {
+const nameOf = (manifest: Manifest): string | undefined => {
   return isRecord(manifest.json) && typeof manifest.json["name"] === "string"
     ? manifest.json["name"]
     : undefined;
-}
+};
 
-interface Context extends SpecifierContext {
+type Context = SpecifierContext & {
   readonly allowlist: Allowlist;
-}
+};
 
-function checkSection(
+const checkSection = (
   manifest: Manifest,
   field: string,
   runtime: boolean,
   section: Record<string, unknown>,
   context: Context,
-): string[] {
+): string[] => {
   const problems: string[] = [];
   for (const [name, specifier] of Object.entries(section)) {
     const where = `${label(manifest)}: ${field}.${name}`;
@@ -94,14 +94,14 @@ function checkSection(
     if (problem !== undefined) problems.push(`${where} ${problem}`);
   }
   return problems;
-}
+};
 
 /** `overrides`, `pnpm.overrides`, `resolutions`, `catalog`, and `catalogs`. */
-function checkPinning(
+const checkPinning = (
   manifest: Manifest,
   json: Record<string, unknown>,
   context: Context,
-): string[] {
+): string[] => {
   const pnpm = isRecord(json["pnpm"]) ? json["pnpm"] : {};
   const where = label(manifest);
   const sources: [string, unknown, "overrides" | "catalog" | "catalogs"][] = [
@@ -123,9 +123,9 @@ function checkPinning(
       ? []
       : checks[kind](`${where}: ${field}`, value, context),
   );
-}
+};
 
-function checkManifest(manifest: Manifest, context: Context): string[] {
+const checkManifest = (manifest: Manifest, context: Context): string[] => {
   if (!isRecord(manifest.json))
     return [`${label(manifest)}: not a JSON object`];
   const json = manifest.json;
@@ -153,12 +153,12 @@ function checkManifest(manifest: Manifest, context: Context): string[] {
   }
   problems.push(...checkPinning(manifest, json, context));
   return problems;
-}
+};
 
-function contextFor(
+const contextFor = (
   manifests: readonly Manifest[],
   allowlist: Allowlist,
-): Context {
+): Context => {
   const workspaceNames = new Set(
     manifests
       .map(manifest => nameOf(manifest))
@@ -169,14 +169,14 @@ function contextFor(
     ...allowlist.development,
   ]);
   return { allowlist, allowedNames, workspaceNames };
-}
+};
 
 /** The problems found; an empty array means every dependency is allowed. */
-export function findViolations(
+export const findViolations = (
   manifests: readonly Manifest[],
   allowlist: Allowlist,
   workspaceYaml?: string,
-): string[] {
+): string[] => {
   const context = contextFor(manifests, allowlist);
   const problems = manifests.flatMap(manifest =>
     checkManifest(manifest, context),
@@ -185,10 +185,10 @@ export function findViolations(
     problems.push(...checkWorkspaceYaml(workspaceYaml, context));
   }
   return problems;
-}
+};
 
 /** `overrides`, `catalog`, and `catalogs` of pnpm-workspace.yaml. */
-function checkWorkspaceYaml(text: string, context: Context): string[] {
+const checkWorkspaceYaml = (text: string, context: Context): string[] => {
   const { sections, problems } = readWorkspaceSections(text);
   const where = "pnpm-workspace.yaml";
   const overrides = sections["overrides"];
@@ -206,4 +206,4 @@ function checkWorkspaceYaml(text: string, context: Context): string[] {
       ? []
       : checkCatalogs(`${where}: catalogs`, catalogs, context)),
   ];
-}
+};

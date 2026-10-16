@@ -16,10 +16,10 @@ const SKIPPED_DIRECTORIES: ReadonlySet<string> = new Set([
  * `root` with `/` separators, sorted. It walks the whole tree (not only the
  * workspace globs), so a file outside the declared workspace is still seen.
  */
-export function findFiles(
+export const findFiles = (
   root: string,
   accept: (path: string) => boolean,
-): string[] {
+): string[] => {
   const found: string[] = [];
   const walk = (directory: string): void => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -34,8 +34,8 @@ export function findFiles(
   };
   walk(root);
   return found.toSorted();
-}
+};
 
-export function readText(root: string, path: string): string {
+export const readText = (root: string, path: string): string => {
   return readFileSync(join(root, path), "utf8");
-}
+};
