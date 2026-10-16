@@ -5,11 +5,12 @@ custody of the player's action key, the transcript, and the boundary to the
 game.
 
 **Status:** pre-release. Not published to npm yet. Today the public entry holds
-the redacting logger and the package's error type. Key custody, the signer lock,
-and the transcript state are built and tested inside the package, but are not
-exposed: they are reached through the use cases (`start`, `pick`, `cashOut`),
-which are specified, not implemented yet, together with the `CreateRoundAuth`
-and tip checks and the game bridge.
+the redacting logger, the package's error type, and the validation of the chain
+part of the environment configuration. Key custody, the signer lock, the
+transcript state, and the chain tip check are built and tested inside the
+package, but are not exposed: they are reached through the use cases (`start`,
+`pick`, `cashOut`), which are specified, not implemented yet, together with the
+`CreateRoundAuth` check and the game bridge.
 
 ## Install
 
@@ -45,6 +46,20 @@ try {
 }
 ```
 
+Validating the environment configuration at boot:
+
+```ts
+import { validateChainConfig } from "@intraverse/se-client-shell";
+
+const result = validateChainConfig(JSON.parse(documentText));
+if (!result.ok) {
+  // Each issue is a code and a field name, never a value.
+  showConfigurationError(result.issues);
+} else if (result.config.degraded) {
+  showIndicator("chain check not independent (development)");
+}
+```
+
 ## Entry points
 
 - `@intraverse/se-client-shell`: the only entry.
@@ -58,6 +73,23 @@ try {
     fields, and it never passes secret text. The sink gets a frozen plain
     record; a sink that throws is ignored.
   - `REDACTED` is the text every redacting value prints: `[redacted]`.
+  - `validateChainConfig(document)` reads the chain part of the parsed
+    environment configuration: `environment`, `runtimeSigner`, `registryDomain`
+    (`chainId`, `verifyingContract`), `rpcEndpoints` (per entropy source,
+    `{ provider, url }` entries), `minRpcQuorum` (default 2,
+    `DEFAULT_MIN_RPC_QUORUM`), and `tipLagMargin` (per source, required). It
+    returns the configuration typed and frozen, or every issue found. It refuses
+    `production` with `minRpcQuorum` below 2, two endpoints of one source that
+    share a provider or a URL, and a source with fewer endpoints than
+    `minRpcQuorum`. `local` and `preview` may set `minRpcQuorum` to 1; the
+    configuration is then `degraded`. The pinned signer and registry domain are
+    the only trust anchor of the chain checks.
+  - `RpcTransport`, `RpcCall`, and `BlockTag` type the RPC transport the Wrapper
+    supplies: one JSON-RPC 2.0 call (`eth_getBlockByNumber`) to one endpoint,
+    resolving with the response's `result`. The optional third argument is an
+    abort signal (`play-client`'s `CancelSignal`, which the platform
+    `AbortSignal` satisfies) that the shell aborts when the call times out; a
+    transport may ignore it, and a late answer is ignored.
   - `ShellError` is the error the package throws, with a stable `code`
     (`ShellErrorCode`) and a fixed message per code that never carries an input
     value.
@@ -79,7 +111,9 @@ try {
   a URL.
 - It depends on `@intraverse/se-client-signing`,
   `@intraverse/se-client-snapshot`, and `@intraverse/se-client-play-client`.
-- Amounts are strings or `bigint`, never `number`.
+- Amounts and block numbers are strings or `bigint`, never `number`.
+- The chain check asks every configured endpoint, needs `minRpcQuorum` of them
+  to answer and all of them to agree, and never drops an outlier.
 
 ## More
 

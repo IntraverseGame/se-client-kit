@@ -96,11 +96,12 @@ Part of the [Wrapper spec](../wrapper.md), section
   [Decided questions](../wrapper.md#decided-questions)): the minimum number of
   endpoints that must answer is a configuration value, `minRpcQuorum`, and its
   default is **2**. When fewer than that answer (W-26b), the tip check is
-  **failed**, not skipped: the shell signs `PlayerCancel` and shows "could not
-  verify the chain". The environment configuration carries an `environment`
-  field (`production`, `preview`, or `local`). A local or preview environment
-  with one chain endpoint (the local anvil node) may set `minRpcQuorum` to 1,
-  and then the shell MUST show a non-dismissable "chain check not independent
+  **failed**, not skipped, and the shell shows "could not verify the chain"; it
+  signs `PlayerCancel` only if `T_0` is settled, and otherwise signs nothing
+  (W-25, W-26). The environment configuration carries an `environment` field
+  (`production`, `preview`, or `local`). A local or preview environment with one
+  chain endpoint (the local anvil node) may set `minRpcQuorum` to 1, and then
+  the shell MUST show a non-dismissable "chain check not independent
   (development)" indicator and MUST record `tipCheck: "degraded"` with the
   round's evidence (W-27). **Boot rule:** the Wrapper MUST refuse to start if
   `environment` is `production` and `minRpcQuorum` is below 2 (it shows the
@@ -122,23 +123,31 @@ Part of the [Wrapper spec](../wrapper.md), section
     answered **and** (2) **every** answering endpoint agrees: each is within the
     source's lag margin of `h_top`, and all return the same block hash at height
     `h_low` (the shell queries that height on each). The observed tip is
-    `h_top`.
+    `h_top`. The calls are JSON-RPC `eth_getBlockByNumber` with the block tag
+    `finalized`, then with `h_low` as a quantity, each with `false` (no
+    transaction bodies); each call times out per W-43, and an answer that is not
+    a block is no answer
+    ([the `shell` package](../client-kit/the-shell-package.md)).
   - **Failure.** Any answering endpoint that is further than the lag margin
     behind `h_top`, or that returns a different hash at `h_low`, fails the
-    check, as does too few answering. The shell does not drop an outlier and
-    does not pick a side: it signs `PlayerCancel` per W-26. The round's evidence
-    (W-27) records every endpoint's answer (its provider, final block, and the
-    hash at `h_low`).
+    check, as does too few answering, and so does an endpoint that gave its
+    final block but no block at `h_low` within the timeout (it cannot be shown
+    to agree; the player sees "could not verify the chain", as for too few
+    answering). The shell does not drop an outlier and does not pick a side: the
+    round fails per W-26, which signs `PlayerCancel` only if `T_0` is settled
+    and otherwise signs nothing (W-25). The round's evidence (W-27) records
+    every endpoint's answer (its provider, final block, and the hash at
+    `h_low`).
   - **The bind.** The shell records the observed tip with the round's evidence
     and checks `N` against it: for a `future` bind `N` MUST be above that tip;
     for a `tip` bind `N` MUST NOT be older than it, within the source's lag
     margin.
   - **Independent** means providers run by different organizations on separate
     infrastructure: the configuration names each endpoint's provider, and the
-    shell refuses a configuration in which two endpoints share a provider. The
-    configuration schema also refuses an entropy source whose configured
-    endpoint count is below `minRpcQuorum`, so a quorum can never be unreachable
-    by configuration.
+    shell refuses a configuration in which two endpoints of one entropy source
+    share a provider (names compared without case) or a URL. The configuration
+    schema also refuses an entropy source whose configured endpoint count is
+    below `minRpcQuorum`, so a quorum can never be unreachable by configuration.
   <!-- TODO(backend entropy spec): the lag margin in blocks per chain, from the measured RPC lag; it is the `tipLagMargin` configuration value. -->
 - **W-27.** The shell SHOULD keep each round's evidence (its `CreateRoundAuth`,
   the tip-check answers, and every signed action) in memory for the page's life
