@@ -43,7 +43,7 @@ Dependencies point one way: `contracts` (data only) ← `snapshot` and
 `play-client` ← `shell` ← `wrapper`; `signing` ← `shell`; `signing`'s tests read
 the vectors from `contracts`' test-only entry (read only by tests; the consumers
 are listed in the
-[client kit spec](./specs/client-kit.md#the-contracts-package)). No cycles. The
+[client kit spec](./specs/client-kit/the-contracts-package.md)). No cycles. The
 design lives in `specs/` ([client kit](./specs/client-kit.md) and
 [Wrapper](./specs/wrapper.md)) and `decisions/`.
 

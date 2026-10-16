@@ -62,9 +62,9 @@ which returns it as `unknown`) or holding the player's key.
 
 ## More
 
-- [Packages](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit.md#packages)
+- [Packages](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit/packages.md)
   in the kit specification
-- [Rendering from the Snapshot](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper.md#rendering-from-the-snapshot)
+- [Rendering from the Snapshot](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper/rendering-from-the-snapshot.md)
   in the Wrapper specification
 
 Contributing: see

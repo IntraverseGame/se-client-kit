@@ -41,7 +41,8 @@ The kit is a repository of packages and apps. These are its ownership lines.
   - the `contracts` package (the data vendored from the backend and its lock
     file), and the typed client, the Snapshot validator, and the signing code,
     as implementations of contracts it does not define;
-  - the browser e2e suite (its tests; where some of them run is below);
+  - the browser e2e suite (its tests; where some of them run is in
+    [Testing and CI](./client-kit/testing-and-ci.md));
   - its releases: npm packages and the Wrapper bundle.
 - **The SuperEngine backend owns** (the source of truth, in private
   repositories):
@@ -55,7 +56,8 @@ The kit is a repository of packages and apps. These are its ownership lines.
   vectors file (`test/vectors/signing.json`, generated with `viem`).
 - **Neither side imports the other's code.** They share contracts (documents and
   vectors), copied into the kit with a recorded source commit and a content hash
-  ([Contracts](#how-the-kit-gets-its-contracts)). No git submodule is used.
+  ([Contracts](./client-kit/how-the-kit-gets-its-contracts.md)). No git
+  submodule is used.
 
 ## Contract
 
@@ -81,17 +83,17 @@ se-client-kit/
 ```
 
 Every workspace is a pnpm package with wireit scripts (see
-[Task orchestration](#task-orchestration-and-caching)); the root `package.json`
-fans them out. Exactly: the five `packages/*` and `apps/reference-game` have
-`build` and `typecheck`; `apps/wrapper` has `build`, `typecheck`, and `test`
-(Vitest with jsdom; today only an environment smoke test); `e2e`
-(`@intraverse/se-client-e2e`, private) has `typecheck` and `test` (Playwright,
-with no suites yet) and no `build`. **A package gets a `test` script with its
-first real test**, not before: a `test` script that passes with no tests would
-be a green check that checks nothing, so the empty skeletons have none, and the
-root `test` runs the Wrapper's tests and the `tools/` tests (`test:tools`). The
-pull request that adds a package's first test adds its `test` script and its
-entry in the root `test` dependencies.
+[Task orchestration](./client-kit/testing-and-ci.md#task-orchestration-and-caching));
+the root `package.json` fans them out. Exactly: the five `packages/*` and
+`apps/reference-game` have `build` and `typecheck`; `apps/wrapper` has `build`,
+`typecheck`, and `test` (Vitest with jsdom; today only an environment smoke
+test); `e2e` (`@intraverse/se-client-e2e`, private) has `typecheck` and `test`
+(Playwright, with no suites yet) and no `build`. **A package gets a `test`
+script with its first real test**, not before: a `test` script that passes with
+no tests would be a green check that checks nothing, so the empty skeletons have
+none, and the root `test` runs the Wrapper's tests and the `tools/` tests
+(`test:tools`). The pull request that adds a package's first test adds its
+`test` script and its entry in the root `test` dependencies.
 
 Directories are `packages/<name>` and `apps/<name>`. The intended npm names are
 `@intraverse/se-client-<name>` (scope `@intraverse`, decided in
@@ -101,679 +103,46 @@ claimed on npm yet: that is part of the publishing work (#12).
 
 ### Packages
 
-Every package and app has a `README.md`, and it is **public documentation**: npm
-renders it on the package page, and its reader has never seen this repository.
-It is written for a consumer: what the package is and the problem it solves,
-when to use it and when not to, the install line
-(`pnpm add @intraverse/se-client-<name>`, with a plain statement that it is not
-published yet while that is true), a minimal example once a public API exists
-(until then, "pre-release: no public API yet"), the entry points, the guarantees
-and limits that matter to a user, where amounts are touched (strings or
-`bigint`), and links. It states only what is true and tested today. It must not
-hold contributor or agent material (the build and CI tooling, lint rules, the
-dependency-direction matrix, the review process, internal issue numbers); that
-lives in CONTRIBUTING.md, the specification, and the `add-a-package` skill, and
-a one-line pointer to CONTRIBUTING.md is enough. The only links allowed are
-absolute links into this repository
-(`https://github.com/IntraverseGame/se-client-kit/blob/main/...` or
-`/tree/main/...`, so they work on npm) whose paths, and heading anchors for
-Markdown files, exist, plus anchors within the README itself. Any other host,
-public or private, any other branch or repository, and any relative, `http:`, or
-`mailto:` link fails, so no stray or private URL ships in a published README
-(plain-text URLs in prose or code are held to the same rule). Each library's
-`package.json` carries `description`, `keywords`, `license`, `repository` (with
-`directory`), `bugs`, and `homepage`, using only the public repository URL. The
-README is updated in the same change as the API or role it describes.
-`pnpm check:readmes` (an uncached script, because it depends on what git tracks
-and ignores; part of `pnpm check` and `pnpm test`) runs `tools/readme-rules.ts`
-over every README and enforces: the package name; for a library an install line
-and, while it is private, a plain "not published to npm yet"; a "Specified, not
-implemented yet" line when the status says there is no public API or an empty
-entry (the sentence must be in prose: code blocks, inline code, and HTML
-comments do not count); and links. Links are extracted in every form (inline and
-image links, reference definitions, autolinks, HTML `href`, `src`, `srcset`,
-`data`, `poster`, `action`, `formaction`, and other URL attributes in any
-quoting, `url()` in `style` attributes and `<style>` blocks, a
-`<meta http-equiv=refresh>` target, and bare URLs and `www.` hosts in prose),
-matched case-insensitively for the scheme and host. Every inline Markdown
-destination is a link, whatever it looks like (`README`, `docs`, `page#sec`, and
-`%2e%2fa` are resolved relative to the page by a renderer and break on the npm
-package page), including a `<...>` destination, a title, and spaces or newlines
-inside the parentheses. Fenced code blocks (closed ones) and inline code spans
-are removed first, so `fns[i](event)` written as code is not a link, while the
-same text in prose is; a code span written where a destination goes counts as a
-relative destination and fails. Indented code blocks are not recognized (a link
-in one is still extracted). Only absolute links into this repository
-(`blob/main` or `tree/main`) and anchors inside the README are allowed;
-`javascript:`, `data:`, `mailto:`, `ftp:`, `file:`, `www.`, protocol-relative
-`//host`, relative, and any other host fail. A repository link must point at a
-path that exists and is tracked or at least not ignored: with a `.git`
-directory, `git ls-files --cached --others --exclude-per-directory=.gitignore`
-decides (so a file added in the same change, still untracked, is fine, and an
-ignored or build-output file is not); without one (an unpacked copy), the
-repository's `.gitignore` is applied by a small matcher that fails closed on a
-line it cannot interpret (only the root `.gitignore` is read, and a path below a
-nested `.gitignore` fails closed), a path through a symlinked directory is not
-tracked (as with `git ls-files`), and paths under `dist/`, `node_modules/`,
-`.wireit/`, or matching `*.tsbuildinfo` always fail. Words are matched after
-folding: NFKC, zero-width and bidi controls and soft hyphens removed, a small
-set of Cyrillic and Greek lookalikes mapped to Latin, whitespace runs (spaces,
-tabs, newlines, no-break spaces) folded to one space, and case folded (so a
-lowercase "todo" in prose fails), against `TODO`, `FIXME`, `XXX` and a list of
-forbidden contributor terms. Other cross-script lookalikes are left to review.
-
-| Package                                      | Published                | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Depends on (kit)                                                                                           | Runtime dependencies                |
-| -------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `@intraverse/se-client-contracts`            | npm (runtime entry only) | **Data only, no logic.** Everything vendored from the backend and nothing else: the Play API OpenAPI document, the Snapshot JSON Schema, the signing vectors, the Snapshot vectors (and later the signed-action vectors), the types generated from them, `contracts.lock.json` (source commit and content hash per artifact; kept in this repository, not published in the tarball), and the input of the drift-check job. It has **two entry points**: a **runtime** entry (the schemas and the generated types) and a separate **test-only** entry (the vectors), so vectors can never reach a browser bundle ([rules below](#the-contracts-package)).                                         | none                                                                                                       | none                                |
-| `@intraverse/se-client-signing`              | npm                      | The hand-written, fixed-type EIP-712 encoder and secp256k1 signing and recovery: domain separator, type hashes, `hashStruct`, the `0x1901` digest, `PlayerAction`, `PlayerCashOut`, `PlayerCancel`, and the registry types the shell must recompute or verify (`NewRound`, `CreateRoundAuth`, `MarkReadyAuth`, `CloseRoundAuth`, `PayoutTerms`). Canonical 65-byte signatures, key generation, the transcript helper (the `previous` chain, one signature per sequence), and a provisional action grammar ([The cryptography](#the-cryptography) says which types are implemented today). It takes vectors from `contracts` in **tests only** (a development dependency on the test-only entry). | none at run time                                                                                           | `@noble/curves`, `@noble/hashes`    |
-| `@intraverse/se-client-snapshot`             | npm                      | The hand-written validator over the Snapshot schema's keyword profile (the `Snapshot`, `PlayProblem`, and `AmountRequest` validators) and the render helpers (pure functions over a validated Snapshot). It takes the schema and the types from `contracts`, and its tests take the vectors from `contracts`' test entry.                                                                                                                                                                                                                                                                                                                                                                        | `contracts`                                                                                                | none                                |
-| `@intraverse/se-client-play-client`          | npm                      | A typed `fetch` client for the Play API (and the verify API read the Wrapper needs), generated from the OpenAPI documents. It takes its types from `contracts`, returns the Snapshot body as `unknown`, and never interprets it. It holds no credential: the shell keeps the play token and runs its refresh, using the client's request layer and schedule functions.                                                                                                                                                                                                                                                                                                                           | `contracts`                                                                                                | none (it uses the platform `fetch`) |
-| `@intraverse/se-client-shell`                | npm                      | The headless part of the Wrapper: session and token lifecycle, key custody, the transcript, Web Locks, bind-receipt and tip checks, the controller boundary, the redacting types and logger. It has no DOM dependency beyond the platform APIs it is given.                                                                                                                                                                                                                                                                                                                                                                                                                                      | `signing`, `snapshot`, `play-client` (and `contracts` through them)                                        | none                                |
-| `@intraverse/se-client-wrapper` (app)        | no: a release bundle     | The UI: rendering, accessibility, the iframe mount, the build. It uses the shell and renders only what the shell hands it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `shell` (and its types)                                                                                    | none                                |
-| `@intraverse/se-client-reference-game` (app) | no                       | A minimal game for the tests and as a sample for game developers.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | nothing but the type definitions of the controller protocol `se.controller/1` (type-only, no runtime code) | none                                |
-
-Dependency direction. There are no cycles, and a package never imports an app:
-
-```text
-contracts ──▶ snapshot ────┐
-    │                      ├──▶ shell ──▶ wrapper (app)
-    └─────▶ play-client ───┤
-signing ───────────────────┘
-contracts (test-only entry) ──▶ the tests of signing, snapshot, shell, wrapper,
-                                and the e2e fake Play API (devDependencies)
-```
-
-- `contracts` is the only leaf that holds data; `signing` has no kit dependency
-  at run time. `snapshot` and `play-client` depend on `contracts`'s runtime
-  entry. `signing` takes vectors from `contracts`' test-only entry in its tests.
-  No other package imports `contracts` directly except in tests (the consumers
-  of the test-only entry are listed [below](#the-contracts-package)). No package
-  imports another sideways (`snapshot` and `play-client` never import each
-  other), and a package never imports an app.
-- `play-client` returns the Snapshot as `unknown`, so only `snapshot`'s
-  validator can turn it into a typed value: a Snapshot cannot reach the renderer
-  unvalidated by construction.
-- `shell` is the only package that holds a credential. `wrapper` cannot reach
-  the key or the token: the shell exposes use cases (`start`, `pick`, `cashOut`)
-  and read-only state, never a secret.
-- A lint rule enforces the direction: a `no-restricted-imports` entry per
-  package and per package's test files in `.oxlintrc.json`, checked in CI by
-  `pnpm lint`. A fixture test (`tools/import-direction.test.ts`) runs the real
-  configuration over scratch files and fails if a violating import is not
-  reported (the cases are in `tools/fixtures/`: `import-direction-cases.ts`,
-  `lint-rule-cases.ts`, and `style-rule-cases.ts`). The same entries reject
-  another package's internals (`/src`, `/dist`, a relative path into a sibling
-  package) and the `contracts` test-only entry outside tests.
-- The same configuration enforces the other code rules that a linter can
-  express: the `correctness`, `suspicious`, `pedantic`, and `perf` categories
-  (all errors, and any warning fails the run); no `any`; no `@ts-ignore`,
-  `@ts-nocheck`, or reasonless `@ts-expect-error`; no default export in a
-  library; no side-effect import (`import "./x"`), so a module has no
-  import-time side effect from its imports; a `.ts` extension on relative
-  imports; type-only imports marked as such; no non-null assertion, `eval`,
-  `new Function`, or `==`; no `console` in library code; no focused or skipped
-  test; and an unused lint-disable directive is an error. A top-level call or
-  assignment that runs at import time is not expressible as a lint rule and
-  stays a review item, and so does the reason on a lint-disable comment or a
-  `@ts-expect-error`: the human reviewer and the reviewer agent enforce it,
-  there is no rule for it (an unused disable directive is an error). Type-aware
-  rules are not enabled (they need `oxlint-tsgolint`, which is not in the
-  ADR-001 allow-list; adding it is a follow-up pull request with an ADR
-  amendment). `unicorn/require-module-specifiers` is off only because the empty
-  package skeletons are `export {};`; the first pull request that gives a
-  package real code re-enables it.
-- **Code style**: `type` over `interface`
-  (`typescript/consistent-type-definitions`: `interface` only when a class
-  `implements` it, or for declaration merging, with a disable comment naming the
-  rule and giving the reason on the same line; oxlint flags every interface and
-  cannot require the reason, so review enforces it), and arrow functions over
-  `function` (`func-style` in expression style with arrows allowed, so
-  `export function` and `function` declarations are flagged, plus
-  `prefer-arrow-callback`). Canonical form:
-  `export const findProblems = (dists: readonly Dist[]): string[] => { ... };`
-  with explicit parameter and return types, which `isolatedDeclarations`
-  requires of an exported arrow. Exceptions: a generator is a function
-  expression (`const g = function* (): Generator<T> { ... }`), a function that
-  needs its own `this` or `arguments` is a function expression, overloads stay
-  declarations; none of these is flagged. Known gaps (review catches them):
-  `export default function` and `const f = function () {}`.
-- **CSS** is linted by stylelint (`pnpm lint:css`, part of `pnpm lint`) with the
-  hand-written `stylelint.config.mjs`: correctness rules (no unknown property,
-  at-rule, function, unit, or value; no invalid hex color; no duplicate selector
-  or property; no empty block) and the Wrapper's constraints: no `!important`;
-  no `@import`; only `data:` and same-origin relative `url()` (the Wrapper runs
-  under a strict CSP and is served from the SuperEngine origin); no vendor
-  prefixes. It enables no stylistic rule, because oxfmt formats. The cases are
-  in `tools/css-lint.test.ts`. Files under `dist`, `.wireit`, `node_modules`,
-  and the `.gitignore` paths are not linted.
-- **Tool scripts.** The TypeScript scripts under `tools/` run with `tsx`
-  (`tsx tools/<script>.ts`, a root development dependency). `tsx` brings
-  `esbuild`, whose install script only verifies a prebuilt binary; it is denied
-  in `allowBuilds`, so no lifecycle script runs.
+The package table (published name, responsibility, kit and runtime
+dependencies), the public-README rules that `pnpm check:readmes` enforces, the
+dependency direction, and the lint, code-style, CSS, and tool-script rules. See
+[`client-kit/packages.md`](./client-kit/packages.md).
 
 ### The `contracts` package
 
-`contracts` holds the **data** the kit vendors from the backend and **nothing
-else**. It has no logic: no validator, no client, no encoder, no helper. The
-logic packages read it and never write to it.
-
-- **Contents.** The Play API OpenAPI document (the Play and verify documents
-  only), the Snapshot JSON Schema, the signing vectors, the Snapshot vectors
-  (`valid/` and `invalid/`), later the signed-action vectors, the types
-  generated from the documents and the schema (`openapi-typescript` for the
-  OpenAPI documents; `json-schema-to-typescript` for the Snapshot schema, which
-  gives the structural types only: the conditional blindness rules stay with the
-  validator in `snapshot`; its `export interface` declarations are rewritten as
-  `export type` aliases after generation, since it has no option for that, and
-  its "This interface was referenced by ..." notes are dropped from the doc
-  comments; an interface that extends another, or a note in another shape, fails
-  the generation), the **lock file** `contracts.lock.json` (source, source
-  commit, and SHA-256 per artifact), and the input of the drift-check job (the
-  lock file itself and the list of published sources). Generated files are
-  committed and never edited by hand.
-- **Two entry points** (`package.json` `exports`):
-  - the **runtime entry** (`.`) exports the schemas and the generated types. It
-    is the only entry any production code may import;
-  - the **test-only entry** (`./testing`) exports the vectors. Only test files
-    may import it.
-- **Source layout (pinned).** Inside `packages/contracts/src/`, the **runtime
-  sources** are `index.ts` (the runtime entry), `schemas/` (the vendored OpenAPI
-  documents and the Snapshot schema), and `generated/` (the generated types).
-  The **test-only sources** are `testing.ts` (the test-only entry) and
-  `vectors/`: every vendored vector (`vectors/signing.json`, from the backend's
-  `test/vectors/signing.json`; `vectors/snapshot/valid/` and
-  `vectors/snapshot/invalid/`; later the signed-action vectors), and any module
-  that only the test-only entry uses. Nothing else belongs in `src/`. A module
-  that both entries import is a runtime module by definition, so it lives under
-  `schemas/` or `generated/` and holds no vector data. (`test/vectors/...` is
-  the path in the backend's contracts repository, which is already public by
-  name; `contracts.lock.json` records each artifact's public name and the path
-  in this package, never a path inside a private repository.) Today the runtime
-  modules are `schemas/snapshot.ts` (the schema as data of unknown shape) and
-  `generated/snapshot.ts` (its structural types); the test-only module is
-  `vectors/catalog.ts`, generated, which imports every vector.
-  <!-- TODO(Play API document): the backend has not published the Play and verify OpenAPI document yet; it joins `schemas/` with its `openapi-typescript` types under `generated/`. -->
-- **Tarball.** What is published is the allow-list of check 3 below. The
-  manifest still exports `./testing` for the kit's own tests; the published
-  package has no such file. `contracts.lock.json` is not in the tarball: it
-  stays in this repository, and each release's notes state the contracts it was
-  built against.
-- **Public types.** The runtime entry names its public types one by one; a new
-  definition in a vendored schema becomes public API only when it is added
-  there, and a test fails while a generated type is neither exported nor
-  deliberately left out. `Snapshot1` is left out: it is the generator's
-  structural copy of `Snapshot`, which the schema refers to from
-  `PlayProblem.snapshot`.
-- **Display numbers are not amounts.** The generated Snapshot types carry two
-  JSON numbers from the contract: `Amount.normalized` and `Multiplier`, both
-  display-only by the contract's own definition. They are never an input to
-  arithmetic on an amount; amounts are `Amount.value`, a string of base units,
-  read as `bigint` (the money rule in `AGENTS.md`). The validator and render
-  helpers in `snapshot` follow this.
-- **Vectors never reach a browser bundle.** Three checks, all required:
-  1. a lint rule (an import restriction) fails any import of the test-only entry
-     from a file that is not a test file or a test helper;
-  2. the build fails when a vector would reach an output. **The Wrapper** is
-     covered by a Vite plugin (`apps/wrapper/test-only-entry-guard.ts`) that
-     fails the build, and the dev server's module requests, the moment a module
-     in the graph, direct or transitive, (a) is the package specifier
-     `@intraverse/se-client-contracts/testing`, (b) resolves to or loads a path
-     under `contracts/{dist,src}/{testing,vectors}` (case-insensitive: a
-     relative import, a `?raw` or `?url` import, the imports `import.meta.glob`
-     expands to), or (c) writes such a path in its text, which catches
-     `new URL("<path>", import.meta.url)` assets, and `url()` and `src` paths in
-     CSS and HTML, that Vite reads without resolving. Script modules are parsed
-     with the bundler's own parser (Vite's `parseAst`, as TypeScript, before any
-     transform) and every string literal and template element is tested by its
-     decoded value, as it is and normalized (backslashes, `//`, `/./`, `x/..`),
-     so JS escapes and comments, regular expressions, and stray quotes cannot
-     hide a literal. Other modules (CSS, HTML, JSON, ...) are tested as written,
-     with HTML character references decoded (decimal and hex with any number of
-     leading zeros, with or without the semicolon, and the complete set of named
-     references that expand to path characters: the 16 of the standard's 2,231
-     whose expansion is only ASCII letters, digits, and `/ \ . % : ? # & _ - ~`,
-     tab, or newline, compared with the standard's list by a test), with
-     percent-sequences decoded, and with both, each also normalized (CSS escapes
-     such as `\74 ` are not resolved by Vite and reach no file). The raw source
-     text is tested too. A script module of the project that the parser cannot
-     parse is refused (fail closed); third-party code under `node_modules` is
-     not, because the resolve layer covers it and not the literal scan.
-     `parseAst` can crash the process on extremely deeply nested input (about
-     20,000 nested brackets); a crash fails the build, the safe direction. A
-     comment or string that merely mentions such a path fails the build on
-     purpose. The guard is also part of the worker pipeline (`worker.plugins`),
-     so `new Worker(new URL(...))`, `?worker`, `?sharedworker`, and their
-     `&inline` and `&url` forms are covered, a worker that starts another
-     included. The Wrapper's config has no other plugin pipeline; a new one must
-     add the guard too. The guard is off only under Vitest, which loads the
-     config with `command: "serve"`, because component tests may use the
-     vectors; it cannot be turned off for a build by mode or by environment
-     (`vite build --mode test` and a build with `VITEST` set are refused). The
-     Vite API with `configFile: false` bypasses `vite.config.ts` on purpose, and
-     the guard's tests use it. Real Vite builds over fixtures prove each case
-     (`apps/wrapper/src/test-only-entry-guard.test.ts` and
-     `apps/wrapper/src/test-only-entry-guard-paths.test.ts`), and a performance
-     test keeps the source check linear
-     (`test-only-entry-guard-performance.test.ts`). **Not covered:** a path
-     assembled at run time, and the dev server's dependency pre-bundling (it
-     bundles `node_modules` code without these hooks; dev only, nothing ships).
-     A project stylesheet (and the `<style>` block of an HTML page, which Vite
-     hands over as a stylesheet) that mentions CSS `@import` is refused: Vite
-     inlines an imported stylesheet by reading the file itself, bypassing every
-     plugin, so its text cannot be scanned and following the import reliably is
-     not possible (stylelint already bans `@import` in the repository's own
-     CSS). The text is tested as written, with no comment stripping: a stripper
-     that is not aware of strings reads
-     `@charset "/*"; @import "./b.css"; a::after{content:"*/"}` as one comment
-     and misses the import, and a string-aware tokenizer is more code the guard
-     could get wrong, so a comment or a string that merely mentions `@import`
-     fails the build too, like a path mention. A CSS Modules
-     `composes: x from "./y.module.css"` loads a file by reading it as well and
-     is refused the same way (`from global` names no file and is allowed). Other
-     routes the guard does not see (a loader that reads a file by itself) are
-     backed up by the output canary. The guard (the input side) does not look at
-     `public/` either: Vite copies its files verbatim into `dist/` without a
-     module, and the Wrapper has no `public/` today; a vector copied there is
-     caught by the output canary below. **The output canary**
-     (`pnpm check:build-output`, part of `pnpm check` and the `build` job) is
-     independent of the input syntax: it fingerprints every file under
-     `packages/contracts/src/vectors/**` (and the compiled test-only entry
-     `packages/contracts/dist/testing.js` when present) and fails if any emitted
-     file in any `dist/` (the Wrapper's and every package's, with the test-only
-     chunks of `contracts` itself excluded) is a byte-for-byte copy of a vector
-     (SHA-256, so a renamed or hashed file name does not matter, no minimum size
-     for a vector file) or contains a vector's exact content, its minified JSON
-     form (when it parses as JSON), the JSON-escaped form of either (a source
-     map's `sourcesContent`), or its base64 form (a data URI). The text forms
-     are also taken with the trailing newline trimmed and with LF and CRLF line
-     breaks. The substring forms apply only to vectors of at least 64 bytes, so
-     a tiny file such as `[]` cannot cause false positives; the compiled entry
-     is compared only above that size. A missing `packages/contracts/src` fails
-     the check, while a missing `vectors/` directory (the package is a skeleton
-     today) is a documented no-op for the scan, covered by fixture tests with
-     synthetic vectors. **Limits:** data transformed so that none of those forms
-     remains (a JSON object printed as a JavaScript literal with unquoted keys,
-     a re-encoded or compressed copy, a line-wrapped base64 copy, a hex or
-     UTF-16 copy, a re-indented JSON copy, which is covered only through the
-     minified form and only when the vector parses as JSON), and a vector below
-     the minimum size inlined into another file, are not detected; the lint
-     rule, the Wrapper guard, the runtime-graph check, and review cover those.
-     The scan is linear in the size of the dists times the number of forms;
-     there is no size cap. **The libraries** are covered by
-     `pnpm check:build-output`: tsdown bundles, so a vector has no file of its
-     own in `dist/`, and the check is an allow-list over the `contracts` runtime
-     entry. It follows the import graph of `dist/index.js` (and of
-     `dist/index.d.ts`) and reads the source map of every chunk it loads. The
-     test-only chunk must not be reachable; no runtime chunk may import a
-     `contracts` subpath by name; every reachable chunk must have a source map,
-     unless its lines are only blank, line comments (block comments are not
-     recognized, so a `/*` cannot hide code), and pure re-exports or imports
-     (`export * from`, `export { ... } from`, `import ...`); a map must list at
-     least one source and may not have a `sourceRoot` other than empty or `.`
-     (it is not resolved, so the check fails closed); a source that climbs above
-     the package root fails (it is not clamped); and every source must be a
-     runtime source (`src/index.ts`, `src/schemas/`, `src/generated/`), so a
-     vector, the test-only entry, or a data module shared with them anywhere
-     else fails. The import graph follows relative specifiers in quotes and
-     template literals without a substitution; a computed `import()` (a template
-     with `${...}`, a concatenation) is not followed (a residual: the canary
-     still scans every emitted file outside the test-only chunks). **Known
-     limit:** a namespace re-export (`export * as ns from ...`) in the
-     `contracts` runtime source makes rolldown emit a `rolldown-runtime-*.js`
-     helper chunk that has code and no source map, so the check fails closed on
-     honest output. Use named re-exports; extend the check deliberately (a spec
-     change and a test, no ADR) when a namespace re-export is first needed.
-     **Residual weakness:** the check trusts the source maps. If rolldown ever
-     omits a module from `sources`, or a plugin inlines data under an allowed
-     source name, nothing in this check detects it; the lint rule, the Wrapper
-     guard, and review are the other layers. The check also requires every
-     `package.json` `exports` target to exist in `dist/` (an empty or renamed
-     entry fails), fails if another package's output mentions the test-only
-     entry, and fails on any test file, build state, or file in a package
-     `dist/` that is not a `.js` (with its `.js.map`) or a `.d.ts`. Declaration
-     files carry no declaration map and no `sourceMappingURL` comment;
-  3. the published `contracts` tarball excludes the test-only entry (the `files`
-     field), so a consumer of the npm package cannot import vectors at all.
-     Every library's `files` restricts its tarball to its `dist` output (npm
-     always adds `package.json` and the README): `["dist"]` for `signing`,
-     `snapshot`, `play-client`, and `shell`, and for `contracts` an allow-list
-     that fails closed, `dist/index.js`, `dist/index.js.map`, `dist/index.d.ts`,
-     and `dist/runtime/`. Its tsdown config writes a shared chunk to
-     `dist/runtime/` only when every module in it is a runtime source
-     (`src/index.ts`, `src/schemas/`, `src/generated/`) and any other chunk to
-     `dist/chunks/`, which is never published. `pnpm check:package-files` (part
-     of `pnpm check` and the `build` job, after the library builds) evaluates
-     each `files` against the built `dist/`: every file the runtime entry loads
-     (its JavaScript and declaration graphs and their source maps) must be
-     selected, and in `contracts` nothing else may be (no `testing*` file, no
-     chunk only the test-only entry loads). `tools/package-files.test.ts` holds
-     the manifests to the same rules without a build (every library declares
-     `files`, no entry selects `src/`, `.wireit/`, `*.tsbuildinfo`, or a config
-     file, every entry lies under `dist`, `contracts` selects no `testing*`
-     path). Its matcher approximates npm's `files` with the wireit matcher and
-     refuses `!` entries. The full `npm pack` tarball content check, which
-     arrives with the release work (#12), also asserts that each published
-     package contains its `README.md` and `LICENSE`.
-- **Dependencies.** `contracts` depends on no other kit package and has no
-  runtime dependency. `snapshot` and `play-client` depend on its runtime entry;
-  the test-only entry has these consumers, **all of them tests and all of them
-  development dependencies**: the unit tests of `signing`, `snapshot`, and
-  `shell`; the Wrapper's component tests; and the e2e suite's fake Play API. It
-  never reaches a published tarball or a browser bundle (the three checks
-  above).
-- **Replaceable by design.** If the backend later publishes its contracts as a
-  package (OQ-6 decided: publish later, option B), `contracts` is the one
-  package that is replaced by that dependency (or becomes a thin re-export of
-  it). No logic package changes, because none holds a copy or an import path of
-  its own.
-- **The lock file lives here.** A contract sync touches one package.
+What `contracts` holds (data only), its runtime and test-only entry points, the
+pinned source layout, the tarball, the public types, and the three checks that
+keep vectors out of every browser bundle and published tarball. See
+[`client-kit/the-contracts-package.md`](./client-kit/the-contracts-package.md).
 
 ### The `snapshot` package
 
-- **Validators.** `validateSnapshot`, `validatePlayProblem`, and
-  `validateAmountRequest` take an `unknown` value and evaluate it against the
-  vendored `se.snapshot/1` schema (`#`, `#/$defs/PlayProblem`,
-  `#/$defs/AmountRequest`). Each returns `{ ok: true, value }`, with the input
-  itself as the typed value (no copy), or `{ ok: false, issues }`, with every
-  failed keyword in evaluation order. They never throw: an exception on a value
-  that is not JSON (a throwing getter, a proxy) becomes one issue with the
-  keyword `evaluation`.
-- **Issues.** An issue is `{ instancePath, schemaPath, keyword }`: a JSON
-  Pointer into the document, a JSON Pointer to the failing keyword in the schema
-  document (after `$ref` resolution, for example `/$defs/BaseUnits/pattern`),
-  and the keyword. It never holds a value from the document, so `issues[0]` is
-  what W-28 logs. `anyOf`, `oneOf`, `not`, `additionalProperties: false`, and
-  `required` report one issue at the object or keyword location;
-  `additionalProperties` reports at the object in both forms (with `false`, and
-  with a schema, whose issues for an extra member are at the object, since the
-  member's name is document content); `allOf` and the `then`/`else` of an `if`
-  report their subschemas' own issues; so the first issue of every `invalid/`
-  vector is at its `failsAt` pointer (T-5).
-- **The keyword profile.** The evaluator interprets the schema as data (no
-  generated code, no `eval`, no `new Function`; ADR-001 decision 6) and supports
-  exactly the keywords the vendored schema uses: the annotations `$schema`,
-  `$id`, `$comment`, `$defs`, `title`, `description`; `$ref` to `#` or a `#/...`
-  pointer inside the document; `type`, `const`, `enum`, `minimum`, `maximum`,
-  `minLength` and `maxLength` (in code points), `pattern` (ECMA-262 with the `u`
-  flag, unanchored as JSON Schema says; the schema's own `^...$` anchors reject
-  a trailing newline), `required`, `properties`, `additionalProperties`,
-  `dependentRequired`, `items` (one schema), `minItems`, `maxItems`, `allOf`,
-  `anyOf`, `oneOf`, `not`, `if`, `then`, `else`. It **fails closed**: any other
-  keyword, a malformed keyword value, an invalid pattern, or a `$ref` that does
-  not resolve inside the document is the issue `unsupported`, never a silent
-  pass. A test keeps the vendored schema inside the profile, so a schema sync
-  that adds a keyword fails the tests instead of weakening validation.
-- **Strict, as the contract is.** The validator follows the schema exactly: the
-  Snapshot's objects are closed (`additionalProperties: false`, the allow-list),
-  so an unknown field, an unknown `status`, and an unknown error `code` are
-  rejected, as the `invalid/` vectors require. Tolerance (W-29) applies only to
-  what the schema allows: absent optional fields and the members of the objects
-  the schema leaves open (decided by human review, 2026-10-16).
-- **Narrowing.** The generated contract types are flat. The validator checks the
-  schema's conditional rules, so an accepted Snapshot is typed `ValidSnapshot`,
-  a union discriminated by `status` that carries what each status guarantees:
-  `idle` has no round field; `starting` has `roundId` and no play fields;
-  `active` and `resolving` have `proofs` and no `closeReason`; `won` and `lost`
-  have `proofs.randomnessProof.roundSecret`; `canceled` has `proofs`.
-  `isStepsPresentation` (a `StepConfig`) and `isPlaybackPresentation` (a book
-  round with a `BookConfig`) narrow by `presentation`. An accepted Play API
-  error is `ValidPlayProblem`, discriminated by `code`: `ROUND_ACTIVE` carries a
-  `ValidSnapshot` and `retryable: false`, the six retryable codes have
-  `retryable: true`, every other code `retryable: false` and no `snapshot`.
-- **Money.** `parseBaseUnits` is the package's one reader of `Amount.value`: a
-  base-10 string without sign or leading zero, at most 2^256 - 1, read as a
-  `bigint` (`undefined` otherwise). `compareAmounts` compares two amounts of the
-  same `unit` and `decimals` as `bigint` (`undefined` when they differ). No
-  helper reads `normalized` or a multiplier.
-- **What it emits.** Nothing: no logging, no telemetry, no storage. The issues
-  are returned to the caller.
-- **Tests.** The vector runner (T-5) replays every `valid/` and `invalid/`
-  vector through the validator its `definition` names; seeded property tests (a
-  small mulberry32 generator in the package's test helpers, no new dependency)
-  check that the validators never throw, never modify the input, are
-  deterministic, and never reach the fail-closed paths on arbitrary JSON or on
-  mutations of the vectors; T-6a's `snapshot` half covers amounts above 2^53 and
-  at 2^256 - 1.
-- **Not yet.** The render helpers named in [Packages](#packages) follow with the
-  Wrapper's rendering work.
+The `se.snapshot/1` validators, their issues and fail-closed keyword profile,
+strictness, the `ValidSnapshot` and `ValidPlayProblem` narrowing, the amount
+readers, and the tests. See
+[`client-kit/the-snapshot-package.md`](./client-kit/the-snapshot-package.md).
 
 ### The `play-client` request layer
 
-`play-client` is built in two layers: a hand-written request layer, and one
-function per Play API operation on top of it, typed from the Play API document's
-generated types. The request layer exists today; the operations wait for the
-document (the `TODO(Play API document)` marker above). The request layer holds
-these rules (the Wrapper requirements it serves are in brackets):
-
-- **No credential is kept.** The shell holds the play token and runs the refresh
-  loop (W-3, W-6, W-7); `play-client` provides the pieces it uses (the request
-  layer, the refresh schedule, single flight, the retry classes) and never holds
-  a token or schedules a refresh itself. A request takes its `Authorization`
-  value from a function the shell passes, read once per attempt and never
-  stored. The header form is one function, `bearerAuthorization`, provisional
-  until the Play API confirms it (W-3).
-- **The base.** The Play API base must be an `https:` URL; `http:` is allowed
-  only on a loopback host (`localhost`, `127.0.0.1`, `[::1]`), for local
-  development. Any other base, and a base with credentials, a query string, or a
-  fragment, is refused when the transport is created (W-3).
-- **Request options.** Every request is sent with `credentials: "omit"`,
-  `cache: "no-store"`, `referrerPolicy: "no-referrer"`, and `redirect: "error"`
-  (W-3), so the token is never sent on to another URL. A refused redirect
-  surfaces as a `NetworkError` (`network`), which is how the platform `fetch`
-  reports it; a 3xx response that a `fetch` hands back anyway is a
-  `ProtocolError`. A path is absolute below the configured base, and a path with
-  a query string or a fragment is refused: no query string or fragment is sent,
-  and a secret is never placed in a path, because error messages carry the path.
-- **Timeout and cancel.** Every attempt, the body read included, times out
-  (default 15 s, W-43) and is aborted through the platform `AbortController`
-  when there is one. A request may carry the caller's abort signal: aborting it
-  aborts the in-flight `fetch`, or clears a backoff wait, and the request
-  rejects with a `NetworkError` (`aborted`) without another attempt and without
-  reading its `Authorization` again (the shell stops its calls when the session
-  ends, W-7).
-- **Errors.** Three types: `NetworkError` (no response: `timeout`, `network`, or
-  `aborted`; the platform's error is dropped, since it can name the URL),
-  `ProblemError` (an error status with a problem body: its `code`, `retryable`,
-  HTTP `status`, and `requestId` are read, the body stays `unknown` for the
-  `snapshot` validator and is not enumerable, so a console dump shows what the
-  JSON form shows), and `ProtocolError` (an error status without a problem body,
-  or a body that is not JSON). A message and the JSON form hold the method, the
-  path, the status, the `requestId`, and the `code` only (W-4, W-41); never a
-  header, a request body, or the problem's `detail`. A `code` the kit does not
-  know is kept as a string, for the status and `retryable` fallback (W-42).
-- **Retry classes.** A request names its class: `never` (the launch-code redeem:
-  no repeat at all, W-1, W-2), `refresh` (a lost response or a retryable problem
-  is repeated with the same old token; the request must name the old token's
-  local deadline, `localDeadlineMs`, as `notAfterMs`, the type and a runtime
-  check refuse a refresh without it, and no repeat starts at or after it, W-6,
-  W-7), or `idempotent` (a mutating call with its intent's idempotency key, or a
-  read: a lost response or a retryable problem is repeated with the same bytes,
-  W-16, W-42, W-43). A problem that is not `retryable`, an aborted request, and
-  `SESSION_EXPIRED`, `SESSION_REVOKED`, and `UNAUTHENTICATED` whatever their
-  flag, are never repeated. The bound is a configuration value, checked when the
-  transport is created (`maxAttempts` a safe integer of at least 1; both delays
-  finite and non-negative, the initial one not above the maximum). Its defaults
-  are provisional, since W-42 asks only for "a bounded number of times with
-  backoff": 3 attempts in all, waiting 500 ms, then doubling to at most 2 s (the
-  polling rates of W-35), with no jitter.
-- **Token schedule.** Pure functions over the deadline the response carries
-  (W-5): the clock offset from the `Date` header, the refresh point (the earlier
-  of the configured fraction of the lifetime and the margin before the deadline,
-  defaults one third and 60 s, W-6), expiry, and a single-flight wrapper so at
-  most one refresh is in flight. Reading `tokenExpiresAt` assumes a full RFC
-  3339 timestamp with seconds and a zone (`Z` or `+hh:mm`); one without a zone
-  is refused, since it would be read in the device's local time. This is
-  provisional until the Play API document fixes the format.
-- **Idempotency keys** come from an injected random source (`randomUUID`) and
-  must be UUIDs, provisional until the Play API document fixes their limits
-  (W-36).
-- **Provisional items.** The bearer form, the `tokenExpiresAt` format, the
-  idempotency key's form, and the retry defaults above are each one function or
-  constant. Each is replaced, and its provisional note removed, as the matching
-  Play API item of the open contract items closes.
-- **It emits nothing**: no log line, no metric, no event.
-- **Tests** run against a fake `fetch`, a fake clock, and a fake abort signal
-  (no network, no timer), with problem bodies typed against the contracts'
-  `PlayProblem`. `play-client`'s tests are not a consumer of the `contracts`
-  test-only entry, so they do not replay the `PlayProblem` vectors; the typed
-  copies stand in for them. The fake is rebuilt from the Play API document when
-  it is vendored, and the operations are added then; until then the request
-  layer is delivered on its own, as part of the client's issue, which stays open
-  for the operations.
-  <!-- TODO(Play API document): the operations (redeem, refresh, start, continue, cash-out, cancel, the Snapshot read), their paths and wire types, and a fake Play API built from the document. -->
+The hand-written request layer under the Play API operations: no kept
+credential, the base URL and request options, timeout and cancel, the error
+types, the retry classes, the token schedule, idempotency keys, and what is
+provisional. See
+[`client-kit/the-play-client-request-layer.md`](./client-kit/the-play-client-request-layer.md).
 
 ### The cryptography
 
-- `signing` is a hand-written encoder for a **fixed set of types**, over
-  `@noble/curves` (secp256k1) and `@noble/hashes` (Keccak-256, SHA-256). It
-  follows the rules of the backend's Go verifier: signatures are 65 bytes
-  `r ‖ s ‖ v`, `v` in `{27, 28}`, low `s`; recovery rejects any other length,
-  `v`, a high `s`, and the zero address; signing is deterministic (RFC 6979) and
-  normalizes `s`.
-- **What it encodes today.** The domain
-  (`EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)`),
-  `PlayerAction` and `PlayerCashOut`
-  (`(string action,uint8[] path,uint32 sequence,bytes32 round,bytes32 previous)`,
-  where `round` is the round id), `CreateRoundAuth`, `MarkReadyAuth`, and
-  `CloseRoundAuth`, each with its type hash, `hashStruct`, and the `0x1901`
-  digest. The field types are `string` (Keccak-256 of its UTF-8 bytes; a lone
-  surrogate is refused), `uint8[]` (Keccak-256 of the concatenated 32-byte
-  words), `bytes32`, `bool`, `address`, and `uintN` (big-endian 32-byte words,
-  range-checked). A value outside its type is refused, never truncated. A
-  `uint128` or `uint256` field (an amount, the chain id, an expiry) takes a
-  `bigint` or a canonical decimal string only; a `number` is accepted only for
-  the fields of 40 bits or fewer (a sequence, a window, a path step). The draw
-  registry's `CreateDrawRoundAuth` and `RecordDrawAuth` are in the vendored
-  vectors and are encoded and replayed by the tests through an internal module,
-  but are not public API (the first release has no book round). `PlayerCancel`,
-  `NewRound`, and `PayoutTerms` are not implemented yet: no vendored contract
-  defines their fields.
-  <!-- TODO(signed-action spec): the `PlayerCancel`, `NewRound`, and `PayoutTerms` type strings and their vectors. -->
-- **Keys.** `createSigner` draws 32 bytes from the platform's cryptographic
-  random source (`crypto.getRandomValues`, through `@noble/hashes`; a test
-  injects its own source), redraws a value that is zero or not below the curve
-  order, and gives up with `random-source` after 16 invalid draws (a broken
-  source, since a uniform draw is invalid with probability about 2^-128). The
-  key stays in the signer's closure: the signer exposes its address, `sign`
-  (digest to signature), and `destroy` (zeroes the key bytes, best effort, and
-  refuses every later `sign`); its `toJSON` and `toString` print a placeholder.
-  Nothing returns, serializes, or logs the key.
-- **Errors.** Every refusal is a `SigningError` with a stable `code`
-  (`invalid-input`, `invalid-signature-length`, `invalid-signature-v`, `high-s`,
-  `invalid-signature`, `zero-address`, `random-source`, `signer-destroyed`,
-  `signing-failed`, `equivocation`, `nothing-pending`) and a fixed message per
-  code: a message never carries an input value, and an error from the curve
-  library is replaced, not wrapped, so no key or message content reaches an
-  error. The package emits no log.
-- **Transcript helper.** `createTranscript` holds one round's chain for the
-  shell (W-15 to W-18): the last accepted `T` (`T_0` at the start), the next
-  sequence (from 1), and the one signed message awaiting confirmation. `sign`
-  builds the message at the next sequence with `previous` = the last `T`; while
-  a message is pending, the same request returns the same signed entry (the same
-  bytes, for a resend) and any other request, including a cash-out against a
-  move, is refused with `equivocation`. `confirm` advances `T` to the pending
-  message's struct hash. The shell still decides when an action is applied and
-  owns the `idempotencyKey`; one transcript serves one round.
-- **Action grammar.** The canonical action text is built by a small, separate
-  module, `provisionalGrammar`, which holds only the spellings the vendored
-  vectors pin (`pick row <row> tile <tile>`, `cash out`). It is replaced when
-  the signed-action spec publishes the grammar; nothing else in the package
-  depends on it.
-  <!-- TODO(signed-action spec): the action grammar for Coin Flip and the canonical `path`. -->
-- No general EIP-712 library (`viem`, `ethers`) is a dependency. They are used
-  only as the independent generator of the vectors in the contracts repository.
-- **Vectors.** The package's tests replay `test/vectors/signing.json` from the
-  contracts repository (the file `viem` generated, so an independent
-  implementation checks this one) and the worked-round vectors, read through the
-  test-only entry of the `contracts` package, where they are copied with their
-  source commit noted. The signed-action spec's vectors join them. The vector
-  file names its two signing keys (the action key `player` and the admin
-  `engine`) as the well-known local development accounts but does not carry
-  them, so the tests hold those two keys in a test fixture
-  (`packages/signing/src/fixtures/keys.ts`). They are the vectors' test keys
-  (the AGENTS.md exception): public by design, the default accounts of the local
-  Ethereum development node, holding nothing and never used outside tests. The
-  tests prove each derives the address the vectors give. The negative cases (a
-  high `s`, a bad `v`, a wrong length, `r` or `s` out of range, a changed
-  `previous`) are derived from the vector signatures; the zero-address case
-  replaces Keccak-256 in one test file, since no key with the zero address is
-  known.
-  <!-- TODO(signed-action spec): the spec's vector file and where it is published. -->
+The fixed-type EIP-712 encoder and secp256k1 signing in `signing`: what it
+encodes today, key custody in the signer, the `SigningError` codes, the
+transcript helper, the provisional action grammar, and the vectors. See
+[`client-kit/the-cryptography.md`](./client-kit/the-cryptography.md).
 
 ### How the kit gets its contracts
 
-The kit and the backend share **documents**, never code. Each document is copied
-into the `contracts` package (`packages/contracts/`) and pinned in its
-`contracts.lock.json`, which records, for each file, the source (by name), the
-source commit, and the SHA-256 of the content. **Decided (TPO, 2026-10-15;
-[OQ-6](./wrapper.md#decided-questions)): vendor now, publish later.** The
-sources are private today, so the kit vendors copies and does not wait for the
-backend to publish; no git submodule is used. When the backend publishes its
-contracts (the Snapshot bundle, the OpenAPI documents, the vectors), the
-`contracts` package is replaced by that dependency (option B) without touching a
-logic package.
-
-| Contract (by name and version)                                                         | Used by       | Form in the kit                                                                                                                                                                                                                                                                                                                                                   |
-| -------------------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The Play API `/play/v1` and the verify API read (OpenAPI documents)                    | `play-client` | in `contracts`: the Play and verify documents only, never any other surface's document. Types are generated with a pinned `openapi-typescript` (a development dependency) into committed files in `contracts`; `play-client`'s hand-written thin `fetch` layer sits on them. CI regenerates and fails on a diff.                                                  |
-| The Snapshot schema `se.snapshot/1`, its golden vectors, and the published bundle      | `snapshot`    | in `contracts`: the schema, types (runtime entry), and the `valid/` and `invalid/` vectors (test-only entry). <!-- TODO(Snapshot bundle): the backend specifies a content-hashed bundle (schema plus vectors) for TypeScript consumers; until it is published the kit copies the schema file and the vectors by the same procedure, with the same lock entry. --> |
-| The signing vectors (`test/vectors/signing.json`) and the signed-action spec's vectors | `signing`     | in `contracts`: the files, unchanged, on the test-only entry                                                                                                                                                                                                                                                                                                      |
-| The environment configuration schema                                                   | the Wrapper   | owned by the kit (in `shell`), not copied and not in `contracts`                                                                                                                                                                                                                                                                                                  |
-
-Rules:
-
-1. **Vendor, with the source noted.** A contract file is copied by a person (or
-   a script run by a person) with access, and the pull request shows the diff
-   and the new lock entry. **No kit job holds a credential to read a private
-   repository**: the kit's CI never fetches from one. The script is
-   `tools/sync-contracts.ts`. It reads each file at a git ref of a local
-   checkout (never its working tree), copies it byte for byte, and rewrites the
-   lock in the same run. A lock entry (`lockVersion` 1) is `path` (in the
-   package), `source` (the repository, by name), `sourceName`, `sourceCommit`
-   (the last commit that touched the file, in full), and `sha256`. `sourceName`
-   is the artifact's public name, fixed in the script (`se.snapshot/1 schema`,
-   `se.snapshot/1 vectors/valid/<file>`, `se.snapshot/1 vectors/invalid/<file>`,
-   `test/vectors/signing.json`): a path inside a private repository is
-   unpublished backend layout and is never recorded, and a test fails on a name
-   that is not one of these. The local checkouts and the paths in them are given
-   in a file named by `--sources`, kept outside this repository. Vectors are
-   append-only: the script refuses to change or remove a locked vector unless it
-   is given `--allow-vector-change`, which is legitimate only before the first
-   release. Generated files are rewritten by
-   `tools/generate-contracts.ts --write`.
-2. **Verify offline.** The `contracts` job recomputes each copied file's SHA-256
-   and fails when it differs from the lock, and fails when the generated types
-   in `contracts` differ from a regeneration of the committed documents.
-3. **Detect drift.** Until the backend publishes its contracts, drift is
-   detected from the backend side, which reads this repository's public lock
-   file (no credential needed), and by the person who runs the sync. Once a
-   published source exists, a `contracts-drift` job compares each lock entry
-   with it and reports a difference as a warning for an additive change and a
-   failure for a breaking one.
-   <!-- TODO(contract publication): the published locations; then the drift job and its severity. -->
-4. **Additive changes are synced.** Within `/play/v1` and `se.snapshot/1`
-   changes are additive. Clients are tolerant readers only within what the
-   schema they were built against allows (absent optional fields, members of the
-   objects it leaves open); the Snapshot schema closes its objects, so a new
-   Snapshot field, `status`, or error `code` is rejected by a kit that has not
-   synced it (`snapshot` package, W-28, W-29). Such a change reaches players
-   with a kit release that syncs the new schema.
-5. **Review before publish.** Every file copied into this public repository is
-   reviewed as [Never in the public repository](#never-in-the-public-repository)
-   says. The signing vectors use a well-known local test key and are public by
-   design; the review still happens. Accepted (human review, 2026-10-16): the
-   signing vectors' `_comment` fields name the contracts repository's test
-   tooling, and three Snapshot vectors' descriptions
-   (`valid/cashorcrash-won-expired.json`,
-   `valid/coinflip-canceled-expired-no-action.json`,
-   `invalid/status-unknown.json`) cite backend decisions, a backend document and
-   a backend module operation by name. These are names, not contents; vectors
-   are append-only and copies stay byte for byte, so any rewording comes as a
-   new vector at the source.
-
-   Issue #4's drift requirement is met, until the published locations exist, by
-   the `contracts` job verifying the lock against the committed copies; the
-   `contracts-drift` comparison job follows with them.
+Vendor now, publish later: which backend documents are copied into `contracts`,
+the lock file, and the rules to vendor, verify offline, detect drift, sync
+additive changes, and review before publish. See
+[`client-kit/how-the-kit-gets-its-contracts.md`](./client-kit/how-the-kit-gets-its-contracts.md).
 
 ### Versioning and compatibility
 
@@ -789,10 +158,11 @@ Rules:
 - **Contract compatibility.** A kit built for `/play/v1` and `se.snapshot/1`
   keeps working through every additive change that stays within the schema it
   was built against; a change that adds a Snapshot field, `status`, or error
-  `code` needs a kit release that syncs it (rule 4 above). A breaking change is
-  a new surface prefix (`/play/v2`) or `se.snapshot/2`, served alongside the old
-  one for a deprecation window, and a new **major** of the affected kit
-  packages.
+  `code` needs a kit release that syncs it (rule 4 of
+  [How the kit gets its contracts](./client-kit/how-the-kit-gets-its-contracts.md)).
+  A breaking change is a new surface prefix (`/play/v2`) or `se.snapshot/2`,
+  served alongside the old one for a deprecation window, and a new **major** of
+  the affected kit packages.
 - The kit states what it was built against in `contracts.lock.json` and in each
   release's notes: the Play API prefix, the Snapshot schema id, and the signing
   vector set. A Wrapper release is served only against a matching backend
@@ -804,66 +174,10 @@ Rules:
 
 ### Supply chain
 
-The kit publishes code players run and packages others install, so its build is
-the attack surface a player cannot see. The rules:
-
-- **Lockfile and install.** `pnpm-lock.yaml` is committed; CI installs with
-  `--frozen-lockfile`. Dependency lifecycle scripts are disabled by default
-  (only an explicit allow-list may run one), and the lockfile and every
-  `package.json` are code-owner paths. A newly published dependency version
-  SHOULD wait a configured age before it is accepted (pnpm's minimum release
-  age). The age is **7 days** (`minimumReleaseAge: 10080` minutes, strict, in
-  `pnpm-workspace.yaml`), no lifecycle script is allowed (`allowBuilds` has no
-  `true` entry; `esbuild`, brought by `tsx`, is denied explicitly so the strict
-  check passes), the trust policy is `no-downgrade`, and dependencies are saved
-  at an exact version. Dependabot's `cooldown` is 7 days to match, for the `npm`
-  and the `github-actions` ecosystems.
-- **Runtime dependencies are an allow-list**: `@noble/curves` and
-  `@noble/hashes`, and nothing else
-  ([ADR-001](../decisions/ADR-001-toolchain-and-signing.md)). Anything else
-  needs an ADR first. A CI job (`allow-list`, `pnpm check:deps`) fails if any
-  `package.json` declares a dependency outside the list in
-  `tools/allowed-dependencies.json`, which a test keeps equal to the ADR's
-  table. It checks names and specifiers in `dependencies`, `devDependencies`,
-  `peerDependencies`, and `optionalDependencies`, in `overrides`,
-  `pnpm.overrides`, `resolutions`, `catalog`, and `catalogs` of every
-  `package.json`, and in `overrides`, `catalog`, and `catalogs` of
-  `pnpm-workspace.yaml`. A specifier must be an exact registry version (or
-  `workspace:` for a kit package, or a `catalog:` reference); git, URL, `file:`,
-  `link:`, `npm:` alias, range, and tag specifiers are rejected, as is any
-  construct in those YAML sections the check cannot read.
-- **Pinned toolchain.** The Node version, the package manager (`packageManager`
-  with its hash), and every GitHub Action (**by full commit SHA**, updated by
-  Dependabot's pull requests) are pinned.
-- **Provenance.** Packages are published from GitHub Actions with npm
-  provenance, so each version links to the commit and workflow that built it.
-  The Wrapper bundle is released with a build-provenance attestation and a
-  SHA-256 manifest of every file.
-- **Credentials.** The publishing credential is never in the repository. The
-  preferred form is npm trusted publishing from the release workflow (no
-  long-lived token); otherwise a token in a protected GitHub environment with
-  required
-  reviewers. <!-- TODO(infrastructure owner): which form the npm organization supports, and the rotation procedure. -->
-- **Bundling.** A package's own source is the only thing in its `dist/`; nothing
-  from `node_modules` is ever bundled (`deps` in `tsdown.base.ts`). A kit
-  package stays an import (`neverBundle` for the `@intraverse/` scope), a
-  package's `dependencies` are external by tsdown's default, and any other
-  package, a devDependency or one that is not declared at all, fails the build
-  (`onlyBundle: []`). tsdown would otherwise inline anything not listed in
-  `dependencies`, which could copy another package, a dependency the allow-list
-  never saw (a runtime dependency moved to `devDependencies` would ship inside
-  the package), or the `contracts` vectors into this one.
-  `tools/tsdown-bundling.test.ts` builds a fixture each way.
-- **Reproducible build.** The Wrapper build is deterministic for a commit and a
-  lockfile, so anyone can rebuild a release and compare its manifest. The
-  packages (tsdown) are too: building the same sources twice from a clean state,
-  in two different directories, gave byte-identical `dist/` trees (JavaScript,
-  its source maps, and declarations; chunk names are content hashes).
-- **Vulnerability and license checks** run in CI on every change and on a
-  schedule (`pnpm audit` for production dependencies: the CI job fails on high
-  and critical advisories only, the weekly scheduled run reports every severity;
-  dependency review on pull requests, secret scanning with push protection on
-  this public repository).
+Lockfile and install policy, the runtime-dependency allow-list, the pinned
+toolchain, provenance, credentials, bundling, the reproducible build, and the
+vulnerability and license checks. See
+[`client-kit/supply-chain.md`](./client-kit/supply-chain.md).
 
 ### How the Wrapper reaches the SuperEngine origin
 
@@ -913,114 +227,9 @@ name and version only, never by a link into a private repository.
 
 ### Testing and CI
 
-The kit's tests are the executable half of
-[wrapper.md's test plan](./wrapper.md#test-plan).
-
-| Level     | Tool                                 | What                                                                                                                                           |
-| --------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit      | Vitest                               | per package; the signing, Snapshot, and transcript vectors; the token schedule; redaction                                                      |
-| Component | Vitest and jsdom                     | the Wrapper renders every `valid/` Snapshot                                                                                                    |
-| e2e       | Playwright                           | win, loss, cash-out, offline, typed errors, two tabs, the sandbox, accessibility, the no-secret scan                                           |
-| Static    | oxlint, stylelint, oxfmt, TypeScript | lint (oxlint for TypeScript, stylelint for CSS), format check (oxfmt, for every file type it supports), `tsc --noEmit`, import-direction rules |
-| Tooling   | Vitest, tsx                          | `tools/`: the lint fixtures that prove a violation fails (TypeScript and CSS), the allow-list check, the test-only-entry check                 |
-
-**CI jobs** (GitHub Actions, one required aggregate job `ci-ok`): `lint` and
-`format`; `typecheck`; `unit` (`pnpm test`); `allow-list` (the dependency
-allow-list); `contracts` (the hash check, the regenerated-types diff, and the
-import check that the test-only entry is imported only by tests);
-`contracts-drift` (rule 3 above, when a source is published); `build` (the
-bundle, its manifest, a size budget, a check that the same bundle is what e2e
-runs and what is released (no test or per-environment build), and a check that
-no vector reaches any bundle or release output); `e2e-fake` (Playwright against
-the in-repo fake Play API, which answers from the contract's vectors); `audit`
-(`pnpm audit --prod`, failing on high and critical advisories only);
-`dependency-review` (pull requests only); `release` (changesets, provenance, on
-the default branch only).
-
-Today `contracts` runs the test-only-entry import check, the hash check against
-`contracts.lock.json`, and the generated-files diff (the Snapshot types and the
-vector catalog; the OpenAPI types join with the Play API document).
-`contracts-drift` and `release` are not defined yet. `build` builds every
-workspace; the manifest and size budget join it with the first release build,
-and the job also runs `pnpm check:build-output` (the no-vector content check,
-now over the vendored vectors) and `pnpm check:package-files`. `e2e-fake` has no
-suites yet. The workflows hold no secret, run with `permissions: {}` at the top
-and `contents: read` per job, and pin every Action by full commit SHA.
-
-#### Task orchestration and caching
-
-The scripts are [wireit](https://github.com/google/wireit) scripts, declared in
-the `package.json` that owns them with their `command`, input `files`, `output`,
-`dependencies`, and `packageLocks: ["pnpm-lock.yaml"]`, so the lockfile and the
-shared configuration (`tsconfig.base.json`, `.oxlintrc.json`) are inputs of the
-scripts that read them. A task whose inputs are unchanged is skipped and its
-outputs restored from the cache.
-
-- **Local:** `.wireit/` in each worktree (git-ignored; like `node_modules`, it
-  is per worktree). `pnpm clean:cache` empties it.
-- **CI:** `WIREIT_CACHE=github`, using the GitHub Actions cache through
-  `google/wireit`'s `setup-github-actions-caching` action (pinned by commit SHA,
-  in `.github/actions/setup`). It hands the job's own Actions cache credentials
-  to wireit on the runner; no repository secret is involved. There is no remote
-  cache service (ADR-001 rejected one because it needs a credential).
-- **A cache hit never replaces a gate that could fail.** A script is cached only
-  if it declares `files`; the gating checks (`lint`, `format:check`,
-  `test:tools`, `check:deps`, `check:contracts`, and the contracts hash check
-  when it lands) list every file they read, the test suites list the files they
-  read outside their package or depend on the task that produces them, and
-  `test:e2e` and `format` declare no `files`, so they always run. `pnpm audit`
-  is a plain CI step, never cached, because its result depends on the advisory
-  database and not on repository files.
-- **Every input is listed.** A script lists every file its command reads: the
-  sources of a workspace as `src/**` (all file types: JSON schemas and vectors,
-  CSS, SVG, assets), `public/**` for a Vite app, its top-level `*.ts`
-  (`vite.config.ts` and the files it imports), `index.html`, `package.json`, its
-  tsconfigs, the shared `tsconfig.base.json` and `tsdown.base.ts`, the env and
-  PostCSS files Vite loads, and the lockfile (`packageLocks`). A `build`
-  excludes only test files (`src/**/*.test.ts`) and the Wrapper's scratch
-  fixture `src/fixtures/guard-scratch.ts`; `test` and `typecheck` keep the
-  fixtures. `tools/wireit-inputs.test.ts` checks this mechanically: it walks
-  every workspace and holds each script's `files` to the files on disk and to
-  probes for files that do not exist yet (a `contracts` schema or vector, a
-  Wrapper `public/` file, an env file), and it fails on a script that has a
-  command and no `files` unless it is declared to run every time (`format`,
-  `check:readmes`, `e2e#test`). The audit runs inside `test:tools`, and it reads
-  every file of every workspace, so `test:tools` lists the workspace trees
-  (`packages/*/**`, `apps/*/**`, `e2e/**`, without `dist/`, `node_modules/`,
-  `.wireit/`, `coverage/`, `test-results/`, `playwright-report/`, and
-  `*.tsbuildinfo`): a new or edited workspace file re-runs the audit instead of
-  restoring a cached pass, and the audit holds `test:tools` to those trees too.
-  Its matcher approximates wireit's globs (`path.matchesGlob` with dotfiles on):
-  extglobs and bracket expressions are not interpreted as wireit does, and it
-  applies every `!` pattern to every include where wireit applies one only to
-  the includes before it (which can only cause a false alarm). A test file that
-  shipped code imports would be outside a `build`'s inputs; a lint rule keeps
-  tests out of the graph.
-
-**Test tooling notes.** The DOM for component tests is **jsdom**: it is the most
-complete DOM for the axe accessibility checks, and the pieces it lacks (Web
-Locks, `crypto`, `fetch`) are injected fakes in the shell's tests anyway. The
-**formatter** is oxfmt alone, for TypeScript, JSON, Markdown, YAML, and HTML
-(oxfmt covers Markdown and YAML as of 0.72, so prettier was dropped);
-`pnpm format` writes and `pnpm format:check` verifies. Files that must stay as
-written are listed in `ignorePatterns` of `.oxfmtrc.json` (the lockfile,
-changelogs and changesets, and the agent and skill files, whose single-line
-frontmatter some agent tools require). The Snapshot types come from
-`json-schema-to-typescript`, the typed client's from `openapi-typescript`; both
-are development dependencies that write committed, generated files
-([ADR-001](../decisions/ADR-001-toolchain-and-signing.md)).
-
-**Where the preview-stack e2e runs.** The SuperEngine preview stack is private,
-so a public CI job cannot reach it without a credential. This repository owns
-the e2e **suite**; a job owned by the backend repository checks this repository
-out at a **pinned commit**, installs with `--frozen-lockfile`, builds the
-Wrapper, and runs the suite against its own throwaway stack. That job holds no
-secret. The same suite runs against the fake Play API in this repository's own
-CI, so a change here is checked without the backend. Only the fake-API suites
-are deterministic and hermetic; the preview-stack run (wrapper.md T-10 to T-12,
-and so AC1) talks to a real stack, is **not hermetic**, and is never part of
-`pnpm check` or of this repository's required CI jobs.
-<!-- TODO(preview stack): the pin and the job live in the backend repository. -->
+The test levels and tools, the CI jobs, and task orchestration and caching with
+wireit (what may be cached and how inputs are listed). See
+[`client-kit/testing-and-ci.md`](./client-kit/testing-and-ci.md).
 
 ### Environment configuration
 
@@ -1067,8 +276,8 @@ the publishing environment), are in the
 
 What the kit must never contain is [above](#never-in-the-public-repository).
 What the Wrapper must never expose is in [wrapper.md](./wrapper.md#security).
-The release path is the main risk: [Supply chain](#supply-chain) and the
-runbook's escalation steps.
+The release path is the main risk: [Supply chain](./client-kit/supply-chain.md)
+and the runbook's escalation steps.
 
 ## Observability
 

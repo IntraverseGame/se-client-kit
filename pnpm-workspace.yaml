@@ -3,7 +3,7 @@ packages:
   - apps/*
   - e2e
 
-# Supply chain (specs/client-kit.md, "Supply chain"; ADR-001 decision 7).
+# Supply chain (specs/client-kit/supply-chain.md; ADR-001 decision 7).
 # A version must have been published for at least 7 days (in minutes).
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true

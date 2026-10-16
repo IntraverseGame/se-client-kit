@@ -1,5 +1,6 @@
 // The fixture cases for tools/import-direction.test.ts. The expectations are
-// written from the spec (specs/client-kit.md, "Dependency direction") and
+// written from the spec (specs/client-kit/packages.md, "Dependency direction")
+// and
 // AGENTS.md, not derived from .oxlintrc.json, so a weakened rule fails.
 
 export type Case = {

@@ -12,7 +12,7 @@
 //
 // Issues carry locations only (JSON Pointers into the document and into the
 // schema) and the failing keyword, never a value from the document, so an issue
-// is safe to log (specs/wrapper.md, W-28).
+// is safe to log (specs/wrapper/rendering-from-the-snapshot.md, W-28).
 
 import {
   checkAdditionalProperties,

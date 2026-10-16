@@ -1,6 +1,7 @@
 // Money. `Amount.value` is a base-10 string of base units; it is read here, and
 // only here, as a `bigint`. `Amount.normalized` and `formatted` are display
-// values and never an input to a decision (specs/wrapper.md, W-34).
+// values and never an input to a decision
+// (specs/wrapper/rendering-from-the-snapshot.md, W-34).
 
 const BASE_UNITS = /^(?:0|[1-9][0-9]*)$/u;
 

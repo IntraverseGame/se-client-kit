@@ -115,7 +115,7 @@ try {
 
 ## More
 
-- [Packages](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit.md#packages)
+- [Packages](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit/packages.md)
   in the kit specification
 
 Contributing: see

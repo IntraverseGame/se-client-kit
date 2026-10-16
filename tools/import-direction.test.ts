@@ -20,7 +20,7 @@ import { styleCases } from "./fixtures/style-rule-cases.ts";
 
 const cases: readonly Case[] = [...directionCases, ...ruleCases, ...styleCases];
 
-// Proof that the dependency-direction lint rule (specs/client-kit.md,
+// Proof that the dependency-direction lint rule (specs/client-kit/packages.md,
 // "Dependency direction") fails on a violation. Each case writes a small file
 // into a scratch tree, runs the repository's real oxlint binary with the
 // repository's real .oxlintrc.json over that tree, and reads the diagnostics

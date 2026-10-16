@@ -1,6 +1,6 @@
 // Generated files of packages/contracts. Committed, never edited by hand, and
-// proved current by `check:contracts` (specs/client-kit.md, "The `contracts`
-// package"):
+// proved current by `check:contracts`
+// (specs/client-kit/the-contracts-package.md):
 //
 //   src/generated/snapshot.ts   the structural types of the Snapshot schema
 //   src/vectors/catalog.ts      every vendored vector, for the test-only entry

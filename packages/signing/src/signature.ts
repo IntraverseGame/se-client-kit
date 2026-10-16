@@ -1,6 +1,6 @@
 // Canonical secp256k1 signatures: 65 bytes `r ‖ s ‖ v`, `v` in {27, 28}, low
-// `s`. These are the backend verifier's rules (specs/client-kit.md, "The
-// cryptography").
+// `s`. These are the backend verifier's rules
+// (specs/client-kit/the-cryptography.md).
 
 import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { keccak_256 } from "@noble/hashes/sha3.js";

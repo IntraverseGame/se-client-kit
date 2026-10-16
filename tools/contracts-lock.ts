@@ -1,5 +1,5 @@
-// Vendoring and verification of the `contracts` package (specs/client-kit.md,
-// "How the kit gets its contracts"). `verifyLock` is offline and is what the
+// Vendoring and verification of the `contracts` package
+// (specs/client-kit/how-the-kit-gets-its-contracts.md). `verifyLock` is offline and is what the
 // `contracts` CI job runs. `planSync` and `applySync` are run by a person with
 // access to the sources: the kit's CI never reads a private repository.
 //

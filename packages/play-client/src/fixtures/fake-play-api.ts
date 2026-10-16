@@ -1,7 +1,7 @@
 // A fake Play API for the unit tests: an injected `fetch` that answers from a
 // script of replies and records every request. It knows no paths or operation
 // shapes yet: those come from the Play API document, which is not vendored in
-// `contracts` (specs/client-kit.md, "The contracts package"). When it is, the
+// `contracts` (specs/client-kit/the-contracts-package.md). When it is, the
 // fake is built from that document.
 
 import type { FetchLike, RequestInitLike, ResponseLike } from "../platform.ts";

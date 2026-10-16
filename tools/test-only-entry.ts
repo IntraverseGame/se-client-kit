@@ -1,5 +1,5 @@
 // The `contracts` test-only entry (the vectors) may be imported by test files
-// and test helpers only (ADR-001; specs/client-kit.md, "The contracts package").
+// and test helpers only (ADR-001; specs/client-kit/the-contracts-package.md).
 // The lint rule in .oxlintrc.json is the first check; this is the independent
 // one the `contracts` CI job runs over the same tree.
 
