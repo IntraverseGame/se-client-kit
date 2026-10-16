@@ -28,7 +28,7 @@ and [AGENTS.md](../../AGENTS.md). **Block** on:
   signing; a random or clock source that cannot be injected in a test;
 - **the Wrapper's security invariants** ([wrapper spec](../../specs/wrapper.md)):
   a second action signed at one `(round, sequence)`, or a different action built
-  for a resend; signing before the bind receipt and tip checks pass (other than
+  for a resend; signing before the `CreateRoundAuth` and tip checks pass (other than
   the required `PlayerCancel`); a `postMessage` handler without both
   `event.source` and `event.origin` checks or without a closed schema; a relaxed
   iframe sandbox, a game or operator origin allow-list that is widened or read

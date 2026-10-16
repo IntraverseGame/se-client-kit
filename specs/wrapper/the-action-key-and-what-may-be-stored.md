@@ -33,11 +33,12 @@ Part of the [Wrapper spec](../wrapper.md), section
     a lost key costs is already the backend's rule: the round runs to its time
     limit and ends by its game's expiry rule, with no recovery path.
 - **W-12.** What the Wrapper MAY keep after a page is gone: nothing. In
-  particular no key, token, launch code, receipt, or signed action, and no
-  identifier derived from them. The one exception is a download the **player
-  starts** (the evidence export of W-27): the file goes to the player, and the
-  page holds no copy of it afterwards. A persistent evidence store is deferred
-  with the post-round receipt check ([OQ-1](../wrapper.md#decided-questions)).
+  particular no key, token, launch code, `CreateRoundAuth`, or signed action,
+  and no identifier derived from them. The one exception is a download the
+  **player starts** (the evidence export of W-27): the file goes to the player,
+  and the page holds no copy of it afterwards. A persistent evidence store is
+  deferred with the post-round evidence check
+  ([OQ-1](../wrapper.md#decided-questions)).
 - **W-13.** The shell MUST serialize the key's use behind its Web Lock (W-14)
   and MUST sign only on a player action, on the automatic cash-out of W-24, or
   on the `PlayerCancel` that W-26 requires. It MUST NOT sign in response to a

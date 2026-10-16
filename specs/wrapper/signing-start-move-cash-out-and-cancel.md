@@ -12,8 +12,8 @@ Part of the [Wrapper spec](../wrapper.md), section
 - **W-21.** Every signature MUST be canonical: 65 bytes `r ‖ s ‖ v`, `v` in
   `{27, 28}`, low `s`, deterministic (RFC 6979). The shell MUST reject any other
   length, `v`, or high `s`, and a recovered zero address, when it checks a
-  signature it received (the bind receipt). This is the backend verifier's rule,
-  stated for the browser
+  signature it received (the round's `CreateRoundAuth`). This is the backend
+  verifier's rule, stated for the browser
   ([ADR-001](../../decisions/ADR-001-toolchain-and-signing.md)).
 - **W-22.** **Start.** The shell starts a round with the Play API's `start`
   verb, a fresh `idempotencyKey` (within the Play API's length limits), the bet
@@ -22,9 +22,9 @@ Part of the [Wrapper spec](../wrapper.md), section
   address. A player-signed `PlayerStart` is **deferred** (a config round's bind
   needs no signed start), so the first release has no signed start. "Sign start"
   is read as: the shell generates the key and presents its address in the
-  `start` call, and the bind receipt then commits to that address
-  ([OQ-5](../wrapper.md#decided-questions)).
-  <!-- TODO(Play API, signed-action spec): the `start` request carries the action key address; its field name and the response's receipt envelope. -->
+  `start` call (its `actionKey` field), and the round's `CreateRoundAuth` then
+  commits to that address ([OQ-5](../wrapper.md#decided-questions)). The `start`
+  response is the round's Snapshot.
 - **W-23.** **Move.** The game sends a validated pick request (W-38); the shell
   checks it is legal in the Snapshot it holds (the step exists, the option is in
   range, the status is `active`), builds the canonical action, signs
@@ -41,32 +41,60 @@ Part of the [Wrapper spec](../wrapper.md), section
   nothing.
   <!-- TODO(signed-action spec): confirm what the backend does at the last step (paid by the move, or `active` until a cash-out) and fix the automatic cash-out rule to it. -->
 - **W-25.** **Cancel.** The shell signs `PlayerCancel` (`action = "cancel"`,
-  empty path, sequence 1, `previous = T_0`) only when a check of W-26 fails, or
-  when the player cancels a round that is `active` with no move made, if the
-  game offers it (config rounds only; W-31 offers the control in the `active`
-  row).
+  empty path, sequence 1, `previous = T_0`) only when a check of W-26 fails and
+  `T_0` is settled (W-26), or when the player cancels a round that is `active`
+  with no move made, if the game offers it (config rounds only; W-31 offers the
+  control in the `active` row).
 - **W-26.** **Checks before the first signature and before the game is shown as
   ready.** The Snapshot is `starting` while the round prepares. The shell MUST
   NOT show the game as ready, and MUST NOT sign anything except the
   `PlayerCancel` this item requires, until the Snapshot is `active` **and** all
   of these hold:
-  1. **Receipt signature.** The bind receipt is a `CreateRoundAuth` whose
-     signature is canonical and recovers to the backend's signer address from
-     the environment configuration (never a value taken from the response).
-  2. **Receipt contents.** The receipt's round id equals the Snapshot's
-     `roundId`; its action key equals the shell's own key address; its bet and
-     currency equal what the player chose (`bet` against the `AmountRequest` the
-     shell sent, `unit` against the currency); its source, `N`, and
-     `roundSecretHash` equal the Snapshot's `proofs.randomnessProof` (`source`,
-     `blockNumber`, `roundSecretHash`).
-  3. **Ready evidence.** The shell recomputes `T_0` and compares it with the
-     round's Ready evidence.
-  4. **Tip check** (W-26b). If a check fails, the shell signs `PlayerCancel`
-     (W-25) as soon as the round is `active`, keeps the receipt, shows "this
-     round failed verification and was canceled", and the player's bet is
-     returned by the cancel. For a book round (not in the first release) the
-     check can only flag.
-  <!-- TODO(Play API, signed-action spec): where the Play API returns the bind receipt and the fields to recompute `created` and `T_0` (the Snapshot schema `/1` carries none of them: its `proofs.randomnessProof` has `source`, `blockNumber`, `roundSecretHash` only), and how the shell learns the signing domain (`chainId`, `verifyingContract`) and the backend signer address (this spec assumes the environment configuration). -->
+  1. **Domain and signer.** The Snapshot's signing domain for the round
+     (`chainId`, `verifyingContract`) and its signer address MUST equal the
+     environment configuration's `registryDomain` and `runtimeSigner`, which are
+     the trust anchor ([OQ-7](../wrapper.md#decided-questions)). Any mismatch
+     fails the check. The shell builds every digest with the configured domain,
+     never with a value taken from the response.
+  2. **`CreateRoundAuth` signature.** The round's `CreateRoundAuth` carries a
+     canonical signature (W-21) that recovers to `runtimeSigner`.
+  3. **`CreateRoundAuth` contents.** The shell recomputes `created`, the hash of
+     the round's on-chain creation arguments, from the Snapshot's fields and its
+     own values, and it MUST equal the `CreateRoundAuth`'s `created`. The round
+     id is the Snapshot's `roundId`. The action key is the shell's own key
+     address. The bet and currency are what the player chose (`bet` against the
+     `AmountRequest` the shell sent, `unit` against the currency). The source,
+     `N`, and `roundSecretHash` are the Snapshot's `proofs.randomnessProof`
+     (`source`, `blockNumber`, `roundSecretHash`). The terms hash comes from the
+     backend's Snapshot fields (TODO below).
+  4. **Ready evidence.** The shell recomputes
+     `T_0 = keccak256(abi.encode(created, seedHash))`, with `seedHash` from the
+     Snapshot's `proofs.fairnessProof.seedHash`, as the vendored signing vectors
+     reproduce (`created`, `seedHash`, `ready` in `signing.json`). It MUST equal
+     the Snapshot's `proofs.fairnessProof.readyHash`. In the first release the
+     shell takes `readyHash` from the Snapshot as given. Checking it against the
+     registry's record waits on anchoring, in a later increment.
+  5. **Tip check** (W-26b).
+
+  A field this check needs that has not been received for the round by the time
+  the Snapshot is `active` fails the check; it is never skipped. **`T_0` is
+  settled** only when checks 1 to 4 pass. If a check fails:
+
+  - **`T_0` settled** (only the tip check failed): the shell signs
+    `PlayerCancel` (W-25) as soon as the round is `active`, keeps the round's
+    evidence (W-27), shows "this round failed verification and was canceled",
+    and the player's bet is returned by the cancel.
+  - **`T_0` not settled** (a field is missing, or check 1, 2, 3, or 4 failed):
+    the shell MUST sign nothing for the round, not even `PlayerCancel`, because
+    a cancel linked to an unconfirmed `previous` may be refused and can never be
+    rebuilt at that sequence (W-15). It keeps the round's evidence, shows "this
+    round failed verification", and the round ends by its game's expiry rule.
+
+  For a book round (not in the first release) the check can only flag.
+  <!-- TODO(backend Snapshot fields): W-26 is blocked on the backend. The Snapshot (`se.snapshot/1`) will carry the round's `CreateRoundAuth`, the fields to recompute `created` (the terms hash among them), the signing domain, and the signer address as optional, additive fields; their names, their envelope, and the statuses that carry them are not decided yet. `proofs.fairnessProof.readyHash` is also not in the vendored schema yet (its `FairnessProof` is closed), so today's validator refuses a Snapshot that carries it. Until a newer schema and its vectors are vendored into `contracts`, the shell cannot complete checks 1 to 4, and every round ends by the "`T_0` not settled" path. -->
+  <!-- TODO(open question): whether the shell also checks the `CreateRoundAuth`'s `expiry` and `prepareWindow` against the injected clock; to settle when the backend's field names are known. -->
+  <!-- TODO(later increment): the shell also checks the domain, the signer, and the `CreateRoundAuth` against the registry on-chain. -->
+
 - **W-26a. Fewer than `minRpcQuorum` endpoints answer.** Decided (OQ-2,
   [Decided questions](../wrapper.md#decided-questions)): the minimum number of
   endpoints that must answer is a configuration value, `minRpcQuorum`, and its
@@ -77,11 +105,12 @@ Part of the [Wrapper spec](../wrapper.md), section
   with one chain endpoint (the local anvil node) may set `minRpcQuorum` to 1,
   and then the shell MUST show a non-dismissable "chain check not independent
   (development)" indicator and MUST record `tipCheck: "degraded"` with the
-  receipt. **Boot rule:** the Wrapper MUST refuse to start if `environment` is
-  `production` and `minRpcQuorum` is below 2 (it shows the configuration-error
-  state and signs nothing). The release build's fixture check
-  ([client-kit.md](../client-kit.md#environment-configuration)) is an additional
-  guard, not a replacement. **This is the single-RPC gap of the first release.**
+  round's evidence (W-27). **Boot rule:** the Wrapper MUST refuse to start if
+  `environment` is `production` and `minRpcQuorum` is below 2 (it shows the
+  configuration-error state and signs nothing). The release build's fixture
+  check ([client-kit.md](../client-kit.md#environment-configuration)) is an
+  additional guard, not a replacement. **This is the single-RPC gap of the first
+  release.**
 - **W-26b. Tip check.** The shell asks **at least `minRpcQuorum` independent**
   RPC endpoints for their final block, and fails closed on any disagreement. In
   production these are public RPC endpoints from independent providers. The
@@ -100,12 +129,13 @@ Part of the [Wrapper spec](../wrapper.md), section
   - **Failure.** Any answering endpoint that is further than the lag margin
     behind `h_top`, or that returns a different hash at `h_low`, fails the
     check, as does too few answering. The shell does not drop an outlier and
-    does not pick a side: it signs `PlayerCancel` per W-26. The receipt records
-    every endpoint's answer (its provider, final block, and the hash at
-    `h_low`).
-  - **The bind.** The shell records the observed tip with the receipt and checks
-    `N` against it: for a `future` bind `N` MUST be above that tip; for a `tip`
-    bind `N` MUST NOT be older than it, within the source's lag margin.
+    does not pick a side: it signs `PlayerCancel` per W-26. The round's evidence
+    (W-27) records every endpoint's answer (its provider, final block, and the
+    hash at `h_low`).
+  - **The bind.** The shell records the observed tip with the round's evidence
+    and checks `N` against it: for a `future` bind `N` MUST be above that tip;
+    for a `tip` bind `N` MUST NOT be older than it, within the source's lag
+    margin.
   - **Independent** means providers run by different organizations on separate
     infrastructure: the configuration names each endpoint's provider, and the
     shell refuses a configuration in which two endpoints share a provider. The
@@ -113,11 +143,11 @@ Part of the [Wrapper spec](../wrapper.md), section
     endpoint count is below `minRpcQuorum`, so a quorum can never be unreachable
     by configuration.
   <!-- TODO(backend entropy spec): the lag margin in blocks per chain, from the measured RPC lag; it is the `tipLagMargin` configuration value. -->
-- **W-27.** The shell SHOULD keep every bind receipt and every signed action in
-  memory for the page's life and SHOULD offer them as a JSON download after the
-  round ends, started by the player (the only write out of the page, W-12).
-  After the round's deadline the shell is also meant to check each receipt
-  against the verify API and the public record chain; that check needs receipts
-  that outlive the page and is deferred
-  ([OQ-1](../wrapper.md#decided-questions)).
-  <!-- TODO(later increment): post-round receipt check against the public record. -->
+- **W-27.** The shell SHOULD keep each round's evidence (its `CreateRoundAuth`,
+  the tip-check answers, and every signed action) in memory for the page's life
+  and SHOULD offer it as a JSON download after the round ends, started by the
+  player (the only write out of the page, W-12). After the round's deadline the
+  shell is also meant to check each round's evidence against the verify API and
+  the public record chain; that check needs evidence that outlives the page and
+  is deferred ([OQ-1](../wrapper.md#decided-questions)).
+  <!-- TODO(later increment): post-round evidence check against the public record. -->

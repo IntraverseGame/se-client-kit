@@ -102,5 +102,5 @@ the specs' headings.
   [Observability](./wrapper.md#observability) ·
   [Test plan](./wrapper.md#test-plan) (T-1 to T-18) ·
   [What this spec does not own](./wrapper.md#what-this-spec-does-not-own) ·
-  [Decided questions](./wrapper.md#decided-questions) (OQ-1 to OQ-6) ·
+  [Decided questions](./wrapper.md#decided-questions) (OQ-1 to OQ-7) ·
   [References](./wrapper.md#references)

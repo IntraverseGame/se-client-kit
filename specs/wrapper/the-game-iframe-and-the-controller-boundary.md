@@ -16,8 +16,8 @@ Part of the [Wrapper spec](../wrapper.md), section
   the game only with `targetOrigin = D`. Every accepted message MUST be parsed
   against a closed, versioned schema (`se.controller/1`, below) and ignored if
   it does not match. The game never receives the key, the token, a signature, a
-  receipt, or a header: the Wrapper sends it Snapshots (validated, W-28) and
-  nothing else of the session.
+  `CreateRoundAuth`, or a header: the Wrapper sends it Snapshots (validated,
+  W-28) and nothing else of the session.
 - **`se.controller/1`, the first-release minimum.** Messages are JSON objects
   with `schema: "se.controller/1"` and a `type`. Controller variations come in
   later increments.
