@@ -7,7 +7,7 @@ Part of the [Client kit spec](../client-kit.md), section
 custody, the signer lock, and the transcript state (W-4, W-9 to W-19, W-41 as
 far as the shell is concerned); then the chain configuration, the tip check, and
 the decision it leads to (W-26a, W-26b, and W-26's pass or fail). The
-`CreateRoundAuth` and `T_0` checks (W-26 items 1 to 4), the `se.controller/1`
+`CreateRoundAuth` and `T_0` checks (W-26 items 1 to 5), the `se.controller/1`
 bridge (W-37, W-38), and the session, start, move, and cash-out flows follow;
 the flows wait for the Play API operations. The Wrapper requirements each rule
 serves are in brackets.
@@ -116,13 +116,14 @@ serves are in brackets.
   failed verification": `lagging`, `hash-mismatch`, or a bind that does not
   hold, `failure: "bind"`). A failure signs nothing by itself: per W-25 and W-26
   the shell signs `PlayerCancel` (through the round's `signCancel`) as soon as
-  the round is `active` only if `T_0` is settled, and the player then sees the
-  reason's text, with "and was canceled" added to "this round failed
-  verification"; if `T_0` is not settled it signs nothing for the round, not
-  even `PlayerCancel`, keeps the evidence, and the round ends by its game's
-  expiry rule. W-26 items 1 to 4 are not built, so `T_0` is never settled today
-  and every failure takes that path. The shell does not act on the decision yet:
-  the start flow is not built.
+  the round is `active` only if `T_0` is settled and the round's
+  `CreateRoundAuth` was not re-issued, and the player then sees the reason's
+  text, with "and was canceled" added to "this round failed verification"; if
+  `T_0` is not settled it signs nothing for the round, not even `PlayerCancel`,
+  keeps the evidence, and the round ends by its game's expiry rule. W-26 items 1
+  to 5 are not built, so `T_0` is never settled today and every failure takes
+  that path. The shell does not act on the decision yet: the start flow is not
+  built.
 - **Key custody (W-9 to W-13).** A session generates its action key with
   `signing`'s `createSigner` on the first need (the first `address()` or
   signature), from the injected random source (the platform's
@@ -183,7 +184,10 @@ serves are in brackets.
     optional `proofs.fairnessProof.readyHash`, absent until the round is
     released. That field comes from a later Snapshot schema version the kit has
     not vendored yet (the vendored `se.snapshot/1` does not have it), so it is
-    provisional and the caller passes `T_0` until a schema sync adds it.
+    provisional and the caller passes `T_0` until a schema sync adds it. W-26
+    fixes the `bytes32` form of `newRound.roundId` (the 16 UUIDv7 bytes,
+    left-aligned and zero-padded); the transcript's round id is expected to be
+    that same value once check 3 has passed, pending the signed-action spec.
   - The EIP-712 domain is an input of the session. The environment configuration
     pins its `chainId` and `verifyingContract`; the session is not wired to the
     validated configuration yet.
@@ -192,7 +196,7 @@ serves are in brackets.
   - The bind's mode (`future` or `tip`) and `N` are inputs of the decision: the
     Snapshot's `proofs.randomnessProof.blockNumber` is `N`, and the mode is not
     yet in a contract the kit has vendored.
-  - The `CreateRoundAuth` and `T_0` checks (W-26 items 1 to 4) are not built:
+  - The `CreateRoundAuth` and `T_0` checks (W-26 items 1 to 5) are not built:
     the Snapshot schema version that carries `proofs.createRoundAuth` is not
     vendored yet, and the caller passes `T_0` instead of the shell recomputing
     it and comparing it with `readyHash`. Its trust rule is decided
@@ -200,6 +204,7 @@ serves are in brackets.
     pins the signer and the domain, the Snapshot's per-round copy must equal
     them or the shell refuses, and the Snapshot is never the trust anchor.
     <!-- TODO(signed-action spec): the CreateRoundAuth check against the vendored Snapshot schema and its vectors. -->
+    <!-- TODO(shell transcript): a re-issue (W-26) needs a transcript state that neither `stale` nor `closed` gives: no new signature, while a W-16 resend of an action already signed continues. -->
   - The `PlayerCancel` encoding is an injected function from the message to its
     struct hash; `signing` does not encode `PlayerCancel` until a published
     contract defines its type string and an independent vector pins it. Without
