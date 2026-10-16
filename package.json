@@ -110,6 +110,7 @@
     },
     "test": {
       "dependencies": [
+        "./packages/signing:test",
         "./apps/wrapper:test",
         "test:tools",
         "check:readmes"

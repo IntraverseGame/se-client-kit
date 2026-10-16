@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-16 (toolchain pull request; only the tooling tests and a jsdom smoke test exist)
+last-verified: 2026-10-16 (signing pull request; the tooling tests, a jsdom smoke test, and the `signing` unit and vector tests exist)
 ---
 
 # Testing (agent context)
@@ -23,6 +23,13 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   point, so do not regenerate them from this repository's code.
 - **Component** (Vitest with jsdom): the Wrapper renders every valid Snapshot;
   accessibility checks on components.
+- **Signing tests** (`packages/signing/src/*.test.ts`) read vectors through
+  `src/fixtures/vectors.ts` (the only importer of the test-only entry there)
+  and use the two public development keys in `src/fixtures/keys.ts` via an
+  injected random source. Tests are typechecked by `tsconfig.test.json` (Node
+  and Vitest types); `tsconfig.json` covers the shipped source only, so the
+  source cannot use Node or DOM globals. oxlint forbids conditionals in test
+  bodies: put branching in module-level helpers.
 - **e2e** (Playwright): win, loss, cash-out, offline, typed errors, two tabs,
   the sandbox, accessibility, and a scan that no secret reaches the page, logs,
   or storage. They run against an in-repo **fake Play API** that answers from

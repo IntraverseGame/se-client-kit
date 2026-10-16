@@ -154,7 +154,8 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   the play token, or anything derived from them beyond the session. The
   redacting types and logger of the shell are the only way to log near them. No
   secrets, keys, tokens, or connection strings in code, tests, fixtures, issues,
-  or comments. The test keys in the vectors are public by design and are the
+  or comments. The public development keys the vectors were signed with
+  (`packages/signing/src/fixtures/keys.ts`) are public by design and are the
   only exception.
 - **Money amounts are strings or `bigint`, never JS `number`**, at every
   boundary and in every type. Arithmetic on amounts uses `bigint` in base units.
@@ -196,8 +197,9 @@ The kit is public so that anyone can read exactly what holds the player's key.
 What is published cannot be taken back once cloned, forked, or cached. Never
 add, in any file, commit, issue, pull request, log, or agent output:
 
-- credentials, tokens, private keys (other than the public test keys of the
-  vectors), connection strings, npm or deploy credentials;
+- credentials, tokens, private keys (other than the public development keys the
+  vectors were signed with, `packages/signing/src/fixtures/keys.ts`), connection
+  strings, npm or deploy credentials;
 - internal hostnames or URLs, dashboard links, cloud account or resource
   identifiers;
 - unpublished backend internals: only the player-facing contracts (the Play API
