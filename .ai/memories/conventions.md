@@ -1,18 +1,17 @@
 ---
 description: TypeScript, error, money, secret, logging, and naming conventions. Read before writing code.
-last-verified: 2026-10-15 (commit 8630f95, bootstrap; conventions are proposals until the toolchain and specs land)
+last-verified: 2026-10-16 (commit e8d3dd0, bootstrap; the TypeScript rules are accepted in ADR-001, lint enforcement lands with the toolchain)
 ---
 
 # Conventions
 
 Binding rules: [AGENTS.md#non-negotiables](../../AGENTS.md#non-negotiables).
-This note records the patterns behind them. Items marked _proposal_ are recorded
-in ADR-001 as proposed and are not settled until it is accepted.
+This note records the patterns behind them.
 
 - **Strict TypeScript.** `strict` on, no `any`, no unexplained
   `@ts-ignore` / `@ts-expect-error` (put the reason on the same line). Prefer
   `unknown` at trust boundaries and narrow it with a validator.
-- **Exports** _(ADR-001, proposed)_: named exports only in libraries; a single public
+- **Exports** _(ADR-001)_: named exports only in libraries; a single public
   entry point per package; no import-time side effects.
 - **Money:** amounts are decimal **strings** on the wire and `bigint` in code,
   in base units. Never `number`, never floating point. A decimal value (rate,

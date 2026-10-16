@@ -42,7 +42,7 @@ description: Use when adding a new package under packages/ (or an app under apps
    the lint configuration so a forbidden import fails
    (<!-- TODO(toolchain PR): the rule format depends on the lint tool -->). Add a
    negative fixture proving the rule fires.
-5. **API and types:** strict TypeScript, no `any`, named exports (ADR-001, proposed), no
+5. **API and types:** strict TypeScript, no `any`, named exports (ADR-001), no
    side effects at import. Money amounts are strings or `bigint`. Errors are
    typed. Nothing in the package logs or stores a key or token.
 6. **Tests:** unit tests, vector replay for wire or crypto formats, and the

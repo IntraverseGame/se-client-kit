@@ -90,8 +90,7 @@ exist and never an ad-hoc equivalent.
 ## Architecture rules
 
 Until the toolchain lands these are enforced by review; afterwards by lint
-import-direction rules and CI. Proposals are marked and need confirming in an
-ADR or the packages' spec.
+import-direction rules and CI.
 
 - **Packages** live under `packages/`, apps under `apps/`. Dependency
   direction is one way: `contracts` (data only, no logic) is a leaf;
@@ -113,11 +112,11 @@ ADR or the packages' spec.
   `unknown`; only the `snapshot` validator turns it into a typed value.
 - Strict TypeScript (`strict`, no implicit `any`); no `any` and no
   `@ts-ignore` / `@ts-expect-error` without a reason on the same line.
-- Named exports only in libraries; no default exports (ADR-001, proposed).
+- Named exports only in libraries; no default exports (ADR-001).
 - Imports of another package go through its public entry point
-  (`package.json` `exports`), never its internals (ADR-001, proposed).
+  (`package.json` `exports`), never its internals (ADR-001).
 - Public packages are tree-shakeable ESM with no import-time side effects
-  (ADR-001, proposed).
+  (ADR-001).
 - Standard platform APIs first (`fetch`, Web Crypto where it fits, Web Locks).
 - Never edit generated files (typed clients, generated types); regenerate.
 

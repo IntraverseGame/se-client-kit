@@ -6,7 +6,7 @@ libraries it is built from.
 
 > **Status: bootstrapping.** The repository holds the license, the contribution
 > and agent-workflow documents, and the first specs and decisions (the client kit,
-> the Wrapper, and the toolchain ADR; all drafts or proposed). There is no
+> the Wrapper, as drafts; and the first three ADRs, accepted). There is no
 > product code and no toolchain yet. Nothing here is released.
 
 ## Why this repository is public

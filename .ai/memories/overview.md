@@ -51,7 +51,7 @@ name only; never paste private text or link to private repositories.
 
 Bootstrapping: the repository holds the license, the agent-agnostic knowledge
 layer (this directory), and the first specs (`specs/client-kit.md`,
-`specs/wrapper.md`) and decisions (`ADR-001` to `ADR-003`, still proposed). The toolchain (pnpm
+`specs/wrapper.md`) and decisions (`ADR-001` to `ADR-003`, accepted 2026-10-16). The toolchain (pnpm
 workspace, TypeScript, Vite, Vitest, Playwright, oxlint, oxfmt, CI) is the next
 pull request; packages follow.
 
