@@ -21,6 +21,11 @@ const VALIDATORS = [
 
 const ITERATIONS = 2000;
 
+// The seeded runs take well under a second alone, but CI runs every package's
+// tests in parallel on a small runner, where one has taken over Vitest's 5 s
+// default. The inputs and assertions are fixed; only the time limit is raised.
+const FUZZ_TIMEOUT_MS = 30_000;
+
 const POINTER = /^(?:\/(?:[^~/]|~[01])*)*$/u;
 
 type Tally = { accepted: number; rejected: number };
@@ -65,7 +70,7 @@ const documents = [
   ...Object.values(snapshotVectors.invalid),
 ].map(file => (file as { readonly input: unknown }).input);
 
-describe("validators on arbitrary input", () => {
+describe("validators on arbitrary input", { timeout: FUZZ_TIMEOUT_MS }, () => {
   it("never throw on arbitrary JSON values", () => {
     const random = seededRandom(0x5e_ed_00_01);
     const counts = tally();

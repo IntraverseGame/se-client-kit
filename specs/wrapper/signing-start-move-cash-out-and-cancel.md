@@ -33,13 +33,10 @@ Part of the [Wrapper spec](../wrapper.md), section
   to the game with a `reject` message and nothing is signed.
 - **W-24.** **Cash-out.** The shell signs `PlayerCashOut` when the player asks
   for it (the cash-out button, offered when the status is `active` and at least
-  one step was survived), and only then, with one exception: after a move whose
-  Snapshot is `active` with `step` equal to the number of steps, it signs
-  `PlayerCashOut` automatically, so a win is never stranded for lack of a click.
-  This applies **only if the backend leaves the round `active` at the last
-  step**; when the move itself closes the round (`won`), the Wrapper signs
-  nothing.
-  <!-- TODO(signed-action spec): confirm what the backend does at the last step (paid by the move, or `active` until a cash-out) and fix the automatic cash-out rule to it. -->
+  one step was survived), and only then. It never signs a cash-out on its own:
+  the backend pays out on the move that survives the last step, so after that
+  move the round is `won` and nothing is signed
+  ([OQ-8](../wrapper.md#decided-questions)).
 - **W-25.** **Cancel.** The shell signs `PlayerCancel` (`action = "cancel"`,
   empty path, sequence 1, `previous = T_0`) only when a check of W-26 fails and
   `T_0` is settled (W-26), or when the player cancels a round that is `active`

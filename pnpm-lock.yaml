@@ -231,7 +231,21 @@ importers:
         specifier: workspace:*
         version: link:../contracts
 
-  packages/shell: {}
+  packages/shell:
+    dependencies:
+      '@intraverse/se-client-play-client':
+        specifier: workspace:*
+        version: link:../play-client
+      '@intraverse/se-client-signing':
+        specifier: workspace:*
+        version: link:../signing
+      '@intraverse/se-client-snapshot':
+        specifier: workspace:*
+        version: link:../snapshot
+    devDependencies:
+      '@intraverse/se-client-contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
   packages/signing:
     dependencies:
