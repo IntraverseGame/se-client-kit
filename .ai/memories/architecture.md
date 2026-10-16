@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-16 (shell key-custody pull request; every package but the apps has code; `shell` has its first slice)
+last-verified: 2026-10-16 (shell tip-check pull request; every package but the apps has code; `shell` has its first slice)
 ---
 
 # Architecture (agent context)
@@ -39,15 +39,19 @@ structure below.
   a token. `play-client` sends the token but keeps none: each request takes its
   `Authorization` value from a function the shell passes.
 - **Shell internals stay internal.** The shell's public entry is the redacting
-  logger, `REDACTED`, and `ShellError`. The signing session (lock + key) and
-  the per-round transcript state are not exported, so the UI cannot sign an
-  arbitrary action text; they are reached through use cases once those exist.
-  Every use of the key checks the signer lock first (no lock, no Web Locks API,
-  a lost lock: `lock-not-held`). Its provisional seams (`T_0`, the `bytes32`
-  round id, the domain, the `PlayerCancel` hash, the Snapshot-reading rule) are
-  listed in `specs/client-kit/the-shell-package.md`; do not hard-code them.
-  After `STALE_ACTION` a round never signs again, even when the outcome is
-  adopted.
+  logger, `REDACTED`, `ShellError`, and the chain configuration's validation
+  (`validateChainConfig`, for W-26a's boot rule) with the RPC transport types
+  the Wrapper implements. The tip check and its pass-or-fail decision are
+  internal until the start flow exists. The environment configuration, never a
+  Snapshot or a response, pins the backend signer and the registry domain. The
+  signing session (lock + key) and the per-round transcript state are not
+  exported, so the UI cannot sign an arbitrary action text; they are reached
+  through use cases once those exist. Every use of the key checks the signer
+  lock first (no lock, no Web Locks API, a lost lock: `lock-not-held`). Its
+  provisional seams (`T_0`, the `bytes32` round id, the domain, the
+  `PlayerCancel` hash, the Snapshot-reading rule) are listed in
+  `specs/client-kit/the-shell-package.md`; do not hard-code them. After
+  `STALE_ACTION` a round never signs again, even when the outcome is adopted.
 - **A Snapshot is untrusted until validated.** `play-client` returns it as
   `unknown`; only `snapshot`'s validator produces a typed value, so an
   unvalidated Snapshot cannot reach the renderer by construction.

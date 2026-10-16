@@ -3,17 +3,26 @@
 Part of the [Client kit spec](../client-kit.md), section
 [Contract](../client-kit.md#contract).
 
-`shell` is built in slices. The first slice exists today: the redacting types
-and logger, key custody, the signer lock, and the transcript state (W-4, W-9 to
-W-19, W-41 as far as the shell is concerned). The `CreateRoundAuth` and tip
-checks (W-26, W-26a, W-26b), the `se.controller/1` bridge (W-37, W-38), and the
-session, start, move, and cash-out flows follow; the flows wait for the Play API
-operations. The Wrapper requirements each rule serves are in brackets.
+`shell` is built in slices. Two exist today: the redacting types and logger, key
+custody, the signer lock, and the transcript state (W-4, W-9 to W-19, W-41 as
+far as the shell is concerned); then the chain configuration, the tip check, and
+the decision it leads to (W-26a, W-26b, and W-26's pass or fail). The
+`CreateRoundAuth` and `T_0` checks (W-26 items 1 to 4), the `se.controller/1`
+bridge (W-37, W-38), and the session, start, move, and cash-out flows follow;
+the flows wait for the Play API operations. The Wrapper requirements each rule
+serves are in brackets.
 
-- **Public API.** Only the redacting logger (`createLogger` and its types),
-  `REDACTED`, and `ShellError` with its `ShellErrorCode`. Key custody, the
-  signer lock, and the transcript state are internal: the UI is meant to get use
-  cases and read-only state, never a signing capability
+- **Public API.** The redacting logger (`createLogger` and its types),
+  `REDACTED`, `ShellError` with its `ShellErrorCode`, the chain configuration's
+  validation (`validateChainConfig`, `DEFAULT_MIN_RPC_QUORUM`, and the types
+  `ChainConfig`, `ChainConfigResult`, `ChainConfigIssue`,
+  `ChainConfigIssueCode`, `Environment`, `SourceConfig`, `RpcEndpoint`), and the
+  RPC transport types (`RpcTransport`, `RpcCall`, `BlockTag`). The validation is
+  public because the Wrapper applies W-26a's boot rule before it starts; the
+  transport types because the Wrapper supplies the transport (it owns `fetch`
+  and the Content Security Policy). Key custody, the signer lock, the transcript
+  state, the tip check, and its decision are internal: the UI is meant to get
+  use cases and read-only state, never a signing capability
   ([Packages](./packages.md)), and those use cases do not exist yet.
 - **Redacting types (W-4).** Everything that holds a secret, or a closure over
   the key, prints `[redacted]` under `String()`, `JSON.stringify`, template
@@ -42,6 +51,78 @@ operations. The Wrapper requirements each rule serves are in brackets.
   `session-ended`, `invalid-input`, `key-generation`, `round-exists`,
   `equivocation`, `round-stopped`, `cancel-unavailable`) and a fixed message per
   code that never carries an input value (W-41).
+- **The chain configuration (W-26a, W-26b, the Wrapper's Configuration).**
+  `validateChainConfig(document)` reads the chain part of the parsed environment
+  configuration document and returns `{ ok: true, config }` (typed, deeply
+  frozen) or `{ ok: false, issues }`, each issue a `code` and a dotted `field`,
+  never a value. It reads `environment` (`production`, `preview`, or `local`),
+  `runtimeSigner` (a non-zero address), `registryDomain` (`chainId`, a positive
+  integer, and `verifyingContract`, a non-zero address), `rpcEndpoints` (per
+  entropy source, named as the Snapshot's `proofs.randomnessProof.source`, a
+  non-empty list of `{ provider, url }`: the provider a short token, the URL
+  `https:`, or `http:` on a loopback host only, with no credentials, query
+  string, or fragment), `minRpcQuorum` (an integer of at least 1, default 2),
+  and `tipLagMargin` (per source, a non-negative integer of blocks, required for
+  each source and only for those). Other fields are the Wrapper's and are
+  ignored. Addresses are kept lowercase (their case is not checked against
+  EIP-55); block counts become `bigint`. It refuses (`code`):
+  `production-quorum`, the boot rule, `production` with `minRpcQuorum` below 2;
+  `shared-provider`, two endpoints of one source with one provider (names
+  compared without case) or one URL (one provider may serve two sources);
+  `quorum-unreachable`, a source with fewer endpoints than `minRpcQuorum`; and
+  `invalid-environment`, `invalid-signer`, `invalid-domain`, `invalid-quorum`,
+  `invalid-endpoints`, and `invalid-lag-margin` for a missing or malformed
+  field. `local` and `preview` may set `minRpcQuorum` to 1: the config is then
+  `degraded`, the Wrapper shows the "chain check not independent (development)"
+  indicator, and every tip check records `tipCheck: "degraded"`. The Wrapper
+  refuses to start on any issue. This configuration is the only trust anchor of
+  the chain checks: the signer address and the registry domain are pinned per
+  environment, and a Snapshot's or a response's copy of them is compared with
+  it, never used in its place.
+- **The tip check (W-26b, W-26a).** It runs over the endpoints the configuration
+  lists for the round's source, through an injected `RpcTransport`
+  (`(endpoint, call, signal?) => Promise<result>`: it sends one JSON-RPC 2.0
+  request and resolves with its `result`, or rejects). There are no provider
+  names or URLs in the code. It makes two rounds of calls, each in parallel:
+  `eth_getBlockByNumber` with `["finalized", false]` to every endpoint, then
+  with `[h_low, false]` (`h_low` as a JSON-RPC quantity) to each endpoint that
+  answered. Each call times out on the injected clock (default 15 s, W-43) and
+  has its own abort signal (from the platform `AbortController`; typed as
+  `play-client`'s `CancelSignal`, since the kit compiles without the DOM
+  library), aborted when that call times out and never otherwise; where the
+  platform has no `AbortController` the signal is absent. A transport may ignore
+  it, and a late answer is ignored. A rejection, a timeout, a transport that
+  throws, and a `result` that is not a block (an object whose `number` is a
+  canonical lowercase quantity of at most 64 bits and whose `hash` is 32 bytes
+  of hex) are no answer; a hash is kept lowercase. `h_top` and `h_low` are the
+  maximum and minimum final block of the endpoints that answered. The check
+  passes only if at least `minRpcQuorum` answered, each is at most
+  `tipLagMargin` blocks behind `h_top`, each gave the block at `h_low`, and
+  every hash at `h_low` is the same. The failures, in this order, are
+  `too-few-answered`, `lagging`, `hash-unavailable`, and `hash-mismatch`; a
+  source the configuration does not list is `unknown-source` and no endpoint is
+  asked. It never drops an outlier or picks a side. The record (frozen) holds
+  the source, `passed`, the `failure`, `tipCheck` (`independent` or `degraded`),
+  the observed tip `h_top` and `h_low` (`null` when no endpoint answered), the
+  lag margin, and every configured endpoint's answer in order: its provider, its
+  final block, and its hash at `h_low` (`null` for no answer). Block numbers are
+  `bigint`.
+- **The decision (W-26, W-26b).** `decideChain(record, bind)` returns `pass`
+  only if the check passed and the bind holds: for a `future` bind `N` is above
+  `h_top`; for a `tip` bind `N` is at least `h_top` minus the lag margin.
+  Otherwise it returns `fail`, with the record kept and a reason:
+  `chain-unverified` ("could not verify the chain": `too-few-answered`,
+  `hash-unavailable`, or `unknown-source`) or `verification-failed` ("this round
+  failed verification": `lagging`, `hash-mismatch`, or a bind that does not
+  hold, `failure: "bind"`). A failure signs nothing by itself: per W-25 and W-26
+  the shell signs `PlayerCancel` (through the round's `signCancel`) as soon as
+  the round is `active` only if `T_0` is settled, and the player then sees the
+  reason's text, with "and was canceled" added to "this round failed
+  verification"; if `T_0` is not settled it signs nothing for the round, not
+  even `PlayerCancel`, keeps the evidence, and the round ends by its game's
+  expiry rule. W-26 items 1 to 4 are not built, so `T_0` is never settled today
+  and every failure takes that path. The shell does not act on the decision yet:
+  the start flow is not built.
 - **Key custody (W-9 to W-13).** A session generates its action key with
   `signing`'s `createSigner` on the first need (the first `address()` or
   signature), from the injected random source (the platform's
@@ -103,8 +184,22 @@ operations. The Wrapper requirements each rule serves are in brackets.
     released. That field comes from a later Snapshot schema version the kit has
     not vendored yet (the vendored `se.snapshot/1` does not have it), so it is
     provisional and the caller passes `T_0` until a schema sync adds it.
-  - The EIP-712 domain is an input of the session, assumed to come from the
-    environment configuration (W-26).
+  - The EIP-712 domain is an input of the session. The environment configuration
+    pins its `chainId` and `verifyingContract`; the session is not wired to the
+    validated configuration yet.
+  - `tipLagMargin` has no default and is required per source: the margin in
+    blocks per chain is not decided (W-26b).
+  - The bind's mode (`future` or `tip`) and `N` are inputs of the decision: the
+    Snapshot's `proofs.randomnessProof.blockNumber` is `N`, and the mode is not
+    yet in a contract the kit has vendored.
+  - The `CreateRoundAuth` and `T_0` checks (W-26 items 1 to 4) are not built:
+    the Snapshot schema version that carries `proofs.createRoundAuth` is not
+    vendored yet, and the caller passes `T_0` instead of the shell recomputing
+    it and comparing it with `readyHash`. Its trust rule is decided
+    ([OQ-7](../wrapper.md#decided-questions)): the environment configuration
+    pins the signer and the domain, the Snapshot's per-round copy must equal
+    them or the shell refuses, and the Snapshot is never the trust anchor.
+    <!-- TODO(signed-action spec): the CreateRoundAuth check against the vendored Snapshot schema and its vectors. -->
   - The `PlayerCancel` encoding is an injected function from the message to its
     struct hash; `signing` does not encode `PlayerCancel` until a published
     contract defines its type string and an independent vector pins it. Without
@@ -140,4 +235,12 @@ operations. The Wrapper requirements each rule serves are in brackets.
   checks that no sequence has two signatures and the chain never breaks; a
   whole-session test checks that the key's bytes (hex, base64, and decimal)
   appear in no printed object, error, log line, or global, and that no storage,
-  cookie, URL, history, network, or messaging global is read or written.
+  cookie, URL, history, network, or messaging global is read or written. The
+  chain configuration's tests cover each refusal (T-8a) and the boot rule; the
+  tip check runs against a scripted JSON-RPC transport and a manual clock and
+  covers every T-8 tip case: exactly the quorum agreeing passes, one outlier
+  among three fails, too few answering fails, a hash mismatch at `h_low` fails,
+  a disagreement just beyond the lag margin fails (and at it passes), `h_top` is
+  reported, every answer is recorded, and the degraded mode records
+  `tipCheck: "degraded"`; plus the calls' shape, untrusted answers, and the
+  request timeout (T-8a).
