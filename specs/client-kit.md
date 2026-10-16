@@ -167,7 +167,7 @@ forbidden contributor terms. Other cross-script lookalikes are left to review.
 | `@intraverse/se-client-contracts`            | npm (runtime entry only) | **Data only, no logic.** Everything vendored from the backend and nothing else: the Play API OpenAPI document, the Snapshot JSON Schema, the signing vectors, the Snapshot vectors (and later the signed-action vectors), the types generated from them, `contracts.lock.json` (source commit and content hash per artifact; kept in this repository, not published in the tarball), and the input of the drift-check job. It has **two entry points**: a **runtime** entry (the schemas and the generated types) and a separate **test-only** entry (the vectors), so vectors can never reach a browser bundle ([rules below](#the-contracts-package)).                                         | none                                                                                                       | none                                |
 | `@intraverse/se-client-signing`              | npm                      | The hand-written, fixed-type EIP-712 encoder and secp256k1 signing and recovery: domain separator, type hashes, `hashStruct`, the `0x1901` digest, `PlayerAction`, `PlayerCashOut`, `PlayerCancel`, and the registry types the shell must recompute or verify (`NewRound`, `CreateRoundAuth`, `MarkReadyAuth`, `CloseRoundAuth`, `PayoutTerms`). Canonical 65-byte signatures, key generation, the transcript helper (the `previous` chain, one signature per sequence), and a provisional action grammar ([The cryptography](#the-cryptography) says which types are implemented today). It takes vectors from `contracts` in **tests only** (a development dependency on the test-only entry). | none at run time                                                                                           | `@noble/curves`, `@noble/hashes`    |
 | `@intraverse/se-client-snapshot`             | npm                      | The hand-written validator over the Snapshot schema's keyword profile (the `Snapshot`, `PlayProblem`, and `AmountRequest` validators) and the render helpers (pure functions over a validated Snapshot). It takes the schema and the types from `contracts`, and its tests take the vectors from `contracts`' test entry.                                                                                                                                                                                                                                                                                                                                                                        | `contracts`                                                                                                | none                                |
-| `@intraverse/se-client-play-client`          | npm                      | A typed `fetch` client for the Play API (and the verify API read the Wrapper needs), generated from the OpenAPI documents. It takes its types from `contracts`, returns the Snapshot body as `unknown`, and never interprets it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `contracts`                                                                                                | none (it uses the platform `fetch`) |
+| `@intraverse/se-client-play-client`          | npm                      | A typed `fetch` client for the Play API (and the verify API read the Wrapper needs), generated from the OpenAPI documents. It takes its types from `contracts`, returns the Snapshot body as `unknown`, and never interprets it. It holds no credential: the shell keeps the play token and runs its refresh, using the client's request layer and schedule functions.                                                                                                                                                                                                                                                                                                                           | `contracts`                                                                                                | none (it uses the platform `fetch`) |
 | `@intraverse/se-client-shell`                | npm                      | The headless part of the Wrapper: session and token lifecycle, key custody, the transcript, Web Locks, bind-receipt and tip checks, the controller boundary, the redacting types and logger. It has no DOM dependency beyond the platform APIs it is given.                                                                                                                                                                                                                                                                                                                                                                                                                                      | `signing`, `snapshot`, `play-client` (and `contracts` through them)                                        | none                                |
 | `@intraverse/se-client-wrapper` (app)        | no: a release bundle     | The UI: rendering, accessibility, the iframe mount, the build. It uses the shell and renders only what the shell hands it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `shell` (and its types)                                                                                    | none                                |
 | `@intraverse/se-client-reference-game` (app) | no                       | A minimal game for the tests and as a sample for game developers.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | nothing but the type definitions of the controller protocol `se.controller/1` (type-only, no runtime code) | none                                |
@@ -536,6 +536,91 @@ logic packages read it and never write to it.
   at 2^256 - 1.
 - **Not yet.** The render helpers named in [Packages](#packages) follow with the
   Wrapper's rendering work.
+
+### The `play-client` request layer
+
+`play-client` is built in two layers: a hand-written request layer, and one
+function per Play API operation on top of it, typed from the Play API document's
+generated types. The request layer exists today; the operations wait for the
+document (the `TODO(Play API document)` marker above). The request layer holds
+these rules (the Wrapper requirements it serves are in brackets):
+
+- **No credential is kept.** The shell holds the play token and runs the refresh
+  loop (W-3, W-6, W-7); `play-client` provides the pieces it uses (the request
+  layer, the refresh schedule, single flight, the retry classes) and never holds
+  a token or schedules a refresh itself. A request takes its `Authorization`
+  value from a function the shell passes, read once per attempt and never
+  stored. The header form is one function, `bearerAuthorization`, provisional
+  until the Play API confirms it (W-3).
+- **The base.** The Play API base must be an `https:` URL; `http:` is allowed
+  only on a loopback host (`localhost`, `127.0.0.1`, `[::1]`), for local
+  development. Any other base, and a base with credentials, a query string, or a
+  fragment, is refused when the transport is created (W-3).
+- **Request options.** Every request is sent with `credentials: "omit"`,
+  `cache: "no-store"`, `referrerPolicy: "no-referrer"`, and `redirect: "error"`
+  (W-3), so the token is never sent on to another URL. A refused redirect
+  surfaces as a `NetworkError` (`network`), which is how the platform `fetch`
+  reports it; a 3xx response that a `fetch` hands back anyway is a
+  `ProtocolError`. A path is absolute below the configured base, and a path with
+  a query string or a fragment is refused: no query string or fragment is sent,
+  and a secret is never placed in a path, because error messages carry the path.
+- **Timeout and cancel.** Every attempt, the body read included, times out
+  (default 15 s, W-43) and is aborted through the platform `AbortController`
+  when there is one. A request may carry the caller's abort signal: aborting it
+  aborts the in-flight `fetch`, or clears a backoff wait, and the request
+  rejects with a `NetworkError` (`aborted`) without another attempt and without
+  reading its `Authorization` again (the shell stops its calls when the session
+  ends, W-7).
+- **Errors.** Three types: `NetworkError` (no response: `timeout`, `network`, or
+  `aborted`; the platform's error is dropped, since it can name the URL),
+  `ProblemError` (an error status with a problem body: its `code`, `retryable`,
+  HTTP `status`, and `requestId` are read, the body stays `unknown` for the
+  `snapshot` validator and is not enumerable, so a console dump shows what the
+  JSON form shows), and `ProtocolError` (an error status without a problem body,
+  or a body that is not JSON). A message and the JSON form hold the method, the
+  path, the status, the `requestId`, and the `code` only (W-4, W-41); never a
+  header, a request body, or the problem's `detail`. A `code` the kit does not
+  know is kept as a string, for the status and `retryable` fallback (W-42).
+- **Retry classes.** A request names its class: `never` (the launch-code redeem:
+  no repeat at all, W-1, W-2), `refresh` (a lost response or a retryable problem
+  is repeated with the same old token; the request must name the old token's
+  local deadline, `localDeadlineMs`, as `notAfterMs`, the type and a runtime
+  check refuse a refresh without it, and no repeat starts at or after it, W-6,
+  W-7), or `idempotent` (a mutating call with its intent's idempotency key, or a
+  read: a lost response or a retryable problem is repeated with the same bytes,
+  W-16, W-42, W-43). A problem that is not `retryable`, an aborted request, and
+  `SESSION_EXPIRED`, `SESSION_REVOKED`, and `UNAUTHENTICATED` whatever their
+  flag, are never repeated. The bound is a configuration value, checked when the
+  transport is created (`maxAttempts` a safe integer of at least 1; both delays
+  finite and non-negative, the initial one not above the maximum). Its defaults
+  are provisional, since W-42 asks only for "a bounded number of times with
+  backoff": 3 attempts in all, waiting 500 ms, then doubling to at most 2 s (the
+  polling rates of W-35), with no jitter.
+- **Token schedule.** Pure functions over the deadline the response carries
+  (W-5): the clock offset from the `Date` header, the refresh point (the earlier
+  of the configured fraction of the lifetime and the margin before the deadline,
+  defaults one third and 60 s, W-6), expiry, and a single-flight wrapper so at
+  most one refresh is in flight. Reading `tokenExpiresAt` assumes a full RFC
+  3339 timestamp with seconds and a zone (`Z` or `+hh:mm`); one without a zone
+  is refused, since it would be read in the device's local time. This is
+  provisional until the Play API document fixes the format.
+- **Idempotency keys** come from an injected random source (`randomUUID`) and
+  must be UUIDs, provisional until the Play API document fixes their limits
+  (W-36).
+- **Provisional items.** The bearer form, the `tokenExpiresAt` format, the
+  idempotency key's form, and the retry defaults above are each one function or
+  constant. Each is replaced, and its provisional note removed, as the matching
+  Play API item of the open contract items closes.
+- **It emits nothing**: no log line, no metric, no event.
+- **Tests** run against a fake `fetch`, a fake clock, and a fake abort signal
+  (no network, no timer), with problem bodies typed against the contracts'
+  `PlayProblem`. `play-client`'s tests are not a consumer of the `contracts`
+  test-only entry, so they do not replay the `PlayProblem` vectors; the typed
+  copies stand in for them. The fake is rebuilt from the Play API document when
+  it is vendored, and the operations are added then; until then the request
+  layer is delivered on its own, as part of the client's issue, which stays open
+  for the operations.
+  <!-- TODO(Play API document): the operations (redeem, refresh, start, continue, cash-out, cancel, the Snapshot read), their paths and wire types, and a fake Play API built from the document. -->
 
 ### The cryptography
 

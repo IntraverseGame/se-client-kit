@@ -166,8 +166,12 @@ defaults.
   (`localStorage`, `sessionStorage`, IndexedDB, Cache Storage, cookies, the
   history state), to a URL, to a log, to an error message, to the DOM, or to a
   `postMessage`. It is sent only in the `Authorization` request header of Play
-  API calls, with `credentials: "omit"`, `cache: "no-store"`, and
-  `referrerPolicy: "no-referrer"`.
+  API calls, with `credentials: "omit"`, `cache: "no-store"`,
+  `referrerPolicy: "no-referrer"`, and `redirect: "error"` (a redirect is never
+  followed, so the token is never sent on to another URL; it surfaces as a
+  network failure). The Play API base MUST be an `https:` URL; `http:` is
+  allowed only on a loopback host (`localhost`, `127.0.0.1`, `[::1]`), and any
+  other base is refused before a request is made.
   <!-- TODO(Play API): confirm the bearer header form of the play token. -->
 - **W-4.** Every type that holds a token, a launch code, or the key MUST print
   `[redacted]` under `String()`, `JSON.stringify`, template literals, and the
@@ -184,7 +188,11 @@ defaults.
   redeem response. At most one refresh is in flight. The new token replaces the
   old one only after its response arrived; until then the old token stays in
   use. A refresh whose response was lost MAY be repeated with the same old
-  token: the presented token keeps its own expiry.
+  token: the presented token keeps its own expiry. The **shell** holds the token
+  and runs this refresh loop; the `play-client` package only provides the pieces
+  (the request layer, the refresh-point and clock-offset functions, single
+  flight, the retry classes) and never holds a token
+  ([client-kit.md](./client-kit.md#the-play-client-request-layer)).
 - **W-7.** A refresh failing with a retryable problem MUST be retried with
   bounded backoff while the old token is valid. A refresh answered
   `SESSION_EXPIRED`, `SESSION_REVOKED`, or `UNAUTHENTICATED`, or a token that

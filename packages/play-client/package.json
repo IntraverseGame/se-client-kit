@@ -30,9 +30,13 @@
       "default": "./dist/index.js"
     }
   },
+  "dependencies": {
+    "@intraverse/se-client-contracts": "workspace:*"
+  },
   "scripts": {
     "build": "wireit",
-    "typecheck": "wireit"
+    "typecheck": "wireit",
+    "test": "wireit"
   },
   "wireit": {
     "build": {
@@ -45,6 +49,7 @@
         "!src/**/*.test.ts",
         "package.json",
         "tsconfig.json",
+        "tsconfig.test.json",
         "tsdown.config.ts",
         "../../tsdown.base.ts",
         "../../tsconfig.base.json"
@@ -57,7 +62,7 @@
       ]
     },
     "typecheck": {
-      "command": "tsc -p tsconfig.json",
+      "command": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
       "dependencies": [
         "../contracts:build"
       ],
@@ -65,6 +70,26 @@
         "src/**",
         "package.json",
         "tsconfig.json",
+        "tsconfig.test.json",
+        "../../tsconfig.base.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "test": {
+      "command": "vitest run",
+      "dependencies": [
+        "../contracts:build"
+      ],
+      "files": [
+        "src/**",
+        "*.ts",
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.test.json",
+        "../../tsdown.base.ts",
         "../../tsconfig.base.json"
       ],
       "output": [],

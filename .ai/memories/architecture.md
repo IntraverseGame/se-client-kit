@@ -34,7 +34,8 @@ plan and flag any divergence.
 - **The shell is the only code that touches a credential** (action key, play
   token). The UI gets use cases (`start`, `pick`, `cashOut`) and read-only
   state, never a secret. Do not "simplify" this by letting the UI sign or read
-  a token.
+  a token. `play-client` sends the token but keeps none: each request takes its
+  `Authorization` value from a function the shell passes.
 - **A Snapshot is untrusted until validated.** `play-client` returns it as
   `unknown`; only `snapshot`'s validator produces a typed value, so an
   unvalidated Snapshot cannot reach the renderer by construction.

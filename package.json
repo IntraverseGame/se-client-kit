@@ -113,6 +113,7 @@
         "./packages/signing:test",
         "./apps/wrapper:test",
         "./packages/snapshot:test",
+        "./packages/play-client:test",
         "test:tools",
         "check:readmes"
       ]
