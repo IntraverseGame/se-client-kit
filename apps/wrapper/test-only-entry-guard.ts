@@ -113,7 +113,9 @@ const stringsIn = (root: unknown): string[] => {
       const value = record["value"] as { cooked?: string | null; raw?: string };
       found.push(value.cooked ?? "", value.raw ?? "");
     }
-    stack.push(...Object.values(record));
+    // One push per child: spreading a long node list into a single call can
+    // exceed the engine's argument limit.
+    for (const child of Object.values(record)) stack.push(child);
   }
   return found;
 };

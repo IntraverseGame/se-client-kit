@@ -53,3 +53,20 @@ describe("the Wrapper guard's source check is fast", () => {
     );
   });
 });
+
+describe("the Wrapper guard walks a very large syntax tree", () => {
+  // A node list longer than the engine's argument limit (a large data table)
+  // must not overflow the stack while the guard collects string literals.
+  const table = `export const table: number[] = [${"0,".repeat(300_000)}];`;
+  const transform = testOnlyEntryGuard().transform as Transform;
+
+  it("accepts a project module with a huge array literal", () => {
+    expect(() => transform(table, "/src/table.ts")).not.toThrow();
+  });
+
+  it("accepts a third-party module with a huge array literal", () => {
+    expect(() =>
+      transform(table, "/node_modules/data-table/index.js"),
+    ).not.toThrow();
+  });
+});
