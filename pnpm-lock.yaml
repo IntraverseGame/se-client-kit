@@ -225,7 +225,11 @@ importers:
 
   packages/contracts: {}
 
-  packages/play-client: {}
+  packages/play-client:
+    dependencies:
+      '@intraverse/se-client-contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
   packages/shell: {}
 

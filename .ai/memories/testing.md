@@ -66,7 +66,7 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 
 ## Commands and CI jobs
 
-- `pnpm test` runs the `vitest run` of every workspace that has tests (today `apps/wrapper` and `packages/snapshot`; each must be listed in the root `test` dependencies; a package gets a `test` script with its first real test) plus the tooling tests in
+- `pnpm test` runs the `vitest run` of every workspace that has tests (today `apps/wrapper`, `packages/signing`, `packages/snapshot`, and `packages/play-client`; each must be listed in the root `test` dependencies; a package gets a `test` script with its first real test) plus the tooling tests in
   `tools/` (`test:tools`); `pnpm test:e2e` runs the Playwright suite (none yet,
   so it passes with no tests). `pnpm check` is everything below.
 - `tools/import-direction.test.ts` is the proof that the dependency-direction
