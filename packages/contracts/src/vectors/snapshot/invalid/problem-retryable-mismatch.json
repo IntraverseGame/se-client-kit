@@ -1,0 +1,15 @@
+{
+  "vector": "snapshot/invalid/problem-retryable-mismatch",
+  "description": "ENTROPY_UNAVAILABLE must be retryable.",
+  "definition": "PlayProblem",
+  "expected": "invalid",
+  "failsAt": "/retryable",
+  "input": {
+    "type": "about:blank",
+    "title": "Play error",
+    "status": 422,
+    "requestId": "req_01J9ZK",
+    "code": "ENTROPY_UNAVAILABLE",
+    "retryable": false
+  }
+}

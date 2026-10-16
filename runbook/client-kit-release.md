@@ -85,16 +85,29 @@ source (the drift check says so):
 
 A sync touches **one package**, `contracts` (`packages/contracts/`).
 
-1. Copy the files named in `packages/contracts/contracts.lock.json` from their
-   sources: the Play and verify OpenAPI documents only, the Snapshot schema and
-   vectors, the signing vectors. Never copy another surface's document.
-2. Update the lock: source (by name), source commit, SHA-256 per file. The sync
-   script writes it.
-3. Regenerate the types in `contracts` (`pnpm` script of the package). Vectors
-   stay on the test-only entry; the pull request must not import them from
-   non-test code (the lint rule and the `build` check catch it).
-4. Open a pull request. In the description, say what changed and why; the
-   reviewers check the diff against the never-public checklist.
+1. Fetch the source repositories (`git fetch`) so the refs you name are current.
+   The working trees do not matter: the sync reads committed files.
+2. Write a sources file **outside this repository** (it holds paths on your
+   machine). One entry per group: `snapshot-schema`, `snapshot-vectors-valid`,
+   `snapshot-vectors-invalid`, `signing-vectors`. Each has `name` (the
+   repository, recorded in the lock), `repo` (your local checkout), `ref` (for
+   example the default branch on `origin`) and `path` (the file or directory in
+   that repository). The lock records only public names, so the paths are not in
+   this repository: the source's own documentation names them, or ask its
+   owners. Keep your sources file for the next sync. Copy only the Play and
+   verify OpenAPI documents, the Snapshot schema and vectors, and the signing
+   vectors; never another surface's document.
+3. Run `pnpm exec tsx tools/sync-contracts.ts --sources <file>`. It copies the
+   files and rewrites `packages/contracts/contracts.lock.json` together. It
+   refuses to change or remove a vector that is already locked; pass
+   `--allow-vector-change` only before the first release, and say so in the pull
+   request.
+4. Run `pnpm exec tsx tools/generate-contracts.ts --write` to regenerate the
+   types and the vector catalog, then `pnpm check`. Vectors stay on the
+   test-only entry; the lint rule, `check:contracts`, and `check:build-output`
+   catch an import from non-test code or a vector in an output.
+5. Open a pull request. In the description, say what changed and why; the
+   reviewers check every copied file against the never-public checklist.
 
 ### Release
 
@@ -207,8 +220,12 @@ If the release uses a stored npm token (rather than trusted publishing):
   owner reviews.
 - **`contracts` job fails on a hash.** A file differs from the lock: re-run the
   sync, or the file was edited by hand; restore it from its source.
-- **`contracts` job fails on the generated client.** The OpenAPI document and
-  the committed types differ: regenerate.
+- **`contracts` job fails on a generated file.** A vendored document and the
+  committed generated files differ: run
+  `pnpm exec tsx tools/generate-contracts.ts --write` and commit the result.
+- **The sync refuses with "append-only".** A vector that is already locked
+  changed or disappeared at its source. Ask the source's owners why; a released
+  vector is never edited.
 - **Provenance is missing on a version.** The package was published outside the
   release workflow. Deprecate it and republish from the workflow.
 - **The publish job waits.** It needs an approval from a required reviewer of

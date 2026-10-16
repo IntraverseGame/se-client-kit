@@ -1,0 +1,12 @@
+{
+  "vector": "snapshot/invalid/amount-request-normalized",
+  "description": "normalized is response-only and rejected in a request.",
+  "definition": "AmountRequest",
+  "expected": "invalid",
+  "failsAt": "",
+  "input": {
+    "value": "1000",
+    "unit": "EUR",
+    "normalized": 10
+  }
+}

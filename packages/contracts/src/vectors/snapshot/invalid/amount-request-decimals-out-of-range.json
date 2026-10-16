@@ -1,0 +1,12 @@
+{
+  "vector": "snapshot/invalid/amount-request-decimals-out-of-range",
+  "description": "decimals, when present, is within 0..77.",
+  "definition": "AmountRequest",
+  "expected": "invalid",
+  "failsAt": "/decimals",
+  "input": {
+    "value": "1000",
+    "decimals": 78,
+    "unit": "EUR"
+  }
+}

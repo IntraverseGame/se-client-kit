@@ -88,7 +88,14 @@ Several agents and people work in one clone at once. Rules:
 - Generated code: never edit; regenerate and commit.
 - Contract copies: change the `contracts` package only with its lock entry (source
   commit and hash), in a pull request that shows the diff; it holds data only, no
-  logic.
+  logic. Never copy by hand: `tools/sync-contracts.ts --sources <file>` (the
+  sources file lives outside the repository), then
+  `tools/generate-contracts.ts --write`. The vendored JSON is exempt from oxfmt
+  on purpose (the lock pins its bytes); the generated files are exempt from oxfmt
+  and oxlint (the generator's output is what `check:contracts` compares).
+- `json-schema-to-typescript` is imported by a computed specifier in
+  `tools/generate-contracts.ts`: its declarations do not compile under the strict
+  compiler options. Do not "fix" it into a static import.
 - New dependency: ADR first. No lifecycle scripts.
 - Commits: Conventional Commits; one logical change per PR.
 

@@ -1,0 +1,14 @@
+{
+  "vector": "snapshot/valid/problem-default-code-unknown",
+  "description": "Typed error with the default code of the unknown Kind (no Kind found): not retryable.",
+  "definition": "PlayProblem",
+  "expected": "valid",
+  "input": {
+    "type": "about:blank",
+    "title": "Unknown error",
+    "status": 500,
+    "requestId": "req_01J9ZK",
+    "code": "UNKNOWN",
+    "retryable": false
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "vector": "snapshot/valid/problem-default-code-invalid-argument",
+  "description": "Typed error with a default code (the Kind name) that is not retryable: a malformed body.",
+  "definition": "PlayProblem",
+  "expected": "valid",
+  "input": {
+    "type": "about:blank",
+    "title": "Invalid request",
+    "status": 400,
+    "requestId": "req_01J9ZK",
+    "code": "INVALID_ARGUMENT",
+    "retryable": false
+  }
+}

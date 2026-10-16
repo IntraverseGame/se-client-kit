@@ -1,0 +1,14 @@
+{
+  "vector": "snapshot/valid/problem-entropy-unavailable",
+  "description": "Typed error, retryable.",
+  "definition": "PlayProblem",
+  "expected": "valid",
+  "input": {
+    "type": "about:blank",
+    "title": "Play error",
+    "status": 422,
+    "requestId": "req_01J9ZK",
+    "code": "ENTROPY_UNAVAILABLE",
+    "retryable": true
+  }
+}

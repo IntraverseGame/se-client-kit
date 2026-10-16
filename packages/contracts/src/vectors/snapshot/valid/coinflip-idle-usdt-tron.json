@@ -1,0 +1,86 @@
+{
+  "vector": "snapshot/valid/coinflip-idle-usdt-tron",
+  "description": "Coin Flip idle with a token currency: unit is the wallet registry code, decimals its registry scale (6).",
+  "definition": "Snapshot",
+  "expected": "valid",
+  "input": {
+    "schema": "se.snapshot/1",
+    "version": 0,
+    "presentation": "steps",
+    "model": "config",
+    "context": {
+      "sessionId": "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N",
+      "language": "de",
+      "country": "DE",
+      "device": "mobile",
+      "links": {
+        "lobby": "https://luckybet.example.com/lobby",
+        "deposit": "https://luckybet.example.com/cashier"
+      },
+      "theme": {
+        "appearance": "dark"
+      },
+      "view": {
+        "playerName": "Kai",
+        "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png"
+      }
+    },
+    "status": "idle",
+    "bet": {
+      "balance": {
+        "value": "250000000",
+        "decimals": 6,
+        "unit": "USDT-TRON",
+        "normalized": 250.0,
+        "formatted": "250.00 USDT"
+      },
+      "minBet": {
+        "value": "100000",
+        "decimals": 6,
+        "unit": "USDT-TRON",
+        "normalized": 0.1,
+        "formatted": "0.10 USDT"
+      },
+      "maxBet": {
+        "value": "100000000",
+        "decimals": 6,
+        "unit": "USDT-TRON",
+        "normalized": 100.0,
+        "formatted": "100.00 USDT"
+      },
+      "suggestedBets": [
+        {
+          "value": "1000000",
+          "decimals": 6,
+          "unit": "USDT-TRON",
+          "normalized": 1.0,
+          "formatted": "1.00 USDT"
+        },
+        {
+          "value": "5000000",
+          "decimals": 6,
+          "unit": "USDT-TRON",
+          "normalized": 5.0,
+          "formatted": "5.00 USDT"
+        }
+      ],
+      "defaultBet": {
+        "value": "1000000",
+        "decimals": 6,
+        "unit": "USDT-TRON",
+        "normalized": 1.0,
+        "formatted": "1.00 USDT"
+      }
+    },
+    "config": {
+      "kind": "steps",
+      "steps": [
+        {
+          "index": 0,
+          "optionCount": 2,
+          "multiplier": 1.94
+        }
+      ]
+    }
+  }
+}

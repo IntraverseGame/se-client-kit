@@ -5,8 +5,8 @@ OpenAPI document (`/play/v1`), the Snapshot JSON Schema (`se.snapshot/1`), and
 the types generated from them. It holds documents and generated types and no
 functions.
 
-**Status:** pre-release: no public API yet. Not published to npm yet. When it is
-released it will carry the contracts it was built against.
+**Status:** pre-release. Not published to npm yet. When it is released it will
+carry the contracts it was built against.
 
 ## Install
 
@@ -38,12 +38,14 @@ or calling the Play API (use `@intraverse/se-client-play-client`).
 
 - Data only: no validator, no client, no helper.
 - An amount in the contracts (`Amount.value`) is a string of base units. Read it
-  with `BigInt`, and never hold an amount as a `number`.
+  with `BigInt`, and never hold an amount as a `number`. `Amount.normalized` and
+  `Multiplier` are numbers for display only: never do arithmetic on them.
 - The files are copies of the backend's published contracts, referenced by name
   and version, never imported as code.
 
-Specified, not implemented yet: the package holds no schemas or types today;
-these are the rules it is specified to follow once it does.
+Today the package holds the Snapshot schema and its types. The Play API document
+and its types are not here yet: they join when the backend publishes the
+document.
 
 ## More
 

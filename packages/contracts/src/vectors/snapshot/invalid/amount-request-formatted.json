@@ -1,0 +1,12 @@
+{
+  "vector": "snapshot/invalid/amount-request-formatted",
+  "description": "formatted is response-only and rejected in a request.",
+  "definition": "AmountRequest",
+  "expected": "invalid",
+  "failsAt": "",
+  "input": {
+    "value": "1000",
+    "unit": "EUR",
+    "formatted": "€10.00"
+  }
+}

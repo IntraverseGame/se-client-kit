@@ -1,0 +1,11 @@
+{
+  "vector": "snapshot/invalid/amount-request-value-number",
+  "description": "A request value is a base-10 string, never a JSON number.",
+  "definition": "AmountRequest",
+  "expected": "invalid",
+  "failsAt": "/value",
+  "input": {
+    "value": 1000,
+    "unit": "EUR"
+  }
+}

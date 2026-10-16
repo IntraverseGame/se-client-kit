@@ -1,0 +1,15 @@
+{
+  "vector": "snapshot/valid/problem-insufficient-funds",
+  "description": "Typed error, not retryable.",
+  "definition": "PlayProblem",
+  "expected": "valid",
+  "input": {
+    "type": "about:blank",
+    "title": "Play error",
+    "status": 422,
+    "requestId": "req_01J9ZK",
+    "code": "INSUFFICIENT_FUNDS",
+    "retryable": false,
+    "detail": "Balance below the bet."
+  }
+}

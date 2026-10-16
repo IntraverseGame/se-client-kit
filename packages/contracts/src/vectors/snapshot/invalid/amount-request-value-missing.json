@@ -1,0 +1,10 @@
+{
+  "vector": "snapshot/invalid/amount-request-value-missing",
+  "description": "value is required in a request.",
+  "definition": "AmountRequest",
+  "expected": "invalid",
+  "failsAt": "",
+  "input": {
+    "unit": "EUR"
+  }
+}
