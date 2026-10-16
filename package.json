@@ -112,6 +112,7 @@
       "dependencies": [
         "./packages/signing:test",
         "./apps/wrapper:test",
+        "./packages/snapshot:test",
         "test:tools",
         "check:readmes"
       ]

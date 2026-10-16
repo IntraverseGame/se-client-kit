@@ -242,7 +242,11 @@ importers:
         specifier: workspace:*
         version: link:../contracts
 
-  packages/snapshot: {}
+  packages/snapshot:
+    dependencies:
+      '@intraverse/se-client-contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
 packages:
 

@@ -38,6 +38,11 @@ plan and flag any divergence.
 - **A Snapshot is untrusted until validated.** `play-client` returns it as
   `unknown`; only `snapshot`'s validator produces a typed value, so an
   unvalidated Snapshot cannot reach the renderer by construction.
+  `snapshot`'s evaluator is hand-written over the schema's keyword profile and
+  fails closed on a keyword outside it; do not swap in `ajv` (it needs
+  `unsafe-eval`) or make an unknown keyword pass. It is strict as the schema is
+  (closed objects); tolerance (W-29) applies only within what the schema
+  allows (decided 2026-10-16), so a new Snapshot field needs a kit sync.
 - **Signing mirrors the backend's decisions:** a hand-written, fixed-type
   EIP-712 encoder, 65-byte `r ‖ s ‖ v` signatures with `v` in `{27, 28}` and low
   `s`, deterministic (RFC 6979), the zero address rejected on recovery. It is
@@ -61,8 +66,10 @@ plan and flag any divergence.
   edited; new cases are new files or a new version. A vendored vector file
   records the commit it came from.
 - Changes within `/play/v1` and `se.snapshot/1` are additive; clients are
-  tolerant readers. A breaking change is a new surface or schema version and a
-  new major of the affected packages.
+  tolerant readers only within what the synced schema allows (its objects are
+  closed, so a new Snapshot field or status needs a kit sync). A breaking
+  change is a new surface or schema version and a new major of the affected
+  packages.
 
 ## Things not to "fix"
 
