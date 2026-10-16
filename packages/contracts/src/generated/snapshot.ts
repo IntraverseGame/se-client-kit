@@ -34,101 +34,39 @@ bankedAmount?: Amount
 config: GameConfig
 proofs?: FairnessContext
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "HttpsUrl".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "HttpsUrl".
- */
 export type HttpsUrl = string
 /**
  * Round lifecycle phase. New values only behind a client capability flag.
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "RoundStatus".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "RoundStatus".
  */
 export type RoundStatus = ("idle" | "starting" | "active" | "resolving" | "won" | "lost" | "canceled")
 /**
  * UUIDv7, canonical lowercase text form.
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "RoundId".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "RoundId".
  */
 export type RoundId = string
 /**
  * Non-negative integer in the token's smallest unit, base-10, no sign, no leading zeros, at most 2^256-1 (ADR-011). The pattern is the exact range: any value of up to 77 digits, or a 78-digit value not above 2^256-1 (115792089237316195423570985008687907853269984665640564039457584007913129639935).
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "BaseUnits".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "BaseUnits".
  */
 export type BaseUnits = string
 /**
  * Wallet registry currency code (specs/wallet-contract.md), e.g. EUR, ETH, USDT-TRON.
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Unit".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Unit".
  */
 export type Unit = string
 /**
  * Payout multiplier for display. Never used for money math; amounts come as Amount.
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Multiplier".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Multiplier".
  */
 export type Multiplier = number
 /**
  * PUBLIC round configuration. Never contains unresolved outcomes.
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "GameConfig".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "GameConfig".
  */
 export type GameConfig = (StepConfig | BookConfig)
 /**
  * 32 bytes, 0x-prefixed lowercase hex.
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Hash32".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Hash32".
  */
 export type Hash32 = string
 /**
  * The roundId in its on-chain bytes32 form: the 16 UUIDv7 bytes left-aligned, zero-padded (system-design 06).
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "RoundIdBytes32".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "RoundIdBytes32".
  */
 export type RoundIdBytes32 = string
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "ErrorCode".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "ErrorCode".
- */
 export type ErrorCode = ("INSUFFICIENT_FUNDS" | "LIMIT_EXCEEDED" | "PLAYER_RESTRICTED" | "FUNDING_UNCONFIRMED" | "ENTROPY_UNAVAILABLE" | "PREPARATION_TIMEOUT" | "SIGNED_START_FAILED" | "LANE_LIMIT" | "ROUND_VOIDED" | "ROUND_ACTIVE" | "SESSION_EXPIRED" | "SESSION_REVOKED" | "STALE_ACTION" | "INVALID_ARGUMENT" | "NOT_FOUND" | "CONFLICT" | "FAILED_PRECONDITION" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "UNAVAILABLE" | "UNIMPLEMENTED" | "INTERNAL" | "UNKNOWN")
 /**
  * ROUND_ACTIVE only: the open round, so the client can resume it.
@@ -167,14 +105,8 @@ proofs?: FairnessContext
 
 /**
  * Launch context. No player ID, no operator token.
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "SessionContext".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "SessionContext".
  */
-export interface SessionContext {
+export type SessionContext = {
 sessionId: string
 /**
  * Lowercase ISO 639 code.
@@ -197,14 +129,7 @@ view?: {
 
 }
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Theme".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Theme".
- */
-export interface Theme {
+export type Theme = {
 appearance?: ("dark" | "light")
 colorPalette?: {
 
@@ -213,14 +138,7 @@ tileStyles?: {
 
 }
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "BetContext".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "BetContext".
- */
-export interface BetContext {
+export type BetContext = {
 balance: Amount
 minBet: Amount
 maxBet: Amount
@@ -230,14 +148,7 @@ maxBet: Amount
 suggestedBets: []|[Amount]|[Amount, Amount]|[Amount, Amount, Amount]|[Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]
 defaultBet: Amount
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Amount".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Amount".
- */
-export interface Amount {
+export type Amount = {
 value: BaseUnits
 decimals: number
 unit: Unit
@@ -247,14 +158,7 @@ unit: Unit
 normalized: number
 formatted: string
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "StepConfig".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "StepConfig".
- */
-export interface StepConfig {
+export type StepConfig = {
 kind: "steps"
 /**
  * @minItems 1
@@ -262,14 +166,7 @@ kind: "steps"
  */
 steps: [Step, ...(Step)[]]
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Step".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "Step".
- */
-export interface Step {
+export type Step = {
 index: number
 optionCount: number
 multiplier: Multiplier
@@ -284,14 +181,8 @@ losingIndex?: number
 }
 /**
  * playback presentation. Placeholder in se.snapshot/1: shape frozen, details follow (out of scope for M1).
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "BookConfig".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "BookConfig".
  */
-export interface BookConfig {
+export type BookConfig = {
 kind: "book"
 packageHash: Hash32
 /**
@@ -300,26 +191,12 @@ packageHash: Hash32
 model: string
 draw?: BookDraw
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "BookDraw".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "BookDraw".
- */
-export interface BookDraw {
+export type BookDraw = {
 index: number
 payoutMultiplier: Multiplier
 events: BookEvent[]
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "BookEvent".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "BookEvent".
- */
-export interface BookEvent {
+export type BookEvent = {
 index: number
 type: string
 /**
@@ -329,28 +206,15 @@ data?: {
 [k: string]: unknown | undefined
 }
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "FairnessContext".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "FairnessContext".
- */
-export interface FairnessContext {
+export type FairnessContext = {
 fairnessProof?: FairnessProof
 randomnessProof: RandomnessProof
 record?: OnChainRecord
 }
 /**
  * Config rounds only.
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "FairnessProof".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "FairnessProof".
  */
-export interface FairnessProof {
+export type FairnessProof = {
 seedHash: Hash32
 /**
  * 32 bytes, 0x-prefixed lowercase hex.
@@ -358,28 +222,14 @@ seedHash: Hash32
 seed?: string
 zkProof?: ZKProofRef
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "ZKProofRef".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "ZKProofRef".
- */
-export interface ZKProofRef {
+export type ZKProofRef = {
 status: ("pending" | "processing" | "verified" | "failed")
 proofRef?: Hash32
 verifiedBy?: ("superengine" | "zkverify" | "onchain")
 txHash?: Hash32
 proofLink?: HttpsUrl
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "RandomnessProof".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "RandomnessProof".
- */
-export interface RandomnessProof {
+export type RandomnessProof = {
 /**
  * Entropy source identifier.
  */
@@ -394,14 +244,7 @@ roundSecretHash: Hash32
 roundSecret?: string
 zkProof?: ZKProofRef
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "OnChainRecord".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "OnChainRecord".
- */
-export interface OnChainRecord {
+export type OnChainRecord = {
 chainId: number
 roundId: RoundIdBytes32
 txHash: Hash32
@@ -409,19 +252,13 @@ explorerUrl?: HttpsUrl
 }
 /**
  * An amount sent by the client. Only the money-bearing fields; normalized and formatted are response-only and rejected. decimals is optional and, when present, must equal the registry scale of unit (checked by the BFF, not by this schema).
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "AmountRequest".
- * 
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "AmountRequest".
  */
-export interface AmountRequest {
+export type AmountRequest = {
 value: BaseUnits
 decimals?: number
 unit: Unit
 }
-export interface PlayProblem {
+export type PlayProblem = {
 type: string
 title: string
 status: number
