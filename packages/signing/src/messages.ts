@@ -39,7 +39,8 @@ export type PlayerMessage = {
 
 /**
  * `CreateRoundAuth(bytes32 created,uint40 prepareWindow,uint256 expiry)`: the
- * bind receipt.
+ * registry's authorization of a round's creation, which the shell checks before
+ * a round is shown as ready.
  */
 export type CreateRoundAuth = {
   readonly created: Bytes32;

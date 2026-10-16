@@ -122,7 +122,7 @@ describe("the worked round's player actions", () => {
 });
 
 describe("the registry authorizations", () => {
-  it("reproduces CreateRoundAuth (the bind receipt)", () => {
+  it("reproduces CreateRoundAuth", () => {
     const vector = vectors.createRoundAuth;
     const digest = typedDataDigest(
       separator,
