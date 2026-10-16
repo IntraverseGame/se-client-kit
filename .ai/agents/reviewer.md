@@ -53,8 +53,8 @@ and [AGENTS.md](../../AGENTS.md). **Block** on:
   recorded decision, a lifecycle script enabled, a workflow action not pinned by
   full commit SHA, a floating tool version;
 - type discipline: `any`, unexplained `@ts-ignore` / `@ts-expect-error` or lint
-  disables, default exports in libraries, side effects at import time (the last
-  three are proposals in ADR-001 until it is accepted).
+  disables, default exports in libraries, side effects at import time, imports
+  of another package's internals (the last three are rules of ADR-001).
 
 Also check: error handling (typed errors, no leaked internals), resource
 cleanup (timers, listeners, locks, abort signals), async races (two tabs,

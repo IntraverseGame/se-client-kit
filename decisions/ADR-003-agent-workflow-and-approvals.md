@@ -1,8 +1,7 @@
 # ADR-003 — Agent workflow, approval gates, agent adapters, and the pr-shepherd
 
-- Status: proposed (a maintainer accepts it; until then it describes the working
-  agreement and binds nothing)
-- Date: 2026-10-15
+- Status: accepted
+- Date: 2026-10-16 (proposed 2026-10-15)
 - Amends: [ADR-002](./ADR-002-spec-driven-development.md) (adds the role agents
   and their adapters)
 

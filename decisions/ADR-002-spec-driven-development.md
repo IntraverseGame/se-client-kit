@@ -1,9 +1,8 @@
 # ADR-002 — Spec-Driven Development and an agent-agnostic knowledge layer
 
-- Status: proposed (a maintainer accepts it; until then it describes the working
-  agreement and binds nothing). Amended by
+- Status: accepted. Amended by
   [ADR-003](./ADR-003-agent-workflow-and-approvals.md) (workflow and adapters).
-- Date: 2026-10-15
+- Date: 2026-10-16 (proposed 2026-10-15)
 
 ## Context
 

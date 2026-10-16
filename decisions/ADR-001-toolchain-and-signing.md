@@ -1,8 +1,7 @@
 # ADR-001 — Pure TypeScript on a pnpm workspace, and hand-written EIP-712 signing over `@noble`
 
-- Status: proposed (a human accepts it; until then it binds nothing, and the
-  specs that depend on it are drafts)
-- Date: 2026-10-15
+- Status: accepted
+- Date: 2026-10-16 (proposed 2026-10-15)
 
 ## Context
 
@@ -116,9 +115,8 @@ linked from here). This ADR records the kit's own technical decisions.
    digest, verifies it, and serves it from the SuperEngine origin. Hosting and the
    deploy credentials are an open item for the infrastructure owner; this
    repository holds no deploy credential.
-10. **Three TypeScript rules, proposed** (recorded here so the markers in
-    `AGENTS.md` and the conventions memory point at a decision; they bind once
-    this ADR is accepted):
+10. **Three TypeScript rules** (accepted with this ADR; `AGENTS.md` and the
+    conventions memory point here):
     - **named exports only** in libraries; no default exports;
     - **public entry points only**: a package is imported through its
       `package.json` `exports`, never through its internals;
@@ -190,8 +188,8 @@ linked from here). This ADR records the kit's own technical decisions.
   `openapi-typescript` as development dependencies; GitHub Actions pinned by
   full commit SHA; a pull deploy, so deploy credentials never enter this public
   repository (decision 9); and the kit's end-to-end suite run from a job owned by
-  the backend repository at a pinned kit commit. This ADR stays **proposed**
-  until a human accepts it.
+  the backend repository at a pinned kit commit. The ADR as a whole was
+  accepted on 2026-10-16.
 
 ### Dependency table
 

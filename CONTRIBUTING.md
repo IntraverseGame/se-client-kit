@@ -227,8 +227,8 @@ the main checkout stays on `main`. Procedure:
 Formatting and lint are automated once the toolchain lands
 <!-- TODO(toolchain PR): formatter and linter -->
 
-Conventions and the proposals
-awaiting a decision: [`.ai/memories/conventions.md`](./.ai/memories/conventions.md).
+Conventions:
+[`.ai/memories/conventions.md`](./.ai/memories/conventions.md).
 In short: strict TypeScript, no `any`, money as strings or `bigint`, secrets
 in memory only, typed errors, injected time and randomness.
 
