@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-16 (toolchain pull request; the workspace skeleton exists, packages are empty)
+last-verified: 2026-10-16 (signing pull request; `contracts` and `signing` have code, the other packages are empty skeletons)
 ---
 
 # Architecture (agent context)
@@ -42,7 +42,12 @@ plan and flag any divergence.
   EIP-712 encoder, 65-byte `r ‖ s ‖ v` signatures with `v` in `{27, 28}` and low
   `s`, deterministic (RFC 6979), the zero address rejected on recovery. It is
   checked against the same vectors as the backend's verifier. Do not swap in a
-  general EIP-712 library.
+  general EIP-712 library. The key lives only in the closure of the signer
+  `createSigner` returns (address, `sign`, `destroy`); the transcript helper
+  (`createTranscript`) refuses a second, different message at one sequence;
+  the action grammar is a separate, provisional module until the signed-action
+  spec publishes it. Draw-registry types are encoded internally for the vector
+  replay only.
 
 ## Contracts and vectors
 

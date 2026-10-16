@@ -67,8 +67,9 @@ This note records the patterns behind them.
   session only. They are wrapped in redacting types (a `toString` / `toJSON` that
   prints a placeholder) and are never logged, serialized, put in a URL, written
   to `localStorage`, `sessionStorage`, cookies, or IndexedDB, or placed in an
-  error message. The public test keys of the vectors are the only keys that may
-  appear in the repository.
+  error message. The public development keys the vectors were signed with
+  (`packages/signing/src/fixtures/keys.ts`) are the only keys that may appear
+  in the repository.
 - **Errors:** typed errors with a stable `code`; callers branch on `code`, never
   on message text. Do not leak internals or secrets in messages. Errors from the
   backend are mapped from its published error codes.
