@@ -36,8 +36,12 @@ description: Use when adding a new package under packages/ (or an app under apps
 2. **Layout:** `packages/<name>/` with `src/` (internals), `src/index.ts` (the
    only public entry point), `test/`, `package.json`, and a `tsconfig` that
    extends the shared strict base. `package.json` has an `exports` map to the
-   entry point only, `"type": "module"`, an explicit `files` list, and no
-   lifecycle scripts.
+   entry point only, `"type": "module"`, an explicit `files` list that selects
+   only its `dist` output (`["dist"]`; never `src`, `.wireit`, `*.tsbuildinfo`,
+   or a config file; npm adds `package.json` and the README itself), and no
+   lifecycle scripts. `tools/package-files.test.ts` and
+   `pnpm check:package-files` fail without it; add the new library to the
+   `dependencies` of the root `check:package-files` script.
 3. **Dependencies:** a workspace dependency on another kit package is allowed
    only along the dependency direction. A third-party runtime dependency needs
    an ADR first; a development tool needs a recorded decision. Pin per the

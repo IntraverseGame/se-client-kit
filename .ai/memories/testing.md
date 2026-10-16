@@ -34,6 +34,10 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `dist/`: only `.js` (with its `.js.map`) and `.d.ts` (no declaration map, no `sourceMappingURL` comment), no test file or build state, and no
   vector reachable from the `contracts` runtime entry (import graph plus source
   maps), covered by `tools/build-output.test.ts`.
+- **Package files:** `pnpm check:package-files` (after the library builds) holds
+  each library's `files` to its `dist/`: everything the runtime entry loads is
+  selected, and in `contracts` nothing else (no test-only entry or chunk);
+  covered by `tools/package-files.test.ts`, which also checks the manifests.
 - **Static:** lint, format check, `tsc --noEmit`, and the import-direction
   rules.
 

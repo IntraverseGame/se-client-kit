@@ -21,6 +21,12 @@
   "homepage": "https://github.com/IntraverseGame/se-client-kit/tree/main/packages/contracts#readme",
   "type": "module",
   "sideEffects": false,
+  "files": [
+    "dist/index.js",
+    "dist/index.js.map",
+    "dist/index.d.ts",
+    "dist/runtime"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

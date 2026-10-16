@@ -20,6 +20,7 @@
     "changeset": "changeset",
     "clean:cache": "find . -name .wireit -type d -not -path '*/node_modules/*' -prune -exec rm -rf {} +",
     "check:build-output": "wireit",
+    "check:package-files": "wireit",
     "check:readmes": "wireit"
   },
   "wireit": {
@@ -32,6 +33,7 @@
         "check:deps",
         "check:contracts",
         "check:build-output",
+        "check:package-files",
         "check:readmes"
       ]
     },
@@ -136,7 +138,17 @@
         "decisions/**",
         "CONTRIBUTING.md",
         "README.md",
-        "runbook/**"
+        "runbook/**",
+        "packages/*/**",
+        "apps/*/**",
+        "e2e/**",
+        "!**/dist/**",
+        "!**/node_modules/**",
+        "!**/.wireit/**",
+        "!**/coverage/**",
+        "!**/test-results/**",
+        "!**/playwright-report/**",
+        "!**/*.tsbuildinfo"
       ],
       "output": [],
       "packageLocks": [
@@ -236,6 +248,29 @@
         "packages/contracts/src/**",
         "packages/*/dist/**",
         "apps/*/dist/**"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "check:package-files": {
+      "command": "tsx tools/check-package-files.ts",
+      "dependencies": [
+        "./packages/contracts:build",
+        "./packages/signing:build",
+        "./packages/snapshot:build",
+        "./packages/play-client:build",
+        "./packages/shell:build"
+      ],
+      "files": [
+        "tools/**",
+        "!tools/**/*.test.ts",
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.base.json",
+        "packages/*/package.json",
+        "packages/*/dist/**"
       ],
       "output": [],
       "packageLocks": [

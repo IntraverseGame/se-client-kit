@@ -102,7 +102,8 @@ jobs:
 
   # The bundle manifest and the size budget join this job with the Wrapper's
   # first release build. check:build-output inspects every dist/ (no vector, no
-  # test file, only intended outputs).
+  # test file, only intended outputs); check:package-files holds each library's
+  # package.json files field to its dist/.
   build:
     name: build
     runs-on: ubuntu-latest
@@ -116,6 +117,7 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm run build
       - run: pnpm run check:build-output
+      - run: pnpm run check:package-files
 
   # Playwright against the in-repo fake Play API. There are no suites yet, so no
   # browser is installed; the job that adds the first suite adds

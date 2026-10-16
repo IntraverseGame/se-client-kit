@@ -10,6 +10,9 @@
 // applied to a path relative to the script's package directory (`../` segments
 // are compared literally). The patterns used in this repository are `**`, `*`,
 // `{a,b}`, literal paths, and `!` exclusions, which behave the same in both.
+// Wireit applies a `!` pattern only to the include patterns before it, while
+// `matchesFiles` applies every `!` to every include; that can only cause false
+// alarms (a path reported as omitted), never hide a missing input.
 
 import { matchesGlob } from "node:path";
 

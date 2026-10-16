@@ -5,7 +5,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { findFiles } from "../workspace.ts";
-import { workspacesOf } from "./wireit-required.ts";
+import { filesBelow, workspacesOf } from "./wireit-required.ts";
 
 const SOURCE_FILE = /\.[cm]?[jt]sx?$/u;
 
@@ -42,11 +42,26 @@ const distFiles = (root: string): string[] =>
   );
 
 /**
+ * Every file of every workspace, by path relative to the root, without build
+ * output and build state (what `filesBelow` skips, and `.tsbuildinfo` files).
+ */
+const workspaceTrees = (
+  root: string,
+  workspaces: readonly string[],
+): string[] =>
+  workspaces.flatMap(directory =>
+    filesBelow(join(root, directory))
+      .filter(path => !path.endsWith(".tsbuildinfo"))
+      .map(path => `${directory}/${path}`),
+  );
+
+/**
  * The root scripts that have `files`, and the paths each of their commands
  * reads. The commands: oxfmt (everything), oxlint (the sources and its config,
  * `.gitignore`, the manifests and tsconfigs), stylelint (the CSS, its config,
  * `.gitignore`), tsc over the tools, vitest over the tools (which also read the
- * READMEs, specs, ADRs, and configs the tests check), and the tsx scripts.
+ * READMEs, specs, ADRs, and configs the tests check, and every workspace file
+ * the input audit walks), and the tsx scripts.
  */
 export const rootRequirements = (
   root: string,
@@ -124,6 +139,14 @@ export const rootRequirements = (
             ? [`${directory}/README.md`]
             : []),
         ]),
+        // The input audit (wireit-inputs.test.ts) derives what each workspace
+        // script reads from every file of every workspace, so all of them are
+        // inputs of the suite that runs it: a new file must re-run the audit.
+        ...workspaceTrees(root, workspaces),
+        "packages/probe/helper.ts",
+        "packages/shell/probe/deep/data.json",
+        "apps/probe/.env.local",
+        "e2e/probe/helper.ts",
       ],
     ],
     [
@@ -159,6 +182,19 @@ export const rootRequirements = (
         "packages/contracts/dist/testing.js",
         "apps/wrapper/dist/assets/probe.js",
         ...distFiles(root),
+      ],
+    ],
+    [
+      "check:package-files",
+      [
+        ...tools.filter(path => !path.endsWith(".test.ts")),
+        ...workspaces
+          .filter(directory => directory.startsWith("packages/"))
+          .map(directory => `${directory}/package.json`),
+        ...withTsconfigs,
+        "packages/contracts/dist/runtime/probe-a1.js",
+        "packages/contracts/dist/chunks/probe-b2.js",
+        ...distFiles(root).filter(path => path.startsWith("packages/")),
       ],
     ],
   ];

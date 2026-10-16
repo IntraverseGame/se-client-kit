@@ -35,7 +35,7 @@ Several agents and people work in one clone at once. Rules:
 
 - Scripts: `pnpm install --frozen-lockfile`, `pnpm check` (format check, lint,
   typecheck, unit tests, dependency allow-list, contracts check, build,
-  build-output check), `pnpm test`,
+  build-output check, package files check), `pnpm test`,
   `pnpm test:e2e`, `pnpm lint` (oxlint and stylelint), `pnpm format` (writes; oxfmt is the only formatter, for code, Markdown, and
   YAML), `pnpm format:check`,
   `pnpm typecheck`, `pnpm build`, `pnpm changeset`. Never an ad-hoc equivalent.
@@ -72,7 +72,14 @@ Several agents and people work in one clone at once. Rules:
   every script's `files` to the files on disk and to probes (a schema or vector
   of `contracts`, a Wrapper `public/` file); it fails for a missing input or for
   a script that has a command and no `files` without being declared to run
-  every time. Use `src/**` (not `src/**/*.ts`) so JSON, CSS and assets count.
+  every time. The audit itself runs in `test:tools` and reads every workspace
+  file, so `test:tools` lists `packages/*/**`, `apps/*/**`, and `e2e/**` (minus
+  build output and build state); keep that when you touch its `files`. Use
+  `src/**` (not `src/**/*.ts`) so JSON, CSS and assets count.
+- **Package `files`.** Every library sets `files` (`["dist"]`; `contracts` an
+  allow-list of `dist/index.*` and `dist/runtime/`, where its tsdown config puts
+  only chunks of runtime sources). `pnpm check:package-files` checks it against
+  the built `dist/`; `tools/package-files.test.ts` checks the manifests.
 - **Supply chain.** `pnpm-workspace.yaml` sets `minimumReleaseAge` (7 days),
   `allowBuilds` with no `true` entry (no lifecycle script runs), `trustPolicy: no-downgrade`, and
   exact saves. Dependabot's cooldown (npm and github-actions) matches the age. Every Action is pinned by

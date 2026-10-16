@@ -407,9 +407,27 @@ logic packages read it and never write to it.
      `dist/` that is not a `.js` (with its `.js.map`) or a `.d.ts`. Declaration
      files carry no declaration map and no `sourceMappingURL` comment;
   3. the published `contracts` tarball excludes the test-only entry (the `files`
-     field), so a consumer of the npm package cannot import vectors at all. The
-     tarball content check, which arrives with the first release build, also
-     asserts that each published package contains its `README.md` and `LICENSE`.
+     field), so a consumer of the npm package cannot import vectors at all.
+     Every library's `files` restricts its tarball to its `dist` output (npm
+     always adds `package.json` and the README): `["dist"]` for `signing`,
+     `snapshot`, `play-client`, and `shell`, and for `contracts` an allow-list
+     that fails closed, `dist/index.js`, `dist/index.js.map`, `dist/index.d.ts`,
+     and `dist/runtime/`. Its tsdown config writes a shared chunk to
+     `dist/runtime/` only when every module in it is a runtime source
+     (`src/index.ts`, `src/schemas/`, `src/generated/`) and any other chunk to
+     `dist/chunks/`, which is never published. `pnpm check:package-files` (part
+     of `pnpm check` and the `build` job, after the library builds) evaluates
+     each `files` against the built `dist/`: every file the runtime entry loads
+     (its JavaScript and declaration graphs and their source maps) must be
+     selected, and in `contracts` nothing else may be (no `testing*` file, no
+     chunk only the test-only entry loads). `tools/package-files.test.ts` holds
+     the manifests to the same rules without a build (every library declares
+     `files`, no entry selects `src/`, `.wireit/`, `*.tsbuildinfo`, or a config
+     file, every entry lies under `dist`, `contracts` selects no `testing*`
+     path). Its matcher approximates npm's `files` with the wireit matcher and
+     refuses `!` entries. The full `npm pack` tarball content check, which
+     arrives with the release work (#12), also asserts that each published
+     package contains its `README.md` and `LICENSE`.
 - **Dependencies.** `contracts` depends on no other kit package and has no
   runtime dependency. `snapshot` and `play-client` depend on its runtime entry;
   the test-only entry has these consumers, **all of them tests and all of them
@@ -649,10 +667,10 @@ Today `contracts` runs the test-only-entry import check only; the hash check and
 the regenerated-types diff arrive with the `contracts` package, and
 `contracts-drift` and `release` are not defined yet. `build` builds every
 workspace; the manifest, size budget, and no-vector content check join it with
-the first release build, and the job also runs `pnpm check:build-output`.
-`e2e-fake` has no suites yet. The workflows hold no secret, run with
-`permissions: {}` at the top and `contents: read` per job, and pin every Action
-by full commit SHA.
+the first release build, and the job also runs `pnpm check:build-output` and
+`pnpm check:package-files`. `e2e-fake` has no suites yet. The workflows hold no
+secret, run with `permissions: {}` at the top and `contents: read` per job, and
+pin every Action by full commit SHA.
 
 #### Task orchestration and caching
 
@@ -691,10 +709,18 @@ outputs restored from the cache.
   probes for files that do not exist yet (a `contracts` schema or vector, a
   Wrapper `public/` file, an env file), and it fails on a script that has a
   command and no `files` unless it is declared to run every time (`format`,
-  `check:readmes`, `e2e#test`). Its matcher approximates wireit's globs
-  (`path.matchesGlob` with dotfiles on): extglobs and bracket expressions are
-  not interpreted as wireit does. A test file that shipped code imports would be
-  outside a `build`'s inputs; a lint rule keeps tests out of the graph.
+  `check:readmes`, `e2e#test`). The audit runs inside `test:tools`, and it reads
+  every file of every workspace, so `test:tools` lists the workspace trees
+  (`packages/*/**`, `apps/*/**`, `e2e/**`, without `dist/`, `node_modules/`,
+  `.wireit/`, `coverage/`, `test-results/`, `playwright-report/`, and
+  `*.tsbuildinfo`): a new or edited workspace file re-runs the audit instead of
+  restoring a cached pass, and the audit holds `test:tools` to those trees too.
+  Its matcher approximates wireit's globs (`path.matchesGlob` with dotfiles on):
+  extglobs and bracket expressions are not interpreted as wireit does, and it
+  applies every `!` pattern to every include where wireit applies one only to
+  the includes before it (which can only cause a false alarm). A test file that
+  shipped code imports would be outside a `build`'s inputs; a lint rule keeps
+  tests out of the graph.
 
 **Test tooling notes.** The DOM for component tests is **jsdom**: it is the most
 complete DOM for the axe accessibility checks, and the pieces it lacks (Web

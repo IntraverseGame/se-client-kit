@@ -21,6 +21,9 @@
   "homepage": "https://github.com/IntraverseGame/se-client-kit/tree/main/packages/snapshot#readme",
   "type": "module",
   "sideEffects": false,
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
