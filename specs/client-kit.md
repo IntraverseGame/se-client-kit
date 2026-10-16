@@ -263,9 +263,13 @@ logic packages read it and never write to it.
   generated from the documents and the schema (`openapi-typescript` for the
   OpenAPI documents; `json-schema-to-typescript` for the Snapshot schema, which
   gives the structural types only: the conditional blindness rules stay with the
-  validator in `snapshot`), the **lock file** `contracts.lock.json` (source,
-  source commit, and SHA-256 per artifact), and the input of the drift-check job
-  (the lock file itself and the list of published sources). Generated files are
+  validator in `snapshot`; its `export interface` declarations are rewritten as
+  `export type` aliases after generation, since it has no option for that, and
+  its "This interface was referenced by ..." notes are dropped from the doc
+  comments; an interface that extends another, or a note in another shape, fails
+  the generation), the **lock file** `contracts.lock.json` (source, source
+  commit, and SHA-256 per artifact), and the input of the drift-check job (the
+  lock file itself and the list of published sources). Generated files are
   committed and never edited by hand.
 - **Two entry points** (`package.json` `exports`):
   - the **runtime entry** (`.`) exports the schemas and the generated types. It

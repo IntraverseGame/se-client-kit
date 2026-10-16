@@ -95,7 +95,12 @@ Several agents and people work in one clone at once. Rules:
   and oxlint (the generator's output is what `check:contracts` compares).
 - `json-schema-to-typescript` is imported by a computed specifier in
   `tools/generate-contracts.ts`: its declarations do not compile under the strict
-  compiler options. Do not "fix" it into a static import.
+  compiler options. Do not "fix" it into a static import. Its output is
+  post-processed: `toTypeAliases` makes the generated types `type` aliases, not
+  `interface`s, and `withoutReferenceNotes` drops the generator's "This
+  interface was referenced by ..." doc-comment notes. Output either step cannot
+  rewrite (an `extends`, a note in another shape) fails the generation on
+  purpose.
 - New dependency: ADR first. No lifecycle scripts.
 - Commits: Conventional Commits; one logical change per PR.
 
