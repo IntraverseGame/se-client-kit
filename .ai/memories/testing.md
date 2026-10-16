@@ -40,7 +40,9 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 ## Rules of thumb
 
 - Deterministic and hermetic; no secrets; tests never import another package's
-  internals.
+  internals. The one exception to hermetic is the preview-stack e2e (Wrapper
+  tests T-10 to T-12), which runs from the backend-owned job and is never part
+  of `pnpm check`.
 - Assert on typed error `code`s, not messages; on money as strings or `bigint`.
 - Never weaken a vector assertion to go green.
 - A test never prints or snapshots a key or token.

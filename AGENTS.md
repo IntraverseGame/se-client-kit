@@ -177,7 +177,9 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
 **Tests and specs**
 
 - New behavior needs tests; tests are deterministic and hermetic (no real
-  network, no real clock, no secrets). Inject time and randomness.
+  network, no real clock, no secrets). Inject time and randomness. The one
+  exception is the preview-stack end-to-end run (T-10 to T-12), which is owned
+  by the backend repository's job and is never part of `pnpm check`.
 - Spec-Driven Development: implement to `specs/`; update the spec in the same
   change.
 - Never weaken a test, a vector assertion, or a lint rule to go green.

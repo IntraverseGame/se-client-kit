@@ -296,7 +296,9 @@ Levels and rules: [`.ai/memories/testing.md`](./.ai/memories/testing.md); the
 authoritative testing sections are
 [`specs/client-kit.md`](./specs/client-kit.md#testing-and-ci) and
 [`specs/wrapper.md`](./specs/wrapper.md#test-plan). New behavior needs tests;
-tests are deterministic and hermetic.
+tests are deterministic and hermetic. The one exception is the preview-stack
+end-to-end run (T-10 to T-12), which the backend repository's job owns and which
+is never part of `pnpm check`.
 
 ## Generated code and contract copies
 

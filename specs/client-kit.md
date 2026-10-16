@@ -715,7 +715,10 @@ the e2e **suite**; a job owned by the backend repository checks this repository
 out at a **pinned commit**, installs with `--frozen-lockfile`, builds the
 Wrapper, and runs the suite against its own throwaway stack. That job holds no
 secret. The same suite runs against the fake Play API in this repository's own
-CI, so a change here is checked without the backend.
+CI, so a change here is checked without the backend. Only the fake-API suites
+are deterministic and hermetic; the preview-stack run (wrapper.md T-10 to T-12,
+and so AC1) talks to a real stack, is **not hermetic**, and is never part of
+`pnpm check` or of this repository's required CI jobs.
 <!-- TODO(preview stack): the pin and the job live in the backend repository. -->
 
 ### Environment configuration
