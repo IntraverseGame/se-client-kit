@@ -544,11 +544,8 @@ Rules:
    says. The signing vectors use a well-known local test key and are public by
    design; the review still happens. Accepted (human review, 2026-10-16) for the
    first sync: the signing vectors' `_comment` names the contracts repository's
-   test tooling, and the Snapshot schema's descriptions cite backend documents
-   by name (for example `specs/snapshot.md`, `ADR-011`), which reach the
-   published types. Both are names, not contents; copies stay byte for byte, so
-   any rewording happens at the source.
-   <!-- TODO(Snapshot schema wording): ask the backend to drop internal document references from the schema's public descriptions; a later sync picks it up. -->
+   test tooling. It is a name, not contents; copies stay byte for byte, so any
+   rewording happens at the source.
 
    Issue #4's drift requirement is met, until the published locations exist, by
    the `contracts` job verifying the lock against the committed copies; the
