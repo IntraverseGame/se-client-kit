@@ -542,10 +542,15 @@ Rules:
 5. **Review before publish.** Every file copied into this public repository is
    reviewed as [Never in the public repository](#never-in-the-public-repository)
    says. The signing vectors use a well-known local test key and are public by
-   design; the review still happens. Accepted (human review, 2026-10-16) for the
-   first sync: the signing vectors' `_comment` names the contracts repository's
-   test tooling. It is a name, not contents; copies stay byte for byte, so any
-   rewording happens at the source.
+   design; the review still happens. Accepted (human review, 2026-10-16): the
+   signing vectors' `_comment` fields name the contracts repository's test
+   tooling, and three Snapshot vectors' descriptions
+   (`valid/cashorcrash-won-expired.json`,
+   `valid/coinflip-canceled-expired-no-action.json`,
+   `invalid/status-unknown.json`) cite backend decisions, a backend document and
+   a backend module operation by name. These are names, not contents; vectors
+   are append-only and copies stay byte for byte, so any rewording comes as a
+   new vector at the source.
 
    Issue #4's drift requirement is met, until the published locations exist, by
    the `contracts` job verifying the lock against the committed copies; the
