@@ -5,8 +5,8 @@
       "path": "src/schemas/se.snapshot.v1.schema.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 schema",
-      "sourceCommit": "2ade15ac707084bdf0ccae5d4f46b294519c6f56",
-      "sha256": "e447b771080109c2f1913b6ff7e10e92f5b7b0def9064b7dd8969439aeab0616"
+      "sourceCommit": "83571b8b04f5b6a5c1946db7e8cba77525125725",
+      "sha256": "c77493c65283cd3393bf620f08592678135135a463ba389fbecd4f8ad5b6d3ac"
     },
     {
       "path": "src/vectors/signing.json",
