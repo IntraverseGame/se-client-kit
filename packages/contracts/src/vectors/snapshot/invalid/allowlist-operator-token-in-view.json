@@ -1,0 +1,109 @@
+{
+  "vector": "snapshot/invalid/allowlist-operator-token-in-view",
+  "description": "SessionContext.view must not carry an operator token (operatorToken).",
+  "definition": "Snapshot",
+  "expected": "invalid",
+  "failsAt": "/context/view",
+  "input": {
+    "schema": "se.snapshot/1",
+    "version": 1,
+    "presentation": "steps",
+    "model": "config",
+    "context": {
+      "sessionId": "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N",
+      "language": "de",
+      "country": "DE",
+      "device": "mobile",
+      "links": {
+        "lobby": "https://luckybet.example.com/lobby",
+        "deposit": "https://luckybet.example.com/cashier"
+      },
+      "theme": {
+        "appearance": "dark"
+      },
+      "view": {
+        "playerName": "Kai",
+        "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png",
+        "operatorToken": "tok_abc123"
+      }
+    },
+    "status": "starting",
+    "roundId": "01927c5e-8b3a-7f21-9c4d-5e6f7a8b9c0d",
+    "bet": {
+      "balance": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "minBet": {
+        "value": "10",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 0.1,
+        "formatted": "€0.10"
+      },
+      "maxBet": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "suggestedBets": [
+        {
+          "value": "100",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 1.0,
+          "formatted": "€1.00"
+        },
+        {
+          "value": "500",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 5.0,
+          "formatted": "€5.00"
+        },
+        {
+          "value": "1000",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 10.0,
+          "formatted": "€10.00"
+        }
+      ],
+      "defaultBet": {
+        "value": "100",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 1.0,
+        "formatted": "€1.00"
+      }
+    },
+    "proofs": {
+      "randomnessProof": {
+        "source": "ethereum:block",
+        "blockNumber": 21000123,
+        "roundSecretHash": "0x2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "fairnessProof": {
+        "seedHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "zkProof": {
+          "status": "pending"
+        }
+      }
+    },
+    "config": {
+      "kind": "steps",
+      "steps": [
+        {
+          "index": 0,
+          "optionCount": 2,
+          "multiplier": 1.94
+        }
+      ]
+    }
+  }
+}

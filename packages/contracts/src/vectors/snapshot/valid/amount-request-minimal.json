@@ -1,0 +1,10 @@
+{
+  "vector": "snapshot/valid/amount-request-minimal",
+  "description": "Request-side Amount with only the required fields; decimals omitted.",
+  "definition": "AmountRequest",
+  "expected": "valid",
+  "input": {
+    "value": "1000",
+    "unit": "EUR"
+  }
+}

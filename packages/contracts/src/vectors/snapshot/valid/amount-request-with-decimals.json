@@ -1,0 +1,11 @@
+{
+  "vector": "snapshot/valid/amount-request-with-decimals",
+  "description": "Request-side Amount with decimals present; the BFF checks it against the registry scale.",
+  "definition": "AmountRequest",
+  "expected": "valid",
+  "input": {
+    "value": "1000000000000000000",
+    "decimals": 18,
+    "unit": "ETH"
+  }
+}

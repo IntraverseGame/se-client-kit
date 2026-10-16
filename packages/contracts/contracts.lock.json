@@ -1,0 +1,628 @@
+{
+  "lockVersion": 1,
+  "entries": [
+    {
+      "path": "src/schemas/se.snapshot.v1.schema.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 schema",
+      "sourceCommit": "2ade15ac707084bdf0ccae5d4f46b294519c6f56",
+      "sha256": "e447b771080109c2f1913b6ff7e10e92f5b7b0def9064b7dd8969439aeab0616"
+    },
+    {
+      "path": "src/vectors/signing.json",
+      "source": "se-contracts",
+      "sourceName": "test/vectors/signing.json",
+      "sourceCommit": "5ce86811558e713cdf41bf39c4d79a6de99326d9",
+      "sha256": "dfe46ab82d9c88287bebbfa23413531dc6076cbd20eecf8297f6fa29c679dfb3"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/allowlist-fairness-proof-on-book.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/allowlist-fairness-proof-on-book.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "4b493b094fe75d1ac55905a592ea0ec1db282fbec576e3af8ef6f28e096002c2"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/allowlist-operator-token-in-view.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/allowlist-operator-token-in-view.json",
+      "sourceCommit": "2ade15ac707084bdf0ccae5d4f46b294519c6f56",
+      "sha256": "43fd179ab6f993442a117af7b301442857b5dd7754d4bfe4f59cbca935b2c912"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/allowlist-player-id-in-context.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/allowlist-player-id-in-context.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "fee2e1f986e78eb68abfaec75b9adeac759fa76dad1be8128ab6deac59683ce4"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/allowlist-player-id-in-view.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/allowlist-player-id-in-view.json",
+      "sourceCommit": "2ade15ac707084bdf0ccae5d4f46b294519c6f56",
+      "sha256": "ca1ce2dd39362aea415963c1e05efa1c8005586ec397891b0aca487648b1a290"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/allowlist-settlement-not-in-v1.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/allowlist-settlement-not-in-v1.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "15795369c968ea4ea9de8d95104060d5865339cbe074aee7d09f3001c063f59d"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/allowlist-unknown-step-field.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/allowlist-unknown-step-field.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "02f8d52b25c9d2f3f181cfebcb97a3c564e34a79edb6ae6883bcaa2fc5b9341a"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/allowlist-unknown-top-level-field.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/allowlist-unknown-top-level-field.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "a5ce52e5c495edc6d1b37c3deb14d002d1e02134482e851ca71779a9807079ca"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-request-decimals-out-of-range.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-request-decimals-out-of-range.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "61405d0cd81a2b4eb47c724cccce5114214712bcf990434afe05df43cb243f52"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-request-formatted.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-request-formatted.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "c389c59059ff6f45f65b25df0d235d7a7cb34bf83fb9aa9c7e2c914354af4152"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-request-normalized.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-request-normalized.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "91597bd7c88a715172a4abc055020072af92b2c002d0cf049a80a55eb11e3076"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-request-unit-missing.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-request-unit-missing.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "982325207aa643d66769b441d0ca97517faf59725b21fd57a892c5bfdff85f24"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-request-value-missing.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-request-value-missing.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "e503d9ce832e35d7a047afc1d5c4e443c0e505b244a88e6f2fa6c003c41d9ddc"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-request-value-number.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-request-value-number.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "8b55571e9e43425dc835f2a943e0ae9d32bff261a03da4626b4c73b921fc5d31"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-unit-lowercase.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-unit-lowercase.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "8c18170bbb5f7145ace466c45facfac682c632c6bf55d14abb15dea96ea56773"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-unit-not-registry-code.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-unit-not-registry-code.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "26381c965c76e342b652c10e600c0ee07087fc2c6fc659cdd2b6e6eb8526c81b"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-value-decimal.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-value-decimal.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "3cf41f83639da4553fdc0855b265b2f4dd5d23e2e8b037070130db69ec452fe2"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-value-leading-zero.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-value-leading-zero.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "58b73e1404d8e96767a21f7a0f3fc22c360df8ecd47556d69edfb5e34a2363e3"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-value-negative.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-value-negative.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "86508ca969ac0188e5290dddf5a8a0f3704e0a894e1684f0fbc7c75bcfb9d4a5"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-value-number.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-value-number.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "1c713d9b387105a5d3d8bcac3fea69ab79965345bb629a19fc8530c776091345"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-value-over-uint256.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-value-over-uint256.json",
+      "sourceCommit": "2ade15ac707084bdf0ccae5d4f46b294519c6f56",
+      "sha256": "11f242f1b1f680dc49e00b2cb6edeb76d481e86d0c81c68465c56af68e742821"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/amount-value-too-long.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/amount-value-too-long.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "b4055e757ba8c02c49dff5c17add87909d06dcba69ddb6ea254cc7b240fc5535"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/blindness-draw-before-resolution.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/blindness-draw-before-resolution.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "32c26a0c2d61b3ca87e6642a9a5b29217ad3a619de613b1f52f81666886db31a"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/blindness-draw-on-canceled.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/blindness-draw-on-canceled.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "bd9bf8580a44f5272b7b64ef7c1da78ba132df15cc3638765343d49c2f284f59"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/blindness-loser-of-unplayed-step.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/blindness-loser-of-unplayed-step.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "dfd6f1afdc8f22dda1bc4eec3b05a20e316c7661e007280552b3e83e52d98058"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/blindness-loser-while-starting.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/blindness-loser-while-starting.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "10dca668db7b1f810e0e2bf6a4634e7e01837010421c554f4bb13d7c60ad3dc4"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/blindness-round-secret-before-end.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/blindness-round-secret-before-end.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "2799f21a7dd6db8e316f767f610731fec7205e4cfeb2578b4ecbbe9a483b82fb"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/blindness-seed-before-end.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/blindness-seed-before-end.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "12b1b7720febcee78488a23a38711a02f77046c4a7f3b86e9c16ee0c915a2857"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/close-reason-on-active.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/close-reason-on-active.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "9cdeb65a8d53ffa84d385d340165e687275683b41a59c022c4feba136fed3824"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/close-reason-unknown.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/close-reason-unknown.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "117a0c41884a31946c6fffac8b151fc4ec9b6d44f402779731ee23f015522a2e"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/hash-short.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/hash-short.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "55e7c3a30c7009850ed6bbec071fed96af710b53b1ab71e51333837a95b973b3"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/hash-uppercase.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/hash-uppercase.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "a71885db45a1c23744672b5c4093cba749e8ed89b97c40c6bca7702f36f31a30"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/idle-with-round-fields.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/idle-with-round-fields.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "d01fc780d800d0464e259d0b6f714faf6c39e668dcc054f95a5aed35e60597cf"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/multiplier-negative.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/multiplier-negative.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "389e11e5ce84b0e7557e18e2a968b4a8d056c466ee7f9343f1ef336b8b901513"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/pattern-trailing-newline.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/pattern-trailing-newline.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "b6c0a7b43e3e47c16e977792e534e8b7398302825c641713848112d9b51df28a"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/presentation-config-mismatch.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/presentation-config-mismatch.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "7cf505aebd0dd8ed2025549c21bbd5ef9545f4e13066d1dcf467bbc83dc006e3"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/presentation-playback-with-config-model.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/presentation-playback-with-config-model.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "c1bc637a6320e0f6760ebcb63c3801e490dc20942c65befdd5e690c6f8c7a324"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/problem-default-code-internal-retryable.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/problem-default-code-internal-retryable.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "0f794beb1c13660b239fa701cd6b6f3b051cc57b05f40c4c283c1cfea1d3fd45"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/problem-default-code-retryable-mismatch.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/problem-default-code-retryable-mismatch.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "4da5e98678fb35e0dd80be5606a574e5bcc32000bfc1657506f49f7164c036be"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/problem-hidden-state-in-snapshot.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/problem-hidden-state-in-snapshot.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "45a1ccdbe0ee52b0c7cd310334f5855f8e16b73efeac17507a6a11c8fe2f9528"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/problem-retryable-mismatch.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/problem-retryable-mismatch.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "46718cc37de9f615a255eae35ac7b7092cebb1fd3733f1f2d8950dc04f74612f"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/problem-round-active-without-snapshot.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/problem-round-active-without-snapshot.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "1fb95cf4c770db39e47b2d3e44c44c9019e3cdc4fda2cf1bcf2acf5f8fa44ab3"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/problem-snapshot-on-other-code.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/problem-snapshot-on-other-code.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "5e10401de3e31a259be718ffdc249bfbd6b3d24872222acca78382f0786c3954"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/problem-unknown-code.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/problem-unknown-code.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "c6536e310aa0c7255431776e5fd039b9e5a55231f76629facfbf439bacaad928"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/record-roundid-not-padded.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/record-roundid-not-padded.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "c5d7b61edd5f4cf8e26017370dcd9f7c686e63148da3d21c1c7835cccc898679"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/required-context-missing.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/required-context-missing.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "967367223a4f18203623325c0a782d1371f25ef891d18dd57b8ae6b598afdf40"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/required-fairness-proof-missing.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/required-fairness-proof-missing.json",
+      "sourceCommit": "2ade15ac707084bdf0ccae5d4f46b294519c6f56",
+      "sha256": "f5743245f6e0ca0db9ca47ac50aa9aaed90f21f8eb50e2b84627d1ff28884473"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/required-multiplier-missing.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/required-multiplier-missing.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "c56916a2297da5db7f2a90e757a8fb52dc4c65ba691bb4a15313a796cc9ad035"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/required-proofs-missing.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/required-proofs-missing.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "0a5e924cca748b8771f8e045ba28fe899438c9ad67d8df94476eb49bb115f9ad"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/required-roundid-missing.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/required-roundid-missing.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "e89d617a33b8156cfad2d4eac52901a79273c1874c483a7e2d027f1b2d8173ba"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/required-step-missing.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/required-step-missing.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "84c4ea926f2e96b69a1c5ea9df9ad4f36a93a630097541e1d412e8a1c7edc8d9"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/reveal-round-secret-missing-on-won.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/reveal-round-secret-missing-on-won.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "390d217a6a390803aa68f53b106f009899f06d3dcb90abc39d1fef07f63c6905"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/reveal-seed-missing-on-lost.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/reveal-seed-missing-on-lost.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "08c7edfb55f55c28d34c9aaeee007dcb40e36e61dd02c5094751f17293f48a3c"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/roundid-not-uuidv7.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/roundid-not-uuidv7.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "f366ad43e5cd235b5039f093680e6056701ad30fbf709b66ba5d495414df168d"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/schema-wrong-version.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/schema-wrong-version.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "0500e39f42d50f95cec5b0aad83259dc7013f3410f27bf8679126cdccb616e13"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/starting-fairness-proof-without-randomness-proof.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/starting-fairness-proof-without-randomness-proof.json",
+      "sourceCommit": "2ade15ac707084bdf0ccae5d4f46b294519c6f56",
+      "sha256": "80cf56a38a4c9bdd046cfa3184c1b299c29339c90e074bd4e67dccf247bfae33"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/status-unknown.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/status-unknown.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "252856434eed8f3e15196e523b8ab414532e1ebd5451b6c6f1c6b677011a6284"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/zkproof-tx-while-pending.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/zkproof-tx-while-pending.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "08f750438c11082b04baa53c82f4547bbc0bb1a9bf3622be0be4b5befd914612"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/zkproof-verified-without-proof-ref.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/zkproof-verified-without-proof-ref.json",
+      "sourceCommit": "2ade15ac707084bdf0ccae5d4f46b294519c6f56",
+      "sha256": "d7160f9f2c71d9be7a05b9242de4f3ea7598dc6289636cfdc343509a733a96aa"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/amount-request-minimal.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/amount-request-minimal.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "cab97fdc2c8d8a87635fe42f748342627f7f1923e77d8f4ca50526d2e58ac2f3"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/amount-request-with-decimals.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/amount-request-with-decimals.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "d4a30479b597ec907aca3809e0c4c2d533aa5af1ccdf4658d966fed772cde13d"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/book-playback-resolving-placeholder.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/book-playback-resolving-placeholder.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "68619bad17bfc2fb2d8b8c32187963ef7e03b2c883fe141229e8e5de321749cd"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/book-playback-won-placeholder.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/book-playback-won-placeholder.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "7c4969c01d5367939a4b3d5d5b96094caad336c36c6c82b6ce2e5b63a6c397a1"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-active-row2.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-active-row2.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "e304658546e909f18b0fc1ff66c282e7ae10702e861659eea58b8b7e2dec7f22"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-lost-row2.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-lost-row2.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "d91cc69ed3931463c393f4a19d41df178643ded5b42177cbc3ae2b2fcbd30310"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-resolving-row2.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-resolving-row2.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "611502133e70b898ed0145611aeb3c5923044b545ad22e9e9e7fe14751d43cb5"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-won-cashout.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-won-cashout.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "ee50b11e783fd3eb50dae386b869c611fb887cc8b483e467c686b082e1c732ff"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-won-expired.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-won-expired.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "f3d21ed8310f4b434ab3418a27e1189c6893e89cc175b259c5a94bec86fd2d23"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-active.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-active.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "e9a486045161432f3be3e4bdf682edf2ec4fd6c394bf72dad3227ee87e8a43b6"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-canceled-expired-no-action.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-canceled-expired-no-action.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "7e7ba2ac7a854fbfc0edd1da3f0e6e1f291a4dbd99bde7b4b456ab617848d4a9"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-canceled.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-canceled.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "da1a6f40e2298350033e0eb5c6edcbe90e6638c1279a8635c67412151cb614d1"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-idle-amount-uint256-max.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-idle-amount-uint256-max.json",
+      "sourceCommit": "2ade15ac707084bdf0ccae5d4f46b294519c6f56",
+      "sha256": "4fbd13ca1f8ac5ca644ec2fed7bd2eed6c9d05aee68058ee1bba4c4bb9db73af"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-idle-eth-big-amount.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-idle-eth-big-amount.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "feb04e71bf6256347e525cf0fdf2b469bbfa61cd1a7231470019246d03d951df"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-idle-usdt-tron.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-idle-usdt-tron.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "c7512a94a921fbcdd45c952a84fc5893d266fa45601da000fb671c08a28f3603"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-idle.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-idle.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "e2f088b098c8cdf0acd6468b57eaa30f69c8ca3cf993e6265c6413c8ff965537"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-lost.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-lost.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "d0bed894364f90c371c95d031c1f7dae69877951fa8f11847feca0f609b670f3"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-resolving.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-resolving.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "2e3c2c3db4ffd0331e0ae4a9d1864a8e6743d8f827fc7437db51c4e5162b1003"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-starting-bound.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-starting-bound.json",
+      "sourceCommit": "2ade15ac707084bdf0ccae5d4f46b294519c6f56",
+      "sha256": "3bdad4b21dcc9f2dcb828f63e931c4fb7e9c1f036dd02ae73eea3bbca1d33457"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-starting-created.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-starting-created.json",
+      "sourceCommit": "2ade15ac707084bdf0ccae5d4f46b294519c6f56",
+      "sha256": "f949252322bc95548c83358a1444be80c14819e9deeffc85cb0b8a87296dc389"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-starting.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-starting.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "59cddd9d1c7cf33e0bf84cdf7c07a0d55c259e8e7d05895f717413ae03c5a17e"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-won-proofs-verified.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-won-proofs-verified.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "50593f61f0fb2aa3e53722e96960091208cf1bb5e9d31b960540f11c1138f4ce"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-won.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-won.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "a6e71e9e4f423a2375094f24067de9dc42538868839116ef6fa4906d996a0dab"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/problem-default-code-invalid-argument.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/problem-default-code-invalid-argument.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "697d9e87aca0f5c2d37a12417ad6b7d6b863edeb99bbff00afef8ac6d6403847"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/problem-default-code-unavailable.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/problem-default-code-unavailable.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "521cdee7782f101facb4b796a8361b1d493d7ac32e6d596ded8f7c804d0f4845"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/problem-default-code-unknown.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/problem-default-code-unknown.json",
+      "sourceCommit": "64fbb5c5924ca300943c402a577aaef1d34b384c",
+      "sha256": "c26b3e304cf9e991ace58a5298e46fdce3a44ebaf69af3956777df456a20f86d"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/problem-entropy-unavailable.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/problem-entropy-unavailable.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "7fea39f1c61c7dfc632812ade5b6de23c6ed151089a8eac8c9d1cbd4a852ff52"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/problem-insufficient-funds.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/problem-insufficient-funds.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "91ef774f8b8eb45d340bcf680d6a6af42a0000733ed9ed2cb410b40dc01c4117"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/problem-round-active.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/problem-round-active.json",
+      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
+      "sha256": "5773a88608444f6ed55ff8c7f49389eb3083312f760191756f8a8d4649fc8bae"
+    }
+  ]
+}

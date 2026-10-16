@@ -1,0 +1,94 @@
+{
+  "vector": "snapshot/invalid/amount-unit-not-registry-code",
+  "description": "unit must be a wallet registry code, not a display symbol.",
+  "definition": "Snapshot",
+  "expected": "invalid",
+  "failsAt": "/bet/balance/unit",
+  "input": {
+    "schema": "se.snapshot/1",
+    "version": 0,
+    "presentation": "steps",
+    "model": "config",
+    "context": {
+      "sessionId": "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N",
+      "language": "de",
+      "country": "DE",
+      "device": "mobile",
+      "links": {
+        "lobby": "https://luckybet.example.com/lobby",
+        "deposit": "https://luckybet.example.com/cashier"
+      },
+      "theme": {
+        "appearance": "dark"
+      },
+      "view": {
+        "playerName": "Kai",
+        "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png"
+      }
+    },
+    "status": "idle",
+    "bet": {
+      "balance": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "€",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "minBet": {
+        "value": "10",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 0.1,
+        "formatted": "€0.10"
+      },
+      "maxBet": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "suggestedBets": [
+        {
+          "value": "100",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 1.0,
+          "formatted": "€1.00"
+        },
+        {
+          "value": "500",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 5.0,
+          "formatted": "€5.00"
+        },
+        {
+          "value": "1000",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 10.0,
+          "formatted": "€10.00"
+        }
+      ],
+      "defaultBet": {
+        "value": "100",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 1.0,
+        "formatted": "€1.00"
+      }
+    },
+    "config": {
+      "kind": "steps",
+      "steps": [
+        {
+          "index": 0,
+          "optionCount": 2,
+          "multiplier": 1.94
+        }
+      ]
+    }
+  }
+}

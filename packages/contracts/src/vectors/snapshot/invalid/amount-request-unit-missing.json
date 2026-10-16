@@ -1,0 +1,11 @@
+{
+  "vector": "snapshot/invalid/amount-request-unit-missing",
+  "description": "unit is required in a request; decimals alone does not identify the currency.",
+  "definition": "AmountRequest",
+  "expected": "invalid",
+  "failsAt": "",
+  "input": {
+    "value": "1000",
+    "decimals": 2
+  }
+}

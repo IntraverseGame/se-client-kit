@@ -1,0 +1,133 @@
+{
+  "vector": "snapshot/invalid/record-roundid-not-padded",
+  "description": "On-chain roundId must be the UUIDv7 bytes left-aligned and zero-padded.",
+  "definition": "Snapshot",
+  "expected": "invalid",
+  "failsAt": "/proofs/record/roundId",
+  "input": {
+    "schema": "se.snapshot/1",
+    "version": 5,
+    "presentation": "steps",
+    "model": "config",
+    "context": {
+      "sessionId": "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N",
+      "language": "de",
+      "country": "DE",
+      "device": "mobile",
+      "links": {
+        "lobby": "https://luckybet.example.com/lobby",
+        "deposit": "https://luckybet.example.com/cashier"
+      },
+      "theme": {
+        "appearance": "dark"
+      },
+      "view": {
+        "playerName": "Kai",
+        "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png"
+      }
+    },
+    "status": "won",
+    "roundId": "01927c5e-8b3a-7f21-9c4d-5e6f7a8b9c0d",
+    "bet": {
+      "balance": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "minBet": {
+        "value": "10",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 0.1,
+        "formatted": "€0.10"
+      },
+      "maxBet": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "suggestedBets": [
+        {
+          "value": "100",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 1.0,
+          "formatted": "€1.00"
+        },
+        {
+          "value": "500",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 5.0,
+          "formatted": "€5.00"
+        },
+        {
+          "value": "1000",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 10.0,
+          "formatted": "€10.00"
+        }
+      ],
+      "defaultBet": {
+        "value": "100",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 1.0,
+        "formatted": "€1.00"
+      }
+    },
+    "step": 1,
+    "currentMultiplier": 1.94,
+    "proofs": {
+      "randomnessProof": {
+        "source": "ethereum:block",
+        "blockNumber": 21000123,
+        "roundSecretHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "blockValue": "0x3333333333333333333333333333333333333333333333333333333333333333",
+        "blockExplorerUrl": "https://explorer.example.com/block/21000123",
+        "roundSecret": "0x4444444444444444444444444444444444444444444444444444444444444444",
+        "zkProof": {
+          "status": "verified",
+          "proofRef": "0x7777777777777777777777777777777777777777777777777777777777777777",
+          "verifiedBy": "superengine",
+          "txHash": "0x8888888888888888888888888888888888888888888888888888888888888888",
+          "proofLink": "https://explorer.example.com/tx/0x8888888888888888888888888888888888888888888888888888888888888888"
+        }
+      },
+      "fairnessProof": {
+        "seedHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "zkProof": {
+          "status": "verified",
+          "proofRef": "0x7777777777777777777777777777777777777777777777777777777777777777",
+          "verifiedBy": "superengine",
+          "txHash": "0x8888888888888888888888888888888888888888888888888888888888888888",
+          "proofLink": "https://explorer.example.com/tx/0x8888888888888888888888888888888888888888888888888888888888888888"
+        },
+        "seed": "0x5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "record": {
+        "chainId": 8453,
+        "roundId": "0x6666666666666666666666666666666666666666666666666666666666666666",
+        "txHash": "0x9999999999999999999999999999999999999999999999999999999999999999",
+        "explorerUrl": "https://explorer.example.com/tx/0x9999999999999999999999999999999999999999999999999999999999999999"
+      }
+    },
+    "config": {
+      "kind": "steps",
+      "steps": [
+        {
+          "index": 0,
+          "optionCount": 2,
+          "multiplier": 1.94,
+          "selectedIndex": 1,
+          "losingIndex": 0
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "vector": "snapshot/valid/problem-default-code-unavailable",
+  "description": "Typed error with a default code (the Kind name) that is retryable: an engine outage.",
+  "definition": "PlayProblem",
+  "expected": "valid",
+  "input": {
+    "type": "about:blank",
+    "title": "Service unavailable",
+    "status": 503,
+    "requestId": "req_01J9ZK",
+    "code": "UNAVAILABLE",
+    "retryable": true
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "vector": "snapshot/valid/coinflip-idle-amount-uint256-max",
+  "description": "Amount.value at the limit, 2^256-1 (78 digits), stays valid.",
+  "definition": "Snapshot",
+  "expected": "valid",
+  "input": {
+    "schema": "se.snapshot/1",
+    "version": 0,
+    "presentation": "steps",
+    "model": "config",
+    "context": {
+      "sessionId": "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N",
+      "language": "de",
+      "country": "DE",
+      "device": "mobile",
+      "links": {
+        "lobby": "https://luckybet.example.com/lobby",
+        "deposit": "https://luckybet.example.com/cashier"
+      },
+      "theme": {
+        "appearance": "dark"
+      },
+      "view": {
+        "playerName": "Kai",
+        "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png"
+      }
+    },
+    "status": "idle",
+    "bet": {
+      "balance": {
+        "value": "2000000000000000000000",
+        "decimals": 18,
+        "unit": "ETH",
+        "normalized": 2000.0,
+        "formatted": "2000 ETH"
+      },
+      "minBet": {
+        "value": "2000000000000000000000",
+        "decimals": 18,
+        "unit": "ETH",
+        "normalized": 2000.0,
+        "formatted": "2000 ETH"
+      },
+      "maxBet": {
+        "value": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+        "decimals": 18,
+        "unit": "ETH",
+        "normalized": 1.157920892373162e+59,
+        "formatted": "1.1579e59 ETH"
+      },
+      "suggestedBets": [],
+      "defaultBet": {
+        "value": "2000000000000000000000",
+        "decimals": 18,
+        "unit": "ETH",
+        "normalized": 2000.0,
+        "formatted": "2000 ETH"
+      }
+    },
+    "config": {
+      "kind": "steps",
+      "steps": [
+        {
+          "index": 0,
+          "optionCount": 2,
+          "multiplier": 1.94
+        }
+      ]
+    }
+  }
+}

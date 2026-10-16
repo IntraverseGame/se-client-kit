@@ -886,7 +886,13 @@
       }
     }
   ],
-  "ignorePatterns": ["**/dist/**", "**/.wireit/**", "**/node_modules/**"],
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/.wireit/**",
+    "**/node_modules/**",
+    "packages/contracts/src/generated/**",
+    "packages/contracts/src/vectors/catalog.ts"
+  ],
   "options": {
     "denyWarnings": true,
     "reportUnusedDisableDirectives": "error"

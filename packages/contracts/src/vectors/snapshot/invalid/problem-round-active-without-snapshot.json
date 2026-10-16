@@ -1,0 +1,15 @@
+{
+  "vector": "snapshot/invalid/problem-round-active-without-snapshot",
+  "description": "ROUND_ACTIVE must carry the open Snapshot.",
+  "definition": "PlayProblem",
+  "expected": "invalid",
+  "failsAt": "",
+  "input": {
+    "type": "about:blank",
+    "title": "Play error",
+    "status": 409,
+    "requestId": "req_01J9ZK",
+    "code": "ROUND_ACTIVE",
+    "retryable": false
+  }
+}

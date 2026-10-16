@@ -282,8 +282,30 @@ logic packages read it and never write to it.
   that only the test-only entry uses. Nothing else belongs in `src/`. A module
   that both entries import is a runtime module by definition, so it lives under
   `schemas/` or `generated/` and holds no vector data. (`test/vectors/...` is
-  the path in the backend's contracts repository; `contracts.lock.json` records
-  the source path and the path in this package.)
+  the path in the backend's contracts repository, which is already public by
+  name; `contracts.lock.json` records each artifact's public name and the path
+  in this package, never a path inside a private repository.) Today the runtime
+  modules are `schemas/snapshot.ts` (the schema as data of unknown shape) and
+  `generated/snapshot.ts` (its structural types); the test-only module is
+  `vectors/catalog.ts`, generated, which imports every vector.
+  <!-- TODO(Play API document): the backend has not published the Play and verify OpenAPI document yet; it joins `schemas/` with its `openapi-typescript` types under `generated/`. -->
+- **Tarball.** What is published is the allow-list of check 3 below. The
+  manifest still exports `./testing` for the kit's own tests; the published
+  package has no such file. `contracts.lock.json` is not in the tarball: it
+  stays in this repository, and each release's notes state the contracts it was
+  built against.
+- **Public types.** The runtime entry names its public types one by one; a new
+  definition in a vendored schema becomes public API only when it is added
+  there, and a test fails while a generated type is neither exported nor
+  deliberately left out. `Snapshot1` is left out: it is the generator's
+  structural copy of `Snapshot`, which the schema refers to from
+  `PlayProblem.snapshot`.
+- **Display numbers are not amounts.** The generated Snapshot types carry two
+  JSON numbers from the contract: `Amount.normalized` and `Multiplier`, both
+  display-only by the contract's own definition. They are never an input to
+  arithmetic on an amount; amounts are `Amount.value`, a string of base units,
+  read as `bigint` (the money rule in `AGENTS.md`). The validator and render
+  helpers in `snapshot` follow this.
 - **Vectors never reach a browser bundle.** Three checks, all required:
   1. a lint rule (an import restriction) fails any import of the test-only entry
      from a file that is not a test file or a test helper;
@@ -484,7 +506,22 @@ Rules:
 1. **Vendor, with the source noted.** A contract file is copied by a person (or
    a script run by a person) with access, and the pull request shows the diff
    and the new lock entry. **No kit job holds a credential to read a private
-   repository**: the kit's CI never fetches from one.
+   repository**: the kit's CI never fetches from one. The script is
+   `tools/sync-contracts.ts`. It reads each file at a git ref of a local
+   checkout (never its working tree), copies it byte for byte, and rewrites the
+   lock in the same run. A lock entry (`lockVersion` 1) is `path` (in the
+   package), `source` (the repository, by name), `sourceName`, `sourceCommit`
+   (the last commit that touched the file, in full), and `sha256`. `sourceName`
+   is the artifact's public name, fixed in the script (`se.snapshot/1 schema`,
+   `se.snapshot/1 vectors/valid/<file>`, `se.snapshot/1 vectors/invalid/<file>`,
+   `test/vectors/signing.json`): a path inside a private repository is
+   unpublished backend layout and is never recorded, and a test fails on a name
+   that is not one of these. The local checkouts and the paths in them are given
+   in a file named by `--sources`, kept outside this repository. Vectors are
+   append-only: the script refuses to change or remove a locked vector unless it
+   is given `--allow-vector-change`, which is legitimate only before the first
+   release. Generated files are rewritten by
+   `tools/generate-contracts.ts --write`.
 2. **Verify offline.** The `contracts` job recomputes each copied file's SHA-256
    and fails when it differs from the lock, and fails when the generated types
    in `contracts` differ from a regeneration of the committed documents.
@@ -501,7 +538,17 @@ Rules:
 5. **Review before publish.** Every file copied into this public repository is
    reviewed as [Never in the public repository](#never-in-the-public-repository)
    says. The signing vectors use a well-known local test key and are public by
-   design; the review still happens.
+   design; the review still happens. Accepted (human review, 2026-10-16) for the
+   first sync: the signing vectors' `_comment` names the contracts repository's
+   test tooling, and the Snapshot schema's descriptions cite backend documents
+   by name (for example `specs/snapshot.md`, `ADR-011`), which reach the
+   published types. Both are names, not contents; copies stay byte for byte, so
+   any rewording happens at the source.
+   <!-- TODO(Snapshot schema wording): ask the backend to drop internal document references from the schema's public descriptions; a later sync picks it up. -->
+
+   Issue #4's drift requirement is met, until the published locations exist, by
+   the `contracts` job verifying the lock against the committed copies; the
+   `contracts-drift` comparison job follows with them.
 
 ### Versioning and compatibility
 
@@ -663,14 +710,15 @@ the in-repo fake Play API, which answers from the contract's vectors); `audit`
 `dependency-review` (pull requests only); `release` (changesets, provenance, on
 the default branch only).
 
-Today `contracts` runs the test-only-entry import check only; the hash check and
-the regenerated-types diff arrive with the `contracts` package, and
+Today `contracts` runs the test-only-entry import check, the hash check against
+`contracts.lock.json`, and the generated-files diff (the Snapshot types and the
+vector catalog; the OpenAPI types join with the Play API document).
 `contracts-drift` and `release` are not defined yet. `build` builds every
-workspace; the manifest, size budget, and no-vector content check join it with
-the first release build, and the job also runs `pnpm check:build-output` and
-`pnpm check:package-files`. `e2e-fake` has no suites yet. The workflows hold no
-secret, run with `permissions: {}` at the top and `contents: read` per job, and
-pin every Action by full commit SHA.
+workspace; the manifest and size budget join it with the first release build,
+and the job also runs `pnpm check:build-output` (the no-vector content check,
+now over the vendored vectors) and `pnpm check:package-files`. `e2e-fake` has no
+suites yet. The workflows hold no secret, run with `permissions: {}` at the top
+and `contents: read` per job, and pin every Action by full commit SHA.
 
 #### Task orchestration and caching
 

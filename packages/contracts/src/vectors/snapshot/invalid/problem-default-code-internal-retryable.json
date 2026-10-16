@@ -1,0 +1,15 @@
+{
+  "vector": "snapshot/invalid/problem-default-code-internal-retryable",
+  "description": "A default code other than UNAVAILABLE must not be retryable.",
+  "definition": "PlayProblem",
+  "expected": "invalid",
+  "failsAt": "/retryable",
+  "input": {
+    "type": "about:blank",
+    "title": "Internal error",
+    "status": 500,
+    "requestId": "req_01J9ZK",
+    "code": "INTERNAL",
+    "retryable": true
+  }
+}
