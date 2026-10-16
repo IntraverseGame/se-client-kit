@@ -1,6 +1,6 @@
 ---
 description: What se-client-kit is, why it is public, the package map, and its boundary to the backend. Read first on any task.
-last-verified: 2026-10-15 (commit 8630f95, bootstrap; no product code yet)
+last-verified: 2026-10-16 (toolchain pull request; empty package skeletons, no product code yet)
 ---
 
 # Overview
@@ -20,7 +20,7 @@ it, and compare it with what is served. The cost: everything committed here is
 world-readable and cannot be taken back, so what may be committed is limited
 (see [AGENTS.md](../../AGENTS.md#public-repository)).
 
-## Package map (planned; none exists yet)
+## Package map (empty skeletons; no product code yet)
 
 | Project          | Kind           | Role                                                                    |
 | ---------------- | -------------- | ----------------------------------------------------------------------- |
@@ -34,8 +34,8 @@ world-readable and cannot be taken back, so what may be committed is limited
 
 Dependency direction: `contracts` ← `snapshot` and `play-client` ← `shell` ←
 `wrapper`; `signing` ← `shell`; tests read vectors from `contracts`' test-only
-entry. The npm scope is undecided
-<!-- TODO: npm scope -->
+entry. The intended npm names are `@intraverse/se-client-<name>` (not claimed on
+npm yet; that is part of the publishing work, #12).
 
 Details: [architecture.md](./architecture.md).
 
@@ -50,14 +50,16 @@ name only; never paste private text or link to private repositories.
 ## Current state
 
 Bootstrapping: the repository holds the license, the agent-agnostic knowledge
-layer (this directory), and the first specs (`specs/client-kit.md`,
-`specs/wrapper.md`) and decisions (`ADR-001` to `ADR-003`, accepted 2026-10-16). The toolchain (pnpm
-workspace, TypeScript, Vite, Vitest, Playwright, oxlint, oxfmt, CI) is the next
-pull request; packages follow.
+layer (this directory), the first specs (`specs/client-kit.md`,
+`specs/wrapper.md`) and decisions (`ADR-001` to `ADR-003`, accepted 2026-10-16),
+and the toolchain (pnpm workspace, TypeScript, Vite, Vitest, Playwright, oxlint,
+oxfmt, changesets, wireit, CI). The packages and apps are empty
+skeletons; their code follows.
 
 ## Where things are
 
 - Contracts and behavior: `specs/`; decisions: `decisions/`; proposals: `rfcs/`;
   procedures: `runbook/`; agent layer: `.ai/`.
-- Planned: `packages/` (including `packages/contracts`, the copies plus the lock
-  file), `apps/`, `e2e/`, `.changeset/`.
+- `packages/` (including `packages/contracts`, later the copies plus the lock
+  file), `apps/`, `e2e/`, `tools/` (repository checks), `.changeset/`,
+  `.github/` (workflows, the setup action, dependabot).

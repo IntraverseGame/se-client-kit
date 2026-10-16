@@ -24,8 +24,9 @@ description: Use before merging any non-trivial change. Reconciles code with spe
    file (source commit and hash); generated types match a fresh regeneration;
    released vector files are untouched; the package holds no logic and only
    tests import its test-only entry.
-4. Public API: exported names, `package.json` `exports`, and the changeset
-   agree with the spec.
+4. Public API: exported names, `package.json` `exports`, the changeset, and the
+   package's `README.md` (public documentation: role, status, entry points,
+   guarantees, and no contributor material) agree with the spec.
 5. Security: nothing in the diff logs, stores, or exposes a key or token; the
    spec's statement of what may never be logged still holds.
 6. Telemetry: anything that logs, emits metrics, or sends events is described in
@@ -48,7 +49,7 @@ description: Use before merging any non-trivial change. Reconciles code with spe
 ```sh
 git diff --stat main...HEAD
 git grep -n "TODO"
-pnpm check   # <!-- TODO(toolchain PR): available once the toolchain lands -->
+pnpm check
 ```
 
 ## Expected output

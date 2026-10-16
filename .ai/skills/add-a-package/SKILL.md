@@ -10,8 +10,12 @@ description: Use when adding a new package under packages/ (or an app under apps
 - An agreed spec (or accepted RFC) for the capability — see
   [prd-to-spec](../prd-to-spec/SKILL.md).
 - Read [.ai/memories/architecture.md](../../memories/architecture.md).
-- The toolchain exists
-  (<!-- TODO(toolchain PR): workspace, build, lint, and test configuration land with the toolchain -->).
+- The toolchain exists (pnpm workspace, wireit scripts, oxlint and stylelint, Vitest, tsx for `tools/`). Copy
+  the shape of an existing package under `packages/`: `package.json` with the
+  `build` (`tsdown`) and `typecheck` (`tsc -p tsconfig.json`) wireit scripts (and
+  `test` once it has its first real test), `tsconfig.json` (with `declaration`
+  and `isolatedDeclarations` for a library: every export needs an explicit type),
+  and `tsdown.config.ts` (see `tsdown.base.ts`; add each entry point).
 
 ## Workflow
 
@@ -32,27 +36,54 @@ description: Use when adding a new package under packages/ (or an app under apps
 2. **Layout:** `packages/<name>/` with `src/` (internals), `src/index.ts` (the
    only public entry point), `test/`, `package.json`, and a `tsconfig` that
    extends the shared strict base. `package.json` has an `exports` map to the
-   entry point only, `"type": "module"`, an explicit `files` list, and no
-   lifecycle scripts.
+   entry point only, `"type": "module"`, an explicit `files` list that selects
+   only its `dist` output (`["dist"]`; never `src`, `.wireit`, `*.tsbuildinfo`,
+   or a config file; npm adds `package.json` and the README itself), and no
+   lifecycle scripts. `tools/package-files.test.ts` and
+   `pnpm check:package-files` fail without it; add the new library to the
+   `dependencies` of the root `check:package-files` script.
 3. **Dependencies:** a workspace dependency on another kit package is allowed
    only along the dependency direction. A third-party runtime dependency needs
    an ADR first; a development tool needs a recorded decision. Pin per the
    lockfile policy; never add a lifecycle script.
 4. **Enforce the direction:** add the package to the import-restriction rules of
-   the lint configuration so a forbidden import fails
-   (<!-- TODO(toolchain PR): the rule format depends on the lint tool -->). Add a
-   negative fixture proving the rule fires.
-5. **API and types:** strict TypeScript, no `any`, named exports (ADR-001), no
+   the lint configuration so a forbidden import fails: a pair of `overrides`
+   entries in `.oxlintrc.json` (one for the package, one for its test files)
+   carrying a `no-restricted-imports` rule, and the package's name added to the
+   restricted groups of the others. Add a negative case to
+   `tools/fixtures/import-direction-cases.ts` (the dependency-direction cases;
+   the other rule cases are in `lint-rule-cases.ts` and `style-rule-cases.ts`) proving the rule fires, and add the package
+   to the root `build` and `typecheck` wireit dependencies (and `test` when it
+   gets its first test), and to `packages/*/tsdown.config.ts` coverage of the
+   root `tsconfig.json`. **Wire the graph:** a package resolves another through
+   its `exports`, which point at `dist/`, so its `build`, `typecheck`, and `test`
+   wireit scripts list the `build` of every kit package it imports (and of
+   `contracts` when its tests import the test-only entry) in `dependencies`;
+   otherwise they may see a missing or stale `dist/`. Add the new package's
+   `build` to the `dependencies` of each package or app that will import it.
+5. **API and types:** strict TypeScript, no `any`, named exports (ADR-001), `type`
+   over `interface` and arrow functions over `function` (AGENTS.md), no
    side effects at import. Money amounts are strings or `bigint`. Errors are
    typed. Nothing in the package logs or stores a key or token.
-6. **Tests:** unit tests, vector replay for wire or crypto formats, and the
+6. **Build gotcha (`contracts`):** use named re-exports in its runtime source;
+   `export * as ns` makes rolldown emit an unmapped helper chunk that
+   `pnpm check:build-output` rejects.
+7. **Tests:** unit tests, vector replay for wire or crypto formats, and the
    check that the public entry point exports exactly what the spec lists.
-7. **Release:** a changeset; mark the package private until it is meant to be
+8. **Release:** a changeset; mark the package private until it is meant to be
    published; if it is published, its `exports`, provenance, and license are
    set per the release runbook (planned).
-8. **Docs:** a spec for its contract (with its **Boundary** section), the
-   package map in `.ai/memories/architecture.md` and `overview.md`, and the
-   README package list.
+9. **Docs:** a spec for its contract (with its **Boundary** section), the
+   package map in `.ai/memories/architecture.md` and `overview.md`, the README
+   package list, and the package's own `README.md`. The README is public
+   documentation that ships to npm: write it for a consumer (what it is, when to
+   use it, install line, entry points, guarantees), with links only into this repository
+   (absolute `https://github.com/IntraverseGame/se-client-kit/blob/main/...`; any
+   other host fails) and
+   no contributor material; copy the shape of an existing one. Add the npm
+   metadata to the library's `package.json` (`description`, `keywords`,
+   `license`, `repository` with `directory`, `bugs`, `homepage`).
+   `tools/readmes.test.ts` fails without the README or if it breaks the rules.
 
 ## Constraints
 
@@ -64,7 +95,7 @@ description: Use when adding a new package under packages/ (or an app under apps
 ## Useful commands
 
 ```sh
-pnpm check   # <!-- TODO(toolchain PR): available once the toolchain lands -->
+pnpm check
 pnpm lint
 ```
 

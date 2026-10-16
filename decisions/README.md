@@ -1,9 +1,8 @@
 # Decisions (ADRs)
 
 Decisions and their rationale (each ADR's status shows whether it is accepted or
-proposed), for choices that are hard to reverse: a
-new dependency, the package structure, a protocol, supply-chain tooling, the
-agent workflow.
+proposed), for choices that are hard to reverse: a new dependency, the package
+structure, a protocol, supply-chain tooling, the agent workflow.
 
 ## Conventions
 

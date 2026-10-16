@@ -1,0 +1,77 @@
+{
+  "name": "@intraverse/se-client-contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The SuperEngine Play API and Snapshot contracts as data, with generated types. Data only.",
+  "keywords": [
+    "superengine",
+    "openapi",
+    "json-schema",
+    "contracts"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IntraverseGame/se-client-kit.git",
+    "directory": "packages/contracts"
+  },
+  "bugs": {
+    "url": "https://github.com/IntraverseGame/se-client-kit/issues"
+  },
+  "homepage": "https://github.com/IntraverseGame/se-client-kit/tree/main/packages/contracts#readme",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist/index.js",
+    "dist/index.js.map",
+    "dist/index.d.ts",
+    "dist/runtime"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "scripts": {
+    "build": "wireit",
+    "typecheck": "wireit"
+  },
+  "wireit": {
+    "build": {
+      "command": "tsdown",
+      "files": [
+        "src/**",
+        "!src/**/*.test.ts",
+        "package.json",
+        "tsconfig.json",
+        "tsdown.config.ts",
+        "../../tsdown.base.ts",
+        "../../tsconfig.base.json"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json",
+      "files": [
+        "src/**",
+        "package.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
+  }
+}

@@ -1,14 +1,14 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-15 (commit 8630f95, bootstrap; planned structure, nothing built)
+last-verified: 2026-10-16 (toolchain pull request; the workspace skeleton exists, packages are empty)
 ---
 
 # Architecture (agent context)
 
 The contract is the kit's [client kit spec](../../specs/client-kit.md) and
 [Wrapper spec](../../specs/wrapper.md); this note is the orientation around
-them. Until the packages exist, treat the structure below as the plan and flag
-any divergence.
+them. The packages are empty skeletons so far; treat the structure below as the
+plan and flag any divergence.
 
 ## Mental model
 
@@ -21,8 +21,11 @@ any divergence.
   tests; the consumers are listed in `specs/client-kit.md`);
   `reference-game` depends on nothing but the controller protocol's types. No
   cycles; a package never imports an app; `snapshot` and `play-client` never
-  import each other. Enforced by lint import rules and CI once the toolchain
-  lands.
+  import each other. Enforced by `no-restricted-imports` overrides in
+  `.oxlintrc.json` (per package, with a separate entry for its test files) and
+  proven by `tools/import-direction.test.ts` (cases in `tools/fixtures/`), which runs the real config over
+  scratch files; a new package updates both. `pnpm check:contracts` is a second,
+  independent check that only tests import the test-only entry.
 - **`contracts` is data only.** No validator, client, encoder, or helper in it.
   Two entry points: runtime (schemas, generated types) and test-only (vectors).
   Only tests import the test-only entry; the build fails if a vector reaches any
@@ -44,7 +47,7 @@ any divergence.
 ## Contracts and vectors
 
 - The kit shares **documents, never code** with the backend. Each contract file
-  lives in the `contracts` package (planned) and is pinned in its lock file with
+  lives in the `contracts` package and is pinned in its lock file with
   its source commit and a SHA-256. A contract sync touches that one package.
 - CI recomputes the hashes offline and fails on a mismatch. It holds no
   credential for any private repository; drift is detected from the backend
@@ -57,6 +60,23 @@ any divergence.
   new major of the affected packages.
 
 ## Things not to "fix"
+
+- **Packages build with tsdown, not tsc.** `exports` point at `dist/` (`index.js`
+  and `index.d.ts`; `contracts` also `testing.*`), so a package that imports
+  another sees its built `dist/`: the wireit `build`, `typecheck`, and `test`
+  scripts depend on the `build` of the kit packages they import. `contracts`
+  builds two entries, so the test-only entry is a separate chunk and the runtime
+  entry's import graph never reaches it (checked by `check:build-output`).
+  `isolatedDeclarations` is on for libraries; do not turn it off to avoid
+  writing a return type.
+
+- **Lifecycle scripts are off** (no `true` entry in `allowBuilds` of `pnpm-workspace.yaml`; `esbuild`, brought by
+  `tsx`, is denied explicitly) and
+  a version must be seven days old (`minimumReleaseAge`). Do not add a build
+  script to the allow-list, and do not lower the age to get a fix in.
+- **wireit scripts declare their inputs.** Do not replace a script by an ad-hoc
+  command, and do not widen `output` or drop `files` to make a task "always
+  green"; a script without `files` is deliberately uncached.
 
 - No UI framework in the Wrapper (a small UI, and a framework's dependency graph
   would sit in the code that holds the key). Changing it needs an ADR.
@@ -72,4 +92,4 @@ any divergence.
 
 ## Known open items
 
-<!-- TODO: npm scope; hosting and deploy of the released Wrapper (credentials stay outside this repository); CODEOWNERS handles. -->
+<!-- TODO: hosting and deploy of the released Wrapper (credentials stay outside this repository); CODEOWNERS handles. -->

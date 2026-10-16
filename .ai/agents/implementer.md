@@ -7,7 +7,8 @@ description: Use when writing or changing TypeScript code and its tests to satis
 
 ## Responsibilities
 
-- Write production-quality, strict, idiomatic TypeScript that implements the
+- Write production-quality, strict, idiomatic TypeScript (arrow functions, `type`
+  over `interface`, per AGENTS.md) that implements the
   spec — no more, no less. Optimize for clarity, correctness, and a small
   dependency graph.
 - Own tests: write and optimize unit, component, and e2e tests, and replay the
@@ -54,11 +55,11 @@ description: Use when writing or changing TypeScript code and its tests to satis
 ## Expected outputs
 
 - Code + tests + regenerated artifacts, one logical change per PR.
-- `pnpm check` green; `pnpm test:e2e` run when user-visible behavior changed.
+- `pnpm build` and `pnpm check:build-output` green when a package, an entry
+  point, or `exports` changed (packages build with tsdown);
+- `pnpm check` green (format, lint for TypeScript and CSS, typecheck, tests, checks); `pnpm test:e2e` run when user-visible behavior changed.
 - A PR description listing the spec sections implemented and how it was verified.
 - The decisions the human made along the way (question, answer, where recorded).
-
-<!-- TODO(toolchain PR): the commands exist once the toolchain lands. -->
 
 ## References
 

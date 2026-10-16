@@ -159,3 +159,6 @@ playwright/.cache/
 
 # Claude Code personal settings (the shared .claude/settings.json is tracked)
 .claude/settings.local.json
+
+# wireit task cache (per worktree)
+.wireit

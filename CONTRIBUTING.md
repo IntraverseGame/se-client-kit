@@ -15,32 +15,74 @@ organized.
 This guide links to canonical sources instead of repeating them. When the two
 disagree, the linked source wins; please fix this file.
 
-**This repository is public.** Everything you write here, including issues,
-pull requests, and commit messages, is world-readable. Read
+**This repository is public.** Everything you write here, including issues, pull
+requests, and commit messages, is world-readable. Read
 [Public repository](./AGENTS.md#public-repository) before your first change.
 
 ## Prerequisites and quickstart
 
-The toolchain is not installed yet; it arrives in the next pull request
-<!-- TODO(toolchain PR): Node and pnpm versions, `pnpm install`, and the scripts below -->
-
-Intended scripts:
+You need the Node version in [`.node-version`](./.node-version) and pnpm at the
+version of `packageManager` in [`package.json`](./package.json). pnpm (10 or
+later) switches to the pinned version by itself; otherwise `corepack enable`
+does. Dependency lifecycle scripts are off, and pnpm refuses a version published
+less than seven days ago (`pnpm-workspace.yaml`).
 
 ```sh
 pnpm install --frozen-lockfile   # install exactly what the lockfile says
-pnpm check                       # format check, lint, typecheck, unit tests, contracts check
+pnpm check                       # format check, lint, typecheck, unit tests, allow-list, contracts check, build, build-output and package files checks
 pnpm test                        # unit and component tests
 pnpm test:e2e                    # Playwright, against the in-repo fake Play API
-pnpm lint
-pnpm format
+pnpm lint                        # oxlint (with the dependency-direction rules) and stylelint (CSS)
+pnpm format                      # writes: oxfmt formats everything it supports
+pnpm format:check                # the same, read-only
+pnpm typecheck
+pnpm build                       # packages: tsdown (bundled ESM with .js.map, and .d.ts); the Wrapper: Vite
+pnpm changeset                   # add release notes for a change to a published package
 ```
+
+**Tasks and the cache.** Every script above is a
+[wireit](https://github.com/google/wireit) script: its `command`, input `files`,
+`output`, and `dependencies` are declared in the `wireit` section of the
+`package.json` that owns it, so `pnpm check` runs only what changed. Skipped
+tasks are restored from the cache in `.wireit/` (not committed). In CI the cache
+is the GitHub Actions cache; there is no remote cache and no secret.
+`node_modules` and `.wireit` are per worktree (run
+`pnpm install --frozen-lockfile` once in each). `pnpm clean:cache` forgets every
+cached result (also if you suspect a stale entry). When you add a file a script
+reads, add it to that script's `files`; a task that reads another package's
+output depends on that package's task.
+
+Every package under `packages/` and app under `apps/` has its own `README.md`,
+and it is **public documentation**: npm renders it on the package page, so it is
+written for a consumer who has never seen this repository (what it is, when to
+use it, the install line, entry points, the guarantees that matter to a user),
+says only what is true and tested today, and links only into this repository
+with absolute `https://github.com/IntraverseGame/se-client-kit/blob/main/...`
+URLs (any other host fails). Build, CI, lint, review, and agent material stays
+out of it and lives here and in the specification. Update it in the same change
+when the package's public API or role changes. `pnpm check` (its
+`pnpm check:readmes` step) fails if one is missing, has a relative, external,
+ignored, or broken link, or mentions a contributor-only term (the list is in
+`tools/readme-rules.ts`).
+
+**Working on a single package** (kept out of the package READMEs): from the
+repository root, `pnpm --filter @intraverse/se-client-<name> build` builds its
+`dist/` with tsdown, `... typecheck` runs `tsc --noEmit`, and `... test` runs
+its Vitest tests (a package has a `test` script only once it has a real test).
+`pnpm check` runs everything CI runs. The source layout of `contracts`, the
+build-output check, and the Vite guard of the Wrapper are described in
+[`specs/client-kit.md`](./specs/client-kit.md#the-contracts-package).
+
+Playwright browsers are not installed by `pnpm install` (lifecycle scripts are
+off). When a suite exists, run `pnpm exec playwright install chromium` once.
 
 ## Repository at a glance
 
 ```text
-packages/    contracts (data only), signing, snapshot, play-client, shell (planned)
-apps/        wrapper (the UI) and a reference game                        (planned)
-e2e/         Playwright suite and the fake Play API                       (planned)
+packages/    contracts (data only), signing, snapshot, play-client, shell (empty skeletons)
+apps/        wrapper (the UI) and a reference game                        (empty skeletons)
+e2e/         Playwright suite and the fake Play API                       (no suites yet)
+tools/       repository checks and their tests (allow-list, contracts entry, lint rules)
 specs/       current behavior and contracts (source of truth)
 decisions/   accepted decisions (ADRs)
 rfcs/        proposals: active/, archived/
@@ -52,7 +94,8 @@ runbook/     how to develop, release, and operate
 Dependency direction between packages is one way: `contracts` (data only) is a
 leaf; `snapshot` and `play-client` depend on it; `signing` has no kit dependency
 at run time; `shell` depends on `signing`, `snapshot`, and `play-client`; the
-`wrapper` app depends on `shell`. See [`.ai/memories/architecture.md`](./.ai/memories/architecture.md).
+`wrapper` app depends on `shell`. See
+[`.ai/memories/architecture.md`](./.ai/memories/architecture.md).
 
 ## Development flow
 
@@ -98,8 +141,8 @@ rough PRD / raw requirement          external: issue tracker / product docs
 - Significant, cross-cutting, or uncertain change → write an **RFC** first.
 - A choice that is hard to reverse (new dependency, package structure, protocol,
   supply-chain tooling) → record an **ADR**.
-- Accepted RFCs never stay canonical: their durable content moves into
-  `specs/` and `decisions/`, and the RFC is archived.
+- Accepted RFCs never stay canonical: their durable content moves into `specs/`
+  and `decisions/`, and the RFC is archived.
 
 **Stages and where their artifacts live.**
 
@@ -160,15 +203,15 @@ A typical change:
 4. **reviewer** — run on the human-approved diff; approve or request changes
    (changes go back to step 2).
 5. **Stage and commit** — only after steps 3 and 4 approve, and only when a
-   human asks. **No agent stages or commits on its own**, and none opens a
-   pull request (`gh pr create`) before a human confirms it.
+   human asks. **No agent stages or commits on its own**, and none opens a pull
+   request (`gh pr create`) before a human confirms it.
 
-Once the change is a pull request, the **pr-shepherd** works the conversation
-on GitHub when asked: it reviews another person's pull request with inline
-comments and follows up after new pushes, or answers the review comments on
-your own. It posts under the account your `gh` CLI is logged in as, only after
-you confirm the exact draft, and it never approves. A fix it makes for a review
-comment goes through steps 3 to 5 again. Its review is not the step 4 gate.
+Once the change is a pull request, the **pr-shepherd** works the conversation on
+GitHub when asked: it reviews another person's pull request with inline comments
+and follows up after new pushes, or answers the review comments on your own. It
+posts under the account your `gh` CLI is logged in as, only after you confirm
+the exact draft, and it never approves. A fix it makes for a review comment goes
+through steps 3 to 5 again. Its review is not the step 4 gate.
 
 **Where knowledge lives.**
 
@@ -185,16 +228,16 @@ comment goes through steps 3 to 5 again. Its review is not the step 4 gate.
 ### Asking the human
 
 At any step of the flow, an agent that hits an open question, a remaining item
-to decide, or a spec gap asks the human instead of guessing. The binding rule
-is in [`AGENTS.md`](./AGENTS.md#asking-the-human) and the procedure in the
+to decide, or a spec gap asks the human instead of guessing. The binding rule is
+in [`AGENTS.md`](./AGENTS.md#asking-the-human) and the procedure in the
 [ask-the-human](./.ai/skills/ask-the-human/SKILL.md) skill. An answer is not an
-approval: it does not replace the human review, the reviewer agent, or a
-human's request to commit.
+approval: it does not replace the human review, the reviewer agent, or a human's
+request to commit.
 
 ## Branching, commits, and pull requests
 
-**Parallel work.** Several people and agents work in one clone at the same
-time. Each task has its own branch in its own git worktree beside the clone
+**Parallel work.** Several people and agents work in one clone at the same time.
+Each task has its own branch in its own git worktree beside the clone
 (`git worktree add -b feat/<slug> ../se-client-kit-worktrees/feat-<slug> origin/main`);
 the main checkout stays on `main`. Procedure:
 [`runbook/development/parallel-work.md`](./runbook/development/parallel-work.md).
@@ -224,27 +267,45 @@ the main checkout stays on `main`. Procedure:
 
 ## Code style
 
-Formatting and lint are automated once the toolchain lands
-<!-- TODO(toolchain PR): formatter and linter -->
+Formatting and lint are automated: **oxfmt** formats TypeScript, JSON, Markdown,
+YAML, and HTML, and **oxlint** lints (`pnpm format`, `pnpm lint`; `pnpm check`
+verifies both). Do not format by hand or with another tool. The lint
+configuration (`.oxlintrc.json`) also enforces the package dependency direction,
+the public-entry-point rule, and the code rules of `AGENTS.md` that a linter can
+express (no `any`, no default exports in libraries, no side-effect imports, a
+reason on every `@ts-expect-error`). Every such rule has a fixture case in
+`tools/fixtures/` (`import-direction-cases.ts`, `lint-rule-cases.ts`, and
+`style-rule-cases.ts`, merged by `tools/import-direction.test.ts`); add one with
+a new rule. A lint-disable comment that suppresses nothing is itself an error.
+**stylelint** (`stylelint.config.mjs`, explicit rules, no shared config) lints
+CSS for correctness and the Wrapper's constraints: no unknown properties,
+at-rules, or values, no duplicates, no `!important`, no `@import`, no remote
+`url()` (the CSP and the SuperEngine origin), no vendor prefixes; it has no
+stylistic rule, because oxfmt formats. The repository's own TypeScript scripts
+in `tools/` run with `tsx` (`pnpm check:deps`, `pnpm check:contracts`). The
+reason on a disable comment or a `@ts-expect-error` is enforced by review (the
+human reviewer and the reviewer agent), not by a rule.
 
-Conventions:
-[`.ai/memories/conventions.md`](./.ai/memories/conventions.md).
-In short: strict TypeScript, no `any`, money as strings or `bigint`, secrets
-in memory only, typed errors, injected time and randomness.
+Conventions: [`.ai/memories/conventions.md`](./.ai/memories/conventions.md). In
+short: strict TypeScript, no `any`, money as strings or `bigint`, secrets in
+memory only, typed errors, injected time and randomness.
 
 ## Testing
 
 Levels and rules: [`.ai/memories/testing.md`](./.ai/memories/testing.md); the
-authoritative testing sections are [`specs/client-kit.md`](./specs/client-kit.md#testing-and-ci)
-and [`specs/wrapper.md`](./specs/wrapper.md#test-plan). New behavior
-needs tests; tests are deterministic and hermetic.
+authoritative testing sections are
+[`specs/client-kit.md`](./specs/client-kit.md#testing-and-ci) and
+[`specs/wrapper.md`](./specs/wrapper.md#test-plan). New behavior needs tests;
+tests are deterministic and hermetic. The one exception is the preview-stack
+end-to-end run (T-10 to T-12), which the backend repository's job owns and which
+is never part of `pnpm check`.
 
 ## Generated code and contract copies
 
 Never edit generated files; regenerate and commit the output. Contract files in
-the `contracts` package are copies with a lock entry (source commit and hash); they change
-only in a reviewed pull request that shows the diff. Vector files of a released
-version are never edited.
+the `contracts` package are copies with a lock entry (source commit and hash);
+they change only in a reviewed pull request that shows the diff. Vector files of
+a released version are never edited.
 
 ## Knowledge architecture
 
@@ -260,10 +321,9 @@ version are never edited.
 | `AGENTS.md`     | Binding rules for agents                                          | a non-negotiable changes                          |
 
 The four role agents (AI role definitions, not people) live in
-[`.ai/agents/`](./.ai/agents/): `implementer` (staff-level TypeScript
-engineer), `reviewer` (the review gate), `documenter` (PRDs to specs, RFCs, and
-ADRs), and `pr-shepherd` (pull requests on GitHub, posted only on
-confirmation).
+[`.ai/agents/`](./.ai/agents/): `implementer` (staff-level TypeScript engineer),
+`reviewer` (the review gate), `documenter` (PRDs to specs, RFCs, and ADRs), and
+`pr-shepherd` (pull requests on GitHub, posted only on confirmation).
 
 If you change behavior, update the spec in the same change. If you change
 operations, update the runbook. If you make a non-obvious choice, add an ADR.

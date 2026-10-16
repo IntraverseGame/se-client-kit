@@ -40,20 +40,27 @@ description: Use when adding or changing behavior, signing code, contracts, or t
 ## Constraints
 
 - Deterministic and hermetic; no secrets; no test imports another package's
-  internals.
+  internals. The preview-stack e2e (backend-owned job, never part of
+  `pnpm check`) is the one non-hermetic suite; do not add tests to it here.
 - Never weaken a vector assertion or skip a test to go green — fix the code, or
   change the spec through the development flow. A released vector file is never
   edited; add a new version.
 
 ## Useful commands
 
-<!-- TODO(toolchain PR): scripts land with the toolchain -->
-
 ```sh
-pnpm test                  # unit and component
+pnpm test                  # unit and component (wireit skips what did not change)
 pnpm test:e2e              # Playwright against the fake Play API
 pnpm check                 # everything the CI runs
 ```
+
+A test that reads files outside its own package (a vector, the schema) must
+have those files in its wireit `files`, or depend on the task that produces
+them; otherwise a cached pass could hide a failure. `tools/wireit-inputs.test.ts`
+checks the `files` of every script against the files on disk; it runs in
+`test:tools`, whose `files` cover every workspace tree so that a new file
+re-runs it. A root `tools/` test that reads a file outside them adds that file
+to `test:tools` `files`.
 
 ## Expected output
 

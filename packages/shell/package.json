@@ -1,0 +1,81 @@
+{
+  "name": "@intraverse/se-client-shell",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The headless part of the SuperEngine Wrapper: sessions, key custody, and the game boundary.",
+  "keywords": [
+    "superengine",
+    "wrapper",
+    "key-custody",
+    "headless"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IntraverseGame/se-client-kit.git",
+    "directory": "packages/shell"
+  },
+  "bugs": {
+    "url": "https://github.com/IntraverseGame/se-client-kit/issues"
+  },
+  "homepage": "https://github.com/IntraverseGame/se-client-kit/tree/main/packages/shell#readme",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "wireit",
+    "typecheck": "wireit"
+  },
+  "wireit": {
+    "build": {
+      "command": "tsdown",
+      "dependencies": [
+        "../signing:build",
+        "../snapshot:build",
+        "../play-client:build"
+      ],
+      "files": [
+        "src/**",
+        "!src/**/*.test.ts",
+        "package.json",
+        "tsconfig.json",
+        "tsdown.config.ts",
+        "../../tsdown.base.ts",
+        "../../tsconfig.base.json"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json",
+      "dependencies": [
+        "../signing:build",
+        "../snapshot:build",
+        "../play-client:build",
+        "../contracts:build"
+      ],
+      "files": [
+        "src/**",
+        "package.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
+  }
+}

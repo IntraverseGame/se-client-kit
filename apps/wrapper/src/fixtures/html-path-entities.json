@@ -1,0 +1,23 @@
+{
+  "source": "https://html.spec.whatwg.org/entities.json",
+  "referenceCount": 2231,
+  "selection": "every named character reference whose expansion is made only of ASCII letters and digits and of / \\ . % : ? # & _ - ~ tab newline",
+  "references": {
+    "&AMP": "&",
+    "&AMP;": "&",
+    "&NewLine;": "\n",
+    "&Tab;": "\t",
+    "&UnderBar;": "_",
+    "&amp": "&",
+    "&amp;": "&",
+    "&bsol;": "\\",
+    "&colon;": ":",
+    "&fjlig;": "fj",
+    "&lowbar;": "_",
+    "&num;": "#",
+    "&percnt;": "%",
+    "&period;": ".",
+    "&quest;": "?",
+    "&sol;": "/"
+  }
+}

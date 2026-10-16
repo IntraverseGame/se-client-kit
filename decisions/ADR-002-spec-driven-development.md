@@ -39,8 +39,8 @@ operators, and auditors, so they must stand on their own.
 
 ## Alternatives considered
 
-- **Code as the only documentation** — cheap, but contracts (signature
-  encoding, error semantics, what may be logged) are invisible until broken.
+- **Code as the only documentation** — cheap, but contracts (signature encoding,
+  error semantics, what may be logged) are invisible until broken.
 - **Tool-specific instruction files** (one per AI tool) — duplicated and
   divergent content.
 - **Wiki outside the repo** — drifts from code; not reviewed with changes; not

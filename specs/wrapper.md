@@ -1,10 +1,11 @@
 # Wrapper
 
 Status: **Draft, for human review.** This is the contract the Wrapper is built
-and tested to. It takes effect for the code when the first release lands.
-The [questions it raised](#decided-questions) (OQ-1 to OQ-6) were decided by
-the TPO (the Technical Product Owner) on 2026-10-15; none is open. The
-signed-action grammar, `T_0`, and the signing vectors belong to the backend's signed-action spec and are only referenced here
+and tested to. It takes effect for the code when the first release lands. The
+[questions it raised](#decided-questions) (OQ-1 to OQ-6) were decided by the TPO
+(the Technical Product Owner) on 2026-10-15; none is open. The signed-action
+grammar, `T_0`, and the signing vectors belong to the backend's signed-action
+spec and are only referenced here
 ([What this spec does not own](#what-this-spec-does-not-own)).
 
 ## Purpose
@@ -14,21 +15,24 @@ signed-action grammar, `T_0`, and the signing vectors belong to the backend's si
   session from a launch code, signs the player's actions, checks what the
   backend tells it about the round, renders the Snapshot, and hosts the game
   iframe.
-- The player trusts this code with the one key that can cash out their round.
-  So the contract is written as requirements that a test can fail, and the code
-  is public ([client-kit.md](./client-kit.md)).
+- The player trusts this code with the one key that can cash out their round. So
+  the contract is written as requirements that a test can fail, and the code is
+  public ([client-kit.md](./client-kit.md)).
 - The first release plays Coin Flip end to end against the SuperEngine backend:
-  launch, key setup, signed start, move, and cash-out.
+  launch, key setup, round start (the key's address is presented in the `start`
+  call; there is no signed `PlayerStart`, W-22), move, and cash-out.
 
 ## Scope
 
 In scope (first release):
 
-- opening a session from a launch code, the play token, and its refresh;
+- opening a session from a launch code read from the URL fragment, the play
+  token, and its refresh;
 - the action key: generation, custody, and what may be stored;
 - two tabs of one session (Web Locks);
 - the transcript: tracking `T_n`, never signing two actions at one sequence;
-- signing start, move, cash-out, and cancel through the signed-action spec;
+- starting a round with the action key's address (no signed start, W-22), and
+  signing move, cash-out, and cancel through the signed-action spec;
 - verifying the bind receipt, and the tip check, before the game is shown as
   ready; `PlayerCancel` when a check fails;
 - rendering from the Snapshot, validated against `se.snapshot/1`;
@@ -72,11 +76,13 @@ owns.
 - **The Wrapper consumes** (contracts, never backend code):
   - the Play API, `/play/v1`, as its OpenAPI document;
   - the Snapshot schema `se.snapshot/1` and its golden vectors;
-  - the signed-action spec and the signing vectors;
-    (the three above all arrive as vendored data in the kit's `contracts`
-    package, never as backend code);
-  - public JSON-RPC endpoints, for the tip check;
-  - one environment configuration document ([Configuration](#configuration)).
+  - the signed-action spec and the signing vectors; (the three above all arrive
+    as vendored data in the kit's `contracts` package, never as backend code);
+  - public JSON-RPC endpoints, for the tip check (a local or preview environment
+    may use its own node, W-26a);
+  - one environment configuration document ([Configuration](#configuration));
+  - the operator launch contract, by name only: the launch URL whose fragment
+    carries the launch code (W-1).
 - **The Wrapper is consumed by:**
   - the player;
   - the operator page, which embeds the Wrapper and receives resize, lobby, and
@@ -98,6 +104,7 @@ How the kit obtains those contracts is in
 | operator page | The page of the operator that embeds the Wrapper (origin A).                                                                                                                                                                   |
 | SE origin     | The origin that serves the Wrapper. The Wrapper's code, its Play API calls, and its credentials live here.                                                                                                                     |
 | game origin D | The origin of the game iframe. A different registrable domain from the SE origin.                                                                                                                                              |
+| launch code   | The single-use, short-lived secret in the fragment of the launch URL. The Wrapper redeems it once for a session (W-1, W-2).                                                                                                    |
 | action key    | The per-session secp256k1 key the shell generates. Its address is bound to the round at start.                                                                                                                                 |
 | bind receipt  | The backend's signed statement (an EIP-712 `CreateRoundAuth`) over the exact arguments of the round's on-chain creation: round id, entropy source, target block `N`, round secret hash, bet, currency, action key, terms hash. |
 | tip check     | The shell's check of the bind's block `N` against the final tip on independent RPCs.                                                                                                                                           |
@@ -105,13 +112,13 @@ How the kit obtains those contracts is in
 
 ### Requirements and traceability
 
-Every requirement below uses MUST, SHOULD, or MAY in the RFC 2119 sense. Each
-is tied to a first-release requirement (R1 to R4) or acceptance criterion (AC1
-to AC5), or to the security model the Wrapper exists to keep.
+Every requirement below uses MUST, SHOULD, or MAY in the RFC 2119 sense. Each is
+tied to a first-release requirement (R1 to R4) or acceptance criterion (AC1 to
+AC5), or to the security model the Wrapper exists to keep.
 
 | Item | Text (short)                                                                                                                               | Requirements                                                     |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
-| R1   | open a session from a launch code, hold the token only in memory, refresh before expiry                                                    | W-1 to W-8                                                       |
+| R1   | open a session from a launch code (read from the URL fragment only), hold the token only in memory, refresh before expiry                  | W-1 to W-8                                                       |
 | R2   | generate the key locally, sign start, move, and cash-out per the signing vectors, verify the bind receipt before showing the game as ready | W-9 to W-27                                                      |
 | R3   | render only from a validated Snapshot; handle `starting`, `active`, `resolving`, `won`, `lost`, `idle`, and the typed error                | W-28 to W-38                                                     |
 | R4   | show the round id and a verify-page link after the round ends                                                                              | W-39, W-40; T-6, T-10                                            |
@@ -130,12 +137,23 @@ not from numbers written in the test. The numbers that appear below for polling,
 timeouts, and retries are the **Wrapper's own configuration**, with the stated
 defaults.
 
-- **W-1.** On load the Wrapper MUST take the launch code from its launch URL
-  exactly once, and MUST remove it from the URL (`history.replaceState`) before
-  any network call or log line. A launch code is a secret: single use and short
-  lived. It SHOULD travel in the URL fragment, which no server
-  and no `Referer` header sees.
-  <!-- TODO(Play API): the launch URL shape (query or fragment, parameter name) comes from the operator launch contract; the requirement to scrub it does not depend on it. -->
+- **W-1.** On load the Wrapper MUST read the launch code **only from the URL
+  fragment**, exactly once, and MUST remove it from the URL
+  (`history.replaceState`) before any network call or log line. A launch code is
+  a secret: single use and short lived. The fragment is the one place no server
+  and no `Referer` header sees; a code in the query string would reach the
+  server in the first document request. So the Wrapper never reads a code from
+  the query string, never forwards it (in a request, a log line, a message, or
+  the DOM), and never stores it: it ignores the query string and treats the
+  launch as having no code (W-1a). The operator launch contract (owned
+  elsewhere, named here only) must therefore place the launch code in the
+  fragment.
+  <!-- TODO(Play API): the parameter name and the exact fragment format come from the operator launch contract. Only the placement (the fragment) is decided here. -->
+- **W-1a.** **No launch code.** When the fragment holds no launch code (it is
+  absent or empty, or the code was placed only in the query string), the Wrapper
+  MUST NOT call the redeem call and MUST sign nothing. It shows the
+  [session-ended state](#error-and-degraded-states) with the instruction to
+  relaunch from the operator, the same state W-2 shows for a rejected code.
 - **W-2.** The Wrapper MUST redeem the code once, with the Play API's redeem
   call, and MUST NOT retry a redeem whose response was lost: a code cannot be
   redeemed twice, so the player needs a new launch. It shows the
@@ -161,21 +179,22 @@ defaults.
 - **W-6.** The Wrapper MUST refresh the token before it expires: when the
   remaining time falls to a configured fraction of the token's lifetime (default
   one third), and at least a configured margin (default 60 s) before the
-  deadline, whichever is earlier (Wrapper configuration). The deadline is corrected by the
-  clock offset measured from the HTTP `Date` header of the redeem response. At
-  most one refresh is in flight. The new token replaces the old one only after
-  its response arrived; until then the old token stays in use. A refresh whose
-  response was lost MAY be repeated with the same old token: the presented
-  token keeps its own expiry.
+  deadline, whichever is earlier (Wrapper configuration). The deadline is
+  corrected by the clock offset measured from the HTTP `Date` header of the
+  redeem response. At most one refresh is in flight. The new token replaces the
+  old one only after its response arrived; until then the old token stays in
+  use. A refresh whose response was lost MAY be repeated with the same old
+  token: the presented token keeps its own expiry.
 - **W-7.** A refresh failing with a retryable problem MUST be retried with
   bounded backoff while the old token is valid. A refresh answered
   `SESSION_EXPIRED`, `SESSION_REVOKED`, or `UNAUTHENTICATED`, or a token that
   reached its deadline, ends the session: the Wrapper stops signing, discards
-  the key and the token, and shows the session-ended state. A token that
-  expired cannot be refreshed.
+  the key and the token, and shows the session-ended state. A token that expired
+  cannot be refreshed.
 - **W-8.** A token refresh and a Snapshot read do not count as player activity
   on the backend. The Wrapper MUST NOT send calls only to keep a session alive:
-  a tab left open expires by the backend's idle timeout, and the Wrapper shows the session-ended state when it learns that.
+  a tab left open expires by the backend's idle timeout, and the Wrapper shows
+  the session-ended state when it learns that.
 
 ### The action key and what may be stored
 
@@ -191,56 +210,57 @@ defaults.
   handed to the UI layer or the game. The signing function takes a digest and
   returns a signature; nothing returns the key.
 - **W-11.** **Storage rule (decided, OQ-1,
-  [Decided questions](#decided-questions)).** In the first release the shell MUST keep the key
-  and the token **in memory only**, and nothing in the Wrapper writes to
-  persistent or tab-scoped browser storage. A reload, a closed tab, or the
-  session's end destroys the key, and the shell zeroes the key bytes when the
-  session ends (best effort: JavaScript cannot guarantee the memory is wiped).
-  The Wrapper MUST NOT register a service worker and MUST NOT set cookies.
+  [Decided questions](#decided-questions)).** In the first release the shell
+  MUST keep the key and the token **in memory only**, and nothing in the Wrapper
+  writes to persistent or tab-scoped browser storage. A reload, a closed tab, or
+  the session's end destroys the key, and the shell zeroes the key bytes when
+  the session ends (best effort: JavaScript cannot guarantee the memory is
+  wiped). The Wrapper MUST NOT register a service worker and MUST NOT set
+  cookies.
   - Why not storage that lives "for the session". `sessionStorage` survives a
     reload and is **copied into a duplicated tab**, so it would put one key in
     two live tabs. `localStorage` and IndexedDB survive the browser closing,
     outliving the session, and are readable by any script on the SE origin. A
     reload cannot be continued in any case: the token is memory-only and the
     launch code is single-use, so a reload needs a new launch and therefore a
-    new session. The backend does not hand an open round to another session, so a key kept across a reload would not let the
-    player move in that round. What a lost key costs is already the backend's
-    rule: the round runs to its time limit and ends by its game's expiry rule,
-    with no recovery path.
+    new session. The backend does not hand an open round to another session, so
+    a key kept across a reload would not let the player move in that round. What
+    a lost key costs is already the backend's rule: the round runs to its time
+    limit and ends by its game's expiry rule, with no recovery path.
 - **W-12.** What the Wrapper MAY keep after a page is gone: nothing. In
   particular no key, token, launch code, receipt, or signed action, and no
   identifier derived from them. The one exception is a download the **player
   starts** (the evidence export of W-27): the file goes to the player, and the
-  page holds no copy of it afterwards. A persistent evidence store is deferred with the post-round receipt check
-  ([OQ-1](#decided-questions)).
+  page holds no copy of it afterwards. A persistent evidence store is deferred
+  with the post-round receipt check ([OQ-1](#decided-questions)).
 - **W-13.** The shell MUST serialize the key's use behind its Web Lock (W-14)
   and MUST sign only on a player action, on the automatic cash-out of W-24, or
-  on the `PlayerCancel` that W-26 requires. It MUST NOT sign in response to a message from the game that is not a
-  validated action request (W-37, W-38).
+  on the `PlayerCancel` that W-26 requires. It MUST NOT sign in response to a
+  message from the game that is not a validated action request (W-37, W-38).
 
 ### Two tabs
 
-- **W-14.** After the redeem, the shell MUST request an exclusive Web Lock
-  named `se:signer:<sessionId>` (`navigator.locks.request` with
-  `ifAvailable: true`) and hold it for the page's life. A tab that does not get
-  the lock MUST NOT sign, refresh, or poll for the session, and MUST show the
-  "this session is open in another tab" state. If the browser has no Web Locks
-  API, the shell MUST NOT sign (fail closed).
+- **W-14.** After the redeem, the shell MUST request an exclusive Web Lock named
+  `se:signer:<sessionId>` (`navigator.locks.request` with `ifAvailable: true`)
+  and hold it for the page's life. A tab that does not get the lock MUST NOT
+  sign, refresh, or poll for the session, and MUST show the "this session is
+  open in another tab" state. If the browser has no Web Locks API, the shell
+  MUST NOT sign (fail closed).
 - **Why it still matters with a memory-only key.** Two tabs cannot share an
   in-memory key, so two tabs of one session do not arise from normal use: a
-  second launch is a second session with its own key, and a second redeem of
-  one code fails. The lock is the guard that keeps a sequence from forking if
-  a tab is cloned or a future design hands a session over. A fork would be
+  second launch is a second session with its own key, and a second redeem of one
+  code fails. The lock is the guard that keeps a sequence from forking if a tab
+  is cloned or a future design hands a session over. A fork would be
   equivocation by the key holder, and the backend rejects it (a stale `previous`
   or a wrong sequence).
 
 ### The transcript
 
-- **W-15.** The shell MUST track, per round it signs for: the round id, the
-  last accepted `T` (`T_0` at the start), the next sequence, and the digest,
-  the signed bytes, and the `idempotencyKey` of any action it has signed but
-  not seen applied. It MUST NEVER sign two different actions for one `(round, sequence)`, whatever the
-  network does.
+- **W-15.** The shell MUST track, per round it signs for: the round id, the last
+  accepted `T` (`T_0` at the start), the next sequence, and the digest, the
+  signed bytes, and the `idempotencyKey` of any action it has signed but not
+  seen applied. It MUST NEVER sign two different actions for one
+  `(round, sequence)`, whatever the network does.
 - **W-16.** The shell MUST record a signed action in that state **before** it
   sends it. If the send fails or its outcome is unknown, the shell MUST resend
   the **same signed bytes** with the **same** `idempotencyKey`, or read the
@@ -274,22 +294,24 @@ defaults.
   `{27, 28}`, low `s`, deterministic (RFC 6979). The shell MUST reject any other
   length, `v`, or high `s`, and a recovered zero address, when it checks a
   signature it received (the bind receipt). This is the backend verifier's rule,
-  stated for the browser ([ADR-001](../decisions/ADR-001-toolchain-and-signing.md)).
+  stated for the browser
+  ([ADR-001](../decisions/ADR-001-toolchain-and-signing.md)).
 - **W-22.** **Start.** The shell starts a round with the Play API's `start`
   verb, a fresh `idempotencyKey` (within the Play API's length limits), the bet
-  as an `AmountRequest` (`value`, `unit`, copied from the Snapshot's own `Amount`
-  fields, never typed or computed from a float), and the action key's address.
-  A player-signed `PlayerStart` is **deferred** (a config round's bind needs no
-  signed start), so the first release has no signed start. "Sign start" is read
-  as: the shell generates the key and presents its address in the `start` call,
-  and the bind receipt then commits to that address ([OQ-5](#decided-questions)).
+  as an `AmountRequest` (`value`, `unit`, copied from the Snapshot's own
+  `Amount` fields, never typed or computed from a float), and the action key's
+  address. A player-signed `PlayerStart` is **deferred** (a config round's bind
+  needs no signed start), so the first release has no signed start. "Sign start"
+  is read as: the shell generates the key and presents its address in the
+  `start` call, and the bind receipt then commits to that address
+  ([OQ-5](#decided-questions)).
   <!-- TODO(Play API, signed-action spec): the `start` request carries the action key address; its field name and the response's receipt envelope. -->
-- **W-23.** **Move.** The game sends a validated pick request (W-38); the
-  shell checks it is legal in the Snapshot it holds (the step exists, the
-  option is in range, the status is `active`), builds the canonical action,
-  signs `PlayerAction` at the next sequence, and sends `continue` with the
-  signed bytes and a fresh `idempotencyKey`. A request that fails the check is
-  rejected to the game with a `reject` message and nothing is signed.
+- **W-23.** **Move.** The game sends a validated pick request (W-38); the shell
+  checks it is legal in the Snapshot it holds (the step exists, the option is in
+  range, the status is `active`), builds the canonical action, signs
+  `PlayerAction` at the next sequence, and sends `continue` with the signed
+  bytes and a fresh `idempotencyKey`. A request that fails the check is rejected
+  to the game with a `reject` message and nothing is signed.
 - **W-24.** **Cash-out.** The shell signs `PlayerCashOut` when the player asks
   for it (the cash-out button, offered when the status is `active` and at least
   one step was survived), and only then, with one exception: after a move whose
@@ -300,13 +322,13 @@ defaults.
   nothing.
   <!-- TODO(signed-action spec): confirm what the backend does at the last step (paid by the move, or `active` until a cash-out) and fix the automatic cash-out rule to it. -->
 - **W-25.** **Cancel.** The shell signs `PlayerCancel` (`action = "cancel"`,
-  empty path, sequence 1, `previous = T_0`) only when a check of W-26 fails,
-  or when the player cancels a round that is `active` with no move made, if the
+  empty path, sequence 1, `previous = T_0`) only when a check of W-26 fails, or
+  when the player cancels a round that is `active` with no move made, if the
   game offers it (config rounds only; W-31 offers the control in the `active`
   row).
-- **W-26.** **Checks before the first signature and before the game is shown
-  as ready.** The Snapshot is `starting` while the round prepares. The
-  shell MUST NOT show the game as ready, and MUST NOT sign anything except the
+- **W-26.** **Checks before the first signature and before the game is shown as
+  ready.** The Snapshot is `starting` while the round prepares. The shell MUST
+  NOT show the game as ready, and MUST NOT sign anything except the
   `PlayerCancel` this item requires, until the Snapshot is `active` **and** all
   of these hold:
   1. **Receipt signature.** The bind receipt is a `CreateRoundAuth` whose
@@ -314,17 +336,17 @@ defaults.
      the environment configuration (never a value taken from the response).
   2. **Receipt contents.** The receipt's round id equals the Snapshot's
      `roundId`; its action key equals the shell's own key address; its bet and
-     currency equal what the player chose (`bet` against the `AmountRequest`
-     the shell sent, `unit` against the currency); its source, `N`, and
-     `roundSecretHash` equal the Snapshot's `proofs.randomnessProof`
-     (`source`, `blockNumber`, `roundSecretHash`).
+     currency equal what the player chose (`bet` against the `AmountRequest` the
+     shell sent, `unit` against the currency); its source, `N`, and
+     `roundSecretHash` equal the Snapshot's `proofs.randomnessProof` (`source`,
+     `blockNumber`, `roundSecretHash`).
   3. **Ready evidence.** The shell recomputes `T_0` and compares it with the
      round's Ready evidence.
-  4. **Tip check** (W-26b).
-     If a check fails, the shell signs `PlayerCancel` (W-25) as soon as the round
-     is `active`, keeps the receipt, shows "this round failed verification and was
-     canceled", and the player's bet is returned by the cancel. For a book round
-     (not in the first release) the check can only flag.
+  4. **Tip check** (W-26b). If a check fails, the shell signs `PlayerCancel`
+     (W-25) as soon as the round is `active`, keeps the receipt, shows "this
+     round failed verification and was canceled", and the player's bet is
+     returned by the cancel. For a book round (not in the first release) the
+     check can only flag.
   <!-- TODO(Play API, signed-action spec): where the Play API returns the bind receipt and the fields to recompute `created` and `T_0` (the Snapshot schema `/1` carries none of them: its `proofs.randomnessProof` has `source`, `blockNumber`, `roundSecretHash` only), and how the shell learns the signing domain (`chainId`, `verifyingContract`) and the backend signer address (this spec assumes the environment configuration). -->
 - **W-26a. Fewer than `minRpcQuorum` endpoints answer.** Decided (OQ-2,
   [Decided questions](#decided-questions)): the minimum number of endpoints that
@@ -342,21 +364,26 @@ defaults.
   ([client-kit.md](./client-kit.md#environment-configuration)) is an additional
   guard, not a replacement. **This is the single-RPC gap of the first release.**
 - **W-26b. Tip check.** The shell asks **at least `minRpcQuorum` independent**
-  public RPC endpoints for their final block, and fails closed on any
-  disagreement:
+  RPC endpoints for their final block, and fails closed on any disagreement. In
+  production these are public RPC endpoints from independent providers. The
+  local or preview exception of W-26a (one endpoint, the local node, with
+  `minRpcQuorum` = 1, the degraded indicator, and `tipCheck: "degraded"`)
+  applies to everything below: "public" and the independence rule describe the
+  production requirement.
   - **Definitions.** `h_top` is the maximum final block over all the endpoints
-    that answered within the request timeout (W-43). `h_low` is the minimum final block over
-    the same endpoints.
+    that answered within the request timeout (W-43). `h_low` is the minimum
+    final block over the same endpoints.
   - **The rule.** The check passes only if (1) at least `minRpcQuorum` endpoints
     answered **and** (2) **every** answering endpoint agrees: each is within the
     source's lag margin of `h_top`, and all return the same block hash at height
     `h_low` (the shell queries that height on each). The observed tip is
     `h_top`.
   - **Failure.** Any answering endpoint that is further than the lag margin
-    behind `h_top`, or that returns a different hash at `h_low`, fails the check,
-    as does too few answering. The shell does not drop an outlier and does not
-    pick a side: it signs `PlayerCancel` per W-26. The receipt records every
-    endpoint's answer (its provider, final block, and the hash at `h_low`).
+    behind `h_top`, or that returns a different hash at `h_low`, fails the
+    check, as does too few answering. The shell does not drop an outlier and
+    does not pick a side: it signs `PlayerCancel` per W-26. The receipt records
+    every endpoint's answer (its provider, final block, and the hash at
+    `h_low`).
   - **The bind.** The shell records the observed tip with the receipt and checks
     `N` against it: for a `future` bind `N` MUST be above that tip; for a `tip`
     bind `N` MUST NOT be older than it, within the source's lag margin.
@@ -364,14 +391,15 @@ defaults.
     infrastructure: the configuration names each endpoint's provider, and the
     shell refuses a configuration in which two endpoints share a provider. The
     configuration schema also refuses an entropy source whose configured
-    endpoint count is below `minRpcQuorum`, so a quorum can never be
-    unreachable by configuration.
+    endpoint count is below `minRpcQuorum`, so a quorum can never be unreachable
+    by configuration.
   <!-- TODO(backend entropy spec): the lag margin in blocks per chain, from the measured RPC lag; it is the `tipLagMargin` configuration value. -->
 - **W-27.** The shell SHOULD keep every bind receipt and every signed action in
   memory for the page's life and SHOULD offer them as a JSON download after the
-  round ends, started by the player (the only write out of the page, W-12). After the round's deadline the shell is also meant to check each
-  receipt against the verify API and the public record chain; that check needs
-  receipts that outlive the page and is deferred ([OQ-1](#decided-questions)).
+  round ends, started by the player (the only write out of the page, W-12).
+  After the round's deadline the shell is also meant to check each receipt
+  against the verify API and the public record chain; that check needs receipts
+  that outlive the page and is deferred ([OQ-1](#decided-questions)).
   <!-- TODO(later increment): post-round receipt check against the public record. -->
 
 ### Rendering from the Snapshot
@@ -383,8 +411,8 @@ defaults.
   state and logs the schema path of the first failure, never the document.
 - **W-29.** The Snapshot is the only source of round state. The Wrapper MUST NOT
   infer hidden state from an absent field, MUST ignore fields it does not know
-  (tolerant reader), and MUST ignore a Snapshot whose `version` is lower than the
-  last one it accepted for the session (a stale response).
+  (tolerant reader), and MUST ignore a Snapshot whose `version` is lower than
+  the last one it accepted for the session (a stale response).
 - **W-30.** The Wrapper MUST declare its capabilities when the session starts:
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
   six of R3 and `canceled`, which the cancel path needs).
@@ -408,33 +436,33 @@ defaults.
   status.
 - **W-34.** Money: the Wrapper MUST read `Amount.value` as a string and use
   `BigInt` for any comparison (for example the bet against the balance), and
-  MUST display `Amount.formatted`. It MUST NOT compute money from
-  `normalized` or from a multiplier, and MUST NOT use a floating-point number
-  for an amount.
-- **W-35.** While the status is `starting` or `resolving`, the Wrapper MUST
-  poll the Snapshot read (no WebSocket in the first release) with bounded
-  backoff (SHOULD: 500 ms rising to 2 s, Wrapper configuration) until the status changes, and MUST keep
-  polling at the slow rate after a longer wait, with a "taking longer than
-  expected" notice. It MUST stop polling when the status is terminal or the
-  session ended.
+  MUST display `Amount.formatted`. It MUST NOT compute money from `normalized`
+  or from a multiplier, and MUST NOT use a floating-point number for an amount.
+- **W-35.** While the status is `starting` or `resolving`, the Wrapper MUST poll
+  the Snapshot read (no WebSocket in the first release) with bounded backoff
+  (SHOULD: 500 ms rising to 2 s, Wrapper configuration) until the status
+  changes, and MUST keep polling at the slow rate after a longer wait, with a
+  "taking longer than expected" notice. It MUST stop polling when the status is
+  terminal or the session ended.
 - **W-36.** Idempotency. Each player intent (start, a move, cash-out, cancel)
   gets one `idempotencyKey` (`crypto.randomUUID()`), reused for every retry of
   that intent and never for another.
 
 ### The game iframe and the controller boundary
 
-- **W-37.** The game runs in `<iframe sandbox="allow-scripts allow-same-origin">`
-  served from game origin D, which MUST differ from the SE origin and MUST be
-  on a different registrable domain, so a script in the game can never reach the
-  Wrapper's storage or code. The Wrapper MUST refuse to mount a game whose
-  origin equals its own, and MUST take D only from the environment configuration
-  allow-list (never from a message, a URL parameter, or the Snapshot).
+- **W-37.** The game runs in
+  `<iframe sandbox="allow-scripts allow-same-origin">` served from game origin
+  D, which MUST differ from the SE origin and MUST be on a different registrable
+  domain, so a script in the game can never reach the Wrapper's storage or code.
+  The Wrapper MUST refuse to mount a game whose origin equals its own, and MUST
+  take D only from the environment configuration allow-list (never from a
+  message, a URL parameter, or the Snapshot).
   <!-- TODO(Play API, catalog): where D comes from for a launched game (the game's release target or the launch response). -->
 - **W-38.** A message from the game is accepted only if `event.source` is the
   game frame's `contentWindow` **and** `event.origin` is D. The Wrapper posts to
   the game only with `targetOrigin = D`. Every accepted message MUST be parsed
-  against a closed, versioned schema (`se.controller/1`, below) and ignored if it
-  does not match. The game never receives the key, the token, a signature, a
+  against a closed, versioned schema (`se.controller/1`, below) and ignored if
+  it does not match. The game never receives the key, the token, a signature, a
   receipt, or a header: the Wrapper sends it Snapshots (validated, W-28) and
   nothing else of the session.
 - **`se.controller/1`, the first-release minimum.** Messages are JSON objects
@@ -465,9 +493,9 @@ defaults.
 ### Error and degraded states
 
 - **W-41.** No key, token, or launch code may appear in an error state, a
-  notice, the document title, the DOM, the console, or the URL. The error
-  states show the typed `code`'s message in the player's language and the
-  problem's `requestId`, so support can find the call.
+  notice, the document title, the DOM, the console, or the URL. The error states
+  show the typed `code`'s message in the player's language and the problem's
+  `requestId`, so support can find the call.
 - **W-42.** Typed errors. The Wrapper branches on `code` and never on the
   message; it retries only when `retryable` is `true`, with the same
   `idempotencyKey`, a bounded number of times with backoff, then shows the
@@ -489,32 +517,32 @@ defaults.
   losing the round: the Wrapper keeps polling at the slow rate, resends a
   signed-but-unconfirmed action only as W-16 says, and says so when the browser
   reports being offline. After the connection returns, it reads the Snapshot
-  first and continues from it. A request MUST time out (SHOULD: 15 s, Wrapper configuration). The
-  Wrapper never reports success for an action whose outcome it has not read.
+  first and continues from it. A request MUST time out (SHOULD: 15 s, Wrapper
+  configuration). The Wrapper never reports success for an action whose outcome
+  it has not read.
 - **W-44.** Degraded states the Wrapper MUST show distinctly: session ended;
-  open in another tab; connection problem; chain check not independent
-  (W-26a); round failed verification; out of sync (W-19); Snapshot rejected
-  (W-28).
+  open in another tab; connection problem; chain check not independent (W-26a);
+  round failed verification; out of sync (W-19); Snapshot rejected (W-28).
 
 ### Accessibility
 
-The Wrapper's own UI (everything except the game's contents) targets
-**WCAG 2.2 level AA**.
+The Wrapper's own UI (everything except the game's contents) targets **WCAG 2.2
+level AA**.
 
 - **W-45.** Every control MUST be operable by keyboard alone, with a visible
   focus indicator and a logical order; the game iframe has a `title`. No
   keyboard trap, including around the iframe.
-- **W-46.** A status change MUST be announced to assistive technology through
-  a polite live region (`aria-live="polite"`), and an error through
+- **W-46.** A status change MUST be announced to assistive technology through a
+  polite live region (`aria-live="polite"`), and an error through
   `role="alert"`. Focus moves to the result or error heading only when the
   player's own action caused the change, never when a poll did.
 - **W-47.** Color MUST NOT carry meaning alone (win, loss, and error have text
   and an icon with a text alternative). Text contrast SHOULD be at least 4.5:1
-  and the UI SHOULD honor `prefers-reduced-motion` and 200 % zoom without
-  loss of function. Targets SHOULD be at least 24 by 24 CSS pixels.
-- **W-48.** Every control and state has a text label in the session's
-  `language` (the Snapshot's `context.language`), with a fallback language.
-  Money is shown as the Snapshot's `formatted` string.
+  and the UI SHOULD honor `prefers-reduced-motion` and 200 % zoom without loss
+  of function. Targets SHOULD be at least 24 by 24 CSS pixels.
+- **W-48.** Every control and state has a text label in the session's `language`
+  (the Snapshot's `context.language`), with a fallback language. Money is shown
+  as the Snapshot's `formatted` string.
 
 ### Operator embedding
 
@@ -524,11 +552,12 @@ The Wrapper's own UI (everything except the game's contents) targets
   is the primary control; this requirement is defense in depth. The Wrapper
   accepts a handshake or message from the operator page only if
   `event.source === window.parent` **and** `event.origin` is in
-  `operatorOrigins` (as W-38 does for the game frame), replies only with `targetOrigin` set to that origin,
-  and parses every message against a closed schema.
+  `operatorOrigins` (as W-38 does for the game frame), replies only with
+  `targetOrigin` set to that origin, and parses every message against a closed
+  schema.
   - Where `location.ancestorOrigins` exists, the Wrapper MUST refuse to start
-    (the configuration-error state, no signing) if any ancestor origin is not
-    in `operatorOrigins`.
+    (the configuration-error state, no signing) if any ancestor origin is not in
+    `operatorOrigins`.
   - Where it does not exist (Firefox), the Wrapper MUST NOT sign until a
     handshake from an origin in `operatorOrigins` has arrived, and from then on
     talks only to that origin.
@@ -566,29 +595,29 @@ Content Security Policy.
 
 ## Errors and edge cases
 
-| Case                                                          | Behavior                                                                                                                                                        |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The launch code is invalid, expired, or already used          | The API refuses the redeem; the Wrapper shows the session-ended state with the relaunch instruction (W-2). It cannot tell the cases apart                       |
-| The page reloads mid-round                                    | A new launch is needed; the key and token are gone (W-11). The round runs to its time limit                                                                     |
-| The Snapshot says `active` but a check failed                 | The game is never shown (W-26); the cancel is signed                                                                                                            |
-| The bind receipt arrives but the Snapshot stays `starting`    | W-35 polling; the round is voided by the server's deadline and the Snapshot shows `idle` with a typed error; nothing was signed                                 |
-| The game sends a pick for a step that is not current          | `reject: not_legal`; nothing is signed                                                                                                                          |
-| Two `action` messages arrive before the first resolves        | The second gets `reject: busy`                                                                                                                                  |
-| The response to a `continue` is lost                          | W-16: resend the same bytes and key, or read the Snapshot                                                                                                       |
-| A signed `cashOut` is answered `STALE_ACTION`                 | W-19                                                                                                                                                            |
-| The clock of the device is wrong                              | W-6's offset correction from the `Date` header; a skew beyond a configured limit is shown as a notice, and the Wrapper still refreshes by the server's deadline |
-| The game origin is not in the allow-list, or is the SE origin | The game is not mounted (W-37)                                                                                                                                  |
-| The Wrapper is framed by an origin not in `operatorOrigins`   | The Wrapper refuses to start where `location.ancestorOrigins` exists, and signs nothing before a handshake from a listed origin where it does not (W-49)        |
+| Case                                                                                               | Behavior                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The launch URL carries no launch code in its fragment (absent, empty, or only in the query string) | No redeem call; the session-ended state with the relaunch instruction (W-1a). A query-string code is never read, forwarded, or stored (W-1)                     |
+| The launch code is invalid, expired, or already used                                               | The API refuses the redeem; the Wrapper shows the session-ended state with the relaunch instruction (W-2). It cannot tell the cases apart                       |
+| The page reloads mid-round                                                                         | A new launch is needed; the key and token are gone (W-11). The round runs to its time limit                                                                     |
+| The Snapshot says `active` but a check failed                                                      | The game is never shown (W-26); the cancel is signed                                                                                                            |
+| The bind receipt arrives but the Snapshot stays `starting`                                         | W-35 polling; the round is voided by the server's deadline and the Snapshot shows `idle` with a typed error; nothing was signed                                 |
+| The game sends a pick for a step that is not current                                               | `reject: not_legal`; nothing is signed                                                                                                                          |
+| Two `action` messages arrive before the first resolves                                             | The second gets `reject: busy`                                                                                                                                  |
+| The response to a `continue` is lost                                                               | W-16: resend the same bytes and key, or read the Snapshot                                                                                                       |
+| A signed `cashOut` is answered `STALE_ACTION`                                                      | W-19                                                                                                                                                            |
+| The clock of the device is wrong                                                                   | W-6's offset correction from the `Date` header; a skew beyond a configured limit is shown as a notice, and the Wrapper still refreshes by the server's deadline |
+| The game origin is not in the allow-list, or is the SE origin                                      | The game is not mounted (W-37)                                                                                                                                  |
+| The Wrapper is framed by an origin not in `operatorOrigins`                                        | The Wrapper refuses to start where `location.ancestorOrigins` exists, and signs nothing before a handshake from a listed origin where it does not (W-49)        |
 
 ## Security
 
-The key and the token are the assets. What may never happen is in W-3, W-4,
-W-10 to W-13, W-37, W-38, W-41, and W-49, and is tested by T-9, T-9a, T-13, and
-T-18. Summary:
-the secrets live in one closure in memory, never in storage, a URL, a log, the
-DOM, or a message; the game is untrusted, sandboxed on another origin, and talks
-only through a closed, origin-checked message set; the Wrapper checks the
-backend's claims (the bind receipt, the tip) before it signs.
+The key and the token are the assets. What may never happen is in W-3, W-4, W-10
+to W-13, W-37, W-38, W-41, and W-49, and is tested by T-9, T-9a, T-13, and T-18.
+Summary: the secrets live in one closure in memory, never in storage, a URL, a
+log, the DOM, or a message; the game is untrusted, sandboxed on another origin,
+and talks only through a closed, origin-checked message set; the Wrapper checks
+the backend's claims (the bind receipt, the tip) before it signs.
 
 ## Observability
 
@@ -601,10 +630,16 @@ document. A client-side error channel is a later decision with its own spec.
 
 ## Test plan
 
-The suites live in this repository ([client-kit.md](./client-kit.md#testing-and-ci)).
-The backend owns the vectors and the contracts they check. All tests are
+The suites live in this repository
+([client-kit.md](./client-kit.md#testing-and-ci)). The backend owns the vectors
+and the contracts they check. The unit, component, and e2e suites that run
+against the in-repo fake Play API (`pnpm check` and the `e2e-fake` job) are
 deterministic and hermetic: an injected clock, a seeded random source, no
-network beyond the in-repo fake Play API, no real key.
+network beyond that fake, no real key. The **preview-stack e2e** (T-10 to T-12,
+and so AC1) is the exception: it talks to the SuperEngine preview stack, so it
+is not hermetic, runs from the backend-owned job (see
+[client-kit.md](./client-kit.md#testing-and-ci)), and is never part of
+`pnpm check`.
 
 | ID    | Level                        | What it proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Covers                                |
 | ----- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
@@ -612,7 +647,7 @@ network beyond the in-repo fake Play API, no real key.
 | T-2   | unit, `signing`              | the worked-round vectors, and the negative cases: high `s`, bad `v`, wrong length, zero address, a changed `previous`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | AC2, W-21                             |
 | T-3   | unit, `signing` and `shell`  | Sign then Recover round trips for random digests from a seeded source; signing is deterministic; key generation draws 32 bytes from the injected random source, redraws a zero or out-of-range value, and derives the address that the vectors give                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | W-9, W-21                             |
 | T-4   | unit, `shell`                | the transcript: sequence and `previous` chaining; the same signed bytes and `idempotencyKey` on a resend; never two different actions at one sequence under a randomized sequence of failures, retries, and cancel against move; `STALE_ACTION`                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | W-15, W-16, W-17, W-18, W-19          |
-| T-4a  | unit, `shell`                | session open: the launch code is removed from the URL before the first request and the first log line, from both a query and a fragment; a redeem whose response is lost is not retried and ends in the session-ended state                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | W-1, W-2                              |
+| T-4a  | unit, `shell`                | session open: the launch code is read only from the fragment and removed from the URL before the first request and the first log line; a launch URL whose code is only in the query string is treated as having no code (nothing read, forwarded, logged, or stored, no redeem call, the session-ended state with the relaunch instruction); a redeem whose response is lost is not retried and ends in the session-ended state                                                                                                                                                                                                                                                                                        | W-1, W-1a, W-2                        |
 | T-4b  | unit, `shell`                | the signing flows: `start` carries a fresh `idempotencyKey`, the bet copied from the Snapshot's `Amount` fields, and the key address (W-22, W-36); a move is built only when legal and otherwise answered `reject` (W-23); cash-out on request only, and the automatic cash-out only when the backend leaves the round `active` at the last step, never when the move closed the round (W-24); cancel on a failed check, never together with a move at sequence 1 (W-25); nothing is signed on a message that is not a validated action request (W-13)                                                                                                                                                                 | W-13, W-22, W-23, W-24, W-25, W-36    |
 | T-5   | unit, `snapshot`             | every `valid/` vector validates and every `invalid/` vector fails at its `failsAt` pointer, with the `snapshot` package's evaluator; the files are the append-only set held in the `contracts` package (test-only entry), copied from the backend                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | AC3, W-28                             |
 | T-5a  | unit, `shell`                | the Snapshot is the only source of state: unknown fields are ignored, an absent field is not read as hidden state, a lower `version` is ignored; the capability declaration lists `steps` and all seven statuses                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | W-29, W-30                            |
@@ -627,7 +662,7 @@ network beyond the in-repo fake Play API, no real key.
 | T-10  | e2e, browser                 | a **win** against the preview stack, including the start, the move, the receipt and tip checks, and the round id and verify link at the end                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | AC1, W-22, W-23, W-26, W-39           |
 | T-11  | e2e, browser                 | a **loss**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | AC1, W-23, W-39                       |
 | T-12  | e2e, browser                 | a **cash-out** (needs a game with more than one step; [OQ-3](#decided-questions)); and the automatic cash-out case against a fake Play API that leaves the round `active` at the last step                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | AC1, W-24, W-25                       |
-| T-13  | e2e, browser                 | **no secret** after a whole session, a reload, and the session's end: no launch code, play token, or key (the e2e stubs `crypto.getRandomValues` with Playwright's `addInitScript`, so it knows the key's bytes, hex, and base64 forms, and tests the unmodified release bundle) in any console message, request or response URL, document URL and history, `localStorage`, `sessionStorage`, IndexedDB, Cache Storage, cookies, or service worker registrations; the player-started evidence download is the only write out and leaves no copy                                                                                                                                                                        | AC4, W-3, W-4, W-11, W-12, W-27       |
+| T-13  | e2e, browser                 | **no secret** after a whole session (launched through the fragment, so no launch code is ever in a request URL), a reload, and the session's end: no launch code, play token, or key (the e2e stubs `crypto.getRandomValues` with Playwright's `addInitScript`, so it knows the key's bytes, hex, and base64 forms, and tests the unmodified release bundle) in any console message, request or response URL, document URL and history, `localStorage`, `sessionStorage`, IndexedDB, Cache Storage, cookies, or service worker registrations; the player-started evidence download is the only write out and leaves no copy                                                                                            | AC4, W-3, W-4, W-11, W-12, W-27       |
 | T-14  | e2e + automated audit        | accessibility: an axe scan of every status and error state, and keyboard-only play of a round, with a visible focus indicator and no keyboard trap, and text labels in the session's language                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | AC5, W-45, W-48                       |
 | T-14a | e2e, browser                 | live regions and visual rules: a status change is announced through a polite live region and an error through `role="alert"`; focus moves to the result or error heading only after the player's own action, never after a poll; win, loss, and error carry text and an icon beside colour; `prefers-reduced-motion` is honored; the UI works at 200 % zoom                                                                                                                                                                                                                                                                                                                                                            | AC5, W-46, W-47                       |
 | T-15  | e2e, browser                 | offline: the network is cut during `starting`, during `resolving`, and during a signed action; the connection-problem state appears, the round is not lost, and no second action is signed at the sequence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | AC5, W-16, W-43                       |
@@ -663,7 +698,8 @@ signature; canonical signatures only.
 ## Decided questions
 
 The questions this spec raised were decided by the TPO on 2026-10-15. Each row
-keeps the question, the options, and the decision. The spec follows the decision.
+keeps the question, the options, and the decision. The spec follows the
+decision.
 
 | ID   | Question                                                                                                                                                                                                                                                                                                                                                            | Options                                                                                                                                                                                                                                                                                                                                                                                                 | Decision                                                                                                                                                                                                                                                                   |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1,0 +1,21 @@
+packages:
+  - packages/*
+  - apps/*
+  - e2e
+
+# Supply chain (specs/client-kit.md, "Supply chain"; ADR-001 decision 7).
+# A version must have been published for at least 7 days (in minutes).
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
+# Dependency lifecycle scripts are off. A package may run one only if it is
+# listed here with `true`; no entry is `true`, on purpose.
+allowBuilds:
+  # tsx's esbuild has an install script that only checks and optimizes the
+  # prebuilt binary, which is delivered by a platform package and works without
+  # it. Denied explicitly so `strictDepBuilds` stays on.
+  esbuild: false
+strictDepBuilds: true
+# Refuse a version whose trust evidence is weaker than an earlier one's.
+trustPolicy: no-downgrade
+# Dependencies are saved at an exact version.
+savePrefix: ""

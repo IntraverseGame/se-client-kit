@@ -4,13 +4,15 @@
 
 ## How it was verified
 
-<!-- Commands run (e.g. `pnpm check`, `pnpm test:e2e`) and results. -->
+<!-- Commands run (e.g. `pnpm check`, `pnpm build` when a package changed, `pnpm test:e2e`) and results. -->
 
 ## Checklist
 
-- [ ] `pnpm check` passes locally (format, lint, typecheck, unit tests, contracts
-      check). <!-- TODO(toolchain PR): scripts land with the toolchain -->
-- [ ] Generated code regenerated and committed; no generated file edited by hand.
+- [ ] `pnpm check` passes locally (format, lint for TypeScript and CSS,
+      typecheck, unit tests, dependency allow-list, contracts check, build and
+      build-output check).
+- [ ] Generated code regenerated and committed; no generated file edited by
+      hand.
 - [ ] **Spec Drift Synchronization:** code and `specs/` agree; any behavior
       change updates the spec in this PR.
 - [ ] Memories in `.ai/memories/` updated if architecture, conventions, testing,
@@ -24,6 +26,10 @@
       user-visible behavior.
 - [ ] Package boundaries hold: dependency direction respected, other packages
       imported through their public entry point only.
+- [ ] The `README.md` of each package or app I touched is current when its
+      public API or role changed; it is public documentation (it ships to npm):
+      written for a consumer, with links only into this repository and no
+      contributor material.
 - [ ] Money amounts are strings or `bigint`; no key or token is logged,
       serialized, or stored.
 - [ ] **Public repository:** no secrets, tokens, keys (other than the public
@@ -39,4 +45,5 @@
       committed (ADR-003).
 
 See [`AGENTS.md`](../AGENTS.md) for the mandatory actions and
-[`CONTRIBUTING.md`](../CONTRIBUTING.md#development-flow) for the development flow.
+[`CONTRIBUTING.md`](../CONTRIBUTING.md#development-flow) for the development
+flow.

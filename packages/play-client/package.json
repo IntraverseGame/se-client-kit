@@ -1,0 +1,76 @@
+{
+  "name": "@intraverse/se-client-play-client",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A typed fetch client for the SuperEngine Play API (/play/v1).",
+  "keywords": [
+    "superengine",
+    "play-api",
+    "fetch",
+    "client"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IntraverseGame/se-client-kit.git",
+    "directory": "packages/play-client"
+  },
+  "bugs": {
+    "url": "https://github.com/IntraverseGame/se-client-kit/issues"
+  },
+  "homepage": "https://github.com/IntraverseGame/se-client-kit/tree/main/packages/play-client#readme",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "wireit",
+    "typecheck": "wireit"
+  },
+  "wireit": {
+    "build": {
+      "command": "tsdown",
+      "dependencies": [
+        "../contracts:build"
+      ],
+      "files": [
+        "src/**",
+        "!src/**/*.test.ts",
+        "package.json",
+        "tsconfig.json",
+        "tsdown.config.ts",
+        "../../tsdown.base.ts",
+        "../../tsconfig.base.json"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json",
+      "dependencies": [
+        "../contracts:build"
+      ],
+      "files": [
+        "src/**",
+        "package.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
+  }
+}

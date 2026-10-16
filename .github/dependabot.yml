@@ -1,6 +1,23 @@
 version: 2
 updates:
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /.github/actions/*
     schedule:
       interval: weekly
+    # Same 7-day cooldown as the npm ecosystem and `minimumReleaseAge`.
+    cooldown:
+      default-days: 7
+  - package-ecosystem: npm
+    directories:
+      - /
+      - /packages/*
+      - /apps/*
+      - /e2e
+    schedule:
+      interval: weekly
+    # Matches `minimumReleaseAge` in pnpm-workspace.yaml (7 days): Dependabot
+    # proposes a version only after it has been published that long.
+    cooldown:
+      default-days: 7
