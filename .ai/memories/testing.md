@@ -81,6 +81,8 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - `tools/dependency-allowlist.test.ts` covers the allow-list check and keeps
   `tools/allowed-dependencies.json` equal to the ADR-001 table.
   `tools/test-only-entry.test.ts` covers the `contracts` test-only entry check.
+  `tools/index-files.test.ts` covers the index-file rule (only entries, only
+  re-exports) and runs it over the repository.
 - The jsdom smoke test is `apps/wrapper/src/environment.test.ts`; component
   tests set `environment: "jsdom"` through `apps/wrapper/vite.config.ts`.
 - **Cache.** Tests are wireit scripts; a passing run is cached by its declared

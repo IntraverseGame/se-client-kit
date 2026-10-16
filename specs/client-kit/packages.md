@@ -125,6 +125,24 @@ contracts (test-only entry) ──▶ the tests of signing, snapshot, shell, wra
   amendment). `unicorn/require-module-specifiers` is off only because the empty
   package skeletons are `export {};`; the first pull request that gives a
   package real code re-enables it.
+- **Index files**: an `index.ts` exists only as the entry point of a package or
+  an app (`packages/<name>/src/index.ts`, `apps/<name>/src/index.ts`) and holds
+  only re-exports (`export { ... } from "...";`,
+  `export type { ... } from "...";`, `export * from "...";`, or the empty
+  `export {};`): no import, no declaration, no logic. An empty re-export
+  (`export {} from`, a side-effect import) and a namespace re-export
+  (`export * as ns from`) are not allowed. Comments are full-line `//` only (a
+  block comment could hide a statement). A directory of internals has no
+  `index.ts`; its modules are named after what they hold and imported by that
+  name. An entry names each module once. oxlint cannot express this;
+  `tools/index-files.test.ts` checks every index file in the repository. oxlint
+  1.87's `no-duplicate-imports` with `includeExports` reports any
+  `export { a, b } from` that names more than one binding, so `.oxlintrc.json`
+  turns `includeExports` off for the entries only (duplicate imports there still
+  fail, and the check above catches a module re-exported twice); everywhere else
+  it stays on, so a multi-name `export { ... } from` outside an entry also
+  fails. The override comes out when oxlint stops reporting a single multi-name
+  re-export.
 - **Code style**: `type` over `interface`
   (`typescript/consistent-type-definitions`: `interface` only when a class
   `implements` it, or for declaration merging, with a disable comment naming the

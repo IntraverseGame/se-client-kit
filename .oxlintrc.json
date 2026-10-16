@@ -884,6 +884,17 @@
         "import/no-default-export": "error",
         "eslint/no-console": "error"
       }
+    },
+    {
+      "files": ["packages/*/src/index.ts", "apps/*/src/index.ts"],
+      "rules": {
+        "eslint/no-duplicate-imports": [
+          "error",
+          {
+            "includeExports": false
+          }
+        ]
+      }
     }
   ],
   "ignorePatterns": [

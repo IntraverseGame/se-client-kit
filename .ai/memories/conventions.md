@@ -58,7 +58,9 @@ This note records the patterns behind them.
   sync); `tools/readme-rules.ts` and `tools/readmes.test.ts` enforce it. `e2e/`
   has none: it is neither an app nor a package.
 - **Exports** _(ADR-001)_: named exports only in libraries; a single public
-  entry point per package; no import-time side effects.
+  entry point per package; no import-time side effects. `index.ts` is only that
+  entry (`src/index.ts`) and holds only `export ... from` re-exports; an
+  internal directory has no `index.ts` (`tools/index-files.test.ts`).
 - **Money:** an amount (`Amount.value`) is a **string** of base units on the wire
   and a `bigint` in code. Never `number`, never floating point. A decimal value (rate,
   fee) is never a ledger amount; converting one to base units uses an explicit,

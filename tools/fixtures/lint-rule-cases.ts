@@ -143,4 +143,15 @@ export const ruleCases: readonly Case[] = [
     rule: "eslint(no-eval)",
     fails: true,
   },
+  // `includeExports` is off only for the entries (`src/index.ts`, which this
+  // harness cannot place a case at; the real entries are linted by `pnpm lint`,
+  // and tools/index-files.ts checks their duplicate re-exports). Everywhere
+  // else it stays on.
+  {
+    name: "a duplicate re-export outside an entry fails",
+    file: "packages/signing/src/other.ts",
+    source: 'export { a } from "./a.ts";\nexport { b } from "./a.ts";\n',
+    rule: "eslint(no-duplicate-imports)",
+    fails: true,
+  },
 ];

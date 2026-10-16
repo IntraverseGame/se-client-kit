@@ -23,9 +23,11 @@ const generatedNames = (): string[] =>
 
 const exportedNames = (): string[] => {
   const text = readFileSync(join(source, "index.ts"), "utf8");
-  // The local re-export (`export type { ... };`); the names come from the
-  // generated module through the `import type` above it.
-  const list = /^export type \{([^}]*)\};$/mu.exec(text)?.[1];
+  // The type re-export of the generated module.
+  const list =
+    /^export type \{([^}]*)\} from "\.\/generated\/snapshot\.ts";$/mu.exec(
+      text,
+    )?.[1];
   return (list ?? "")
     .split(",")
     .map(name => name.trim())
