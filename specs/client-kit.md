@@ -130,6 +130,13 @@ types, the retry classes, the token schedule, idempotency keys, and what is
 provisional. See
 [`client-kit/the-play-client-request-layer.md`](./client-kit/the-play-client-request-layer.md).
 
+### The `shell` package
+
+The first slice of the headless shell: its public API, the redacting types and
+logger, key custody, the signer lock, the transcript state, and what is
+provisional. See
+[`client-kit/the-shell-package.md`](./client-kit/the-shell-package.md).
+
 ### The cryptography
 
 The fixed-type EIP-712 encoder and secp256k1 signing in `signing`: what it

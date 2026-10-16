@@ -52,6 +52,8 @@ the specs' headings.
     the keyword profile, narrowing, amounts
   - [The `play-client` request layer](./client-kit/the-play-client-request-layer.md)
     — request options, errors, retry classes, the token schedule
+  - [The `shell` package](./client-kit/the-shell-package.md) — redaction, the
+    logger, key custody, the signer lock, the transcript state
   - [The cryptography](./client-kit/the-cryptography.md) — EIP-712 types, keys,
     `SigningError`, the transcript helper, the vectors
   - [How the kit gets its contracts](./client-kit/how-the-kit-gets-its-contracts.md)
@@ -102,5 +104,5 @@ the specs' headings.
   [Observability](./wrapper.md#observability) ·
   [Test plan](./wrapper.md#test-plan) (T-1 to T-18) ·
   [What this spec does not own](./wrapper.md#what-this-spec-does-not-own) ·
-  [Decided questions](./wrapper.md#decided-questions) (OQ-1 to OQ-7) ·
+  [Decided questions](./wrapper.md#decided-questions) (OQ-1 to OQ-8) ·
   [References](./wrapper.md#references)

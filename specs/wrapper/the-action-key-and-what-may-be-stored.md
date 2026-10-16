@@ -40,6 +40,6 @@ Part of the [Wrapper spec](../wrapper.md), section
   deferred with the post-round evidence check
   ([OQ-1](../wrapper.md#decided-questions)).
 - **W-13.** The shell MUST serialize the key's use behind its Web Lock (W-14)
-  and MUST sign only on a player action, on the automatic cash-out of W-24, or
-  on the `PlayerCancel` that W-26 requires. It MUST NOT sign in response to a
-  message from the game that is not a validated action request (W-37, W-38).
+  and MUST sign only on a player action or on the `PlayerCancel` that W-26
+  requires. It MUST NOT sign in response to a message from the game that is not
+  a validated action request (W-37, W-38).

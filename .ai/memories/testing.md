@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-16 (signing pull request; the tooling tests, a jsdom smoke test, and the `signing` unit and vector tests exist)
+last-verified: 2026-10-16 (shell key-custody pull request; `shell` unit, property, and no-secret tests added)
 ---
 
 # Testing (agent context)
@@ -48,6 +48,14 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - **Static:** lint, format check, `tsc --noEmit`, and the import-direction
   rules.
 
+- **Shell tests** (`packages/shell/src/*.test.ts`) inject everything: a
+  recording seeded random source (its first draw is the key, so leak scans
+  know the key's bytes), seeded UUIDs, and an in-memory lock manager shared
+  between sessions to stand for tabs (`src/fixtures/`). Snapshots are the
+  golden `valid/` vectors with `roundId` and `step` replaced and validated;
+  the worked round of the signing vectors is replayed through a round's
+  state. `no-secret.test.ts` replaces storage, cookie, URL, network, and
+  messaging globals with recording getters for a whole session.
 - **Property tests** use a seeded generator, never `Math.random`: the
   `snapshot` package's `src/test/arbitrary.ts` (mulberry32, arbitrary JSON and
   one-change mutations of a document). A package's tests that need types from
@@ -66,7 +74,7 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 
 ## Commands and CI jobs
 
-- `pnpm test` runs the `vitest run` of every workspace that has tests (today `apps/wrapper`, `packages/signing`, `packages/snapshot`, and `packages/play-client`; each must be listed in the root `test` dependencies; a package gets a `test` script with its first real test) plus the tooling tests in
+- `pnpm test` runs the `vitest run` of every workspace that has tests (today `apps/wrapper`, `packages/signing`, `packages/snapshot`, `packages/play-client`, and `packages/shell`; each must be listed in the root `test` dependencies; a package gets a `test` script with its first real test) plus the tooling tests in
   `tools/` (`test:tools`); `pnpm test:e2e` runs the Playwright suite (none yet,
   so it passes with no tests). `pnpm check` is everything below.
 - `tools/import-direction.test.ts` is the proof that the dependency-direction

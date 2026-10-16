@@ -114,6 +114,7 @@
         "./apps/wrapper:test",
         "./packages/snapshot:test",
         "./packages/play-client:test",
+        "./packages/shell:test",
         "test:tools",
         "check:readmes"
       ]

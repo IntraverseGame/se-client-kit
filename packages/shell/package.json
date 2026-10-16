@@ -30,9 +30,15 @@
       "default": "./dist/index.js"
     }
   },
+  "dependencies": {
+    "@intraverse/se-client-play-client": "workspace:*",
+    "@intraverse/se-client-signing": "workspace:*",
+    "@intraverse/se-client-snapshot": "workspace:*"
+  },
   "scripts": {
     "build": "wireit",
-    "typecheck": "wireit"
+    "typecheck": "wireit",
+    "test": "wireit"
   },
   "wireit": {
     "build": {
@@ -47,6 +53,7 @@
         "!src/**/*.test.ts",
         "package.json",
         "tsconfig.json",
+        "tsconfig.test.json",
         "tsdown.config.ts",
         "../../tsdown.base.ts",
         "../../tsconfig.base.json"
@@ -59,7 +66,7 @@
       ]
     },
     "typecheck": {
-      "command": "tsc -p tsconfig.json",
+      "command": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
       "dependencies": [
         "../signing:build",
         "../snapshot:build",
@@ -70,6 +77,29 @@
         "src/**",
         "package.json",
         "tsconfig.json",
+        "tsconfig.test.json",
+        "../../tsconfig.base.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "test": {
+      "command": "vitest run",
+      "dependencies": [
+        "../signing:build",
+        "../snapshot:build",
+        "../play-client:build",
+        "../contracts:build"
+      ],
+      "files": [
+        "src/**",
+        "*.ts",
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.test.json",
+        "../../tsdown.base.ts",
         "../../tsconfig.base.json"
       ],
       "output": [],
@@ -77,5 +107,8 @@
         "pnpm-lock.yaml"
       ]
     }
+  },
+  "devDependencies": {
+    "@intraverse/se-client-contracts": "workspace:*"
   }
 }
