@@ -18,6 +18,7 @@ export {
   hashMarkReadyAuth,
   hashNewRound,
   hashPlayerAction,
+  hashPlayerCancel,
   hashPlayerCashOut,
   hashRandomnessTarget,
   hashReady,

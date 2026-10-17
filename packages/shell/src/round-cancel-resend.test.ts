@@ -3,6 +3,7 @@
 // when the round is still `active` with no move. It never signs a second
 // cancel and never sends a third time.
 
+import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 import { describe, expect, it } from "vitest";
 
 import { lost, ok, problem, type Responder } from "./fixtures/fake-play.ts";
@@ -14,6 +15,7 @@ import {
   startFlow,
   THREE_STEPS,
 } from "./fixtures/round-flow.ts";
+import { snapshot } from "./fixtures/vectors.ts";
 import type { RoundFlow } from "./round-flow.ts";
 
 const UNKNOWN: readonly (readonly [string, Responder])[] = [
@@ -38,6 +40,7 @@ describe.each(UNKNOWN)("after %s to the cancel (W-25)", (_, unknown) => {
     });
     const [first, again] = setup.play.sent("cancelRound");
     expect(bodyOf(again)).toEqual(bodyOf(first));
+    // The resend's `canceled` answer is final (W-25): no further read.
     expect(setup.play.sent("getSnapshot")).toHaveLength(1);
     expect(flow.evidence().signed).toHaveLength(1);
     expect(flow.cancel()).toBe("sent");
@@ -53,17 +56,50 @@ describe.each(UNKNOWN)("after %s to the cancel (W-25)", (_, unknown) => {
       });
       expect(setup.play.sent("cancelRound")).toHaveLength(2);
       expect(setup.play.sent("getSnapshot")).toHaveLength(2);
-      expect(flow.cancel()).toBe("unconfirmed");
+      // The second unknown outcome and an `active` read with no move: the
+      // cancel may be stored, so it is settling (that read counted as 1).
+      expect(flow.cancel()).toBe("settling");
       await flow.observe(setup.at(0));
+      // The next counted read decides: `active` means the cancel did not take.
       await flow.refresh();
+      expect(flow.cancel()).toBe("not-taken");
       expect(setup.play.sent("cancelRound")).toHaveLength(2);
       expect(flow.evidence().signed).toHaveLength(1);
+    },
+  );
+
+  it.each<[string, (setup: FlowSetup) => ValidSnapshot, string]>([
+    ["active", st => st.at(0), "not-taken"],
+    ["canceled", st => st.closed("canceled", 0), "sent"],
+    ["idle", () => snapshot("idle"), "ended"],
+    [
+      "resolving",
+      st => st.read(p => (p.input["status"] = "resolving")),
+      "settling",
+    ],
+  ])(
+    "is settling when the read shows a re-issue, and a counted %s read decides it",
+    async (__, read, decided) => {
+      const { setup, flow } = await cancelRound(s => {
+        s.play.answer("cancelRound", unknown);
+        s.play.answer("getSnapshot", ok(s.reissued()));
+      });
+      // No resend is allowed after a re-issue, but the cancel may be stored.
+      expect(flow.cancel()).toBe("settling");
+      setup.play.answer("getSnapshot", ok(read(setup)));
+      await flow.refresh();
+      expect(flow.cancel()).toBe(decided);
+      expect(setup.play.sent("cancelRound")).toHaveLength(1);
     },
   );
 
   it.each<[string, (setup: FlowSetup) => Responder]>([
     ["a move played", s => ok(s.at(1))],
     ["the round canceled", s => ok(s.closed("canceled", 0))],
+    [
+      "the round resolving",
+      s => ok(s.read(p => (p.input["status"] = "resolving"))),
+    ],
     ["the round lost", s => ok(s.closed("lost", 1))],
     ["a re-issue", s => ok(s.read(p => (p.auth["expiry"] = "1800000601")))],
     ["no Snapshot (the read lost)", () => lost],

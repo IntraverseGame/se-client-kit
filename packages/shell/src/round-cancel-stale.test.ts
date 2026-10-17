@@ -2,14 +2,17 @@
 // after a refused move or cash-out (`STALE_ACTION` or `INVALID_ARGUMENT`), and
 // the re-issue state.
 
-import { recoverAddress } from "@intraverse/se-client-signing";
+import {
+  hashPlayerAction,
+  hashPlayerCancel,
+  recoverAddress,
+} from "@intraverse/se-client-signing";
 import { describe, expect, it } from "vitest";
 
 import {
   openTestSession,
   openWorkedRound,
   shellCodeOf,
-  testCancelHash,
 } from "./fixtures/session.ts";
 import { OTHER_ROUND_ID, snapshot, workedInitial } from "./fixtures/vectors.ts";
 import { firstMove, playMoves, secondMove } from "./fixtures/worked-round.ts";
@@ -27,7 +30,8 @@ describe("cancel against the first move (W-17, W-25)", () => {
       round: round.round,
       previous: workedInitial,
     });
-    expect(cancel.structHash).toBe(testCancelHash(cancel.message));
+    expect(cancel.structHash).toBe(hashPlayerCancel(cancel.message));
+    expect(cancel.structHash).not.toBe(hashPlayerAction(cancel.message));
     expect(recoverAddress(cancel.digest, cancel.signature)).toBe(
       session.address(),
     );
@@ -47,23 +51,6 @@ describe("cancel against the first move (W-17, W-25)", () => {
     expect(shellCodeOf(() => round.signCancel())).toBe("equivocation");
     round.observe(snapshot("active", { step: 1 }));
     expect(shellCodeOf(() => round.signCancel())).toBe("equivocation");
-  });
-
-  it("refuses a cancel without a cancel encoding (provisional)", async () => {
-    const round = openWorkedRound(
-      await openTestSession({ withoutCancel: true }),
-    );
-    expect(shellCodeOf(() => round.signCancel())).toBe("cancel-unavailable");
-    expect(round.pending()).toBeUndefined();
-    expect(round.sign(firstMove).message.sequence).toBe(1);
-  });
-
-  it("refuses a cancel encoding that is not a 32-byte hash", async () => {
-    const round = openWorkedRound(
-      await openTestSession({ hashCancel: () => "0x12" }),
-    );
-    expect(shellCodeOf(() => round.signCancel())).toBe("invalid-input");
-    expect(round.pending()).toBeUndefined();
   });
 
   it("closes the round on the canceled Snapshot", async () => {

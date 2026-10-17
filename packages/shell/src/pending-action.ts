@@ -1,5 +1,5 @@
 // The shapes of a round's transcript state: what a signed, unconfirmed action
-// holds (W-15), the round's phases, and the injected cancel encoding.
+// holds (W-15) and the round's phases.
 
 import type {
   Bytes32,
@@ -10,14 +10,6 @@ import type {
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
 import type { PendingKind, SnapshotReading } from "./snapshot-reading.ts";
-
-/**
- * The struct hash of a `PlayerCancel` message. The type is final in the
- * signed-action specification (the fields of `PlayerAction`), but `signing`
- * does not encode it until an independent signer's vector pins it (#41), so the
- * encoding is injected; without one, the shell refuses to sign a cancel.
- */
-export type CancelHasher = (message: PlayerMessage) => Bytes32;
 
 /** An action the shell signed and has not seen applied (W-15). */
 export type PendingAction = {
@@ -102,9 +94,10 @@ export type RoundSigner = {
   readonly sign: (request: TranscriptRequest) => PendingAction;
   /**
    * Signs `PlayerCancel` (`action = "cancel"`, empty path, sequence 1,
-   * `previous = T_0`, W-25). Throws `equivocation` once a move is signed; a
-   * move asked after it throws `equivocation` too (W-17). A call made while
-   * another `sign` or `signCancel` runs throws `equivocation`.
+   * `previous = T_0`, W-25) with `signing`'s `hashPlayerCancel`. Throws
+   * `equivocation` once a move is signed; a move asked after it throws
+   * `equivocation` too (W-17). A call made while another `sign` or `signCancel`
+   * runs throws `equivocation`.
    */
   readonly signCancel: () => PendingAction;
   /**

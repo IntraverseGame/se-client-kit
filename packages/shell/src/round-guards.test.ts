@@ -47,12 +47,12 @@ const flowWith = (
   );
 
 describe("a failed round signs no move (W-26)", () => {
-  it("with no cancel encoding, after the tip check failed", async () => {
-    const setup = await setUpFlow({
-      tip: TIP_FAILED,
-      session: { withoutCancel: true },
+  it("when the required cancel could not be sent, after the tip check failed", async () => {
+    const setup = await setUpFlow({ tip: TIP_FAILED });
+    const flow = await startFlow({
+      ...setup,
+      hooks: { encodeTypedData: changingPrevious(setup) },
     });
-    const flow = await startFlow(setup);
     expect(flow.cancel()).toBe("unavailable");
     expect(flow.phase()).toBe("failed");
     await refusesActions(flow, 0);
@@ -62,7 +62,8 @@ describe("a failed round signs no move (W-26)", () => {
     const setup = await setUpFlow({ tip: TIP_FAILED });
     setup.play.answer("cancelRound", ok(setup.at(0)));
     const flow = await startFlow(setup);
-    expect(flow.cancel()).toBe("sent");
+    // An `active` answer: the cancel did not take (W-25).
+    expect(flow.cancel()).toBe("not-taken");
     expect(flow.phase()).toBe("failed");
     await refusesActions(flow, 1);
   });
@@ -72,7 +73,8 @@ describe("a failed round signs no move (W-26)", () => {
     setup.play.answer("cancelRound", problem(400, "INVALID_ARGUMENT"));
     setup.play.answer("getSnapshot", ok(setup.at(0)));
     const flow = await startFlow(setup);
-    expect(flow.cancel()).toBe("refused");
+    // The read after the 400 shows `active`: the cancel did not take (W-25).
+    expect(flow.cancel()).toBe("not-taken");
     expect(flow.phase()).toBe("failed");
     await refusesActions(flow, 1);
   });
@@ -228,7 +230,11 @@ describe("a signed cancel that differs from its typed data (W-25, W-26)", () => 
     );
     const cancel = createRoundCancel(
       setup.options,
-      { roundId: ROUND_ID, reissued: () => false },
+      {
+        roundId: ROUND_ID,
+        reissued: () => false,
+        intoRound: tracking.observe,
+      },
       delivery,
       hooks,
     );

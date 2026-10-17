@@ -4,23 +4,19 @@
 // base64. The Coin Flip pick and cancel are tied to the vendored round
 // `valid/coinflip-active-ready-hash` (`previous` is its `readyHash`); the
 // multi-path pick and the cash-out to the worked round of `signing.json`
-// (`previous` is its T_2 and T_3). The cancel is signed with the test's
-// stand-in `PlayerCancel` hash (#41): its typedData does not depend on it.
+// (`previous` is its T_2 and T_3). The cancel's signature is replayed against
+// the independent signer's vector in cancel-vector.test.ts.
 
 import { describe, expect, it } from "vitest";
 
+import { coinFlip } from "./fixtures/coin-flip.ts";
 import { createFakePlay, ok } from "./fixtures/fake-play.ts";
 import { TIP_FAILED, TIP_PASSED } from "./fixtures/flow-stand-ins.ts";
-import {
-  ROUND_REQUEST,
-  roundConfig,
-  vendoredRound,
-} from "./fixtures/round-auth.ts";
+import { vendoredRound } from "./fixtures/round-auth.ts";
 import { openTestSession, openWorkedRound } from "./fixtures/session.ts";
 import { ROUND_ID, snapshot, typedDataVector } from "./fixtures/vectors.ts";
 import { cashOut, playMoves, requestOf } from "./fixtures/worked-round.ts";
 import { createRoundDelivery } from "./round-delivery.ts";
-import { createRoundFlow } from "./round-flow.ts";
 import { legalMove } from "./round-legality.ts";
 
 type Body = Readonly<Record<string, unknown>>;
@@ -30,31 +26,6 @@ const AUTHORIZATION = (): string => "Bearer placeholder";
 /** The hex of a base64 text, to compare with a vector's `hex`. */
 const hexOf = (base64: string): string =>
   `0x${Buffer.from(base64, "base64").toString("hex")}`;
-
-/**
- * The vendored Coin Flip round's flow as the shell would hold it after its
- * start, with no typedData encoder passed: the production default.
- */
-const coinFlip = async (
-  tip: typeof TIP_PASSED,
-): Promise<{
-  readonly flow: ReturnType<typeof createRoundFlow>;
-  readonly play: ReturnType<typeof createFakePlay>;
-}> => {
-  const play = createFakePlay();
-  const flow = createRoundFlow(
-    {
-      session: await openTestSession(),
-      transport: play.transport,
-      authorization: AUTHORIZATION,
-      config: roundConfig(),
-      tipCheck: () => Promise.resolve(tip),
-    },
-    { roundId: ROUND_ID, request: ROUND_REQUEST },
-    vendoredRound(),
-  );
-  return { flow, play };
-};
 
 describe("through the round flow, with the production encoder", () => {
   it("the first Coin Flip move carries the coinflip-pick vector", async () => {
@@ -73,7 +44,8 @@ describe("through the round flow, with the production encoder", () => {
     const { flow, play } = await coinFlip(TIP_FAILED);
     play.answer("cancelRound", ok(vendoredRound()));
     await flow.observe(vendoredRound());
-    expect(flow.cancel()).toBe("sent");
+    // Answered `active`: the cancel did not take (W-25).
+    expect(flow.cancel()).toBe("not-taken");
     const body = play.sent("cancelRound")[0]?.body as Body;
     expect(body["typedData"]).toBe(typedDataVector("coinflip-cancel").base64);
   });

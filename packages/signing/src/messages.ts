@@ -9,6 +9,7 @@ import {
   MARK_READY_AUTH,
   NEW_ROUND,
   PLAYER_ACTION,
+  PLAYER_CANCEL,
   PLAYER_CASH_OUT,
   RANDOMNESS_TARGET,
   READY,
@@ -26,9 +27,9 @@ export type Domain = {
 };
 
 /**
- * The fields of `PlayerAction` and `PlayerCashOut`: `(string action,uint8[]
- * path,uint32 sequence,bytes32 round,bytes32 previous)`. `round` is the round
- * id; `previous` is the `T` the action links to.
+ * The fields of `PlayerAction`, `PlayerCashOut`, and `PlayerCancel`: `(string
+ * action,uint8[] path,uint32 sequence,bytes32 round,bytes32 previous)`. `round`
+ * is the round id; `previous` is the `T` the action links to.
  */
 export type PlayerMessage = {
   readonly action: string;
@@ -87,6 +88,14 @@ export const hashPlayerAction = (message: PlayerMessage): Bytes32 =>
 /** `hashStruct(PlayerCashOut)`: the `T` of a cash-out. */
 export const hashPlayerCashOut = (message: PlayerMessage): Bytes32 =>
   hashStruct(PLAYER_CASH_OUT, message);
+
+/**
+ * `hashStruct(PlayerCancel)`: the `T` of a cancel. The shell signs one only as
+ * `action = "cancel"`, an empty path, sequence 1, and `previous = T_0` (W-25);
+ * the hash itself takes any message of the shared fields.
+ */
+export const hashPlayerCancel = (message: PlayerMessage): Bytes32 =>
+  hashStruct(PLAYER_CANCEL, message);
 
 export const hashCreateRoundAuth = (message: CreateRoundAuth): Bytes32 =>
   hashStruct(CREATE_ROUND_AUTH, message);

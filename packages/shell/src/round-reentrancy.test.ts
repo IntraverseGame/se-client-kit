@@ -1,9 +1,7 @@
-// W-15, W-16, W-17: an injected function (the idempotency key source, the
-// cancel encoding) that calls back into the round's state while it signs is
-// refused, so one sequence never gets two actions and a pending action keeps
-// one idempotency key.
+// W-15, W-16, W-17: an injected function (the idempotency key source) that
+// calls back into the round's state while it signs is refused, so one sequence
+// never gets two actions and a pending action keeps one idempotency key.
 
-import type { PlayerMessage } from "@intraverse/se-client-signing";
 import { describe, expect, it } from "vitest";
 
 import { seededUuids } from "./fixtures/seeded.ts";
@@ -11,7 +9,6 @@ import {
   openTestSession,
   openWorkedRound,
   shellCodeOf,
-  testCancelHash,
 } from "./fixtures/session.ts";
 import { firstMove, otherFirstMove } from "./fixtures/worked-round.ts";
 import type { PendingAction } from "./pending-action.ts";
@@ -97,24 +94,6 @@ describe("a call back into the round while it signs", () => {
     expect(shellCodeOf(() => state.round?.signCancel())).toBe("equivocation");
   });
 
-  it("from the cancel encoding, asking the first move, is refused", async () => {
-    const state: Reentry = { round: undefined, nested: [] };
-    const session = await openTestSession({
-      hashCancel: (message: PlayerMessage) => {
-        reenter(state, round => round.sign(firstMove));
-        return testCancelHash(message);
-      },
-    });
-    state.round = openWorkedRound(session);
-    const cancel = state.round.signCancel();
-    expect(state.nested).toEqual(["equivocation"]);
-    expect(state.round.pending()).toBe(cancel);
-    expect(shellCodeOf(() => state.round?.sign(firstMove))).toBe(
-      "equivocation",
-    );
-    expect(atSequenceOne([cancel, state.round.pending()])).toBe(1);
-  });
-
   it("from the idempotency key source during signCancel is refused", async () => {
     const state: Reentry = { round: undefined, nested: [] };
     const session = await openTestSession({
@@ -123,8 +102,13 @@ describe("a call back into the round while it signs", () => {
     state.round = openWorkedRound(session);
     const cancel = state.round.signCancel();
     expect(state.nested).toEqual(["equivocation"]);
+    expect(state.round.pending()).toBe(cancel);
     expect(state.round.signCancel()).toBe(cancel);
     expect(state.round.signCancel().idempotencyKey).toBe(cancel.idempotencyKey);
+    expect(shellCodeOf(() => state.round?.sign(firstMove))).toBe(
+      "equivocation",
+    );
+    expect(atSequenceOne([cancel, state.round.pending()])).toBe(1);
   });
 
   it("is allowed again once the outer call returned", async () => {
