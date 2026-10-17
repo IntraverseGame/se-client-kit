@@ -60,8 +60,12 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   (`fixtures/fake-rpc.ts`): each provider's chain id and answer, a silence, a
   rejection, or a late answer is scripted, and timeouts fire only when the test
   fires them.
-  The `signature/` vectors are read (`fixtures/vectors.ts`) and their shape
-  checked; their verdicts are replayed when the W-26 checks exist.
+  The `signature/` vectors replay their verdicts through the W-26 checks
+  (`create-round-auth-vectors.test.ts`). They do not pin the entropy chain
+  id, so the wrong-chain cases are unit tests. A case that needs a signed
+  change issues the round with a registry key drawn at run time from a seeded
+  source (`fixtures/round-auth.ts`), which the configuration then pins: never
+  write a key down to sign a test round.
 - **Play client operations** run against a fake Play API server built from the
   vendored document (`packages/play-client/src/fixtures/fake-play-server.ts`):
   its routes are `PLAY_ROUTES`, its scripted answers are typed by each

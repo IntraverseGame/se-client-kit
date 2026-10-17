@@ -67,6 +67,20 @@ export type ActionVector = SignedVector & {
   readonly structHash: Bytes32;
 };
 
+export type NewRoundVector = {
+  readonly roundId: Bytes32;
+  readonly playerRef: Bytes32;
+  readonly currency: Bytes32;
+  readonly betAmount: string;
+  readonly gameId: string;
+  readonly gameVersion: string;
+  readonly circuitVersion: string;
+  readonly roundSecretHash: Bytes32;
+  readonly randomnessTarget: Bytes32;
+  readonly actionKey: Address;
+  readonly payoutTermsHash: Bytes32;
+};
+
 export type TypeVector = {
   readonly encodeType: string;
   readonly typeHash: Bytes32;
@@ -83,6 +97,8 @@ export type SigningVectors = {
   readonly types: Readonly<Record<string, TypeVector>>;
   readonly roundId: Bytes32;
   readonly actionKey: Address;
+  /** `newRound` as the file gives it: hex, and decimal strings for numbers. */
+  readonly newRound: NewRoundVector;
   readonly created: Bytes32;
   readonly seedHash: Bytes32;
   readonly ready: Bytes32;
@@ -199,6 +215,19 @@ const parse = (input: unknown): SigningVectors => {
     ),
     roundId: hex(newRound, "roundId", "newRound"),
     actionKey: hex(newRound, "actionKey", "newRound"),
+    newRound: {
+      roundId: hex(newRound, "roundId", "newRound"),
+      playerRef: hex(newRound, "playerRef", "newRound"),
+      currency: hex(newRound, "currency", "newRound"),
+      betAmount: text(newRound, "betAmount", "newRound"),
+      gameId: text(newRound, "gameId", "newRound"),
+      gameVersion: text(newRound, "gameVersion", "newRound"),
+      circuitVersion: text(newRound, "circuitVersion", "newRound"),
+      roundSecretHash: hex(newRound, "roundSecretHash", "newRound"),
+      randomnessTarget: hex(newRound, "randomnessTarget", "newRound"),
+      actionKey: hex(newRound, "actionKey", "newRound"),
+      payoutTermsHash: hex(newRound, "payoutTermsHash", "newRound"),
+    },
     created: hex(root, "created", "vectors"),
     seedHash: hex(root, "seedHash", "vectors"),
     ready: hex(root, "ready", "vectors"),

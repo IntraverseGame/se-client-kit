@@ -56,8 +56,9 @@ TypeScript, Vite, Vitest, Playwright, oxlint, oxfmt, changesets, wireit, CI).
 Built so far: `contracts` (the vendored Play API document, the Snapshot schema
 and vectors, the signing vectors, generated types), `signing`, `snapshot`,
 `play-client` (the request layer and the Play API operations), and `shell` (key custody, the transcript,
-the tip check). Not built yet: the W-26
-`CreateRoundAuth` checks, the Wrapper UI, and the reference game.
+the tip check, the W-26 `CreateRoundAuth` and `T_0` checks and the round's
+verdict). Not built yet: the start, move, and cash-out flows, the Wrapper UI,
+and the reference game.
 
 ## Where things are
 

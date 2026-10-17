@@ -24,10 +24,22 @@ Part of the [Client kit spec](../client-kit.md), section
   the fields of 40 bits or fewer (a sequence, a window, a path step). The draw
   registry's `CreateDrawRoundAuth` and `RecordDrawAuth` are in the vendored
   vectors and are encoded and replayed by the tests through an internal module,
-  but are not public API (the first release has no book round). `PlayerCancel`,
-  `NewRound`, and `PayoutTerms` are not implemented yet: no vendored contract
-  defines their fields.
-  <!-- TODO(signed-action spec): the `PlayerCancel`, `NewRound`, and `PayoutTerms` type strings and their vectors. -->
+  but are not public API (the first release has no book round).
+- **The round's `abi.encode` hashes (W-26).** Three tuples of static fields are
+  hashed as `keccak256(abi.encode(...))`, their 32-byte words concatenated with
+  no type hash: `hashNewRound` (`created`, over the 11 words of `newRound` in
+  the Snapshot schema's order: `bytes32 roundId`, `bytes32 playerRef`,
+  `bytes32 currency`, `uint128 betAmount`, `uint32 gameId`,
+  `uint32 gameVersion`, `uint32 circuitVersion`, `bytes32 roundSecretHash`,
+  `bytes32 randomnessTarget`, `address actionKey`, `bytes32 payoutTermsHash`),
+  `hashRandomnessTarget` (`bytes32 source`, `uint256 entropyChainId`,
+  `uint256 blockNumber`), and `hashReady` (`T_0`, over `bytes32 created` and
+  `bytes32 seedHash`). The field values follow the same rules as above (the bet
+  a `bigint` or a decimal string, never a `number`). The signing vectors pin
+  `created` and `ready`; the backend's `signature/` Snapshot vectors, which the
+  shell replays, pin `randomnessTarget`. `PlayerCancel` and `PayoutTerms` are
+  not implemented yet: no vendored contract defines their fields.
+  <!-- TODO(signed-action spec): the `PlayerCancel` and `PayoutTerms` type strings and their vectors. -->
 - **Keys.** `createSigner` draws 32 bytes from the platform's cryptographic
   random source (`crypto.getRandomValues`, through `@noble/hashes`; a test
   injects its own source), redraws a value that is zero or not below the curve

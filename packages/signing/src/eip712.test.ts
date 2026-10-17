@@ -7,7 +7,12 @@ import {
 } from "@noble/hashes/utils.js";
 import { describe, expect, it } from "vitest";
 
-import { hashStruct, type StructType, typedDataDigest } from "./eip712.ts";
+import {
+  hashAbiEncoded,
+  hashStruct,
+  type StructType,
+  typedDataDigest,
+} from "./eip712.ts";
 import { codeOf } from "./fixtures/helpers.ts";
 import { vectors } from "./fixtures/vectors.ts";
 import { hashCloseRoundAuth } from "./messages.ts";
@@ -144,5 +149,28 @@ describe("refused values", () => {
   it("refuses a digest input that is not 32 bytes", () => {
     expect(codeOf(() => typedDataDigest("0x12", ZERO))).toBe("invalid-input");
     expect(codeOf(() => typedDataDigest(ZERO, "0x12"))).toBe("invalid-input");
+  });
+});
+
+describe("hashAbiEncoded", () => {
+  it("is keccak256 of the concatenated words, with no type hash", () => {
+    const pair: StructType = {
+      name: "Pair",
+      fields: [
+        { name: "a", type: "bytes32" },
+        { name: "b", type: "uint256" },
+      ],
+    };
+    const first = `0x${"11".repeat(32)}` as const;
+    const hashed = `0x${bytesToHex(
+      keccak_256(concatBytes(hexToBytes("11".repeat(32)), new Uint8Array(32))),
+    )}`;
+    expect(hashAbiEncoded(pair, { a: first, b: 0n })).toBe(hashed);
+  });
+
+  it("refuses a tuple with a dynamic field", () => {
+    expect(codeOf(() => hashAbiEncoded(PLAYER_ACTION, action))).toBe(
+      "invalid-input",
+    );
   });
 });

@@ -3,14 +3,14 @@
 Part of the [Client kit spec](../client-kit.md), section
 [Contract](../client-kit.md#contract).
 
-`shell` is built in slices. Two exist today: the redacting types and logger, key
-custody, the signer lock, and the transcript state (W-4, W-9 to W-19, W-41 as
-far as the shell is concerned); then the chain configuration, the tip check, and
-the decision it leads to (W-26a, W-26b, and W-26's pass or fail). The
-`CreateRoundAuth` and `T_0` checks (W-26 items 1 to 5), the `se.controller/1`
-bridge (W-37, W-38), and the session, start, move, and cash-out flows follow;
-the flows wait for the Play API operations. The Wrapper requirements each rule
-serves are in brackets.
+`shell` is built in slices. Three exist today: the redacting types and logger,
+key custody, the signer lock, and the transcript state (W-4, W-9 to W-19, W-41
+as far as the shell is concerned); then the chain configuration, the tip check,
+and the decision it leads to (W-26a, W-26b, and W-26's pass or fail); then the
+`CreateRoundAuth` and `T_0` checks (W-26 items 1 to 5), the re-issue rule, and
+the round's verdict that combines them with the tip check. The `se.controller/1`
+bridge (W-37, W-38) and the session, start, move, and cash-out flows follow. The
+Wrapper requirements each rule serves are in brackets.
 
 - **Public API.** The redacting logger (`createLogger` and its types),
   `REDACTED`, `ShellError` with its `ShellErrorCode`, the chain configuration's
@@ -21,9 +21,10 @@ serves are in brackets.
   public because the Wrapper applies W-26a's boot rule before it starts; the
   transport types because the Wrapper supplies the transport (it owns `fetch`
   and the Content Security Policy). Key custody, the signer lock, the transcript
-  state, the tip check, and its decision are internal: the UI is meant to get
-  use cases and read-only state, never a signing capability
-  ([Packages](./packages.md)), and those use cases do not exist yet.
+  state, the tip check, its decision, the `CreateRoundAuth` checks, and the
+  round's verdict are internal: the UI is meant to get use cases and read-only
+  state, never a signing capability ([Packages](./packages.md)), and those use
+  cases do not exist yet.
 - **Redacting types (W-4).** Everything that holds a secret, or a closure over
   the key, prints `[redacted]` under `String()`, `JSON.stringify`, template
   literals, `Symbol.toPrimitive`, and Node's inspect hook
@@ -133,9 +134,79 @@ serves are in brackets.
   re-issued, and the player then sees the reason's text, with "and was canceled"
   added to "this round failed verification"; if `T_0` is not settled it signs
   nothing for the round, not even `PlayerCancel`, keeps the evidence, and the
-  round ends by its game's expiry rule. W-26 items 1 to 5 are not built, so
-  `T_0` is never settled today and every failure takes that path. The shell does
-  not act on the decision yet: the start flow is not built.
+  round ends by its game's expiry rule. The round's verdict (below) combines the
+  decision with checks 1 to 5. The shell does not act on it yet: the start flow
+  is not built.
+- **The `CreateRoundAuth` checks (W-26 items 1 to 5).** They read a validated
+  Snapshot, the validated chain configuration (the only trust anchor, OQ-7), and
+  what the shell sent in `start` (the action key's address and the
+  `AmountRequest`'s `value` and `unit`). Checks 1 to 4 run on the round's first
+  Snapshot that carries `proofs.createRoundAuth` and return `waiting` (a
+  `starting` Snapshot without `proofs`), `passed` with the recomputed `created`,
+  or `refused` with the first failing check's reason:
+  1. `missing`: a Snapshot that carries `proofs` without
+     `proofs.createRoundAuth`, or one past `starting` without either (an `idle`
+     Snapshot too). A book Snapshot never carries the object, so a book round is
+     refused here: the first release ships config games only, and book rounds
+     are refused until a later increment defines their evidence (decided by
+     human review, 2026-10-17; W-26).
+  2. `pinned-mismatch`: `domain.chainId`, `domain.verifyingContract`, or
+     `signer` is not the configuration's `registryDomain` or `runtimeSigner`
+     (addresses compared without case).
+  3. `cross-field`: `newRound.roundId` is not the Snapshot `roundId`'s `bytes32`
+     form; `newRound.roundSecretHash` is not
+     `proofs.randomnessProof.roundSecretHash`; `newRound.actionKey` is not the
+     shell's key address (without case); `newRound.betAmount` and the sent
+     `value`, each read with `snapshot`'s `parseBaseUnits` into a `bigint`, are
+     not equal or either is not base units; the sent `unit` and
+     `newRound.currency`, each as ASCII `bytes32`, are not equal byte for byte,
+     or either is not ASCII or is longer than 32 bytes; the source
+     (`proofs.randomnessProof.source`) is not in the configuration, or
+     `entropyChainId` is not the chain id it pins; or
+     `newRound.randomnessTarget` is not
+     `keccak256(abi.encode(bytes32 source, uint256 entropyChainId, uint256 blockNumber))`
+     recomputed with the source as ASCII `bytes32` and the pinned chain id (a
+     source longer than 32 bytes, or a block number that is not a safe integer,
+     fails).
+  4. `recover-mismatch`: `created = keccak256(abi.encode(newRound))` (the
+     currency as ASCII `bytes32`) and the EIP-712 digest of `CreateRoundAuth`
+     under the configured domain (`name` `"SuperEngine"`, `version` `"1"`, and
+     the pinned `chainId` and `verifyingContract`, never the Snapshot's) are
+     computed with `signing`'s `hashNewRound`, `hashCreateRoundAuth`,
+     `domainSeparator`, and `typedDataDigest`; `recoverAddress` refuses a
+     signature that is not canonical (W-21), and the address it recovers must be
+     `runtimeSigner`. A field outside its type fails here too.
+
+  Neither `expiry` nor `prepareWindow` is compared with a time: no clock is
+  read. Check 5 runs once checks 1 to 4 passed: when the Snapshot carries
+  `proofs.fairnessProof.readyHash`,
+  `T_0 = keccak256(abi.encode(created, seedHash))` (`signing`'s `hashReady`,
+  `seedHash` from `proofs.fairnessProof.seedHash`) must equal it
+  (`ready-mismatch`); without it the result is `waiting` while `starting` and
+  `missing` on any later status. `T_0` is settled only by check 5 passing. A
+  re-issue is a later read whose `proofs.createRoundAuth` differs from the
+  round's first one, compared field by field as validated JSON; a read without
+  the object is not one.
+
+- **The round's verdict (W-25, W-26).** `createRoundVerification` holds one
+  round (by its Snapshot `roundId`; other rounds' and `idle` Snapshots are
+  ignored) and takes its Snapshots and its tip-check decision. It keeps the
+  first `proofs.createRoundAuth` and each distinct later one (the evidence,
+  W-27), runs checks 1 to 4 once and check 5 until it decides, keeps the first
+  tip decision, and returns one of: `checking` (nothing signed, the game not
+  shown); `ready` with the settled `T_0`, once every check and the tip check
+  passed and the round is past `starting` (the first move links to `T_0`, and a
+  cancel the player asks for may be signed, W-25); or `failed` with the failure
+  (a check's reason, `reissued`, or `tip-check` with the tip check's failure),
+  what the player is shown (`verification-failed`, or `chain-unverified` for a
+  tip check that could not read the chain), `T_0` when it was settled, and
+  `cancel`. `cancel` is `true` exactly when `T_0` is settled, only the tip check
+  failed, the round's latest Snapshot is `active`, and there was no re-issue:
+  the shell must then sign `PlayerCancel`, which it cannot yet (the
+  `PlayerCancel` encoding below). A tip check that fails before check 5 has run
+  leaves the verdict `checking` until check 5 decides. A re-issue fails the
+  round at any point, with `cancel` `false`, even after `ready` or after a
+  tip-check failure that required a cancel.
 - **Key custody (W-9 to W-13).** A session generates its action key with
   `signing`'s `createSigner` on the first need (the first `address()` or
   signature), from the injected random source (the platform's
@@ -192,15 +263,14 @@ serves are in brackets.
 - **Provisional items.** Each is one injected value or one module, replaced and
   its note removed as the matching contract item closes:
   - `T_0` and the `bytes32` round id are inputs of a round's state: their
-    definition and where the shell reads them belong to the signed-action spec
-    and the Play API (W-18, W-26). `T_0` is the Snapshot's optional
-    `proofs.fairnessProof.readyHash`, absent until the round is released; the
-    vendored `se.snapshot/1` has it (`valid/coinflip-active-ready-hash`), but
-    the shell does not read it yet: the caller passes `T_0` until the W-26
-    checks that recompute and compare it (check 5) are built. W-26 fixes the
-    `bytes32` form of `newRound.roundId` (the 16 UUIDv7 bytes, left-aligned and
-    zero-padded); the transcript's round id is expected to be that same value
-    once check 3 has passed, pending the signed-action spec.
+    definition belongs to the signed-action spec (W-18, W-26). The round's
+    verdict settles `T_0` (check 5 recomputes it and compares it with
+    `proofs.fairnessProof.readyHash`); the start flow that would pass that
+    settled value to the round's state is not built, so the state still takes
+    `T_0` as an input. W-26 fixes the `bytes32` form of `newRound.roundId` (the
+    16 UUIDv7 bytes, left-aligned and zero-padded); the transcript's round id is
+    expected to be that same value once check 3 has passed, pending the
+    signed-action spec.
   - The EIP-712 domain is an input of the session. The environment configuration
     pins its `chainId` and `verifyingContract`; the session is not wired to the
     validated configuration yet.
@@ -209,20 +279,13 @@ serves are in brackets.
   - The bind's mode (`future` or `tip`) and `N` are inputs of the decision: the
     Snapshot's `proofs.randomnessProof.blockNumber` is `N`, and the mode is not
     yet in a contract the kit has vendored.
-  - The `CreateRoundAuth` and `T_0` checks (W-26 items 1 to 5) are not built.
-    The Snapshot schema that carries `proofs.createRoundAuth` and
-    `proofs.fairnessProof.readyHash` is vendored, with the `signature/` vectors
-    whose verdicts the checks must reach (their shape is tested in
-    `create-round-auth-vectors.test.ts`; replaying the verdicts is part of the
-    change that builds the checks), and the caller passes `T_0` instead of the
-    shell recomputing it and comparing it with `readyHash`. Its trust rule is
-    decided ([OQ-7](../wrapper.md#decided-questions); the entropy chain id by
-    human review, 2026-10-16): the environment configuration pins the signer,
-    the domain, and each entropy source's chain id, the Snapshot's per-round
-    copy must equal them or the shell refuses, and the Snapshot is never the
-    trust anchor.
-    <!-- TODO(W-26 checks): build checks 1 to 5 against the vendored schema, and replay every `signature/` vector's verdict through them. -->
-    <!-- TODO(W-26 checks, entropy chain): the `signature/` vectors pin the domain and the signer but not the entropy source's chain id. Replaying their verdicts with each vector's own `entropyChainId` as the configured one would compare a value with itself, so check 3's wrong-chain case needs its own unit tests (T-8). -->
+  - The domain's `name` and `version` (`"SuperEngine"`, `"1"`) the checks build
+    the digest with are the Snapshot schema's constants: the environment
+    configuration pins only `chainId` and `verifyingContract`
+    ([OQ-7](../wrapper.md#decided-questions)).
+  - A re-issue is decided by the round's verdict (`reissued`), but the round's
+    transcript state has no phase that refuses new signatures while a W-16
+    resend continues, so nothing applies the verdict to it yet.
     <!-- TODO(shell transcript): a re-issue (W-26) needs a transcript state that neither `stale` nor `closed` gives: no new signature, while a W-16 resend of an action already signed continues. -->
   - The `PlayerCancel` encoding is an injected function from the message to its
     struct hash; `signing` does not encode `PlayerCancel` until a published
@@ -230,7 +293,8 @@ serves are in brackets.
     one, `signCancel` is `cancel-unavailable` and signs nothing (W-20, W-25).
     The exclusion against the first move does not depend on it. `signCancel`
     does not check that `T_0` is settled: whether a cancel may be signed at all
-    (W-25, W-26) is decided by the W-26 check flow that calls it.
+    (W-25, W-26) is decided by the round's verdict, which the flow that calls it
+    reads (`cancel`, or `ready` for a cancel the player asks for).
   - Reading a Snapshot (`snapshot-reading.ts`): the move at sequence `s` is
     applied exactly when the Snapshot's `step` is `s` and its status is not
     `resolving`, since `step` counts the applied moves and the moves are a
@@ -267,6 +331,23 @@ serves are in brackets.
   request timeout (T-8a), and the pinned chain: an endpoint that reports another
   chain id fails, whether or not it gave a final block (in degraded mode too),
   and an answering one that gives no chain id or a malformed one fails closed.
-  The `signature/` Snapshot vectors are read and validated, and each one's
-  verdict and reason are checked to be ones W-26 defines; the verdicts
-  themselves are replayed when checks 1 to 5 are built.
+  The `signature/` Snapshot vectors are read and validated and replay through
+  checks 1 to 4 with their verdicts and reasons, each under a configuration that
+  pins its `pinned` values and its own entropy source and chain id; the vendored
+  `valid/coinflip-active-ready-hash` round passes checks 1 to 5 and settles
+  `T_0` as its `readyHash`. Since the vectors do not pin the entropy chain id,
+  the wrong-chain cases have their own tests: a configuration that pins another
+  chain, a round signed on another chain, an `entropyChainId` changed after
+  signing, and a source the configuration does not list. The other T-8 cases
+  issue a round with a registry key drawn at run time from a seeded source (so
+  no key is written down) and change a field before or after signing: each check
+  fails with its reason and in order (`missing`, `pinned-mismatch`,
+  `cross-field` for a wrong round, key, bet, currency, secret hash, chain, or
+  `randomnessTarget`, `recover-mismatch` for a tampered `playerRef`, `gameId`,
+  `gameVersion`, `circuitVersion`, `payoutTermsHash`, `prepareWindow`, or
+  `expiry`, another signer, a high-`s` signature, or another domain,
+  `ready-mismatch`, and `missing` for `readyHash` still absent at `active`); a
+  past `expiry` passes; the verdict never sets `cancel` when `T_0` is not
+  settled, sets it for a tip-check failure only once `T_0` is settled and the
+  round is `active`, and withdraws it on a re-issue, which is recorded once with
+  the first object kept.

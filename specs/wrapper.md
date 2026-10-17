@@ -182,7 +182,7 @@ the storage rule, what may outlive a page, and serializing the key's use. See
   never from a guess. The rule the `shell` package reads from the Snapshot is
   provisional until the signed-action spec ties a sequence to the Snapshot's
   progress ([client-kit.md](./client-kit.md#the-shell-package)).
-  <!-- TODO(signed-action spec): `T_0` is the Ready evidence hash, `keccak256(abi.encode(created, seedHash))` as the vendored signing vectors reproduce (W-26, check 5). The signed-action spec pins the byte encoding of its inputs; where the shell reads them from waits on the backend's Snapshot fields (W-26). -->
+  <!-- TODO(signed-action spec): `T_0` is the Ready evidence hash, `keccak256(abi.encode(created, seedHash))` as the vendored signing vectors reproduce (W-26, check 5). The shell reads its inputs from the Snapshot (`proofs.createRoundAuth`, `proofs.fairnessProof`) and recomputes it (W-26); the signed-action spec still pins the byte encoding of its inputs. -->
 - **W-19.** On `STALE_ACTION` the shell MUST stop signing for that round, read
   the Snapshot, and adopt the outcome only if the Snapshot shows its action
   applied. Otherwise it shows the out-of-sync state and offers the verify link.

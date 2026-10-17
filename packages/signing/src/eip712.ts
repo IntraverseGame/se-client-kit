@@ -116,6 +116,40 @@ const encodeField = (type: FieldType, value: unknown): Uint8Array => {
 };
 
 /**
+ * One 32-byte word per field, in the type's order. Every field of the type must
+ * be present in `values`; a field not of the type is refused.
+ */
+const encodeData = (
+  struct: StructType,
+  values: Readonly<Record<string, unknown>>,
+): Uint8Array[] => {
+  const names = new Set(struct.fields.map(f => f.name));
+  for (const key of Object.keys(values)) {
+    if (!names.has(key)) throw invalid();
+  }
+  return struct.fields.map(field => {
+    if (!Object.hasOwn(values, field.name)) throw invalid();
+    return encodeField(field.type, values[field.name]);
+  });
+};
+
+/**
+ * `keccak256(abi.encode(fields...))` of a tuple of static fields (no `string`,
+ * no array): their 32-byte words, concatenated, with no type hash. For static
+ * types the EIP-712 field encoding and `abi.encode` give the same word. A type
+ * with a dynamic field is refused.
+ */
+export const hashAbiEncoded = (
+  struct: StructType,
+  values: Readonly<Record<string, unknown>>,
+): Bytes32 => {
+  if (struct.fields.some(f => f.type === "string" || f.type === "uint8[]")) {
+    throw invalid();
+  }
+  return encodeHex(keccak_256(concatBytes(...encodeData(struct, values))));
+};
+
+/**
  * `Name(type1 name1,type2 name2,...)`, the EIP-712 `encodeType` of a struct
  * without nested structs.
  */
@@ -133,19 +167,13 @@ export const typeHash = (struct: StructType): Bytes32 =>
 export const hashStructBytes = (
   struct: StructType,
   values: Readonly<Record<string, unknown>>,
-): Uint8Array => {
-  const names = new Set(struct.fields.map(f => f.name));
-  for (const key of Object.keys(values)) {
-    if (!names.has(key)) throw invalid();
-  }
-  const words = struct.fields.map(field => {
-    if (!Object.hasOwn(values, field.name)) throw invalid();
-    return encodeField(field.type, values[field.name]);
-  });
-  return keccak_256(
-    concatBytes(keccak_256(utf8ToBytes(encodeType(struct))), ...words),
+): Uint8Array =>
+  keccak_256(
+    concatBytes(
+      keccak_256(utf8ToBytes(encodeType(struct))),
+      ...encodeData(struct, values),
+    ),
   );
-};
 
 export const hashStruct = (
   struct: StructType,

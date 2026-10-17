@@ -48,8 +48,10 @@ structure below.
 - **Shell internals stay internal.** The shell's public entry is the redacting
   logger, `REDACTED`, `ShellError`, and the chain configuration's validation
   (`validateChainConfig`, for W-26a's boot rule) with the RPC transport types
-  the Wrapper implements. The tip check and its pass-or-fail decision are
-  internal until the start flow exists. The environment configuration, never a
+  the Wrapper implements. The tip check and its pass-or-fail decision, the
+  W-26 `CreateRoundAuth` checks, and the round's verdict
+  (`round-verification.ts`, which alone settles `T_0` and says when a
+  `PlayerCancel` must be signed) are internal until the start flow exists. The environment configuration, never a
   Snapshot or a response, pins the backend signer, the registry domain, and
   each entropy source's chain id (every tip-check endpoint must report it with
   `eth_chainId`; one that reports another chain fails the check). The

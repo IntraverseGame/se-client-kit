@@ -12,10 +12,16 @@ export {
   hashCloseRoundAuth,
   hashCreateRoundAuth,
   hashMarkReadyAuth,
+  hashNewRound,
   hashPlayerAction,
   hashPlayerCashOut,
+  hashRandomnessTarget,
+  hashReady,
   type MarkReadyAuth,
+  type NewRound,
   type PlayerMessage,
+  type RandomnessTarget,
+  type Ready,
 } from "./messages.ts";
 export { recoverAddress, type Signature } from "./signature.ts";
 export {

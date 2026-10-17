@@ -60,6 +60,10 @@ signer.destroy(); // at the end of the session
   - `domainSeparator`, `hashPlayerAction`, `hashPlayerCashOut`,
     `hashCreateRoundAuth`, `hashMarkReadyAuth`, `hashCloseRoundAuth`, and
     `typedDataDigest` (the `0x1901` digest).
+  - `hashNewRound` (a round's `created`, `keccak256(abi.encode(newRound))`),
+    `hashRandomnessTarget` (its `randomnessTarget`), and `hashReady` (its `T_0`,
+    `keccak256(abi.encode(created, seedHash))`), with the types `NewRound`,
+    `RandomnessTarget`, and `Ready`.
   - `createSigner`: generates a key and signs digests; the key is never returned
     or serialized.
   - `recoverAddress`: the signer's address (EIP-55) of a canonical signature.
