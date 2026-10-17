@@ -12,4 +12,6 @@ a spec.
   to [`../archived/`](../archived/).
 - Public: no secrets, internal hostnames, or personal data.
 
-No RFC is active yet.
+| RFC                                              | Status | Proposal                                                                  |
+| ------------------------------------------------ | ------ | ------------------------------------------------------------------------- |
+| [RFC-001](./RFC-001-operator-launch-contract.md) | draft  | the operator launch handshake (`se.operator/1`), `resize`, lobby, deposit |
