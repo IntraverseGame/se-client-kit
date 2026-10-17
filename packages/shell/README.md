@@ -5,12 +5,12 @@ custody of the player's action key, the transcript, and the boundary to the
 game.
 
 **Status:** pre-release. Not published to npm yet. Today the public entry holds
-the redacting logger, the package's error type, and the validation of the chain
-part of the environment configuration. Key custody, the signer lock, the
-transcript state, the chain tip check, and the round's `CreateRoundAuth` and
-`T_0` checks are built and tested inside the package, but are not exposed: they
-are reached through the use cases (`start`, `pick`, `cashOut`), which are
-specified, not implemented yet, together with the game bridge.
+the redacting logger, the package's error type, the validation of the chain part
+of the environment configuration, and the game bridge with the `se.controller/1`
+message types. Key custody, the signer lock, the transcript state, the chain tip
+check, and the round's `CreateRoundAuth` and `T_0` checks are built and tested
+inside the package, but are not exposed: they are reached through the use cases
+(`start`, `pick`, `cashOut`), which are specified, not implemented yet.
 
 ## Install
 
@@ -60,6 +60,33 @@ if (!result.ok) {
 }
 ```
 
+Mounting the game bridge:
+
+```ts
+import { createControllerBridge } from "@intraverse/se-client-shell";
+
+const frame = iframe.contentWindow;
+if (frame === null) throw new Error("the game frame is not attached");
+
+const result = createControllerBridge({
+  gameOrigin, // D, from the environment configuration
+  gameOrigins: config.gameOrigins,
+  ownOrigin: globalThis.location.origin,
+  frame,
+  listen: handler => {
+    globalThis.addEventListener("message", handler);
+    return () => globalThis.removeEventListener("message", handler);
+  },
+  pick: pickUseCase, // resolves { accepted: true } or { accepted: false, reason }
+  onIncompatible: () => showError("game not compatible"),
+});
+if (!result.ok) {
+  showError("the game cannot be mounted"); // result.refusal says why
+} else {
+  result.bridge.sendSnapshot(validatedSnapshot);
+}
+```
+
 ## Entry points
 
 - `@intraverse/se-client-shell`: the only entry.
@@ -91,6 +118,22 @@ if (!result.ok) {
     argument is an abort signal (`play-client`'s `CancelSignal`, which the
     platform `AbortSignal` satisfies) that the shell aborts when the call times
     out; a transport may ignore it, and a late answer is ignored.
+  - `createControllerBridge(options)` mounts the boundary to the game iframe
+    (`se.controller/1`). It refuses a game origin that is not on the
+    configuration's allow-list, is the Wrapper's own origin, or is not a
+    serialized origin. It accepts a message only from the frame's window and the
+    game origin, parses it against the closed message set (`hello`, `action`
+    with the `pick` verb), and ignores anything else. It sends the game nothing
+    before its `hello`, then the allow-listed copy of each validated Snapshot
+    (no proofs, session id, links, or amounts) and `reject` messages
+    (`not_legal`, `not_active`, `busy`, `invalid`), always with the game origin
+    as `targetOrigin`. A pick that passes its early pre-check goes to the pick
+    use case you pass, which is the gate: it must re-check the pick against the
+    shell's own latest Snapshot and refuse a step it already signed. The bridge
+    never holds a key, a token, or a signed action. `CONTROLLER_SCHEMA`,
+    `ROUND_STATUSES`, and the message types (`HelloMessage`, `ActionMessage`,
+    `SnapshotMessage`, `RejectMessage`, `GameSnapshot`, `GameStep`, `Pick`,
+    `RejectReason`, and the unions) describe the protocol.
   - `ShellError` is the error the package throws, with a stable `code`
     (`ShellErrorCode`) and a fixed message per code that never carries an input
     value.
@@ -110,6 +153,9 @@ if (!result.ok) {
   before it is sent, and a resend sends the same bytes.
 - Nothing is written to `localStorage`, `sessionStorage`, IndexedDB, cookies, or
   a URL.
+- The game is untrusted: it gets only the allow-listed fields of a validated
+  Snapshot and the closed `reject` reasons, never a key, a token, a signature,
+  or a proof, and every message to it names its origin, never `*`.
 - It depends on `@intraverse/se-client-signing`,
   `@intraverse/se-client-snapshot`, and `@intraverse/se-client-play-client`.
 - Amounts and block numbers are strings or `bigint`, never `number`.
@@ -126,6 +172,8 @@ if (!result.ok) {
 
 - [The `shell` package](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/client-kit/the-shell-package.md)
   in the kit specification, including what is provisional
+- [The game iframe and the controller boundary](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper/the-game-iframe-and-the-controller-boundary.md)
+  in the Wrapper specification
 - [The action key and what may be stored](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper/the-action-key-and-what-may-be-stored.md)
   and
   [The Wrapper specification](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper.md)

@@ -5,7 +5,10 @@
 // the Wrapper applies W-26a's boot rule before it starts; the RPC call and
 // transport types are public because the Wrapper supplies the transport (it
 // owns `fetch` and the Content Security Policy). The tip check and its decision
-// stay internal until the start flow that acts on them exists.
+// stay internal until the start flow that acts on them exists. The game bridge
+// and the `se.controller/1` message types are public because the Wrapper mounts
+// the game iframe and owns the window it talks through; the bridge holds no
+// secret and no signing capability, and gets the pick use case injected.
 
 export {
   DEFAULT_MIN_RPC_QUORUM,
@@ -18,6 +21,35 @@ export {
   type SourceConfig,
 } from "./chain-config.ts";
 export type { RpcEndpoint } from "./config-fields.ts";
+export {
+  createControllerBridge,
+  type ControllerBridge,
+  type ControllerBridgeOptions,
+  type ControllerBridgeResult,
+  type ControllerBridgeState,
+  type ControllerMountRefusal,
+  type GameFrame,
+  type GameMessageEvent,
+  type ListenForMessages,
+  type PickOutcome,
+  type PickUseCase,
+} from "./controller-bridge.ts";
+export {
+  CONTROLLER_SCHEMA,
+  ROUND_STATUSES,
+  type ActionMessage,
+  type GameMessage,
+  type GameSnapshot,
+  type GameStep,
+  type HelloMessage,
+  type Pick,
+  type Presentation,
+  type RejectMessage,
+  type RejectReason,
+  type RoundStatus,
+  type SnapshotMessage,
+  type WrapperMessage,
+} from "./controller-protocol.ts";
 export { ShellError, type ShellErrorCode } from "./errors.ts";
 export {
   createLogger,

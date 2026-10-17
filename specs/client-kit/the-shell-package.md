@@ -3,28 +3,37 @@
 Part of the [Client kit spec](../client-kit.md), section
 [Contract](../client-kit.md#contract).
 
-`shell` is built in slices. Three exist today: the redacting types and logger,
+`shell` is built in slices. Four exist today: the redacting types and logger,
 key custody, the signer lock, and the transcript state (W-4, W-9 to W-19, W-41
 as far as the shell is concerned); then the chain configuration, the tip check,
 and the decision it leads to (W-26a, W-26b, and W-26's pass or fail); then the
 `CreateRoundAuth` and `T_0` checks (W-26 items 1 to 5), the re-issue rule, and
-the round's verdict that combines them with the tip check. The `se.controller/1`
-bridge (W-37, W-38) and the session, start, move, and cash-out flows follow. The
-Wrapper requirements each rule serves are in brackets.
+the round's verdict that combines them with the tip check; then the
+`se.controller/1` game bridge (W-37, W-38, and W-23's pre-check). The session,
+start, move, and cash-out flows follow. The Wrapper requirements each rule
+serves are in brackets.
 
 - **Public API.** The redacting logger (`createLogger` and its types),
   `REDACTED`, `ShellError` with its `ShellErrorCode`, the chain configuration's
   validation (`validateChainConfig`, `DEFAULT_MIN_RPC_QUORUM`, and the types
   `ChainConfig`, `ChainConfigResult`, `ChainConfigIssue`,
-  `ChainConfigIssueCode`, `Environment`, `SourceConfig`, `RpcEndpoint`), and the
-  RPC transport types (`RpcTransport`, `RpcCall`, `BlockTag`). The validation is
-  public because the Wrapper applies W-26a's boot rule before it starts; the
-  transport types because the Wrapper supplies the transport (it owns `fetch`
-  and the Content Security Policy). Key custody, the signer lock, the transcript
-  state, the tip check, its decision, the `CreateRoundAuth` checks, and the
-  round's verdict are internal: the UI is meant to get use cases and read-only
-  state, never a signing capability ([Packages](./packages.md)), and those use
-  cases do not exist yet.
+  `ChainConfigIssueCode`, `Environment`, `SourceConfig`, `RpcEndpoint`), the RPC
+  transport types (`RpcTransport`, `RpcCall`, `BlockTag`), and the game bridge
+  (`createControllerBridge` with its option, result, and state types) with the
+  `se.controller/1` message types (`CONTROLLER_SCHEMA`, `ROUND_STATUSES`,
+  `HelloMessage`, `ActionMessage`, `SnapshotMessage`, `RejectMessage`,
+  `GameSnapshot`, `GameStep`, `Pick`, `RejectReason`, and the unions). The
+  validation is public because the Wrapper applies W-26a's boot rule before it
+  starts; the transport types because the Wrapper supplies the transport (it
+  owns `fetch` and the Content Security Policy); the bridge because the Wrapper
+  mounts the game iframe and owns the window it talks through. The protocol
+  types are on the main entry only: a type-only subpath for the `reference-game`
+  app comes with the change that builds that app (decided in human review,
+  2026-10-17; [Open items](../client-kit.md#open-items)). Key custody, the
+  signer lock, the transcript state, the tip check, its decision, the
+  `CreateRoundAuth` checks, and the round's verdict are internal: the UI is
+  meant to get use cases and read-only state, never a signing capability
+  ([Packages](./packages.md)), and those use cases do not exist yet.
 - **Redacting types (W-4).** Everything that holds a secret, or a closure over
   the key, prints `[redacted]` under `String()`, `JSON.stringify`, template
   literals, `Symbol.toPrimitive`, and Node's inspect hook
@@ -207,6 +216,35 @@ Wrapper requirements each rule serves are in brackets.
   leaves the verdict `checking` until check 5 decides. A re-issue fails the
   round at any point, with `cancel` `false`, even after `ready` or after a
   tip-check failure that required a cancel.
+- **The game bridge (W-37, W-38, W-23's pre-check).**
+  `createControllerBridge(options)` takes the game origin D, the configuration's
+  `gameOrigins`, the Wrapper's own origin, the game frame's window (only its
+  `postMessage`), a `listen` function that subscribes to the page's `message`
+  events and returns the unsubscribe, the pick use case, and `onIncompatible`.
+  It touches no global. It returns `{ ok: false, refusal }` without listening
+  when D or the Wrapper's origin is not a serialized origin as `event.origin`
+  gives it (a malformed host, a port above 65535, or an explicit default port
+  included; `invalid-origin`), D is the Wrapper's origin (`same-origin`), or D
+  is not on the allow-list (`origin-not-allowed`); the registrable-domain rule
+  is not checked yet (W-37). Otherwise it returns `{ ok: true, bridge }`:
+  `sendSnapshot` takes a validated Snapshot (ignored when its `version` is below
+  the latest given), `state()` is `awaiting-hello`, `ready`, `incompatible`, or
+  `closed`, and `close()` unsubscribes. A message counts only when its `source`
+  is the frame and its `origin` is D; the parser reads only own data properties
+  of a plain object, so no game code runs. The rules of the message set, the
+  allow-list, and the order of the pick checks are in
+  [W-38](../wrapper/the-game-iframe-and-the-controller-boundary.md). The game's
+  copy of a Snapshot is built field by field from the allow-list, never by
+  removing fields. It posts only with `targetOrigin = D` (a frame that throws on
+  `postMessage` is ignored). The pick use case takes the pick and resolves with
+  `{ accepted: true }` or `{ accepted: false, reason }`: it holds the round and
+  the signing, so the bridge never sees a signed action, a key, or a token; one
+  that throws or rejects answers `not_active`. The bridge's pre-check is an
+  early filter only (a second pick for the same step can pass it once the first
+  settles, before the answering Snapshot arrives, and a test shows it); the use
+  case is the gate and MUST re-check W-23 against the shell's own latest
+  validated Snapshot and refuse a step it has already signed (W-15). The bridge
+  logs nothing.
 - **Key custody (W-9 to W-13).** A session generates its action key with
   `signing`'s `createSigner` on the first need (the first `address()` or
   signature), from the injected random source (the platform's
@@ -350,4 +388,15 @@ Wrapper requirements each rule serves are in brackets.
   past `expiry` passes; the verdict never sets `cancel` when `T_0` is not
   settled, sets it for a tip-check failure only once `T_0` is settled and the
   round is `active`, and withdraws it on a re-issue, which is recorded once with
-  the first object kept.
+  the first object kept. The game bridge (T-9) runs against a fake frame and
+  listener: a wrong `source` or origin, a bad schema, an unknown `type`, a
+  string, an accessor, and an extra field are ignored; each mount refusal;
+  nothing before `hello`, the first valid one only, and an incompatible one ends
+  the boundary; every post goes to D; each reject reason and `busy` for a
+  repeated id in flight; a seeded property test over recorded sessions of every
+  golden and `signature/` Snapshot, with legal, illegal, malformed, and forged
+  messages, checks that every message the game receives holds only allow-listed
+  fields and no proof, signature, session id, link, or amount; and a session
+  that signs a move through the pick use case shows that the key's bytes, the
+  token, the key's address, the signature, and the digest reach no message and
+  that no messaging, storage, or network global is touched.
