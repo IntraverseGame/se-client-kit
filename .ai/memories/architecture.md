@@ -46,7 +46,9 @@ structure below.
   new token to a `seal` the shell passes and return only the sealed value.
   `cancelRound` has the retry class `never`, like the redeem: the document
   does not answer a repeated cancel from a log, so after a lost response or a
-  `503` the caller reads the Snapshot first. Do not make it `idempotent`.
+  `503` the caller reads the Snapshot first. Do not make it `idempotent`. A
+  round signs at most one cancel: after a refused one (a 400 included) the
+  shell reads the Snapshot and never signs at sequence 1 again (W-15, W-25).
 - **Shell internals stay internal.** The shell's public entry is the redacting
   logger, `REDACTED`, `ShellError`, and the chain configuration's validation
   (`validateChainConfig`, for W-26a's boot rule) with the RPC transport types
@@ -69,10 +71,15 @@ structure below.
   exported, so the UI cannot sign an arbitrary action text; they are reached
   through use cases once those exist. Every use of the key checks the signer
   lock first (no lock, no Web Locks API, a lost lock: `lock-not-held`). Its
-  provisional seams (`T_0`, the `bytes32` round id, the domain, the
-  `PlayerCancel` hash, the Snapshot-reading rule) are listed in
-  `specs/client-kit/the-shell-package.md`; do not hard-code them. After
-  `STALE_ACTION` a round never signs again, even when the outcome is adopted.
+  injected seams are listed in `specs/client-kit/the-shell-package.md`
+  ("Provisional items"): `T_0`, the `bytes32` round id, the domain, and the
+  `PlayerCancel` type hash are now published by the signed-action spec, but
+  stay injected until the code is reconciled; the Snapshot-reading rule is the
+  shell's own. Do not hard-code them. After `STALE_ACTION` the code never signs
+  for the round again; W-19 now asks for a resync (a 400 or a 409 to a move or
+  cash-out is final, not resent: read the Snapshot, continue only if its own
+  pending action shows applied, never re-sign at that sequence), not built
+  yet.
 - **A Snapshot is untrusted until validated.** `play-client` returns it as
   `unknown`; only `snapshot`'s validator produces a typed value, so an
   unvalidated Snapshot cannot reach the renderer by construction.
@@ -88,8 +95,11 @@ structure below.
   general EIP-712 library. The key lives only in the closure of the signer
   `createSigner` returns (address, `sign`, `destroy`); the transcript helper
   (`createTranscript`) refuses a second, different message at one sequence;
-  the action grammar is a separate, provisional module until the signed-action
-  spec publishes it. Draw-registry types are encoded internally for the vector
+  the action grammar is a separate module, still named provisional: the
+  signed-action spec has published it (0-based rows and tiles; see the Wrapper
+  spec's "What this spec does not own"), and the code is not reconciled yet.
+  `PlayerCancel`'s type is published but waits on an independent vector (#41).
+  Draw-registry types are encoded internally for the vector
   replay only.
 
 ## Contracts and vectors

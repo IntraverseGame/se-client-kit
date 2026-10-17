@@ -37,9 +37,18 @@ Part of the [Client kit spec](../client-kit.md), section
   `bytes32 seedHash`). The field values follow the same rules as above (the bet
   a `bigint` or a decimal string, never a `number`). The signing vectors pin
   `created` and `ready`; the backend's `signature/` Snapshot vectors, which the
-  shell replays, pin `randomnessTarget`. `PlayerCancel` and `PayoutTerms` are
-  not implemented yet: no vendored contract defines their fields.
-  <!-- TODO(signed-action spec): the `PlayerCancel` and `PayoutTerms` type strings and their vectors. -->
+  shell replays, pin `randomnessTarget`. `NewRound` is not an EIP-712 struct and
+  has no type string: it is the Play API document's `NewRound` schema, and only
+  its `created` hash is signed (in `CreateRoundAuth`).
+  - **`PlayerCancel`** is published in the signed-action specification: the same
+    fields as `PlayerAction`, type hash
+    `0xacaf7a5ad98f54f1cf2ba32c94a782121894bc4306dbb28b7683c5ef579a9ce6`. It is
+    not implemented yet, because no independent signer has produced a vector for
+    it.
+    <!-- TODO(signed-action spec): the `PlayerCancel` vector from an independent signer (tracked in #41); `signing` encodes `PlayerCancel` once it is vendored. -->
+  - **`PayoutTerms`** reaches the player only as `newRound.payoutTermsHash`,
+    taken as signed (W-26, check 3). No player-facing document publishes a
+    `PayoutTerms` type, so the kit has none to encode.
 - **Keys.** `createSigner` draws 32 bytes from the platform's cryptographic
   random source (`crypto.getRandomValues`, through `@noble/hashes`; a test
   injects its own source), redraws a value that is zero or not below the curve
@@ -67,20 +76,27 @@ Part of the [Client kit spec](../client-kit.md), section
   owns the `idempotencyKey`; one transcript serves one round.
 - **Action grammar.** The canonical action text is built by a small, separate
   module, `provisionalGrammar`, which holds only the spellings the vendored
-  vectors pin (`pick row <row> tile <tile>`, `cash out`). It is replaced when
-  the signed-action spec publishes the grammar; nothing else in the package
-  depends on it.
-  <!-- TODO(signed-action spec): the action grammar for Coin Flip and the canonical `path`. -->
+  vectors pin (`pick row <row> tile <tile>`, `cash out`); nothing else in the
+  package depends on it. The signed-action specification has published the
+  grammar
+  ([What the Wrapper spec does not own](../wrapper.md#what-this-spec-does-not-own)):
+  those two spellings and `cancel`, canonical base-10 numbers, rows and tiles
+  from 0, and a move's `path` of the steps survived then the step played, with
+  `row = len(path) − 1`, where a path entry is the step's `config.steps[].index`
+  in the Snapshot (the tile is only in the text). The module is still named
+  provisional until the code is reconciled with it.
 - No general EIP-712 library (`viem`, `ethers`) is a dependency. They are used
   only as the independent generator of the vectors in the contracts repository.
 - **Vectors.** The package's tests replay `test/vectors/signing.json` from the
   contracts repository (the file `viem` generated, so an independent
   implementation checks this one) and the worked-round vectors, read through the
   test-only entry of the `contracts` package, where they are copied with their
-  source commit noted. The signed-action spec's vectors join them. The vector
-  file names its two signing keys (the action key `player` and the admin
-  `engine`) as the well-known local development accounts but does not carry
-  them, so the tests hold those two keys in a test fixture
+  source commit noted. The signed-action specification publishes no separate
+  player-facing vector file: its independent vectors for `PlayerAction` and
+  `PlayerCashOut` are these signing vectors, and `PlayerCancel` has none yet
+  (#41). The vector file names its two signing keys (the action key `player` and
+  the admin `engine`) as the well-known local development accounts but does not
+  carry them, so the tests hold those two keys in a test fixture
   (`packages/signing/src/fixtures/keys.ts`). They are the vectors' test keys
   (the AGENTS.md exception): public by design, the default accounts of the local
   Ethereum development node, holding nothing and never used outside tests. The
@@ -89,4 +105,3 @@ Part of the [Client kit spec](../client-kit.md), section
   `previous`) are derived from the vector signatures; the zero-address case
   replaces Keccak-256 in one test file, since no key with the zero address is
   known.
-  <!-- TODO(signed-action spec): the spec's vector file and where it is published. -->

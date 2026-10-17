@@ -285,33 +285,43 @@ serves are in brackets.
   - **Cancel against the first move (W-17, W-25).** `signCancel` signs
     `action = "cancel"`, an empty path, sequence 1, `previous = T_0`. It is
     `equivocation` once a move is signed, pending or applied, and a move after a
-    cancel is `equivocation`.
+    cancel is `equivocation`. A round signs at most one cancel (W-15, W-25):
+    after a refused cancel, a 400 included, the shell reads the Snapshot and
+    signs nothing at sequence 1 again; the round ends by its expiry rule unless
+    the Snapshot shows it `canceled`.
   - **`T` advances only on an applied Snapshot (W-18).** `observe` takes a
     validated Snapshot and returns what it shows: `other-round` (another round,
     or `idle`: nothing changes), `applied` (the pending move: `T` advances to
     its struct hash), `not-applied`, `closed` (`won`, `lost`, or `canceled`: the
     round takes no more signatures), or `out-of-sync` (progress the shell did
     not sign: it stops).
-  - **`STALE_ACTION` (W-19).** `stale` stops all signing for the round, the
-    resend included, for good: no resynchronization rule is defined, so the
-    shell never signs again at the next sequence. The next Snapshot of the round
-    decides what it shows: when it shows the pending move applied, the outcome
-    is adopted (`T` advances to it, the phase is `adopted`); when it does not,
-    the round is out of sync. A terminal Snapshot closes it.
+  - **`STALE_ACTION` (W-19).** `stale` holds all signing for the round, the
+    resend included, until the next Snapshot of the round decides: when it shows
+    the pending move applied, the outcome is adopted (`T` advances to it, the
+    phase is `adopted`); when it does not, the round is out of sync. A terminal
+    Snapshot closes it. **Target (W-19, decided 2026-10-17):** a 400
+    `INVALID_ARGUMENT` to a move or a cash-out is handled the same way, and an
+    adopted round signs again from the next sequence; nothing is ever signed
+    again at the refused sequence. Today the code stops for good after
+    `STALE_ACTION`, even when the outcome is adopted, and has no path for a 400;
+    the code change that implements W-19 closes the gap.
 - **Provisional items.** Each is one injected value or one module, replaced and
-  its note removed as the matching contract item closes:
-  - `T_0` and the `bytes32` round id are inputs of a round's state: their
-    definition belongs to the signed-action spec (W-18, W-26). The round's
-    verdict settles `T_0` (check 5 recomputes it and compares it with
+  its note removed as the matching contract item closes. The signed-action
+  specification has published `T_0`, the `bytes32` round id, the domain, and the
+  `PlayerCancel` type hash; the injected values below stay until the code is
+  reconciled with it.
+  - `T_0` and the `bytes32` round id are inputs of a round's state; the
+    signed-action specification defines both (W-18, W-26). The round's verdict
+    settles `T_0` (check 5 recomputes it and compares it with
     `proofs.fairnessProof.readyHash`); the start flow that would pass that
     settled value to the round's state is not built, so the state still takes
     `T_0` as an input. W-26 fixes the `bytes32` form of `newRound.roundId` (the
     16 UUIDv7 bytes, left-aligned and zero-padded); the transcript's round id is
-    expected to be that same value once check 3 has passed, pending the
-    signed-action spec.
-  - The EIP-712 domain is an input of the session. The environment configuration
-    pins its `chainId` and `verifyingContract`; the session is not wired to the
-    validated configuration yet.
+    that same value, read from the Snapshot's
+    `proofs.createRoundAuth.newRound.roundId` once check 3 has passed.
+  - The EIP-712 domain (published) is an input of the session. The environment
+    configuration pins its `chainId` and `verifyingContract`; the session is not
+    wired to the validated configuration yet.
   - `tipLagMargin` has no default and is required per source: the margin in
     blocks per chain is not decided (W-26b).
   - The bind's mode (`future` or `tip`) and `N` are inputs of the decision: the
@@ -326,11 +336,11 @@ serves are in brackets.
     resend continues, so nothing applies the verdict to it yet.
     <!-- TODO(shell transcript): a re-issue (W-26) needs a transcript state that neither `stale` nor `closed` gives: no new signature, while a W-16 resend of an action already signed continues. -->
   - The `PlayerCancel` encoding is an injected function from the message to its
-    struct hash; `signing` does not encode `PlayerCancel` until a published
-    contract defines its type string and an independent vector pins it. Without
-    one, `signCancel` is `cancel-unavailable` and signs nothing (W-20, W-25).
-    The exclusion against the first move does not depend on it. `signCancel`
-    does not check that `T_0` is settled: whether a cancel may be signed at all
+    struct hash. Its type string and type hash are published, but `signing` does
+    not encode `PlayerCancel` until an independent vector pins it. Without one,
+    `signCancel` is `cancel-unavailable` and signs nothing (W-20, W-25). The
+    exclusion against the first move does not depend on it. `signCancel` does
+    not check that `T_0` is settled: whether a cancel may be signed at all
     (W-25, W-26) is decided by the round's verdict, which the flow that calls it
     reads (`cancel`, or `ready` for a cancel the player asks for).
   - Reading a Snapshot (`snapshot-reading.ts`): the move at sequence `s` is
@@ -344,8 +354,13 @@ serves are in brackets.
     is the pending move's sequence confirms that move before the round closes.
     The move that survives the last step closes the round as `won` (W-24,
     [OQ-8](../wrapper.md#decided-questions)), which the shell reads as closed;
-    it never signs a cash-out on its own.
-  <!-- TODO(signed-action spec): `T_0`, the `PlayerCancel` type, the `bytes32` round id's source, and how a sequence maps to the Snapshot's progress; replace the provisional items above. -->
+    it never signs a cash-out on its own. The signed-action specification
+    settles `T_0` (`keccak256(abi.encode(created, seedHash))`, the Snapshot's
+    `readyHash`), the `PlayerCancel` type, and the round id: the `bytes32` form
+    above, read from the Snapshot's `newRound.roundId`. It numbers the n-th
+    accepted action n and does not tie a sequence to the Snapshot's progress, so
+    the reading rule above stays the shell's.
+  <!-- TODO(signed-action spec): the `PlayerCancel` vector from an independent signer (#41), before `signing` encodes `PlayerCancel` and the injected encoding goes. -->
 - **Tests** are unit tests with injected fakes: a seeded random source that
   keeps a copy of each draw (so a test knows the key's bytes), seeded UUIDs, and
   an in-memory lock manager shared between sessions to stand for tabs. The
