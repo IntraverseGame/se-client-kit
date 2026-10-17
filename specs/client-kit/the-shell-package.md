@@ -168,10 +168,11 @@ serves are in brackets.
     signature, and an idempotency key drawn from the injected `randomUUID`
     before the signature) only after it is recorded as pending. While it is
     pending, the same request returns the same object (the same bytes and key)
-    for a resend, and any other request is `equivocation`. A call that re-enters
-    `sign` or `signCancel` from an injected function (the key source, the cancel
-    encoding, the signer) is `equivocation` too, so a pending action keeps one
-    idempotency key.
+    for a resend (a cancel is sent again only after a Snapshot read, W-25), and
+    any other request is `equivocation`. A call that re-enters `sign` or
+    `signCancel` from an injected function (the key source, the cancel encoding,
+    the signer) is `equivocation` too, so a pending action keeps one idempotency
+    key.
   - **Cancel against the first move (W-17, W-25).** `signCancel` signs
     `action = "cancel"`, an empty path, sequence 1, `previous = T_0`. It is
     `equivocation` once a move is signed, pending or applied, and a move after a

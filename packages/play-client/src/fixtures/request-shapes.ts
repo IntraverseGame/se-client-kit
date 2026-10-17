@@ -42,6 +42,12 @@ export const REQUEST_SHAPES: RequestShapes = {
     typedData: "required",
     signature: "required",
   },
+  cancelRound: {
+    idempotencyKey: "required",
+    roundId: "required",
+    typedData: "required",
+    signature: "required",
+  },
   getSnapshot: undefined,
 };
 

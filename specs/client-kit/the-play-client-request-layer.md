@@ -47,21 +47,21 @@ brackets):
   path, the status, the `requestId`, and the `code` only (W-4, W-41); never a
   header, a request body, or the problem's `detail`. A `code` the kit does not
   know is kept as a string, for the status and `retryable` fallback (W-42).
-- **Retry classes.** A request names its class: `never` (the launch-code redeem:
-  no repeat at all, W-1, W-2), `refresh` (a lost response or a retryable problem
-  is repeated with the same old token; the request must name the old token's
-  local deadline, `localDeadlineMs`, as `notAfterMs`, the type and a runtime
-  check refuse a refresh without it, and no repeat starts at or after it, W-6,
-  W-7), or `idempotent` (a mutating call with its intent's idempotency key, or a
-  read: a lost response or a retryable problem is repeated with the same bytes,
-  W-16, W-42, W-43). A problem that is not `retryable`, an aborted request, and
-  `SESSION_EXPIRED`, `SESSION_REVOKED`, and `UNAUTHENTICATED` whatever their
-  flag, are never repeated. The bound is a configuration value, checked when the
-  transport is created (`maxAttempts` a safe integer of at least 1; both delays
-  finite and non-negative, the initial one not above the maximum). Its defaults
-  are provisional, since W-42 asks only for "a bounded number of times with
-  backoff": 3 attempts in all, waiting 500 ms, then doubling to at most 2 s (the
-  polling rates of W-35), with no jitter.
+- **Retry classes.** A request names its class: `never` (the launch-code redeem,
+  W-1, W-2, and a round's cancel, W-25: no repeat at all), `refresh` (a lost
+  response or a retryable problem is repeated with the same old token; the
+  request must name the old token's local deadline, `localDeadlineMs`, as
+  `notAfterMs`, the type and a runtime check refuse a refresh without it, and no
+  repeat starts at or after it, W-6, W-7), or `idempotent` (a mutating call with
+  its intent's idempotency key, or a read: a lost response or a retryable
+  problem is repeated with the same bytes, W-16, W-42, W-43). A problem that is
+  not `retryable`, an aborted request, and `SESSION_EXPIRED`, `SESSION_REVOKED`,
+  and `UNAUTHENTICATED` whatever their flag, are never repeated. The bound is a
+  configuration value, checked when the transport is created (`maxAttempts` a
+  safe integer of at least 1; both delays finite and non-negative, the initial
+  one not above the maximum). Its defaults are provisional, since W-42 asks only
+  for "a bounded number of times with backoff": 3 attempts in all, waiting 500
+  ms, then doubling to at most 2 s (the polling rates of W-35), with no jitter.
 - **Token schedule.** Pure functions over the deadline the response carries
   (W-5): the clock offset from the `Date` header, the refresh point (the earlier
   of the configured fraction of the lifetime and the margin before the deadline,
@@ -106,6 +106,7 @@ one shape (a move at the cash-out route), and a type test keeps it so.
 | `startRound`       | `POST /rounds:start`     | `idempotent` | play token | the round's Snapshot, `unknown`                                           |
 | `continueRound`    | `POST /rounds:continue`  | `idempotent` | play token | the round's Snapshot, `unknown`                                           |
 | `cashOutRound`     | `POST /rounds:cashOut`   | `idempotent` | play token | the round's Snapshot, `unknown`                                           |
+| `cancelRound`      | `POST /rounds:cancel`    | `never`      | play token | the round's Snapshot, `unknown`                                           |
 | `getSnapshot`      | `GET /snapshot`          | `idempotent` | play token | the session's Snapshot, `unknown`                                         |
 
 - **Answers.** Each resolves with `{ body, receivedAtMs, clockOffsetMs }` (the
@@ -147,6 +148,16 @@ one shape (a move at the cash-out route), and a type test keeps it so.
   signed action from another: the shell guarantees that `continueRound` carries
   only a `PlayerAction` and `cashOutRound` only a `PlayerCashOut`, never a
   `PlayerCancel` (W-23, W-25).
+- **The cancel is never repeated** (W-25). `cancelRound` takes the body of a
+  move (`RoundActionRequest`), carrying the signed `PlayerCancel` the shell
+  built, and is sent once whatever the failure. The document does not answer a
+  cancel from a log as it does a repeated move: once the engine took a cancel,
+  the same cancel again is `FAILED_PRECONDITION`. So a lost response, a timeout,
+  or a `503 UNAVAILABLE` (even `retryable: true`) is surfaced to the caller as a
+  `NetworkError` or a `ProblemError`, and the caller reads `getSnapshot` before
+  it sends the cancel again. Its answer is the round's Snapshot, `unknown`:
+  `canceled`, or `active` with a move played when a move won the race;
+  `play-client` does not tell them apart. The document lists no `409` for it.
 - **No secret leaves the body or the header.** The launch code travels only in
   the redeem body, the play token only in the `Authorization` header; neither is
   in a URL, and an error never holds a header or a body (W-4).
@@ -162,11 +173,11 @@ one shape (a move at the cash-out route), and a type test keeps it so.
   and answer, each problem status the document lists for it, an unknown problem
   `code`, the session-ending codes, a lost response, a timeout, an abort by the
   caller, a body that is not JSON, an answer that does not match the document,
-  that a repeat resends the same bytes, that the redeem is never repeated, that
-  neither the token nor the launch code reaches a URL or an error, that a sealed
-  result printed as JSON holds no token and its type has no plain string field
-  for it, that the seal is called once per answer (a refresh resent after a lost
-  response too) and never for an answer that does not match the document, and
-  that the case table's problem statuses equal the document's for each operation
-  (a type test).
-  <!-- TODO(Play API): sending a signed `PlayerCancel` (W-25) is pending the `rounds:cancel` route (`POST /play/v1/rounds:cancel`, planned by the backend and cleared for this public repository on 2026-10-17, see #13; not in the vendored document yet); its operation joins when the document has it. -->
+  that a repeat resends the same bytes, that the redeem and the cancel are never
+  repeated (a lost response, a retryable `UNAVAILABLE`, an unknown retryable
+  `code`), that neither the token nor the launch code reaches a URL or an error,
+  that a sealed result printed as JSON holds no token and its type has no plain
+  string field for it, that the seal is called once per answer (a refresh resent
+  after a lost response too) and never for an answer that does not match the
+  document, and that the case table's problem statuses equal the document's for
+  each operation (a type test).

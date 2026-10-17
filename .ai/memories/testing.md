@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-17 (shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-17 (play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -67,7 +67,9 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   its routes are `PLAY_ROUTES`, its scripted answers are typed by each
   operation's responses in `PlayApiOperations`, and it refuses a call without
   the token where the document requires one. `operation-cases.ts` tables every
-  operation's error statuses, and a test holds them equal to the document's.
+  operation's error statuses, and a test holds them equal to the document's;
+  its `attempts` is 1 for the operations of class `never` (the redeem and the
+  cancel), so the shared failure tests assert they are not repeated.
   The e2e suite has no fake Play API yet; when it gets one, it can answer from
   the same document.
 - **Property tests** use a seeded generator, never `Math.random`: the

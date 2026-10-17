@@ -5,6 +5,7 @@ export type { RequestDescription } from "./errors.ts";
 export { newIntent, type Intent, type RandomUuid } from "./idempotency.ts";
 export { NetworkError, type NetworkFailure } from "./network-error.ts";
 export {
+  cancelRound,
   cashOutRound,
   continueRound,
   getSnapshot,

@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-17 (shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-17 (play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -42,6 +42,9 @@ structure below.
   routes and wire types from the document's generated types; a route that
   drifts from the document does not compile. The redeem and refresh hand the
   new token to a `seal` the shell passes and return only the sealed value.
+  `cancelRound` has the retry class `never`, like the redeem: the document
+  does not answer a repeated cancel from a log, so after a lost response or a
+  `503` the caller reads the Snapshot first. Do not make it `idempotent`.
 - **Shell internals stay internal.** The shell's public entry is the redacting
   logger, `REDACTED`, `ShellError`, and the chain configuration's validation
   (`validateChainConfig`, for W-26a's boot rule) with the RPC transport types

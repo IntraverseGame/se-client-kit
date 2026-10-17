@@ -17,6 +17,7 @@ import {
   type StartRoundRequest,
 } from "./play-api.ts";
 import { ProtocolError } from "./protocol-error.ts";
+import type { RetryClass } from "./retry.ts";
 import { parseDeadline } from "./token-schedule.ts";
 import type { Authorization, PlayResponse, Transport } from "./transport.ts";
 
@@ -177,12 +178,14 @@ const snapshotCall = async (
   transport: Transport,
   id: PlayOperationId,
   options: AuthorizedCallOptions,
+  // A refresh names its deadline and is not a Snapshot call.
+  retry: Exclude<RetryClass, "refresh">,
   body?: StartRoundRequest | RoundActionRequest,
 ): Promise<PlayResult<unknown>> => {
   const response = await transport.send({
     ...PLAY_ROUTES[id],
     authorization: options.authorization,
-    retry: "idempotent",
+    retry,
     ...(body === undefined ? {} : { body }),
     ...(options.signal === undefined ? {} : { signal: options.signal }),
   });
@@ -199,7 +202,7 @@ export const startRound = (
   body: StartRoundRequest,
   options: AuthorizedCallOptions,
 ): Promise<PlayResult<unknown>> =>
-  snapshotCall(transport, "startRound", options, body);
+  snapshotCall(transport, "startRound", options, "idempotent", body);
 
 /**
  * Passes a signed move (`continueRound`), repeated as `startRound` is. Answers
@@ -210,7 +213,7 @@ export const continueRound = (
   body: RoundActionRequest,
   options: AuthorizedCallOptions,
 ): Promise<PlayResult<unknown>> =>
-  snapshotCall(transport, "continueRound", options, body);
+  snapshotCall(transport, "continueRound", options, "idempotent", body);
 
 /**
  * Passes a signed cash-out (`cashOutRound`), repeated as `startRound` is.
@@ -221,7 +224,22 @@ export const cashOutRound = (
   body: RoundActionRequest,
   options: AuthorizedCallOptions,
 ): Promise<PlayResult<unknown>> =>
-  snapshotCall(transport, "cashOutRound", options, body);
+  snapshotCall(transport, "cashOutRound", options, "idempotent", body);
+
+/**
+ * Passes a signed cancel (`cancelRound`, W-25). It is never repeated: a cancel
+ * is not answered from a log as a repeated move is (once the engine took it,
+ * the same cancel again is `FAILED_PRECONDITION`), so after a lost response or
+ * a retryable problem the caller reads `getSnapshot` before it sends a cancel
+ * again. Answers the round's Snapshot as `unknown`: `canceled`, or `active`
+ * with a move played when that move won the race.
+ */
+export const cancelRound = (
+  transport: Transport,
+  body: RoundActionRequest,
+  options: AuthorizedCallOptions,
+): Promise<PlayResult<unknown>> =>
+  snapshotCall(transport, "cancelRound", options, "never", body);
 
 /**
  * Reads the session's Snapshot (`getSnapshot`): its open round, or `idle`. A
@@ -232,4 +250,4 @@ export const getSnapshot = (
   transport: Transport,
   options: AuthorizedCallOptions,
 ): Promise<PlayResult<unknown>> =>
-  snapshotCall(transport, "getSnapshot", options);
+  snapshotCall(transport, "getSnapshot", options, "idempotent");

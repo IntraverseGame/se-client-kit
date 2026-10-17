@@ -1,7 +1,7 @@
 // The problem branches of every operation, against the fake Play API built
 // from the vendored document: each problem status the document lists for the
 // operation, an unknown problem `code`, and the session-ending codes. The
-// redeem is never repeated; the token never reaches an error.
+// redeem and the cancel are never repeated; the token never reaches an error.
 
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -12,13 +12,19 @@ import {
   PROBLEM_CASES,
   UNKNOWN_CODE,
 } from "./fixtures/operation-cases.ts";
-import { FIXTURE_LAUNCH_CODE, redeemAnswer } from "./fixtures/play-bodies.ts";
+import {
+  actionBody,
+  FIXTURE_LAUNCH_CODE,
+  idleSnapshot,
+  redeemAnswer,
+} from "./fixtures/play-bodies.ts";
 import {
   createServerHarness,
   type ServerHarness,
 } from "./fixtures/server-harness.ts";
 import { FIXTURE_TOKEN } from "./fixtures/session.ts";
-import { redeemLaunchCode } from "./operations.ts";
+import { NetworkError } from "./network-error.ts";
+import { cancelRound, redeemLaunchCode } from "./operations.ts";
 import { ProblemError } from "./problem-error.ts";
 import { endsSession } from "./problem.ts";
 
@@ -115,6 +121,51 @@ describe("the redeem (W-1, W-2)", () => {
       LONG_WAIT_MS,
     );
     expect(error).toBeInstanceOf(ProblemError);
+    expect(h.server.served).toHaveLength(1);
+  });
+});
+
+const cancel = (): Promise<unknown> =>
+  cancelRound(h.transport, actionBody, h.auth);
+
+describe("the cancel (W-25)", () => {
+  it("is not repeated after a retryable UNAVAILABLE", async () => {
+    h.server.answer(
+      "cancelRound",
+      { kind: "problem", status: 503, code: "UNAVAILABLE", retryable: true },
+      { kind: "success", body: idleSnapshot },
+    );
+    const { error } = await h.settle(cancel(), LONG_WAIT_MS);
+    expect(error).toBeInstanceOf(ProblemError);
+    expect((error as ProblemError).problem).toMatchObject({
+      status: 503,
+      code: "UNAVAILABLE",
+      retryable: true,
+    });
+    expect(h.server.served).toHaveLength(1);
+  });
+
+  it("is not repeated after a lost response", async () => {
+    h.server.answer(
+      "cancelRound",
+      { kind: "network-failure" },
+      { kind: "success", body: idleSnapshot },
+    );
+    const { error } = await h.settle(cancel(), LONG_WAIT_MS);
+    expect(error).toBeInstanceOf(NetworkError);
+    expect(error).toMatchObject({ reason: "network" });
+    expect(h.server.served).toHaveLength(1);
+  });
+
+  it("is not repeated after an unknown retryable code", async () => {
+    h.server.answer(
+      "cancelRound",
+      { kind: "problem", status: 503, code: UNKNOWN_CODE, retryable: true },
+      { kind: "success", body: idleSnapshot },
+    );
+    const { error } = await h.settle(cancel(), LONG_WAIT_MS);
+    expect(error).toBeInstanceOf(ProblemError);
+    expect((error as ProblemError).problem.code).toBe(UNKNOWN_CODE);
     expect(h.server.served).toHaveLength(1);
   });
 });

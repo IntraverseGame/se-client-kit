@@ -104,6 +104,7 @@ describe("the committed Play API types", () => {
     "startRound",
     "continueRound",
     "cashOutRound",
+    "cancelRound",
     "getSnapshot",
   ])("type the %s operation", operationId => {
     expect(generatedPlayTypes()).toMatch(

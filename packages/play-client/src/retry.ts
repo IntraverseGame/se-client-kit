@@ -6,8 +6,10 @@ import type { PlayClientError } from "./protocol-error.ts";
 /**
  * How a call may be repeated, by what the call is:
  *
- * - `never`: the redeem of a launch code. The code is single use, so a lost or
- *   failed redeem is never repeated (W-1, W-2).
+ * - `never`: the redeem of a launch code, and a round's cancel. The code is
+ *   single use, so a lost or failed redeem is never repeated (W-1, W-2); a
+ *   cancel is not answered from a log, so the caller reads the Snapshot before
+ *   it sends one again (W-25).
  * - `refresh`: a token refresh. A retryable problem or a lost response is
  *   repeated with the same old token while it is valid (W-6, W-7).
  * - `idempotent`: a mutating call with its intent's idempotency key, or a read. A

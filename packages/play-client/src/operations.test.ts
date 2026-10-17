@@ -24,6 +24,7 @@ import {
   START_MS,
 } from "./fixtures/session.ts";
 import {
+  cancelRound,
   cashOutRound,
   continueRound,
   getSnapshot,
@@ -48,7 +49,11 @@ const BEARER = `Bearer ${FIXTURE_TOKEN}`;
 type SnapshotCall = {
   readonly id: Extract<
     PlayOperationId,
-    "startRound" | "continueRound" | "cashOutRound" | "getSnapshot"
+    | "startRound"
+    | "continueRound"
+    | "cashOutRound"
+    | "cancelRound"
+    | "getSnapshot"
   >;
   readonly sent: unknown;
   readonly headers: Readonly<Record<string, string>>;
@@ -75,6 +80,12 @@ const SNAPSHOT_CALLS: readonly SnapshotCall[] = [
     call: x => cashOutRound(x.transport, actionBody, x.auth),
   },
   {
+    id: "cancelRound",
+    sent: actionBody,
+    headers: { "content-type": "application/json" },
+    call: x => cancelRound(x.transport, actionBody, x.auth),
+  },
+  {
     id: "getSnapshot",
     sent: undefined,
     headers: {},
@@ -90,6 +101,7 @@ describe("the routes", () => {
       startRound: { method: "POST", path: "/rounds:start" },
       continueRound: { method: "POST", path: "/rounds:continue" },
       cashOutRound: { method: "POST", path: "/rounds:cashOut" },
+      cancelRound: { method: "POST", path: "/rounds:cancel" },
       getSnapshot: { method: "GET", path: "/snapshot" },
     });
   });
