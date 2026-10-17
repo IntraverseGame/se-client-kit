@@ -237,13 +237,20 @@ and no network, and publishes nothing:
    `release-dry-run.json` (source commit, versions, tarball hashes, digests,
    problems), and prints the same summary (in CI, also to the job summary).
 
-Run it locally with an empty directory outside the repository:
+Run it locally. `--out` must be an empty directory outside the repository; by
+default it is a new temporary directory. Give options to the CLI itself, not
+through `pnpm release:dry-run -- ...`: wireit hands extra arguments to a
+`shell: true` spawn unescaped (Node's DEP0190 warning).
 
 ```sh
-pnpm release:dry-run -- --out "$(mktemp -d)"
+pnpm release:dry-run                                        # output in a new temporary directory
+pnpm exec tsx tools/release-dry-run.ts --out "$(mktemp -d)"   # output where you say
 ```
 
-Add `--keep` to keep the scratch copies for inspection.
+Add `--keep` (to the second form) to keep the scratch copies for inspection. The
+offline installs read the store of the repository's own install
+(`pnpm store path`, passed as `--store-dir`), so run
+`pnpm install --frozen-lockfile` first.
 
 ### Verify before and after
 
@@ -265,9 +272,9 @@ After publishing:
    `integrity-manifest.json`; verify the attestation with the GitHub CLI
    (`gh attestation verify`) against this repository, once releases carry one.
 3. **Reproduce:** check out the released commit and run
-   `pnpm install --frozen-lockfile` and `pnpm release:dry-run -- --out <dir>`;
-   the printed Wrapper digest must equal the release's. A difference is an
-   incident (see Escalation).
+   `pnpm install --frozen-lockfile` and `pnpm release:dry-run`; the printed
+   Wrapper digest must equal the release's. A difference is an incident (see
+   Escalation).
 4. **Compatibility:** the release notes' contract versions match what the
    backend serves in the target environment. Do not promote a Wrapper whose Play
    prefix or Snapshot schema the backend does not serve.
@@ -367,9 +374,14 @@ If the release uses a stored npm token (rather than trusted publishing):
   `apps/wrapper/dist/` trees (or the two tarballs) with `diff -r`, and find what
   the build read from its environment (a path, the time, the time zone, the
   locale). Do not release until it is fixed.
-- **The dry run fails to install offline.** The pnpm store lacks a package the
-  lockfile names: run `pnpm install --frozen-lockfile` in the repository first,
-  which fills the store.
+- **The dry run fails to install offline** (`ERR_PNPM_NO_OFFLINE_TARBALL`). The
+  store its installs read (`pnpm store path` in the repository, passed as
+  `--store-dir`) lacks a package the lockfile names: run
+  `pnpm install --frozen-lockfile` in the repository first, which fills that
+  store. If `pnpm store path` differs between the repository's install and the
+  dry run's, something in the environment moved the store (`PNPM_HOME`, a
+  `store-dir` setting); the dry run keeps `PNPM_HOME` and names the store
+  explicitly for that reason.
 - **The drift check reports a difference.** Run the contract sync.
 
 ## Escalation

@@ -78,7 +78,11 @@ Several agents and people work in one clone at once. Rules:
   verifies digests and publishes the downloaded tarballs.
 - **Release dry run** (`tools/release-dry-run.ts`): copies the working tree
   (`git ls-files -co --exclude-standard`) twice into `--out` (outside the
-  repository, empty), installs offline with `--ignore-scripts`, runs
+  repository, empty), installs offline with `--ignore-scripts` and
+  `--store-dir` set to the repository's `pnpm store path` (in CI the store is
+  under `PNPM_HOME`, set by pnpm/action-setup; dropping `PNPM_HOME` once moved
+  the scratch install to an empty store and failed CI, so the filter keeps it),
+  runs
   `changeset version` and `pnpm build` with `WIREIT_CACHE=none`, pnpm's
   install-before-run off, an empty npm user configuration, and an environment
   without the variables whose names match a token, secret, key, password, or

@@ -51,8 +51,13 @@ jobs:
           cache: "false"
       # Applies the changesets on a scratch copy, packs and checks the five
       # libraries, and builds the Wrapper artifact twice (same digest required).
+      # The CLI directly, not `pnpm release:dry-run -- --out ...`: wireit
+      # passes extra arguments to a `shell: true` spawn unescaped (Node's
+      # DEP0190 warning).
       - id: dry-run
-        run: pnpm release:dry-run -- --out "$RUNNER_TEMP/release-dry-run"
+        run:
+          pnpm exec tsx tools/release-dry-run.ts --out
+          "$RUNNER_TEMP/release-dry-run"
 
   publish:
     name: publish

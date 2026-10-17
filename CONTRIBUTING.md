@@ -38,7 +38,7 @@ pnpm format:check                # the same, read-only
 pnpm typecheck
 pnpm build                       # packages: tsdown (bundled ESM with .js.map, and .d.ts); the Wrapper: Vite
 pnpm changeset                   # add release notes for a change to a published package
-pnpm release:dry-run -- --out "$(mktemp -d)"   # the release dry run: versions, tarballs, Wrapper digest; publishes nothing
+pnpm release:dry-run             # the release dry run: versions, tarballs, Wrapper digest; publishes nothing
 ```
 
 **Tasks and the cache.** Every script above is a

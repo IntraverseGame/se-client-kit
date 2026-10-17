@@ -23,7 +23,11 @@
 //   6. writes the artifact, its `.sha256`, the tarballs, and a report to
 //      `--out`, and prints the digests.
 //
-// Usage: pnpm release:dry-run -- [--out <directory>] [--keep]
+// Usage: pnpm release:dry-run (output in a new temporary directory), or
+//        pnpm exec tsx tools/release-dry-run.ts [--out <directory>] [--keep]
+// (not `pnpm release:dry-run -- ...`: wireit passes extra arguments to a
+// `shell: true` spawn unescaped). The offline installs use the store of the
+// repository's own install (`pnpm store path`, as `--store-dir`).
 // `--out` must be outside the repository and empty (default: a new temporary
 // directory); `--keep` keeps the scratch copies.
 
@@ -43,6 +47,7 @@ import { parseArgs } from "node:util";
 import { loadVectors } from "./build-output-vectors.ts";
 import { PUBLISHED_PACKAGES, packageNameOf } from "./package-tarball.ts";
 import { checkResolution } from "./release-consumer.ts";
+import { publishDryRun, storeDirectory } from "./release-pnpm.ts";
 import {
   buildWrapperArtifact,
   checkTarballs,
@@ -50,7 +55,6 @@ import {
   type PackedLibrary,
   packLibraries,
   prepareOut,
-  publishDryRun,
   readJson,
   run,
   scratchEnvironment,
@@ -88,6 +92,15 @@ type CopyResult = {
 };
 
 const source = sourceOf(root);
+/** The offline install of a scratch copy, from the setup install's store. */
+const offlineInstall = [
+  "install",
+  "--frozen-lockfile",
+  "--offline",
+  "--ignore-scripts",
+  "--store-dir",
+  storeDirectory(root),
+];
 const paths = workingTreeFiles(root);
 
 /** Steps 1, 2, and the packing and Wrapper parts of 3 and 4, in one copy. */
@@ -104,11 +117,7 @@ const prepareCopy = (
   });
   const options = { cwd: directory, env };
   console.log(`[${label}] installing from the lockfile (offline)`);
-  run(
-    "pnpm",
-    ["install", "--frozen-lockfile", "--offline", "--ignore-scripts"],
-    options,
-  );
+  run("pnpm", offlineInstall, options);
   // The changelog generator calls the GitHub API; the dry run checks versions
   // and contents, so it runs with the changelog off.
   const configPath = join(directory, ".changeset", "config.json");
@@ -120,11 +129,7 @@ const prepareCopy = (
   run("pnpm", ["exec", "changeset", "version"], options);
   // The manifests changed: install again, explicitly with lifecycle scripts
   // off (pnpm's own install-before-run is off in the scratch environment).
-  run(
-    "pnpm",
-    ["install", "--frozen-lockfile", "--offline", "--ignore-scripts"],
-    options,
-  );
+  run("pnpm", offlineInstall, options);
   const versions = Object.fromEntries([
     ...PUBLISHED_PACKAGES.map(
       name =>

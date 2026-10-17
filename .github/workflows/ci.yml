@@ -135,7 +135,12 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      - run: pnpm release:dry-run -- --out "$RUNNER_TEMP/release-dry-run"
+      # The CLI directly, not `pnpm release:dry-run -- --out ...`: wireit
+      # passes extra arguments to a `shell: true` spawn unescaped (Node's
+      # DEP0190 warning).
+      - run:
+          pnpm exec tsx tools/release-dry-run.ts --out
+          "$RUNNER_TEMP/release-dry-run"
 
   # Playwright against the in-repo fake Play API (e2e/), on Chromium. The
   # browser comes from Playwright's own download for the pinned

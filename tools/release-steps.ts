@@ -3,7 +3,8 @@
 // runbook/client-kit-release.md): running a command with a clean environment,
 // copying the working tree, packing and checking the five libraries, and
 // building the Wrapper's release artifact (the consumer import check is in
-// tools/release-consumer.ts). Nothing here reads or writes a credential.
+// tools/release-consumer.ts; the store lookup and the publish dry run in
+// tools/release-pnpm.ts). Nothing here reads or writes a credential.
 //
 // The scratch commands get an environment without token-like variables
 // (`scratchEnvironment`). That is hygiene, **not isolation**: a child process
@@ -36,11 +37,13 @@ import { type WrapperArtifact, wrapperArtifact } from "./wrapper-artifact.ts";
  * Environment variables a scratch command never needs: anything that names a
  * token, a secret, a key, a password, or an auth value, and the variables of
  * the calling package manager and task runner (so the scratch run is not
- * steered by the run that started it). A pattern, so a credential under a name
- * it does not match still passes; see the header.
+ * steered by the run that started it). `PNPM_HOME` is kept: it is where pnpm
+ * lives and, unless told otherwise, where its store is (pnpm/action-setup sets
+ * it in CI), not a setting of the calling run. A pattern, so a credential under
+ * a name it does not match still passes; see the header.
  */
 const DROPPED_VARIABLE =
-  /token|secret|key|password|passwd|auth|credential|^npm_|^pnpm_|^wireit_|^actions_/iu;
+  /token|secret|key|password|passwd|auth|credential|^npm_|^pnpm_(?!home$)|^wireit_|^actions_/iu;
 
 /**
  * The environment of a scratch command: the current one without
@@ -240,39 +243,6 @@ export const packLibraries = (
     };
   });
 };
-
-/**
- * `pnpm publish <tarball> --dry-run` for each packed library, against
- * `registry` (the dry run passes an address nothing listens on), with public
- * access and lifecycle scripts off. Returns the failures.
- */
-export const publishDryRun = (
-  packed: readonly PackedLibrary[],
-  registry: string,
-  options: RunOptions,
-): string[] =>
-  packed.flatMap(library => {
-    try {
-      run(
-        "pnpm",
-        [
-          "publish",
-          library.tarball,
-          "--access",
-          "public",
-          "--ignore-scripts",
-          "--no-git-checks",
-          "--dry-run",
-          "--registry",
-          registry,
-        ],
-        options,
-      );
-      return [];
-    } catch (error) {
-      return [error instanceof Error ? error.message : String(error)];
-    }
-  });
 
 /** The tarball content check of every packed library. */
 export const checkTarballs = (

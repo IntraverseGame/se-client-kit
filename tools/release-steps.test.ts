@@ -9,7 +9,7 @@ import { prepareOut, scratchEnvironment } from "./release-steps.ts";
 describe("scratchEnvironment", () => {
   const root = join(sep, "work", "kit");
 
-  it("drops every variable that names a token, a secret, or an auth value", () => {
+  it("drops every variable that names a token, a secret, a key, or an auth value, and keeps PNPM_HOME", () => {
     const environment = scratchEnvironment(
       {
         GITHUB_TOKEN: "x",
@@ -24,14 +24,17 @@ describe("scratchEnvironment", () => {
         deploy_key: "x",
         DB_PASSWORD: "x",
         npm_config_registry: "x",
+        pnpm_config_store_dir: "x",
         npm_lifecycle_event: "x",
         WIREIT_PARENT: "x",
         HOME: "/home/user",
+        PNPM_HOME: "/home/user/.pnpm",
       },
       root,
     );
     expect(environment).toEqual({
       HOME: "/home/user",
+      PNPM_HOME: "/home/user/.pnpm",
       WIREIT_CACHE: "none",
       CI: "true",
       pnpm_config_verify_deps_before_run: "false",
