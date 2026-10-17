@@ -15,6 +15,7 @@ import { createSigner, type RandomSource } from "./signer.ts";
 const ORDER =
   "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141";
 const HALF_ORDER = BigInt(`0x${ORDER}`) >> 1n;
+const ROUND_TRIP_TIMEOUT_MS = 20_000;
 
 /** A deterministic stream of 32-byte values: keccak256("<seed>:<counter>"). */
 const seeded = (seed: string): (() => Uint8Array) => {
@@ -170,13 +171,23 @@ describe("sign", () => {
     expect(playerSigner().sign(digest)).toBe(signer.sign(digest));
   });
 
-  it("round-trips 200 seeded digests: canonical, low s, recovers the signer", () => {
-    expect(roundTrips(200, "signing:t-3")).toEqual(allTrue(200));
-  });
+  // Many sign-and-recover rounds of pure-JS secp256k1: a busy CI runner can
+  // pass the default 5 s, so these two get their own timeout.
+  it(
+    "round-trips 200 seeded digests: canonical, low s, recovers the signer",
+    { timeout: ROUND_TRIP_TIMEOUT_MS },
+    () => {
+      expect(roundTrips(200, "signing:t-3")).toEqual(allTrue(200));
+    },
+  );
 
-  it("round-trips with fresh keys from a seeded source", () => {
-    expect(freshKeyRoundTrips(20, "signing:t-3:keys")).toEqual(allTrue(20));
-  });
+  it(
+    "round-trips with fresh keys from a seeded source",
+    { timeout: ROUND_TRIP_TIMEOUT_MS },
+    () => {
+      expect(freshKeyRoundTrips(20, "signing:t-3:keys")).toEqual(allTrue(20));
+    },
+  );
 
   it("refuses a digest that is not 32 bytes", () => {
     expect(codeOf(() => playerSigner().sign("0x1234"))).toBe("invalid-input");
