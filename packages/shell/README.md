@@ -69,7 +69,7 @@ const frame = iframe.contentWindow;
 if (frame === null) throw new Error("the game frame is not attached");
 
 const result = createControllerBridge({
-  gameOrigin, // D, from the environment configuration
+  gameOrigin, // D, from the game's catalog entry (Play API)
   gameOrigins: config.gameOrigins,
   ownOrigin: globalThis.location.origin,
   frame,
