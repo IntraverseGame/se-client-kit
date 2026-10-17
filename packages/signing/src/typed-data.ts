@@ -29,7 +29,7 @@ export type TypedDataFields = {
   readonly action: string;
   /** Each entry is an integer in 0..255; empty for a cancel. */
   readonly path: readonly number[];
-  /** An integer in 0..2^32-1. */
+  /** An integer in 1..2^32-1: the transcript starts at 1. */
   readonly sequence: number;
   readonly previous: Bytes32;
 };
@@ -112,11 +112,14 @@ const pathBytes = (path: unknown): Uint8Array => {
 /**
  * The canonical `typedData` bytes of a signed action. Deterministic: the same
  * fields always give the same bytes. Throws `SigningError` `invalid-input` for
- * an unknown kind, an action that is empty or not well-formed text, a path
- * entry outside `uint8`, a cancel with a path, a sequence of 0 or outside
- * `uint32`, or a `previous` that is not 32 bytes of hex.
+ * fields that are not an object, an unknown kind, an action that is empty or
+ * not well-formed text, a path entry outside `uint8`, a cancel with a path, a
+ * sequence of 0 or outside `uint32`, or a `previous` that is not 32 bytes of
+ * hex.
  */
 export const encodeTypedData = (fields: TypedDataFields): Uint8Array => {
+  const given: unknown = fields;
+  if (typeof given !== "object" || given === null) throw invalid();
   const { kind, action, path, sequence, previous } = fields;
   const kindValue = kindNumber(kind);
   const actionValue = actionBytes(action);

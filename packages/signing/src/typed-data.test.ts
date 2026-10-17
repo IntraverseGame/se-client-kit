@@ -148,6 +148,9 @@ describe("encodeTypedData", () => {
   });
 
   const refused: readonly (readonly [string, unknown])[] = [
+    ["null fields", null],
+    ["undefined fields", undefined],
+    ["fields that are text", "action"],
     ["kind 0", { ...base, kind: 0 }],
     ["kind 1 as a number", { ...base, kind: 1 }],
     ["an unknown kind", { ...base, kind: "bet" }],

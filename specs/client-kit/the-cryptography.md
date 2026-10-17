@@ -98,19 +98,20 @@ Part of the [Client kit spec](../client-kit.md), section
   | 4     | `0x20` | `sequence`, a varint, a `uint32` from 1                                    |
   | 5     | `0x2a` | `previous`, length-delimited, exactly 32 bytes                             |
 
-  Anything else is refused with `invalid-input`, never truncated: a kind other
-  than the three, an empty `action`, an `action` with a lone surrogate (which
-  UTF-8 cannot encode faithfully), a path entry outside `uint8`, a cancel with a
-  path, a sequence of 0, outside `uint32`, or not a `number`, and a `previous`
-  that is not 32 bytes of `0x` hex. The tags and every byte are pinned by the
-  backend's `typed-data/` Snapshot vectors, which the tests replay byte for byte
-  from their `fields`, in hex and base64. Two of them are steps of
-  `signing.json`: the third pick links to `T_2` and the cash-out to `T_3`, with
-  the action and path of those signed messages, and the tests check both against
-  that file; the Coin Flip pick and cancel link to the `readyHash` of
-  `valid/coinflip-active-ready-hash`. The shell must base64-encode the bytes and
-  apply the Play API document's `typedData` limit (4096 base64 characters); that
-  wiring belongs to the shell's round flows (#8), not to this package.
+  Anything else is refused with `invalid-input`, never truncated: fields that
+  are not an object (`null` included), a kind other than the three, an empty
+  `action`, an `action` with a lone surrogate (which UTF-8 cannot encode
+  faithfully), a path entry outside `uint8`, a cancel with a path, a sequence of
+  0, outside `uint32`, or not a `number`, and a `previous` that is not 32 bytes
+  of `0x` hex. The tags and every byte are pinned by the backend's `typed-data/`
+  Snapshot vectors, which the tests replay byte for byte from their `fields`, in
+  hex and base64. Two of them are steps of `signing.json`: the third pick links
+  to `T_2` and the cash-out to `T_3`, with the action and path of those signed
+  messages, and the tests check both against that file; the Coin Flip pick and
+  cancel link to the `readyHash` of `valid/coinflip-active-ready-hash`. The
+  shell must base64-encode the bytes and apply the Play API document's
+  `typedData` limit (4096 base64 characters); that wiring belongs to the shell's
+  round flows (#8), not to this package.
 
 - **Action grammar.** The canonical action text is built by a small, separate
   module, `provisionalGrammar`, which holds only the spellings the vendored
