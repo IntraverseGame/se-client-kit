@@ -27,6 +27,13 @@ const withoutVitestEnv = async <T>(action: () => Promise<T>): Promise<T> => {
   }
 };
 
+const pluginNamesOf = (config: UserConfig | undefined): unknown[] =>
+  (config?.plugins ?? []).map(plugin =>
+    typeof plugin === "object" && plugin !== null && "name" in plugin
+      ? plugin.name
+      : plugin,
+  );
+
 const workerPluginsOf = (config: UserConfig | undefined): unknown[] =>
   config?.worker?.plugins?.() ?? [];
 
@@ -96,7 +103,11 @@ describe("the Wrapper's test-only-entry resolve guard", () => {
         join(import.meta.dirname, "..", "vite.config.ts"),
       ),
     );
-    expect(loaded?.config.plugins).toHaveLength(1);
+    // The guard, then the release integrity step (release-integrity.ts).
+    expect(pluginNamesOf(loaded?.config)).toEqual([
+      "se-client-test-only-entry-guard",
+      "se-client-release-integrity",
+    ]);
   });
 
   it("puts the guard in the worker pipeline of a build config too", async () => {

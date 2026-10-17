@@ -1,0 +1,167 @@
+// W-35: while the status is `starting` or `resolving`, the Snapshot is read
+// again with bounded backoff until the status changes; after a longer wait the
+// reads go on at the slow rate with a "taking longer than expected" notice.
+// W-43: a read that gets no response is repeated at the slow rate. Polling
+// stops when the status is not one that is polled (a terminal status included)
+// or when the session ended. One read is in flight at a time; time comes from
+// the injected timers only.
+
+import {
+  POLLING_STATUSES,
+  type RoundStatus,
+  type SnapshotRead,
+} from "./round-input.ts";
+import type { TimerHandle, Timers } from "./timers.ts";
+
+export type PollConfig = {
+  /** The first wait, doubling after each read up to `slowDelayMs`. */
+  readonly initialDelayMs: number;
+  /** The slow rate: the longest wait between two reads. */
+  readonly slowDelayMs: number;
+  /** After this long in one status, the "taking longer" notice shows. */
+  readonly slowNoticeAfterMs: number;
+};
+
+/**
+ * W-35's defaults: 500 ms rising to 2 s (Wrapper configuration). PROVISIONAL:
+ * `slowNoticeAfterMs`; W-35 says "after a longer wait" without a number, so 15
+ * s (W-43's request timeout) holds until the spec gives one.
+ */
+export const DEFAULT_POLL_CONFIG: PollConfig = Object.freeze({
+  initialDelayMs: 500,
+  slowDelayMs: 2_000,
+  slowNoticeAfterMs: 15_000,
+});
+
+export type SnapshotPoller = {
+  /**
+   * Follows the status of the last accepted Snapshot: starts polling in a
+   * polled status, restarts the backoff when the status changes, and stops in
+   * any other (or when `undefined`: the session ended or a state blocks).
+   */
+  readonly follow: (status: RoundStatus | undefined) => void;
+  /** Reads now instead of at the next tick (the connection came back). */
+  readonly pollNow: () => void;
+  readonly stop: () => void;
+  readonly running: () => boolean;
+};
+
+export type SnapshotPollerOptions = {
+  /** One Snapshot read; validated by the session before it resolves. */
+  readonly read: () => Promise<SnapshotRead>;
+  readonly timers: Timers;
+  readonly onRead: (read: SnapshotRead) => void;
+  readonly onSlow: () => void;
+  readonly config?: PollConfig;
+};
+
+type Phase = {
+  readonly status: RoundStatus;
+  readonly startedAt: number;
+  reads: number;
+  slowNotified: boolean;
+};
+
+export const createSnapshotPoller = (
+  options: SnapshotPollerOptions,
+): SnapshotPoller => {
+  const config = options.config ?? DEFAULT_POLL_CONFIG;
+  const { timers } = options;
+  let phase: Phase | undefined;
+  let timer: TimerHandle | undefined;
+  let inFlight = false;
+  let generation = 0;
+
+  const clear = (): void => {
+    if (timer !== undefined) {
+      timers.clearTimeout(timer);
+      timer = undefined;
+    }
+  };
+
+  const backoff = (reads: number): number =>
+    Math.min(config.slowDelayMs, config.initialDelayMs * 2 ** reads);
+
+  const readOnce = async (): Promise<SnapshotRead> => {
+    try {
+      return await options.read();
+    } catch {
+      // A read port that throws reports no usable response.
+      return { kind: "network" };
+    }
+  };
+
+  const tick = async (): Promise<void> => {
+    timer = undefined;
+    if (phase === undefined || inFlight) {
+      return;
+    }
+    inFlight = true;
+    const current = generation;
+    const result = await readOnce();
+    inFlight = false;
+    if (current !== generation) {
+      // Stopped while the read was in flight: its result is not used.
+      return;
+    }
+    options.onRead(result);
+    // `onRead` may have stopped polling or restarted it in a new status.
+    if (phase === undefined || timer !== undefined || current !== generation) {
+      return;
+    }
+    phase.reads += 1;
+    if (
+      !phase.slowNotified &&
+      timers.now() - phase.startedAt >= config.slowNoticeAfterMs
+    ) {
+      phase.slowNotified = true;
+      options.onSlow();
+    }
+    schedule(
+      result.kind === "network" || phase.slowNotified
+        ? config.slowDelayMs
+        : backoff(phase.reads),
+    );
+  };
+
+  const schedule = (ms: number): void => {
+    clear();
+    timer = timers.setTimeout(() => {
+      void tick();
+    }, ms);
+  };
+
+  const stop = (): void => {
+    clear();
+    phase = undefined;
+    generation += 1;
+  };
+
+  return Object.freeze({
+    follow: (status: RoundStatus | undefined): void => {
+      if (status === undefined || !POLLING_STATUSES.has(status)) {
+        stop();
+        return;
+      }
+      if (phase?.status === status) {
+        return;
+      }
+      phase = {
+        status,
+        startedAt: timers.now(),
+        reads: 0,
+        slowNotified: false,
+      };
+      if (!inFlight) {
+        schedule(backoff(0));
+      }
+    },
+    pollNow: (): void => {
+      if (phase !== undefined && !inFlight) {
+        schedule(0);
+      }
+    },
+    stop,
+    running: (): boolean => phase !== undefined,
+  });
+};

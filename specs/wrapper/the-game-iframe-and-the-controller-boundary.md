@@ -121,5 +121,8 @@ Part of the [Wrapper spec](../wrapper.md), section
   URL comes from the environment configuration, and the link opens in a new
   browsing context with `rel="noopener noreferrer"`.
   <!-- TODO(verify API): the verify page URL shape and whether it takes the round id in the path or a fragment. -->
+  Until the shape is decided, the link opens `verifyBaseUrl` itself and the
+  round id is shown beside it with its copy control (one function,
+  `verifyUrlFor` in `apps/wrapper`, changes when it is decided).
 - **W-40.** The round id and the link MUST stay visible until the player starts
   another round, and a new round MUST NOT replace them before the player acts.

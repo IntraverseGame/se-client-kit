@@ -4,9 +4,18 @@ The SuperEngine Wrapper: the page that runs a game in the player's browser. It
 shows the round, asks the player to choose, and hosts the game in a sandboxed
 iframe.
 
-**Status:** pre-release: an empty entry. It is an application, not an npm
-package; a release bundle will be built from it and served from the SuperEngine
-origin. The name is the intended one.
+**Status:** pre-release. It is an application, not an npm package; a release
+bundle is built from it and served from the SuperEngine origin. The name is the
+intended one.
+
+What works today: the Wrapper reads its environment configuration document at
+start and refuses to start on an invalid one (for example `production` with
+fewer than two independent RPC endpoints), and it renders the round from
+validated Snapshots: every status, the typed errors, the degraded and
+connection-problem states, the round id with its verify link after a round ends,
+and polling while a round is prepared or resolved. Opening a session from a
+launch code, the start, move, and cash-out actions, the game iframe, and
+operator embedding are not built yet.
 
 ## What it guarantees
 
@@ -19,8 +28,31 @@ origin. The name is the intended one.
   storage unless its specification says so; the key is never persisted.
 - Amounts are shown from strings or `bigint`, never `number`.
 
-Specified, not implemented yet: the entry is empty today; these are the
-guarantees the Wrapper is specified to give.
+Specified, partly implemented: rendering only validated Snapshots and showing
+amounts from `formatted` strings hold today; the key, the game iframe, and the
+controller protocol arrive with the session and the game.
+
+## Accessibility
+
+The Wrapper's own interface targets WCAG 2.2 level AA: status changes are
+announced politely and errors as alerts, an update never moves focus unless the
+player acted, win, loss, and error have text and an icon beside colour, motion
+stops when the system asks for reduced motion, and the layout reflows at 200 %
+zoom.
+
+## Release bundle
+
+The release bundle has no inline script or style. Its page loads its script and
+stylesheet with Subresource Integrity and carries a Content Security Policy in a
+`<meta>` element. Beside the page, `headers.json` holds the recommended response
+headers (a strict `Content-Security-Policy`, `Referrer-Policy: no-referrer`, and
+a `Permissions-Policy`), with placeholders for the origins each environment
+configures, and `integrity-manifest.json` holds the SHA-256 of every other file.
+The build reads its output back and fails unless it holds only regular files (no
+symbolic link), exactly those the manifest lists, each with its hash, and only
+the allowed types: scripts and stylesheets the page loads with their integrity,
+the two JSON files above, and the one page, `index.html`. Any other type, such
+as another HTML file or an SVG, fails the build.
 
 ## Test data never ships
 

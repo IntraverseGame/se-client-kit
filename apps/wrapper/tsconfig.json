@@ -6,5 +6,13 @@
     "moduleResolution": "Bundler",
     "rewriteRelativeImportExtensions": false
   },
-  "include": ["src", "vite.config.ts", "test-only-entry-guard.ts"]
+  "include": [
+    "src",
+    "vite.config.ts",
+    "test-only-entry-guard.ts",
+    "release-integrity.ts",
+    "release-headers.ts",
+    "release-files.ts",
+    "release-output-check.ts"
+  ]
 }
