@@ -208,6 +208,7 @@ const withVectors = (run: (packageDir: string) => void): void => {
       ["invalid", "b.json"],
       ["signature", "c.json"],
       ["typed-data", "d-e.json"],
+      ["signed-action", "f-g.json"],
     ] as const) {
       mkdirSync(join(vectors, "snapshot", folder), { recursive: true });
       writeFileSync(join(vectors, "snapshot", folder, file), "{}\n");
@@ -229,6 +230,18 @@ describe("catalogSource", () => {
       expect(source).toContain('  typedData: {\n    "d-e": vector3,\n  },');
       expect(source).toContain("  readonly typedData: VectorSet;");
       expect(source).not.toMatch(/^ {2}"typed-data": \{/mu);
+    });
+  });
+
+  it("exports the signed-action/ folder under the key signedAction", () => {
+    withVectors(packageDir => {
+      const source = catalogSource(packageDir);
+      expect(source).toContain(
+        'import vector4 from "./snapshot/signed-action/f-g.json" with { type: "json" };',
+      );
+      expect(source).toContain('  signedAction: {\n    "f-g": vector4,\n  },');
+      expect(source).toContain("  readonly signedAction: VectorSet;");
+      expect(source).not.toMatch(/^ {2}"signed-action": \{/mu);
     });
   });
 

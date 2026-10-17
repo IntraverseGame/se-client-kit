@@ -99,26 +99,29 @@ gives for its `operationId`: a route the document does not serve, at that
 method, for that `operationId`, does not compile, even between two operations of
 one shape (a move at the cash-out route), and a type test keeps it so.
 
-| Function           | Route                    | Retry class  | Credential | Answers                                                                   |
-| ------------------ | ------------------------ | ------------ | ---------- | ------------------------------------------------------------------------- |
-| `redeemLaunchCode` | `POST /sessions:redeem`  | `never`      | none       | `sessionId`, the sealed `playToken`, `tokenExpiresAt`, `sessionExpiresAt` |
-| `refreshPlayToken` | `POST /sessions:refresh` | `refresh`    | play token | the sealed `playToken`, `tokenExpiresAt`                                  |
-| `startRound`       | `POST /rounds:start`     | `idempotent` | play token | the round's Snapshot, `unknown`                                           |
-| `continueRound`    | `POST /rounds:continue`  | `idempotent` | play token | the round's Snapshot, `unknown`                                           |
-| `cashOutRound`     | `POST /rounds:cashOut`   | `idempotent` | play token | the round's Snapshot, `unknown`                                           |
-| `cancelRound`      | `POST /rounds:cancel`    | `never`      | play token | the round's Snapshot, `unknown`                                           |
-| `getSnapshot`      | `GET /snapshot`          | `idempotent` | play token | the session's Snapshot, `unknown`                                         |
+| Function           | Route                    | Retry class  | Credential | Answers                                                                                 |
+| ------------------ | ------------------------ | ------------ | ---------- | --------------------------------------------------------------------------------------- |
+| `redeemLaunchCode` | `POST /sessions:redeem`  | `never`      | none       | `sessionId`, the sealed `playToken`, `tokenExpiresAt`, `sessionExpiresAt`, `gameOrigin` |
+| `refreshPlayToken` | `POST /sessions:refresh` | `refresh`    | play token | the sealed `playToken`, `tokenExpiresAt`                                                |
+| `startRound`       | `POST /rounds:start`     | `idempotent` | play token | the round's Snapshot, `unknown`                                                         |
+| `continueRound`    | `POST /rounds:continue`  | `idempotent` | play token | the round's Snapshot, `unknown`                                                         |
+| `cashOutRound`     | `POST /rounds:cashOut`   | `idempotent` | play token | the round's Snapshot, `unknown`                                                         |
+| `cancelRound`      | `POST /rounds:cancel`    | `never`      | play token | the round's Snapshot, `unknown`                                                         |
+| `getSnapshot`      | `GET /snapshot`          | `idempotent` | play token | the session's Snapshot, `unknown`                                                       |
 
 - **Answers.** Each resolves with `{ body, receivedAtMs, clockOffsetMs }` (the
   last two for the token schedule, W-6). A Snapshot answer is the parsed body,
   unread and `unknown`: only the `snapshot` package's validator types it. The
   two token answers are read, since the shell needs their fields: a redeem
   answer must hold a `sessionId` (`ses_` and 32 lowercase hex digits), a
-  non-empty `playToken`, and both deadlines as RFC 3339 timestamps with a zone;
-  a refresh answer a non-empty `playToken` and `tokenExpiresAt`. Anything else
-  is a `ProtocolError` whose message names the method, path, and status only.
-  The answer is a new frozen object of exactly those fields: a field the
-  document does not list is dropped, never passed on.
+  non-empty `playToken`, both deadlines as RFC 3339 timestamps with a zone, and
+  a `gameOrigin` of 1 to 267 characters (code points, as the document's
+  `minLength` and `maxLength` count them; the document gives no pattern, so
+  whether it is an origin, and an allowed one, is the shell's game bridge's
+  check at mount, W-37); a refresh answer a non-empty `playToken` and
+  `tokenExpiresAt`. Anything else is a `ProtocolError` whose message names the
+  method, path, and status only. The answer is a new frozen object of exactly
+  those fields: a field the document does not list is dropped, never passed on.
 - **The token is sealed** (W-3, W-4; decided by human review, 2026-10-17). The
   redeem and the refresh take a `seal: (token: string) => T` from the caller,
   generic in `T`, and call it once with the new play token of a valid answer,

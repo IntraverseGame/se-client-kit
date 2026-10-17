@@ -79,7 +79,7 @@ describe("the open session", () => {
   });
 
   it("mounts the game for D with its pick, which signs and reports the answer", async () => {
-    const opened = await open({ gameOrigin: () => GAME });
+    const opened = await open();
     const session = sessionOf(opened);
     opened.play.answer("startRound", ok(issued.snapshot));
     await session.start(ROUND_REQUEST.bet);
@@ -107,20 +107,18 @@ describe("the open session", () => {
     expect(changes).toEqual(["snapshot"]);
   });
 
-  it("mounts no game without a game origin (W-37)", async () => {
+  it("mounts no game once the session ended (W-37)", async () => {
     const session = sessionOf(await open());
+    session.end();
     expect(session.mountGame(mountOf(createFakeGame()))).toEqual({
       ok: false,
-      refusal: "no-game-origin",
+      refusal: "session-ended",
     });
   });
 
   it("checks D against the allow-list it was opened with, never one the UI gives (W-37)", async () => {
     const session = sessionOf(
-      await open({
-        gameOrigin: () => GAME,
-        gameOrigins: ["https://other.example.net"],
-      }),
+      await open({ gameOrigins: ["https://other.example.net"] }),
     );
     const game = createFakeGame();
     // A caller that slips in its own list and origin past the type.
@@ -137,7 +135,7 @@ describe("the open session", () => {
 
   it("checks D against its own origin, fixed at open (W-37)", async () => {
     const session = sessionOf(
-      await open({ gameOrigin: () => SE_ORIGIN, gameOrigins: [SE_ORIGIN] }),
+      await open({ gameOrigin: SE_ORIGIN, gameOrigins: [SE_ORIGIN] }),
     );
     expect(session.mountGame(mountOf(createFakeGame()))).toEqual({
       ok: false,

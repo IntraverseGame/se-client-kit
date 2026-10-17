@@ -68,8 +68,8 @@ export type GameMount =
   | { readonly ok: true; readonly gameOrigin: string }
   | {
       readonly ok: false;
-      /** `no-game-origin`: the session has no game origin to mount (W-37). */
-      readonly refusal: ControllerMountRefusal | "no-game-origin";
+      /** `session-ended`: the session ended, so it mounts no game (W-37). */
+      readonly refusal: ControllerMountRefusal | "session-ended";
     };
 
 export type PlaySession = {
@@ -83,8 +83,12 @@ export type PlaySession = {
   /** Cashes out the current round, on the player's request only (W-24). */
   readonly cashOut: () => Promise<SessionRead>;
   readonly round: () => RoundState | undefined;
-  /** The game origin D of the launched game, if known (W-37). */
-  readonly gameOrigin: () => string | undefined;
+  /**
+   * The game origin D of the launched game: the `sessions:redeem` answer's
+   * `gameOrigin`, fixed at open (W-37). It is not yet checked: `mountGame`
+   * checks it.
+   */
+  readonly gameOrigin: () => string;
   /**
    * Mounts the game's controller bridge for D, with the session's pick use
    * case, allow-list, and own origin (W-37).

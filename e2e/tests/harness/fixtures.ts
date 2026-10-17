@@ -1,9 +1,10 @@
 // The suite's `test`: Playwright's, extended with the fixtures every e2e test
 // stands on. Automatic for every test: the hermetic guard (no request leaves
-// the fake origins), the static origins (the Wrapper's release bundle and the
-// suite's test pages), and the seeded `crypto.getRandomValues`. On request:
-// the fake Play API, the secret scan, and the network control. The
-// accessibility audit is a plain function (accessibility.ts).
+// the fake origins), the static origins (the Wrapper's release bundle, the
+// suite's test pages, and the reference game at D), and the seeded
+// `crypto.getRandomValues`. On request: the fake Play API, the secret scan,
+// and the network control. The accessibility audit is a plain function
+// (accessibility.ts).
 
 import { test as base, expect } from "@playwright/test";
 

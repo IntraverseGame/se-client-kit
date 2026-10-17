@@ -36,7 +36,6 @@ export type FakeSession = {
   readonly answerStart: (read: SessionRead) => void;
   readonly answerCashOut: (read: SessionRead) => void;
   readonly setRound: (round: RoundState | undefined) => void;
-  readonly setGameOrigin: (origin: string | undefined) => void;
   readonly setMount: (answer: (options: GameMountOptions) => GameMount) => void;
   readonly mounts: GameMountOptions[];
   /** Fires an answer that arrives outside a call (a game's pick). */
@@ -49,9 +48,13 @@ export type FakeSession = {
 const next = (queue: SessionRead[]): SessionRead =>
   (queue.length > 1 ? queue.shift() : queue[0]) ?? { kind: "network" };
 
+/** The D the stand-in's redeem gave it; `setMount` decides the bridge's verdict. */
+export const FAKE_GAME_ORIGIN = "https://game.example.net";
+
+/** By default the session refuses the mount, as an ended one does. */
 const refuseMount = (_options: GameMountOptions): GameMount => ({
   ok: false,
-  refusal: "no-game-origin",
+  refusal: "session-ended",
 });
 
 export const createFakeSession = (): FakeSession => {
@@ -64,7 +67,6 @@ export const createFakeSession = (): FakeSession => {
   const endListeners = new Set<() => void>();
   let cashOuts = 0;
   let round: RoundState | undefined;
-  let gameOrigin: string | undefined;
   let ended = false;
   let mount = refuseMount;
   const session: PlaySession = {
@@ -79,7 +81,7 @@ export const createFakeSession = (): FakeSession => {
       return Promise.resolve(next(cashOutAnswers));
     },
     round: () => round,
-    gameOrigin: () => gameOrigin,
+    gameOrigin: () => FAKE_GAME_ORIGIN,
     mountGame: options => {
       mounts.push(options);
       return mount(options);
@@ -106,9 +108,6 @@ export const createFakeSession = (): FakeSession => {
     answerCashOut: read => cashOutAnswers.push(read),
     setRound: value => {
       round = value;
-    },
-    setGameOrigin: value => {
-      gameOrigin = value;
     },
     setMount: answer => {
       mount = answer;

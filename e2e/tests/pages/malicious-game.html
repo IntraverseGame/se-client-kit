@@ -1,0 +1,105 @@
+<!doctype html>
+<!--
+  T-18's malicious test game, served at the game origin D in place of the
+  reference game. Framed by the Wrapper, it tries to reach the parent's
+  document, storage, and location, sends a valid hello, then forged messages
+  (a pick outside an active round, a pick with extra fields, a message of an
+  unknown type, and a Snapshot of its own), and records, as text in its own
+  page, what each attempt gave and every message it received, so the test and
+  the secret scan can read it. Its last message, the probe, is answered
+  `invalid` after everything before it. Test-only.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Malicious test game</title>
+    <script>
+      window.attempts = {};
+      window.received = [];
+      const record = () => {
+        document.getElementById("record").textContent = JSON.stringify({
+          attempts: window.attempts,
+          received: window.received,
+        });
+      };
+      const attempt = (name, read) => {
+        try {
+          const value = read();
+          window.attempts[name] = { ok: true, value: String(value) };
+        } catch (error) {
+          window.attempts[name] = {
+            ok: false,
+            error: error instanceof Error ? error.name : typeof error,
+          };
+        }
+      };
+      window.addEventListener("message", event => {
+        window.received.push({ origin: event.origin, data: event.data });
+        record();
+      });
+      window.addEventListener("DOMContentLoaded", () => {
+        attempt("parent.document", () => window.parent.document.body.innerHTML);
+        attempt("parent.localStorage", () =>
+          JSON.stringify(window.parent.localStorage),
+        );
+        attempt("parent.sessionStorage", () =>
+          JSON.stringify(window.parent.sessionStorage),
+        );
+        attempt("parent.location.href", () => window.parent.location.href);
+        attempt("top.document.cookie", () => window.top.document.cookie);
+        attempt("parent.indexedDB", () => window.parent.indexedDB.databases);
+        const schema = "se.controller/1";
+        const post = message => window.parent.postMessage(message, "*");
+        post({
+          schema,
+          type: "hello",
+          presentations: ["steps"],
+          statuses: [
+            "idle",
+            "starting",
+            "active",
+            "resolving",
+            "won",
+            "lost",
+            "canceled",
+          ],
+        });
+        post({
+          schema,
+          type: "action",
+          id: "forged-1",
+          verb: "pick",
+          args: { step: 0, option: 1 },
+        });
+        post({
+          schema,
+          type: "action",
+          id: "forged-2",
+          verb: "pick",
+          args: { step: 0, option: 1 },
+          signature: "0x00",
+        });
+        post({ schema, type: "give-me-the-key" });
+        post({ schema, type: "snapshot", snapshot: { status: "won" } });
+        // Last, a well-formed action with a bad verb, which the bridge answers
+        // `invalid` at once: every message above was handled before it, in
+        // order, so its answer marks the end of the bridge's answers.
+        post({
+          schema,
+          type: "action",
+          id: "probe",
+          verb: "jump",
+          args: { step: 0, option: 1 },
+        });
+        window.attempts.done = { ok: true, value: "posted" };
+        record();
+      });
+    </script>
+  </head>
+  <body>
+    <main>
+      <h1>Malicious test game</h1>
+      <pre id="record"></pre>
+    </main>
+  </body>
+</html>

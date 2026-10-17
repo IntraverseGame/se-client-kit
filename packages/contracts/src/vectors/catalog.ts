@@ -115,6 +115,7 @@ import vector108 from "./snapshot/typed-data/cash-out.json" with { type: "json" 
 import vector109 from "./snapshot/typed-data/coinflip-cancel.json" with { type: "json" };
 import vector110 from "./snapshot/typed-data/coinflip-pick.json" with { type: "json" };
 import vector111 from "./snapshot/typed-data/pick-multi-path.json" with { type: "json" };
+import vector112 from "./snapshot/signed-action/coinflip-cancel.json" with { type: "json" };
 import signing from "./signing.json" with { type: "json" };
 
 /** Every vector is data of unknown shape: a consumer validates what it reads. */
@@ -127,6 +128,11 @@ export type SnapshotVectors = {
   readonly signature: VectorSet;
   /** The canonical typedData bytes of signed actions, from their fields. */
   readonly typedData: VectorSet;
+  /**
+   * Signed actions made by an independent signer: the EIP-712 message, its
+   * hashes, and the signature, from a public test key.
+   */
+  readonly signedAction: VectorSet;
 };
 
 export const signingVectors: unknown = signing;
@@ -251,5 +257,8 @@ export const snapshotVectors: SnapshotVectors = {
     "coinflip-cancel": vector109,
     "coinflip-pick": vector110,
     "pick-multi-path": vector111,
+  },
+  signedAction: {
+    "coinflip-cancel": vector112,
   },
 };

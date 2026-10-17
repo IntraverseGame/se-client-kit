@@ -46,15 +46,9 @@ export type SessionParts = {
   /** The refresh fraction and margin (W-6); play-client's defaults otherwise. */
   readonly refresh?: RefreshConfig;
   /**
-   * PROVISIONAL (TODO(Play API): gameOrigin on redeem): the game origin D of
-   * the launched game, the `sessions:redeem` answer's `gameOrigin` (W-37).
-   * Until the vendored Play API document has the field, the source is injected,
-   * and without one no game is mounted.
-   */
-  readonly gameOrigin?: () => string | undefined;
-  /**
    * The configuration's allow-list of game origins (`gameOrigins`), copied at
-   * open: `mountGame` checks D against it, and the UI cannot give it another
+   * open: `mountGame` checks D, the `sessions:redeem` answer's `gameOrigin`,
+   * against it, and the UI can give it neither another D nor another list
    * (W-37).
    */
   readonly gameOrigins: readonly string[];

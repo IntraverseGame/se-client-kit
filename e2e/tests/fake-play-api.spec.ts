@@ -4,7 +4,7 @@
 // them. Part two (scripted failures and refusals) is fake-play-script.spec.ts.
 
 import { expect, test } from "./harness/fixtures.ts";
-import { PAGES_ORIGIN } from "./harness/origins.ts";
+import { GAME_ORIGIN, PAGES_ORIGIN } from "./harness/origins.ts";
 import { ACTION, call, openSession, tokenOf } from "./harness/play-calls.ts";
 import { validVector } from "./harness/vectors.ts";
 
@@ -36,6 +36,7 @@ test.describe("the fake Play API", () => {
       playToken: expect.stringMatching(/^pt_[\w-]{43}$/u),
       tokenExpiresAt: "2026-10-16T12:15:00.000Z",
       sessionExpiresAt: "2026-10-16T14:00:00.000Z",
+      gameOrigin: GAME_ORIGIN,
     });
     const again = await call(page, "/play/v1/sessions:redeem", {
       body: { launchCode: fakePlayApi.launchCode },

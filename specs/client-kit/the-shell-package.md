@@ -69,7 +69,10 @@ are in brackets.
   (play-client's `createTransport`, W-3, W-43) and resolves with a
   `SessionOpening`. Its options also carry the configuration's `gameOrigins` and
   the Wrapper's own origin (`ownOrigin`), copied at open: the session's
-  `mountGame` checks D against these, never against a list the UI gives (W-37):
+  `mountGame` checks D against these, never against a list the UI gives (W-37).
+  D itself is the redeem answer's `gameOrigin`, fixed at open: no option can
+  give it, and a redeem answer without one is `redeem-failed` (play-client
+  refuses it), so no session opens without D:
   - `no-launch-code` when the code is `undefined` (nothing is sent);
     `redeem-failed` after a refused, lost, or unreadable redeem, which is sent
     once and never repeated (W-2); the code is forgotten after the redeem;
@@ -115,7 +118,9 @@ are in brackets.
     Snapshot through `onChange`, and the session's own `gameOrigins` and
     `ownOrigin` (the options, `GameMountOptions`, are only the frame, its
     message listener, and the incompatible-game notice; a list or an origin a
-    caller adds is overridden); `no-game-origin` without a D;
+    caller adds is overridden). `gameOrigin()` is D, unchecked (the bridge
+    checks it at mount); `mountGame` refuses `session-ended` once the session
+    ended;
   - `onChange`, `onEnd`, `ended()`, and `end()`. Every answer is a validated
     Snapshot, a validated typed error, or a closed code: no key, token, launch
     code, signature, or transcript. The session logs nothing.
@@ -550,9 +555,6 @@ are in brackets.
     stricter `future` rule waits for the contract that carries the mode. Kept
     provisional (decided in human review, 2026-10-17).
     <!-- TODO(bind mode): take `bindMode` from the contract that carries it (the Snapshot or the signed-action spec) and drop the session input. -->
-  - The game origin D is an injected source of the session (`gameOrigin`) until
-    the vendored Play API document has the redeem answer's `gameOrigin` (W-37);
-    the Wrapper wires none, so no game is mounted yet.
   - `tipLagMargin` has no default and is required per source: the margin in
     blocks per chain is not decided (W-26b).
   - The bind's mode (`future` or `tip`) and `N` are inputs of the decision: the

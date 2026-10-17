@@ -95,10 +95,21 @@ describe("an answer that does not match the document", () => {
       { ...redeemAnswer, tokenExpiresAt: "2026-10-16T12:15:00" },
     ],
     ["no sessionExpiresAt", { ...redeemAnswer, sessionExpiresAt: undefined }],
+    ["no gameOrigin", { ...redeemAnswer, gameOrigin: undefined }],
+    ["an empty gameOrigin", { ...redeemAnswer, gameOrigin: "" }],
+    [
+      "a gameOrigin of 268 characters",
+      { ...redeemAnswer, gameOrigin: `https://${"a".repeat(260)}` },
+    ],
+    [
+      "a gameOrigin of 268 code points outside the BMP",
+      { ...redeemAnswer, gameOrigin: "\u{1F3B2}".repeat(268) },
+    ],
+    ["a numeric gameOrigin", { ...redeemAnswer, gameOrigin: 1 }],
   ])("refuses a redeem answer with %s", async (_name, body) => {
     h.server.answer("redeemLaunchCode", {
       kind: "success",
-      body: body as typeof redeemAnswer,
+      body: body as unknown as typeof redeemAnswer,
     });
     const { error } = await h.settle(
       redeemLaunchCode(

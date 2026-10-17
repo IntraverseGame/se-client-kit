@@ -79,8 +79,10 @@ try {
     `{ body, receivedAtMs, clockOffsetMs }`. The redeem and refresh answers are
     checked and typed; their new play token is handed to the `seal` you pass
     (`(token: string) => T`) and the answer holds only what it returns
-    (`Sealed<...Response, T>`), so the plain token never leaves the package. A
-    Snapshot answer is `unknown`.
+    (`Sealed<...Response, T>`), so the plain token never leaves the package. The
+    redeem answer also holds `gameOrigin`, the origin to frame the game at,
+    checked only against the document's length bounds: whether it is an allowed
+    origin is the shell's check. A Snapshot answer is `unknown`.
   - `PLAY_ROUTES` is each operation's method and path below the base, checked
     against the document at compile time. The wire types are the document's
     generated types: `RedeemLaunchCodeRequest`, `RedeemLaunchCodeResponse`,

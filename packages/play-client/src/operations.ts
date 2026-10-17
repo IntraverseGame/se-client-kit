@@ -68,6 +68,9 @@ export type RefreshCallOptions<S> = AuthorizedCallOptions & {
 
 const SESSION_ID = /^ses_[0-9a-f]{32}$/u;
 
+/** The document's `maxLength` of `RedeemResponse.gameOrigin`. */
+const MAX_GAME_ORIGIN = 267;
+
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -81,6 +84,16 @@ const isToken = (value: unknown): value is string =>
 
 const isDeadline = (value: unknown): value is string =>
   parseDeadline(value) !== undefined;
+
+/**
+ * The document's bounds of `gameOrigin`: 1 to 267 characters, counted as JSON
+ * Schema counts them (code points). Whether it is an origin, and an allowed
+ * one, is the shell's game bridge's check (W-37), not this one.
+ */
+const isGameOrigin = (value: unknown): value is string =>
+  typeof value === "string" &&
+  value.length > 0 &&
+  (value.length <= MAX_GAME_ORIGIN || [...value].length <= MAX_GAME_ORIGIN);
 
 const result = <Body>(response: PlayResponse, body: Body): PlayResult<Body> =>
   Object.freeze({
@@ -101,9 +114,9 @@ const mismatch = (id: PlayOperationId, status: number): ProtocolError =>
  * (`redeemLaunchCode`, W-1, W-2). It sends no credential, and it is never
  * repeated: the code is single use, so a lost or failed redeem needs a new
  * launch. Throws a `ProtocolError` when the answer lacks a field the shell
- * needs (`sessionId` as `ses_` and 32 hex digits, a non-empty `playToken`, and
- * both deadlines as RFC 3339 timestamps with a zone). The token is returned
- * only as `options.seal` made it.
+ * needs (`sessionId` as `ses_` and 32 hex digits, a non-empty `playToken`, both
+ * deadlines as RFC 3339 timestamps with a zone, and `gameOrigin` of 1 to 267
+ * characters). The token is returned only as `options.seal` made it.
  */
 export const redeemLaunchCode = async <S>(
   transport: Transport,
@@ -122,12 +135,14 @@ export const redeemLaunchCode = async <S>(
   const playToken = field(answer, "playToken");
   const tokenExpiresAt = field(answer, "tokenExpiresAt");
   const sessionExpiresAt = field(answer, "sessionExpiresAt");
+  const gameOrigin = field(answer, "gameOrigin");
   if (
     typeof sessionId !== "string" ||
     !SESSION_ID.test(sessionId) ||
     !isToken(playToken) ||
     !isDeadline(tokenExpiresAt) ||
-    !isDeadline(sessionExpiresAt)
+    !isDeadline(sessionExpiresAt) ||
+    !isGameOrigin(gameOrigin)
   ) {
     throw mismatch("redeemLaunchCode", response.status);
   }
@@ -138,6 +153,7 @@ export const redeemLaunchCode = async <S>(
       playToken: options.seal(playToken),
       tokenExpiresAt,
       sessionExpiresAt,
+      gameOrigin,
     }),
   );
 };

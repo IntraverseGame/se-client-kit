@@ -122,8 +122,9 @@ structure below.
   (`typed-data.ts`); no options type carries an encoder: a test passes one
   only as the separate `FlowTestHooks` argument of the internal constructors,
   and the session passes none. Do not move it back into an options type.
-  Provisional session inputs: `bindMode` (the Wrapper wires `tip`) and the
-  `gameOrigin` source (none wired until the redeem's `gameOrigin` is vendored).
+  Provisional session input: `bindMode` (the Wrapper wires `tip`). D is the
+  redeem answer's `gameOrigin`, fixed at open; no session option gives it, so
+  do not add one back (W-37).
 - **A Snapshot is untrusted until validated.** `play-client` returns it as
   `unknown`; only `snapshot`'s validator produces a typed value, so an
   unvalidated Snapshot cannot reach the renderer by construction.

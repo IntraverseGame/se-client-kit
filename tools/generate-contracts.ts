@@ -190,6 +190,7 @@ export const catalogSource = (packageDir: string): string => {
     ["invalid", "invalid"],
     ["signature", "signature"],
     ["typed-data", "typedData"],
+    ["signed-action", "signedAction"],
   ] as const;
   for (const [kind, key] of folders) {
     const names = findFiles(join(root, "snapshot", kind), () => true);
@@ -217,6 +218,11 @@ export const catalogSource = (packageDir: string): string => {
     "  readonly signature: VectorSet;",
     "  /** The canonical typedData bytes of signed actions, from their fields. */",
     "  readonly typedData: VectorSet;",
+    "  /**",
+    "   * Signed actions made by an independent signer: the EIP-712 message, its",
+    "   * hashes, and the signature, from a public test key.",
+    "   */",
+    "  readonly signedAction: VectorSet;",
     "};",
     "",
     "export const signingVectors: unknown = signing;",

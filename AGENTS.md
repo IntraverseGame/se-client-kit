@@ -161,9 +161,12 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   the play token, or anything derived from them beyond the session. The
   redacting types and logger of the shell are the only way to log near them. No
   secrets, keys, tokens, or connection strings in code, tests, fixtures, issues,
-  or comments. The public development keys the vectors were signed with
-  (`packages/signing/src/fixtures/keys.ts`) are public by design and are the
-  only exception.
+  or comments. The public development keys the vectors were signed with are
+  public by design and are the only exception: they may appear only in
+  `packages/signing/src/fixtures/keys.ts` and in the vendored `signed-action/`
+  vectors in `packages/contracts` (`src/vectors/snapshot/signed-action/`), which
+  embed the same public test key (anvil account 3, test-only, never funded) and
+  cannot be edited.
 - **Money amounts are strings or `bigint`, never JS `number`**, at every
   boundary and in every type. Arithmetic on amounts uses `bigint` in base units.
   A decimal value (a rate, a fee) is never a ledger amount; converting one to
@@ -205,8 +208,10 @@ What is published cannot be taken back once cloned, forked, or cached. Never
 add, in any file, commit, issue, pull request, log, or agent output:
 
 - credentials, tokens, private keys (other than the public development keys the
-  vectors were signed with, `packages/signing/src/fixtures/keys.ts`), connection
-  strings, npm or deploy credentials;
+  vectors were signed with, in `packages/signing/src/fixtures/keys.ts` and in
+  the vendored `signed-action/` vectors of `packages/contracts`, which embed the
+  same public test key and cannot be edited), connection strings, npm or deploy
+  credentials;
 - internal hostnames or URLs, dashboard links, cloud account or resource
   identifiers;
 - unpublished backend internals: only the player-facing contracts (the Play API

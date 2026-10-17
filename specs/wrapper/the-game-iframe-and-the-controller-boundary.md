@@ -8,11 +8,12 @@ Part of the [Wrapper spec](../wrapper.md), section
   D, which MUST differ from the SE origin and MUST be on a different registrable
   domain, so a script in the game can never reach the Wrapper's storage or code.
   The Wrapper MUST refuse to mount a game whose origin equals its own, MUST take
-  D only from the `sessions:redeem` response's `gameOrigin` (the launched game's
-  catalog value, per game version, set by the server), and MUST mount it only
-  when D is on the environment configuration's `gameOrigins` allow-list. It
-  never takes D from the operator's launch URL or anything else the operator
-  supplies, a message, a URL parameter, or the Snapshot.
+  D only from the `sessions:redeem` response's `gameOrigin`
+  (`RedeemResponse.gameOrigin`: the launched game's catalog value, per game
+  version, set by the server), and MUST mount it only when D is on the Wrapper's
+  own allow-list, the environment configuration's `gameOrigins`. It never takes
+  D from the operator's launch URL or launch response or anything else the
+  operator supplies, a game message, a URL parameter, or the Snapshot.
   - **At mount** the `shell`'s bridge refuses (and does not listen) when D or
     the Wrapper's origin is not a serialized origin as `event.origin` gives it
     (`https://host[:port]`, or `http:` on a loopback host only; lowercase, no
@@ -34,10 +35,11 @@ Part of the [Wrapper spec](../wrapper.md), section
     `sessions:redeem` response's `gameOrigin`, a serialized origin with no path
     (`https:`, or a loopback `http:` origin in a local environment), which the
     backend takes from the game catalog. The operator cannot set D, and the
-    launch URL never carries it. Until the vendored Play API document has the
-    field, the shell takes D from an injected source (`gameOrigin` in the
-    session's options) and the Wrapper wires none, so no game is mounted.
-    <!-- TODO(Play API, catalog): `gameOrigin` on the redeem answer is not in the vendored document yet; the shell reads it once it is vendored. See rfcs/active/RFC-001-operator-launch-contract.md (draft): no operator message carries D. -->
+    launch URL never carries it. `play-client` refuses a redeem answer whose
+    `gameOrigin` is missing, empty, or longer than 267 characters (the
+    document's bounds), so no session opens without D; the shell takes D from
+    that answer only, and the bridge checks it at mount (above).
+    <!-- See rfcs/active/RFC-001-operator-launch-contract.md (draft): no operator message carries D. -->
   - **The frame's URL** is D's root with the Wrapper's own serialized origin as
     the query parameter `parentOrigin`, built with the `URL` API (decided in
     human review, 2026-10-17): for example

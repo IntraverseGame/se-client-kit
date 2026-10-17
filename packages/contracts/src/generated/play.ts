@@ -5,9 +5,10 @@ export type paths = {
     /**
      * Exchange a launch code for a play token
      * @description Redeems the single-use launch code of a launch URL and returns the
-     * session's first play token. A code is redeemed at most once: a second
-     * call, an expired code, and an unknown code are the same 401. A lost
-     * response cannot be repeated; the player needs a new launch.
+     * session's first play token and the origin to frame the game at. A code
+     * is redeemed at most once: a second call, an expired code, and an
+     * unknown code are the same 401. A lost response cannot be repeated; the
+     * player needs a new launch.
      */
     post: operations["redeemLaunchCode"];
   };
@@ -114,6 +115,11 @@ export type components = {
        * @description The session's hard end; no token outlives it.
        */
       sessionExpiresAt: string;
+      /**
+       * @description The origin to frame the game at, and the only origin to exchange messages with: a serialized origin with no path, such as `https://games.example.com`, exactly as a browser reports it in `event.origin`. It is the same for the whole session. Frame the game only if it is on your own allow-list.
+       * @example https://games.example.com
+       */
+      gameOrigin: string;
     };
     RefreshResponse: {
       /** @description The new bearer token. Secret. */
@@ -440,9 +446,10 @@ export type operations = {
   /**
    * Exchange a launch code for a play token
    * @description Redeems the single-use launch code of a launch URL and returns the
-   * session's first play token. A code is redeemed at most once: a second
-   * call, an expired code, and an unknown code are the same 401. A lost
-   * response cannot be repeated; the player needs a new launch.
+   * session's first play token and the origin to frame the game at. A code
+   * is redeemed at most once: a second call, an expired code, and an
+   * unknown code are the same 401. A lost response cannot be repeated; the
+   * player needs a new launch.
    */
   redeemLaunchCode: {
     requestBody: {

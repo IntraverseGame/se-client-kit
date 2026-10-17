@@ -12,11 +12,11 @@ round is shown as being checked until the shell's W-26 checks pass, and as
 "this round failed verification", "could not verify the chain", or out of sync
 when they do not; the cash-out control is offered only when the shell offers
 it, and a second start or cash-out click while one is in flight does nothing
-(the shell refuses it too). Polling follows the shell's `isRoundOver`. The game iframe is mounted,
-sandboxed and titled, on the session's game origin D with
-`?parentOrigin=<the Wrapper's origin>` only once the shell's bridge accepted D
-(no source of D is wired yet, so no game is mounted). No payout amount is
-shown on `won` until the Snapshot carries one. The tip check's JSON-RPC
+(the shell refuses it too). Polling follows the shell's `isRoundOver`. The
+game iframe is mounted, sandboxed and titled, on the session's game origin D
+(the redeem answer's `gameOrigin`) with `?parentOrigin=<the Wrapper's origin>`
+only once the shell's bridge accepted D. No payout amount is shown on `won`
+until the Snapshot carries one. The tip check's JSON-RPC
 transport is added. Operator embedding, the W-49 minimum: a framed Wrapper
 opens no session unless `location.ancestorOrigins` exists and every entry is on
 `operatorOrigins` (a masked entry refuses); without that list (Firefox) it
