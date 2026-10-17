@@ -7,9 +7,11 @@ Part of the [Wrapper spec](../wrapper.md), section
   `<iframe sandbox="allow-scripts allow-same-origin">` served from game origin
   D, which MUST differ from the SE origin and MUST be on a different registrable
   domain, so a script in the game can never reach the Wrapper's storage or code.
-  The Wrapper MUST refuse to mount a game whose origin equals its own, and MUST
-  take D only from the environment configuration allow-list (never from a
-  message, a URL parameter, or the Snapshot).
+  The Wrapper MUST refuse to mount a game whose origin equals its own, MUST take
+  D only from the launched game's catalog entry, served by the Play API, and
+  MUST mount it only when D is on the environment configuration's `gameOrigins`
+  allow-list. It never takes D from a message, a URL parameter, the launch
+  response, or the Snapshot.
   - **At mount** the `shell`'s bridge refuses (and does not listen) when D or
     the Wrapper's origin is not a serialized origin as `event.origin` gives it
     (`https://host[:port]`, or `http:` on a loopback host only; lowercase, no
@@ -23,7 +25,10 @@ Part of the [Wrapper spec](../wrapper.md), section
     a public suffix list, which is a new dependency and needs an ADR. Until then
     only an equal origin is refused (decided in human review, 2026-10-17).
     <!-- TODO(W-37, registrable domain): check D against the SE origin's registrable domain; needs a public suffix list and an ADR for the dependency. -->
-  <!-- TODO(Play API, catalog): where D comes from for a launched game (the game's release target or the launch response). -->
+  - **Where D comes from** was decided by the product owner on 2026-10-17 (the
+    catalog, above): the operator cannot set D, and the launch URL never carries
+    it.
+    <!-- TODO(Play API, catalog): the field is not served yet. -->
 - **W-38.** A message from the game is accepted only if `event.source` is the
   game frame's `contentWindow` **and** `event.origin` is D. The Wrapper posts to
   the game only with `targetOrigin = D`. Every accepted message MUST be parsed
