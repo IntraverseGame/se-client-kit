@@ -60,11 +60,11 @@ export type RoundEnd = {
 
 /**
  * Whether the Snapshot's round is over (`won`, `lost`, or `canceled`): the one
- * place the kit decides it, read by the shell's transcript state and by the
- * Wrapper's polling (W-35) and rendering (W-39, W-40). `closeReason` is in the
- * input for the rule #41 adds here (a `canceled` that answers the shell's own
- * cancel, with no `closeReason`, is not final yet); today the status alone
- * decides.
+ * place the kit decides it from a Snapshot, read by the shell's transcript
+ * state and by the Wrapper's polling (W-35) and rendering (W-39, W-40). The
+ * status alone decides: `canceled` is final, with or without a `closeReason`
+ * (`se.snapshot/1` as vendored from b27afc5). Whether a round with a cancel
+ * still settling is over is the round flow's cancel state, not this.
  */
 export const isRoundOver = (snapshot: RoundEnd): boolean =>
   TERMINAL.has(snapshot.status);

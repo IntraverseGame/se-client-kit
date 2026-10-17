@@ -11,7 +11,7 @@ Part of the [Client kit spec](../client-kit.md), section
   normalizes `s`.
 - **What it encodes today.** The domain
   (`EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)`),
-  `PlayerAction` and `PlayerCashOut`
+  `PlayerAction`, `PlayerCashOut`, and `PlayerCancel`
   (`(string action,uint8[] path,uint32 sequence,bytes32 round,bytes32 previous)`,
   where `round` is the round id), `CreateRoundAuth`, `MarkReadyAuth`, and
   `CloseRoundAuth`, each with its type hash, `hashStruct`, and the `0x1901`
@@ -42,10 +42,9 @@ Part of the [Client kit spec](../client-kit.md), section
   its `created` hash is signed (in `CreateRoundAuth`).
   - **`PlayerCancel`** is published in the signed-action specification: the same
     fields as `PlayerAction`, type hash
-    `0xacaf7a5ad98f54f1cf2ba32c94a782121894bc4306dbb28b7683c5ef579a9ce6`. It is
-    not implemented yet, because no independent signer has produced a vector for
-    it.
-    <!-- TODO(signed-action spec): the `PlayerCancel` vector from an independent signer (tracked in #41); `signing` encodes `PlayerCancel` once it is vendored. -->
+    `0xacaf7a5ad98f54f1cf2ba32c94a782121894bc4306dbb28b7683c5ef579a9ce6`.
+    `hashPlayerCancel` encodes it, pinned by the independent signer's
+    `signed-action/coinflip-cancel` Snapshot vector (Foundry cast; #41).
   - **`PayoutTerms`** reaches the player only as `newRound.payoutTermsHash`,
     taken as signed (W-26, check 3). No player-facing document publishes a
     `PayoutTerms` type, so the kit has none to encode.
@@ -134,17 +133,23 @@ Part of the [Client kit spec](../client-kit.md), section
   test-only entry of the `contracts` package, where they are copied with their
   source commit noted. The signed-action specification publishes no separate
   player-facing vector file: its independent vectors for `PlayerAction` and
-  `PlayerCashOut` are these signing vectors. An independent `PlayerCancel`
-  vector is vendored (`snapshotVectors.signedAction["coinflip-cancel"]`, signed
-  with `PLAYER_KEY`) but not replayed yet (#41). The signing vector file names
-  its two signing keys (the action key `player` and the admin `engine`) as the
-  well-known local development accounts but does not carry them, so the tests
-  hold those two keys in a test fixture
-  (`packages/signing/src/fixtures/keys.ts`). They are the vectors' test keys
-  (the AGENTS.md exception): public by design, the default accounts of the local
-  Ethereum development node, holding nothing and never used outside tests. The
-  tests prove each derives the address the vectors give. The negative cases (a
-  high `s`, a bad `v`, a wrong length, `r` or `s` out of range, a changed
-  `previous`) are derived from the vector signatures; the zero-address case
-  replaces Keccak-256 in one test file, since no key with the zero address is
-  known.
+  `PlayerCashOut` are these signing vectors. `PlayerCancel`'s is the backend's
+  independent `signed-action/coinflip-cancel` Snapshot vector, vendored and read
+  through the same entry (`snapshotVectors.signedAction["coinflip-cancel"]`,
+  signed with `PLAYER_KEY`) and replayed: the tests reproduce its type hash,
+  domain separator, struct hash, and digest, sign the digest with the `player`
+  key (its test key, the same public account) to its exact bytes, and recover
+  both that signature and the vector's to its address (#41). That vector file
+  carries its test key (`testKey`): the tests read its address, a contracts test
+  checks that it is the same public key as `PLAYER_KEY`, and the tests sign with
+  the fixture below, not with it. The signing vector file names its two signing
+  keys (the action key `player` and the admin `engine`) as the well-known local
+  development accounts but does not carry them, so the tests hold those two keys
+  in a test fixture (`packages/signing/src/fixtures/keys.ts`). They are the
+  vectors' test keys (the AGENTS.md exception): public by design, the default
+  accounts of the local Ethereum development node, holding nothing and never
+  used outside tests. The tests prove each derives the address the vectors give.
+  The negative cases (a high `s`, a bad `v`, a wrong length, `r` or `s` out of
+  range, a changed `previous`) are derived from the vector signatures; the
+  zero-address case replaces Keccak-256 in one test file, since no key with the
+  zero address is known.

@@ -12,6 +12,7 @@ import { newIntent, type RandomUuid } from "@intraverse/se-client-play-client";
 import {
   type Bytes32,
   createTranscript,
+  hashPlayerCancel,
   type PlayerMessage,
   type SignedEntry,
   type Signature,
@@ -25,7 +26,6 @@ import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 import type { SettledInitial } from "./create-round-auth.ts";
 import { ShellError } from "./errors.ts";
 import type {
-  CancelHasher,
   PendingAction,
   RoundPhase,
   RoundSigner,
@@ -53,10 +53,7 @@ export type RoundSignerOptions = {
   readonly assertLive: () => void;
   readonly isEnded: () => boolean;
   readonly randomUuid: RandomUuid;
-  readonly hashCancel: CancelHasher | undefined;
 };
-
-const BYTES32 = /^0x[0-9a-f]{64}$/u;
 
 const asShellError = (error: unknown): unknown =>
   error instanceof SigningError && error.code === "equivocation"
@@ -77,7 +74,7 @@ const transcriptFor = (options: RoundSignerOptions): Transcript => {
 };
 
 export const createRoundSigner = (options: RoundSignerOptions): RoundSigner => {
-  const { roundId, round, initial, domainSeparator, hashCancel } = options;
+  const { roundId, round, initial, domainSeparator } = options;
   const transcript = transcriptFor(options);
   let phase: Exclude<RoundPhase, "ended" | "reissued"> = "open";
   // Kept apart from `phase`: a re-issue stops new signatures for good, while
@@ -86,7 +83,7 @@ export const createRoundSigner = (options: RoundSignerOptions): RoundSigner => {
   let pending: PendingAction | undefined;
   let canceled = false;
   // Set while `sign` or `signCancel` runs. An injected function (the random
-  // source of keys, the cancel encoding, the signer) that calls back into
+  // source of keys, the signer) that calls back into
   // either would find the state not yet recorded and could sign a second
   // action at the same sequence, so such a call is refused, as `signing`'s
   // transcript refuses one from its sign callback.
@@ -159,7 +156,6 @@ export const createRoundSigner = (options: RoundSignerOptions): RoundSigner => {
     if (transcript.pending() !== undefined || transcript.nextSequence() !== 1) {
       throw new ShellError("equivocation");
     }
-    if (hashCancel === undefined) throw new ShellError("cancel-unavailable");
     const message: PlayerMessage = Object.freeze({
       action: "cancel",
       path: Object.freeze([]),
@@ -167,10 +163,8 @@ export const createRoundSigner = (options: RoundSignerOptions): RoundSigner => {
       round,
       previous: initial,
     });
-    const structHash = hashCancel(message);
-    if (typeof structHash !== "string" || !BYTES32.test(structHash)) {
-      throw new ShellError("invalid-input");
-    }
+    // `signing`'s `PlayerCancel`, pinned by the independent signer's vector.
+    const structHash = hashPlayerCancel(message);
     const idempotencyKey = drawKey();
     const digest = typedDataDigest(domainSeparator, structHash);
     const signature = options.sign(digest);

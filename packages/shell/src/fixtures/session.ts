@@ -1,10 +1,6 @@
 // Test-only: opening a session and a round with fixture values.
 
-import {
-  type Bytes32,
-  hashPlayerAction,
-  type PlayerMessage,
-} from "@intraverse/se-client-signing";
+import type { Bytes32 } from "@intraverse/se-client-signing";
 
 import type { SettledInitial } from "../create-round-auth.ts";
 import { ShellError, type ShellErrorCode } from "../errors.ts";
@@ -20,37 +16,19 @@ import { domain, ROUND_ID, workedInitial, workedRound } from "./vectors.ts";
 
 export const SESSION_ID = "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N";
 
-/**
- * A stand-in `PlayerCancel` encoding for the tests: the `PlayerAction` struct
- * hash of the cancel message. The type is published, but `signing` does not
- * encode it until its independent vector exists (#41), so the shell takes the
- * encoding as an injected dependency.
- */
-export const testCancelHash = (message: PlayerMessage): Bytes32 =>
-  hashPlayerAction(message);
-
-export type TestSessionOverrides = Partial<SigningSessionOptions> & {
-  /** Opens the session with no cancel encoding at all. */
-  readonly withoutCancel?: boolean;
-};
+export type TestSessionOverrides = Partial<SigningSessionOptions>;
 
 export const openTestSession = (
   overrides: TestSessionOverrides = {},
-): Promise<SigningSession> => {
-  const { withoutCancel = false, ...options } = overrides;
-  const defaults = {
+): Promise<SigningSession> =>
+  openSigningSession({
     sessionId: SESSION_ID,
     locks: createFakeLockManager(),
     random: recordingRandom(1),
     randomUuid: seededUuids(2),
     domain,
-  };
-  return openSigningSession(
-    withoutCancel
-      ? { ...defaults, ...options }
-      : { ...defaults, hashCancel: testCancelHash, ...options },
-  );
-};
+    ...overrides,
+  });
 
 /**
  * A vector's `T_0` taken as settled. Test-only: in the shell, only check 5

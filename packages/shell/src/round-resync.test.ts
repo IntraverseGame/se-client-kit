@@ -123,6 +123,7 @@ describe("the required cancel (W-25, W-26)", () => {
     const [cancel] = setup.play.sent("cancelRound");
     expect(cancel?.retry).toBe("never");
     expect(bodyOf(cancel)["signature"]).toBe(signed[0]?.signature);
+    // `canceled` is final (W-25).
     expect(flow.cancel()).toBe("sent");
     expect(flow.phase()).toBe("closed");
     expect(await flow.pick({ step: 0, option: 1 })).toEqual(NOT_ACTIVE);
@@ -131,11 +132,12 @@ describe("the required cancel (W-25, W-26)", () => {
   });
 
   it.each([
-    ["a 400", problem(400, "INVALID_ARGUMENT"), "refused"],
-    ["a 422", problem(422, "FAILED_PRECONDITION"), "refused"],
+    // An `active` read after a refusal: the cancel did not take (W-25).
+    ["a 400", problem(400, "INVALID_ARGUMENT"), "not-taken", 400],
+    ["a 422", problem(422, "FAILED_PRECONDITION"), "not-taken", 422],
   ] as const)(
     "after %s, reads the Snapshot and never signs or sends a cancel again, even when the round is still cancelable",
-    async (_, answer, state) => {
+    async (_, answer, state, status) => {
       const setup = await setUpFlow({ tip: TIP_FAILED });
       setup.play.answer("cancelRound", answer);
       setup.play.answer("getSnapshot", ok(setup.at(0)));
@@ -147,19 +149,12 @@ describe("the required cancel (W-25, W-26)", () => {
       expect(await flow.resend()).toEqual(NOT_ACTIVE);
       expect(flow.evidence().signed).toHaveLength(1);
       expect(setup.play.sent("cancelRound")).toHaveLength(1);
+      // The refusal is kept in the round's evidence (W-27).
+      expect(flow.evidence().cancelRefusals).toEqual([
+        expect.objectContaining({ status }),
+      ]);
     },
   );
-
-  it("signs nothing without a cancel encoding", async () => {
-    const setup = await setUpFlow({
-      tip: TIP_FAILED,
-      session: { withoutCancel: true },
-    });
-    const flow = await startFlow(setup);
-    expect(flow.cancel()).toBe("unavailable");
-    expect(flow.evidence().signed).toEqual([]);
-    expect(setup.play.sent("cancelRound")).toEqual([]);
-  });
 });
 
 describe("a re-issue (T-8, W-26)", () => {

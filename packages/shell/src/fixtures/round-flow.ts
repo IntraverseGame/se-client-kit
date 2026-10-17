@@ -50,6 +50,7 @@ export type FlowSetup = {
   readonly closed: (
     status: "won" | "lost" | "canceled",
     step: number,
+    closeReason?: "expired",
   ) => ValidSnapshot;
   /** The round with its `CreateRoundAuth` re-issued (another `expiry`). */
   readonly reissued: () => ValidSnapshot;
@@ -105,10 +106,11 @@ export const setUpFlow = async (
     hooks: { encodeTypedData: encoder },
     read,
     at: step => read(p => (p.input["step"] = step)),
-    closed: (status, step) =>
+    closed: (status, step, closeReason) =>
       read(p => {
         p.input["status"] = status;
         p.input["step"] = step;
+        if (closeReason !== undefined) p.input["closeReason"] = closeReason;
         if (status !== "canceled") {
           p.randomnessProof["roundSecret"] = HEX32("44");
           p.fairnessProof["seed"] = HEX32("55");
