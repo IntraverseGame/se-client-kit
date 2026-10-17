@@ -24,21 +24,27 @@ the same bundle is what e2e runs and what is released (no test or
 per-environment build), and a check that no vector reaches any bundle or release
 output); `e2e-fake` (Playwright against the in-repo fake Play API, which answers
 from the contract's vectors); `audit` (`pnpm audit --prod`, failing on high and
-critical advisories only); `dependency-review` (pull requests only); `release`
-(changesets, provenance, on the default branch only).
+critical advisories only); `dependency-review` (pull requests only);
+`release-dry-run` (the release dry run: changesets applied on a scratch copy,
+the five tarballs packed and checked and imported as a consumer would, the
+Wrapper artifact built twice with one digest; no token, no network). The release
+itself is a separate workflow, `release` (changesets, provenance, run by hand
+from the default branch only, its publish job in the protected `release`
+environment; [release runbook](../../runbook/client-kit-release.md#release)).
 
 Today `contracts` runs the test-only-entry import check, the hash check against
 `contracts.lock.json`, and the generated-files diff (the Snapshot types, the
-Play API document's types, and the vector catalog). `contracts-drift` and
-`release` are not defined yet. `build` builds every workspace; the manifest and
-size budget join it with the first release build, and the job also runs
+Play API document's types, and the vector catalog). `contracts-drift` is not
+defined yet. `build` builds every workspace (the Wrapper's build writes and
+checks its manifest; the size budget is not defined yet), and the job also runs
 `pnpm check:build-output` (the no-vector content check, now over the vendored
 vectors) and `pnpm check:package-files`. `e2e-fake` installs Playwright's
 Chromium and runs the e2e harness's own tests and a smoke run on the Wrapper's
 release bundle; the browser rows of the Wrapper's test plan are pending
 ([The e2e harness](#the-e2e-harness)). The workflows hold no secret, run with
-`permissions: {}` at the top and `contents: read` per job, and pin every Action
-by full commit SHA.
+`permissions: {}` at the top and `contents: read` per job (the release
+workflow's `publish` job adds `id-token: write`, for provenance and trusted
+publishing), and pin every Action by full commit SHA.
 
 ## Task orchestration and caching
 

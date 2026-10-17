@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-17 (contracts vendoring pull request: `openapi-typescript` 6.7.6 without an install hook, vendored YAML exempt from oxfmt)
+last-verified: 2026-10-17 (release dry run pull request: the release workflow, `pnpm release:dry-run`, the Wrapper artifact digest)
 ---
 
 # Development workflow
@@ -38,16 +38,58 @@ Several agents and people work in one clone at once. Rules:
   build-output check, package files check), `pnpm test`,
   `pnpm test:e2e`, `pnpm lint` (oxlint and stylelint), `pnpm format` (writes; oxfmt is the only formatter, for code, Markdown, and
   YAML), `pnpm format:check`,
-  `pnpm typecheck`, `pnpm build`, `pnpm changeset`. Never an ad-hoc equivalent.
+  `pnpm typecheck`, `pnpm build`, `pnpm changeset`, `pnpm release:dry-run`
+  (not part of `pnpm check`). Never an ad-hoc equivalent.
 - **Watch at the next tsdown bump:** `pnpm install` reports 24 deprecated
   sub-dependencies (the `@yuku-*` platform bindings, pulled in through
   tsdown's toolchain). They block nothing; check whether the new version drops
   them.
 - **Changesets** use `@changesets/changelog-github` (repository
   `IntraverseGame/se-client-kit`). `pnpm changeset` and `changeset status` work
-  offline; only `changeset version` in the future release job needs a
+  offline; only a real `changeset version` (the version pull request) needs a
   `GITHUB_TOKEN`, the Actions-provided token with least privilege, never a stored
-  secret.
+  secret. The release dry run turns the changelog off in its scratch copy, so it
+  needs no token. Version pull request (decided, not built yet, #12): a
+  release-workflow job with `contents: write` runs `changeset version` with the
+  real changelog and pushes a `changeset-release/main` branch, and a person
+  opens the pull request (Actions may not create pull requests here; no new
+  Action). Attestation and artifact upload: an ADR to come proposes
+  `actions/attest-build-provenance` and `actions/upload-artifact`.
+- **Release** ([runbook](../../runbook/client-kit-release.md#release)):
+  `.github/workflows/release.yml`, `workflow_dispatch` only. Job `dry-run`
+  (`contents: read`) runs `pnpm release:dry-run`; job `publish` runs only from
+  `main` with the `publish` input, the repository variable
+  `RELEASE_PUBLISH_ENABLED == 'true'`, and an approval in the protected
+  `release` environment (`contents: read`, `id-token: write`), and runs
+  `tools/release-publish.ts`. Its gate is the pure
+  `findReadinessProblems` (`tools/release-readiness.ts`, unit-tested): pending
+  changesets, a `private` or 0.0.0 library, a missing (with `--publish`) or
+  different Wrapper digest. It is the only `private` guard: pnpm 12.10.1
+  publishes a private package's tarball without complaint. It then publishes
+  the checked tarballs with `--provenance --ignore-scripts`, skipping a version
+  only when the registry's `dist.integrity` equals the local SHA-512. Both
+  release jobs call the setup action with `cache: "false"` (no wireit cache
+  helper, no pnpm store cache). The five libraries are still `private: true`
+  on purpose: removing it is a reviewed change made after the org owners'
+  settings (#3). No npm token exists; trusted publishing (OIDC) is the intended
+  form. **Before any real publish** (decided by the human; runbook Bootstrap
+  step 7, after ADR-005), the publish job is split: a build job without
+  `id-token`, and a publish-only job that runs no repository tooling and only
+  verifies digests and publishes the downloaded tarballs.
+- **Release dry run** (`tools/release-dry-run.ts`): copies the working tree
+  (`git ls-files -co --exclude-standard`) twice into `--out` (outside the
+  repository, empty), installs offline with `--ignore-scripts`, runs
+  `changeset version` and `pnpm build` with `WIREIT_CACHE=none`, pnpm's
+  install-before-run off, an empty npm user configuration, and an environment
+  without the variables whose names match a token, secret, key, password, or
+  auth pattern (`scratchEnvironment`; a name-pattern filter, hygiene only, **not
+  isolation**: a child can still read its parent's environment, on Linux
+  through `/proc/<pid>/environ`). It packs and checks the five tarballs, imports
+  every `exports` entry as a consumer, runs `pnpm publish <tarball> --dry-run`
+  against `http://127.0.0.1:9/` (offline; no provenance outside Actions), and
+  builds the Wrapper artifact (`se-client-wrapper-<version>.tar`,
+  deterministic tar, digest = its SHA-256) in both copies (different paths,
+  time zones, and locales); the digests and the package tarballs must match. Its script has no `files` on purpose (always runs).
 - **tsdown** builds each package into `dist/` (`pnpm build`; shared options in
   `tsdown.base.ts`, entries in the package's `tsdown.config.ts`); `tsc --noEmit`
   only type-checks. **tsx** runs the TypeScript scripts under `tools/`; stylelint lints CSS
@@ -64,7 +106,10 @@ Several agents and people work in one clone at once. Rules:
   (`format`, `test:e2e`). If a result looks stale, `pnpm clean:cache`.
 - **CI cache.** Workflows set `WIREIT_CACHE=github` and the local composite
   action `.github/actions/setup` starts `google/wireit`'s caching helper (pinned
-  by commit SHA). It uses the job's own Actions cache credentials, which are not
+  by commit SHA) and installs with `--frozen-lockfile --ignore-scripts`, so no
+  lifecycle script runs in CI, a workspace project's own included (`allowBuilds`
+  covers dependencies only); the e2e job installs Playwright's browser with its
+  own step. It uses the job's own Actions cache credentials, which are not
   a repository secret; there is no remote cache. A cache hit may only replace a
   run whose inputs are all declared, so the gating scripts (`check:deps`,
   `check:contracts`, `lint`, `test:tools`) list every file they read; add to

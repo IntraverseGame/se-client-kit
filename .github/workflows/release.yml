@@ -1,0 +1,98 @@
+name: Release
+
+# Run by hand only (runbook/client-kit-release.md, Release). The `dry-run` job
+# runs every time and publishes nothing. The `publish` job runs only when all of
+# these hold, so it cannot run before the org owners' settings exist (#3):
+#   - it was dispatched from `main` with `publish` set;
+#   - the repository variable RELEASE_PUBLISH_ENABLED is `true` (set by an org
+#     owner once the protected `release` environment and the npm trusted
+#     publisher exist; a variable, never a secret);
+#   - a required reviewer of the `release` environment approves the deployment.
+# Until the job runs, the `release` environment is never referenced by a run.
+#
+# Before RELEASE_PUBLISH_ENABLED is ever set, the publish job must be split
+# (runbook, Bootstrap step 7; decided by the human, built after ADR-005 is
+# accepted): a build job without `id-token` packs, checks, and uploads the
+# tarballs and the Wrapper artifact, and a publish-only job with `id-token:
+# write` runs no repository tooling, only verifies the downloaded files'
+# digests and publishes them. Until then the publish job below still builds
+# and runs tools/release-publish.ts while it holds the OIDC token.
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish to npm (off by default; the dry run always runs)
+        type: boolean
+        default: false
+
+# No job gets a token unless it asks for one below.
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  dry-run:
+    name: dry-run
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      wrapper-digest: ${{ steps.dry-run.outputs.wrapper-digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No cache: no wireit helper and no pnpm store restore in a release job.
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      # Applies the changesets on a scratch copy, packs and checks the five
+      # libraries, and builds the Wrapper artifact twice (same digest required).
+      - id: dry-run
+        run: pnpm release:dry-run -- --out "$RUNNER_TEMP/release-dry-run"
+
+  publish:
+    name: publish
+    needs: dry-run
+    if: >-
+      inputs.publish && github.ref == 'refs/heads/main' &&
+      vars.RELEASE_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: read
+      # npm provenance and trusted publishing: the job's OIDC token, exchanged
+      # by the package manager; no npm token is stored anywhere.
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No cache: no wireit helper and no pnpm store restore in a release job.
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      # Refuses pending changesets, a private or 0.0.0 library, and a Wrapper
+      # build that differs from the dry run's; then publishes the checked
+      # tarballs with provenance and lifecycle scripts off.
+      - env:
+          WRAPPER_DIGEST: ${{ needs.dry-run.outputs.wrapper-digest }}
+        run: >-
+          pnpm exec tsx tools/release-publish.ts --out "$RUNNER_TEMP/publish"
+          --expect-wrapper-digest "$WRAPPER_DIGEST" --publish
+      # TODO(#12): tag the release, attach the Wrapper artifact and its
+      # build-provenance attestation to a GitHub release (needs
+      # `contents: write` and `attestations: write`; an ADR to come proposes
+      # actions/attest-build-provenance and actions/upload-artifact).
+      # TODO(#12, ADR-005): split this job into a build job without
+      # `id-token` and a publish-only job that runs no repository tooling
+      # (verify the downloaded tarballs' and artifact's digests, then
+      # `pnpm publish <tarball>`). Required before any real publish.
+      # TODO(#12): the version pull request job (decided): a job with
+      # `contents: write` runs `changeset version` with the real changelog and
+      # pushes a `changeset-release/main` branch; a person opens the pull
+      # request. No new Action.

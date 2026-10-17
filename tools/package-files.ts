@@ -10,7 +10,8 @@
 //
 // `selectsPath` approximates npm's `files` semantics with the wireit matcher (a
 // directory selects everything below it). A `!` entry is refused, not modelled.
-// The full `npm pack` tarball check arrives with the release work.
+// The tarball itself (`pnpm pack`) is checked by the release dry run
+// (tools/package-tarball.ts).
 
 import { reachableFrom } from "./build-output.ts";
 import { matchesFiles } from "./wireit-inputs.ts";

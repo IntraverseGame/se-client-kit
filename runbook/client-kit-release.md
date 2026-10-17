@@ -54,7 +54,9 @@ org owners apply the settings; ask them for each.
    Landed by the toolchain pull request: everything above except the release
    workflow and the real CODEOWNERS. Nothing in it needs a repository secret:
    the CI cache is wireit's GitHub Actions cache mode, which uses the job's own
-   cache credentials.
+   cache credentials. The release workflow (`.github/workflows/release.yml`) and
+   the release dry run landed with the publishing work (#12); its publish job
+   stays off until steps 5 to 8 are done.
 
    `.github/CODEOWNERS` stays comment-only until the org owners give their
    handles; branch protection (below) is the interim control.
@@ -68,15 +70,43 @@ org owners apply the settings; ask them for each.
 4. **Actions settings:** read-only default workflow token; Actions may not
    create or approve pull requests; first-time and outside contributors'
    workflows need approval (GitHub's "Fork pull request workflows" setting).
-5. **The publishing environment**, for example `npm-publish`: required reviewers
-   designated by the org owners, a deployment-branch restriction to `main`. The
-   publishing credential, if one is needed, is a secret of this environment
-   only, never a repository-level secret.
-   <!-- TODO(infrastructure owner): the form of the npm credential (trusted publishing from the release workflow needs no stored token), the npm organization, and its scope. -->
-6. **npm:** claim the `intraverse` organization (intended scope `@intraverse`,
-   packages `@intraverse/se-client-<name>`, decided in ADR-001). It is not
-   claimed yet; this step is part of the publishing work (#12). It is owned by
+5. **The publishing environment `release`** (#3): required reviewers designated
+   by the org owners, a deployment-branch restriction to `main`, and no
+   self-review. Create it **before** anyone sets the variable in step 8: GitHub
+   creates an environment that a running job names and that does not exist yet,
+   without any protection. The publishing credential, if one is needed at all,
+   is a secret of this environment only, never a repository-level secret.
+   <!-- TODO(org owners, #3): create the protected `release` environment. -->
+   <!-- TODO(infrastructure owner, #3): the form of the npm credential. Preferred: npm trusted publishing (OIDC) for each of the five packages, trusting this repository, the workflow `release.yml`, and the environment `release`, so no npm token is stored anywhere. Confirm that the pinned pnpm exchanges the OIDC token itself; if it does not, the publish step moves to the npm CLI, which needs a recorded decision. -->
+6. **npm:** claim the `intraverse` organization (scope `@intraverse`, packages
+   `@intraverse/se-client-<name>`, decided in ADR-001; issue #3 still carries
+   the older working name `@superengine`). It is not claimed yet. It is owned by
    the org owners, not a person; two-factor required.
+   <!-- TODO(org owners, #3): claim the npm organization `intraverse` and the five package names. -->
+7. **Split the publish job (required before step 8; decided by the human).**
+   Stripping token-like variables from a child's environment is hygiene, not
+   isolation: a process of the same user can read its parent's environment (on
+   Linux, `/proc/<pid>/environ`), so a job that holds `id-token: write` must not
+   run repository tooling at all. Today the `publish` job still builds, packs,
+   and runs `tools/release-publish.ts` while it holds the OIDC request token.
+   Before any real publish, a pull request splits it into a **build job**
+   without `id-token` (build, pack, check, and upload the five tarballs and the
+   Wrapper artifact with their digests) and a **publish-only job** with
+   `id-token: write` that runs no repository tooling: it downloads the files,
+   verifies their digests against the build job's outputs, and runs
+   `pnpm publish <tarball>`. It needs the artifact upload and download Action
+   that ADR-005 (to come) proposes, and is built after that ADR is accepted.
+   <!-- TODO(#12, ADR-005): split the publish job into a build job without `id-token` and a publish-only job that runs no repository tooling. Must be merged before RELEASE_PUBLISH_ENABLED is ever set. -->
+8. **Turn the publish job on**, only after steps 5 to 7 and the trusted
+   publishers exist:
+   - a reviewed pull request removes `"private": true` from the five libraries'
+     `package.json` and the "not published to npm yet" line from their READMEs
+     (the publish step refuses a private package);
+   - an org owner sets the repository **variable** (not a secret)
+     `RELEASE_PUBLISH_ENABLED` to `true`. Until it is `true`, the workflow's
+     `publish` job is skipped and the `release` environment is never named by a
+     run. Setting it back to anything else turns publishing off again.
+   <!-- TODO(org owners, #3): set RELEASE_PUBLISH_ENABLED once the environment and the trusted publishers exist. -->
 
 ### Sync a contract into the kit
 
@@ -114,52 +144,130 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
 
 ### Release
 
-The kit uses changesets.
+The kit uses changesets. The release workflow (`.github/workflows/release.yml`)
+runs only by hand (`workflow_dispatch`). Its `dry-run` job always runs and
+publishes nothing; its `publish` job runs only when it was started from `main`
+with **publish** ticked, the variable `RELEASE_PUBLISH_ENABLED` is `true`
+(Bootstrap step 8), and a required reviewer of the `release` environment
+approves. Every Action is pinned by full commit SHA; the workflow starts with
+`permissions: {}`; `dry-run` gets `contents: read`, and `publish`
+`contents: read` and `id-token: write` (provenance and trusted publishing). Both
+release jobs use the setup action with `cache: "false"`: no wireit cache helper
+(which holds the job's cache credentials) and no pnpm store cache, so nothing is
+restored from a cache into a release build. Lifecycle scripts stay off
+throughout (`allowBuilds`, `--ignore-scripts`, and the tarball check refuses any
+lifecycle script in a published manifest).
 
 1. A pull request that changes a published package or the Wrapper includes a
    changeset (`pnpm changeset`) naming the packages and the bump (major for a
    break, minor for an addition, patch for a fix) and a note for the release. A
    change to a contract's version (a new Play prefix, a new Snapshot schema) is
-   a **major**.
-2. On merge to `main`, the release workflow opens or updates a **version pull
-   request** that applies the changesets (versions and changelogs). Review it:
-   the versions, the changelogs, and that the lock file's contract entries match
+   a **major**. Its CI runs `release-dry-run` (below), so a changeset that would
+   break a tarball fails before merge.
+2. **Version pull request.** The changesets are applied (`changeset version`:
+   versions and changelogs) in a pull request of their own. Review it: the
+   versions, the changelogs, and that the lock file's contract entries match
    what the notes say. The changelogs come from `@changesets/changelog-github`
    (repository `IntraverseGame/se-client-kit`), which calls the GitHub API when
-   `changeset version` runs, so that job needs a `GITHUB_TOKEN`: the token the
-   Actions runtime provides to the release job, with the least permissions the
-   job needs (to open the version pull request), passed to the step as an
-   environment variable. It is never a stored secret or a personal token, and it
-   is never committed. Nothing else needs it: install, build, and
-   `changeset status` work offline. The release workflow does not exist yet
-   (#12).
-3. Merging the version pull request starts the **publish** job in the
-   `npm-publish` environment. A required reviewer approves the deployment. The
-   job builds from the lockfile with `--frozen-lockfile`, publishes each changed
-   package **with provenance**, and builds the Wrapper release bundle with its
-   integrity manifest and attestation, attaching them to the GitHub release.
+   `changeset version` runs, so it needs a `GITHUB_TOKEN`: the token the Actions
+   runtime provides to a job, with the least permissions the job needs, passed
+   to the step as an environment variable. It is never a stored secret or a
+   personal token, and it is never committed. Nothing else needs it: install,
+   build, `changeset status`, and the dry run work offline.
+   <!-- TODO(#12): the version pull request job (decided: option A). A job of the release workflow with `contents: write` runs `changeset version` with the real changelog generator and the job's `GITHUB_TOKEN`, and pushes the result to a `changeset-release/main` branch; a person opens the pull request from that branch, so Actions never create a pull request (Bootstrap step 4) and no new Action is needed. Not built yet. -->
+3. **Publish.** After the version pull request is merged, start the release
+   workflow from `main` with **publish** ticked. The `dry-run` job runs first
+   and reports the Wrapper digest. The `publish` job then waits for a required
+   reviewer of `release`; on approval it runs `tools/release-publish.ts`, which
+   builds from the lockfile without the task cache, packs the five libraries,
+   runs the same tarball and consumer checks as the dry run, and refuses to go
+   on (`tools/release-readiness.ts`) while a changeset is pending, a library is
+   still `private` or at `0.0.0`, or the Wrapper build differs from the dry
+   run's digest; the digest is required whenever it publishes for real. That
+   check is the only guard against publishing a `private` package: pnpm does not
+   refuse a private package's tarball. It then publishes **the checked tarballs
+   themselves**
+   (`pnpm publish <tarball> --provenance --access public --ignore-scripts`), in
+   dependency order. A version the registry already has is skipped only when the
+   registry's `dist.integrity` equals the local tarball's SHA-512; other bytes
+   under the same version fail the job. (This job layout is temporary: Bootstrap
+   step 7.)
+   <!-- TODO(#12): tag the release and attach the Wrapper artifact, its `.sha256`, and its build-provenance attestation to a GitHub release, and upload the dry run's artifact from CI. This needs `contents: write` and `attestations: write`; an ADR to come proposes `actions/attest-build-provenance` and `actions/upload-artifact` for it (decided; not added before that ADR is accepted). -->
 4. Record in the release notes the contracts the release was built against: the
-   Play API prefix, the Snapshot schema id, and the signing vector set.
+   Play API prefix, the Snapshot schema id, and the signing vector set, and the
+   Wrapper artifact's digest.
+
+### Dry run
+
+`pnpm release:dry-run` (locally), the `release-dry-run` CI job, and the release
+workflow's `dry-run` job run `tools/release-dry-run.ts`. It needs no credential
+and no network, and publishes nothing:
+
+1. It copies the working tree (the files git would commit, so uncommitted
+   changes are included locally; in CI it is the commit) into two scratch
+   directories, and installs each from the lockfile offline with lifecycle
+   scripts off. Its commands get an environment without token-like variables,
+   with pnpm's install-before-run off and an empty npm user configuration (no
+   `~/.npmrc` is read). That keeps them from using a credential by accident; it
+   is not a security boundary (Bootstrap step 7).
+2. In each copy it runs `changeset version` (with the changelog generator off,
+   since that one calls the GitHub API) and `pnpm build` without the task cache.
+3. In the first copy it runs `check:build-output` and `check:package-files`,
+   packs the five libraries (`pnpm pack`), and checks each tarball
+   (`tools/package-tarball.ts`): only `package.json`, `README.md`, `LICENSE`,
+   and the `dist/` files `files` selects; the right name and version; exact
+   dependency versions (no `workspace:` left); no lifecycle script; every
+   `exports` target present except the `contracts` test-only entry, which must
+   be absent along with any `testing` or `vectors` path; the build-output checks
+   and the vector canary over every packed file. It then unpacks the tarballs
+   into a consumer `node_modules`, imports every `exports` entry of every
+   package in Node, and requires `@intraverse/se-client-contracts/testing` not
+   to resolve. Last, it runs
+   `pnpm publish <tarball> --access public --ignore-scripts --no-git-checks --dry-run --registry http://127.0.0.1:9/`
+   for each tarball, so pnpm's own publish checks run against an address nothing
+   listens on, with no network. Provenance is exercised only in Actions, where
+   the OIDC token exists: the dry run cannot show it.
+4. It builds the Wrapper release artifact in each copy (the second with another
+   time zone and locale): `se-client-wrapper-<version>.tar`, a deterministic tar
+   of `apps/wrapper/dist/` (sorted, fixed metadata, uncompressed), whose SRI,
+   policy, and manifest the Wrapper's build already enforced. Its **digest** is
+   the SHA-256 of that file (`sha256:<hex>`). The two digests must be equal, and
+   the two copies' package tarballs byte-identical.
+5. It writes to `--out` the artifact and its `.sha256`, the five tarballs, and
+   `release-dry-run.json` (source commit, versions, tarball hashes, digests,
+   problems), and prints the same summary (in CI, also to the job summary).
+
+Run it locally with an empty directory outside the repository:
+
+```sh
+pnpm release:dry-run -- --out "$(mktemp -d)"
+```
+
+Add `--keep` to keep the scratch copies for inspection.
 
 ### Verify before and after
 
-Before publishing (in the version pull request's CI): all required jobs green;
-the tarball content check (arriving with the first release build) shows each
-published package contains its `README.md` and `LICENSE` and no test-only entry;
-the contract hashes match the lock; the bundle's size budget holds; the bundle
-is the unmodified bundle (no test or per-environment build) and contains no
-vector.
+Before publishing (in the version pull request's CI): all required jobs green,
+`release-dry-run` included, which shows each published package contains its
+`README.md` and `LICENSE` and no test-only entry and that the Wrapper digest is
+reproducible; the contract hashes match the lock; the bundle is the unmodified
+bundle (no test or per-environment build) and contains no vector.
+<!-- TODO(#12): the bundle's size budget. -->
 
 After publishing:
 
 1. **npm provenance:** for each package, the version's page shows the provenance
    statement linking the commit and the workflow run; or run
    `npm audit signatures` against the installed package.
-2. **Bundle:** download the release bundle, recompute the SHA-256 of every file
-   and compare with the manifest; verify the attestation with the GitHub CLI
-   (`gh attestation verify`) against this repository.
-3. **Reproduce:** build the same commit with the same lockfile and compare the
-   manifest with the release's. A difference is an incident (see Escalation).
+2. **Bundle:** download the Wrapper artifact, check its SHA-256 against the
+   release's digest (`shasum -a 256 -c se-client-wrapper-<version>.tar.sha256`),
+   unpack it, recompute the SHA-256 of every file and compare with
+   `integrity-manifest.json`; verify the attestation with the GitHub CLI
+   (`gh attestation verify`) against this repository, once releases carry one.
+3. **Reproduce:** check out the released commit and run
+   `pnpm install --frozen-lockfile` and `pnpm release:dry-run -- --out <dir>`;
+   the printed Wrapper digest must equal the release's. A difference is an
+   incident (see Escalation).
 4. **Compatibility:** the release notes' contract versions match what the
    backend serves in the target environment. Do not promote a Wrapper whose Play
    prefix or Snapshot schema the backend does not serve.
@@ -172,24 +280,33 @@ After publishing:
 ### Roll back or deprecate
 
 - **A bad Wrapper release:** the SuperEngine side repoints the environment to
-  the previous released digest. The bundle store is content-addressed, so the
-  old digest is still there. Then fix forward here.
-- **A bad npm version:** do not unpublish a version others may depend on. Run
-  `npm deprecate` on the version with a message that names the fix, publish a
-  patch, and record both in the changelog. Unpublish only a version that
-  contains a secret or malicious code, and only an org owner, within npm's
-  rules, as part of the incident below.
+  the previous released digest (the digest in that release's notes and
+  `.sha256`). The bundle store is content-addressed, so the old digest is still
+  there. Then fix forward here: a changeset, a patch release, and a new digest.
+  Nothing in this repository is rolled back; a released artifact is never
+  rebuilt in place.
+- **A bad npm version:** do not unpublish a version others may depend on. An org
+  owner, signed in to npm with two-factor (never from CI, never with a token in
+  a file), runs
+  `npm deprecate @intraverse/se-client-<name>@<version> "<what is wrong>; use <fixed version>"`,
+  then the fix ships as a patch through the normal release, and both are
+  recorded in the changelog. If the bad version is `latest`, the patch moves
+  `latest` on publish; to move it sooner, the same org owner runs
+  `npm dist-tag add @intraverse/se-client-<name>@<previous good version> latest`.
+  Unpublish only a version that contains a secret or malicious code, and only an
+  org owner, within npm's rules, as part of the incident below.
 - **A contract mismatch** (the backend moved): sync the contract, release a
   patch or minor, promote; until then keep the previous Wrapper digest in place.
+
+<!-- TODO(#3, #12): verify the npm deprecation and dist-tag steps once, on the first published version, and the Wrapper repoint once the SuperEngine deploy job exists. Neither can be exercised before the npm organization, the `release` environment, and the deploy job exist; the dry run covers everything up to the publish. -->
 
 ### Rotate the npm credential
 
 If the release uses a stored npm token (rather than trusted publishing):
 
 1. An org owner creates the replacement credential in npm with the narrowest
-   scope (publish for the kit's packages only), and writes it into the
-   `npm-publish` environment secret. It is never pasted in a chat, an issue, or
-   a log.
+   scope (publish for the kit's packages only), and writes it into the `release`
+   environment secret. It is never pasted in a chat, an issue, or a log.
 2. Run a release of a trivial change to prove the new credential works.
 3. Revoke the old credential in npm.
 4. Record the date (the secret **name** and date only) with the org owners'
@@ -203,6 +320,7 @@ If the release uses a stored npm token (rather than trusted publishing):
   calls for rulesets, environments, collaborators, and CODEOWNERS errors against
   this repository.
 - A test pull request cannot be merged without code-owner review and `ci-ok`.
+- `pnpm release:dry-run` prints no problem and two equal Wrapper digests.
 - A release's packages show provenance, and the bundle matches its manifest.
 
 ## Troubleshooting
@@ -232,7 +350,26 @@ If the release uses a stored npm token (rather than trusted publishing):
 - **Provenance is missing on a version.** The package was published outside the
   release workflow. Deprecate it and republish from the workflow.
 - **The publish job waits.** It needs an approval from a required reviewer of
-  the `npm-publish` environment.
+  the `release` environment.
+- **The publish job is skipped.** It runs only from `main`, with **publish**
+  ticked, and with the variable `RELEASE_PUBLISH_ENABLED` set to `true`
+  (Bootstrap step 8).
+- **The publish step says "Not ready to publish".** A changeset is pending
+  (merge the version pull request first), a library is still `private` or at
+  `0.0.0` (Bootstrap step 8), `--expect-wrapper-digest` is missing, or the
+  Wrapper build differs from the dry run's.
+- **The publish step says "The registry disagrees".** A version being released
+  is already on npm with other bytes. Never overwrite it: bump the version with
+  a changeset and release again; if the published bytes are not ours, treat it
+  as a security incident (Escalation).
+- **The dry run reports "not reproducible".** Two builds of the same files gave
+  different bytes. Keep the scratch copies (`--keep`), compare the two
+  `apps/wrapper/dist/` trees (or the two tarballs) with `diff -r`, and find what
+  the build read from its environment (a path, the time, the time zone, the
+  locale). Do not release until it is fixed.
+- **The dry run fails to install offline.** The pnpm store lacks a package the
+  lockfile names: run `pnpm install --frozen-lockfile` in the repository first,
+  which fills the store.
 - **The drift check reports a difference.** Run the contract sync.
 
 ## Escalation

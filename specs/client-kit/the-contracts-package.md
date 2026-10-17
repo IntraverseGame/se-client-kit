@@ -231,9 +231,14 @@ logic packages read it and never write to it.
      `files`, no entry selects `src/`, `.wireit/`, `*.tsbuildinfo`, or a config
      file, every entry lies under `dist`, `contracts` selects no `testing*`
      path). Its matcher approximates npm's `files` with the wireit matcher and
-     refuses `!` entries. The full `npm pack` tarball content check, which
-     arrives with the release work (#12), also asserts that each published
-     package contains its `README.md` and `LICENSE`.
+     refuses `!` entries. The tarball content check of the release dry run
+     (`tools/package-tarball.ts`, on the `pnpm pack` output) reads what npm
+     would serve: each published package contains its `package.json`,
+     `README.md`, and `LICENSE` and otherwise only `dist/` files its `files`
+     selects; every `exports` target is present except `./testing`, which must
+     be absent, as must any `testing` or `vectors` path; the build-output checks
+     and the output canary pass over every packed file; and the packed packages
+     import in Node while `./testing` does not resolve.
 - **Dependencies.** `contracts` depends on no other kit package and has no
   runtime dependency. `snapshot` and `play-client` depend on its runtime entry;
   the test-only entry has these consumers, **all of them tests and all of them

@@ -7,18 +7,21 @@ The kit publishes code players run and packages others install, so its build is
 the attack surface a player cannot see. The rules:
 
 - **Lockfile and install.** `pnpm-lock.yaml` is committed; CI installs with
-  `--frozen-lockfile`. Dependency lifecycle scripts are disabled by default
-  (only an explicit allow-list may run one), and the lockfile and every
-  `package.json` are code-owner paths. A newly published dependency version
-  SHOULD wait a configured age before it is accepted (pnpm's minimum release
-  age). The age is **7 days** (`minimumReleaseAge: 10080` minutes, strict, in
-  `pnpm-workspace.yaml`), no lifecycle script is allowed (`allowBuilds` has no
-  `true` entry; `esbuild`, brought by `tsx`, is denied explicitly so the strict
-  check passes), the trust policy is `no-downgrade`, and dependencies are saved
-  at an exact version. There is no install hook (`.pnpmfile.cjs`) and one
-  TypeScript: the generator of the Play API document's types is
-  `openapi-typescript` 6.7.6, the last major without a TypeScript compiler-API
-  dependency, since 7.x needs TypeScript 5's
+  `--frozen-lockfile --ignore-scripts` (the local setup action
+  `.github/actions/setup`), so no lifecycle script runs in CI, a workspace
+  project's own included; nothing in CI needs one (the e2e job installs
+  Playwright's browser with an explicit step). Dependency lifecycle scripts are
+  disabled by default everywhere else too (only an explicit allow-list may run
+  one), and the lockfile and every `package.json` are code-owner paths. A newly
+  published dependency version SHOULD wait a configured age before it is
+  accepted (pnpm's minimum release age). The age is **7 days**
+  (`minimumReleaseAge: 10080` minutes, strict, in `pnpm-workspace.yaml`), no
+  lifecycle script is allowed (`allowBuilds` has no `true` entry; `esbuild`,
+  brought by `tsx`, is denied explicitly so the strict check passes), the trust
+  policy is `no-downgrade`, and dependencies are saved at an exact version.
+  There is no install hook (`.pnpmfile.cjs`) and one TypeScript: the generator
+  of the Play API document's types is `openapi-typescript` 6.7.6, the last major
+  without a TypeScript compiler-API dependency, since 7.x needs TypeScript 5's
   ([ADR-004](../../decisions/ADR-004-openapi-typescript-6.md)). One override
   exists (`overrides` in `pnpm-workspace.yaml`, checked by `check:deps` like any
   other): the `undici` of `openapi-typescript` 6.7.6, which it declares as
@@ -47,8 +50,26 @@ the attack surface a player cannot see. The rules:
   Dependabot's pull requests) are pinned.
 - **Provenance.** Packages are published from GitHub Actions with npm
   provenance, so each version links to the commit and workflow that built it.
-  The Wrapper bundle is released with a build-provenance attestation and a
-  SHA-256 manifest of every file.
+  The release workflow (`.github/workflows/release.yml`) runs by hand only; its
+  `publish` job runs in the protected `release` environment, only from `main`,
+  only when the repository variable `RELEASE_PUBLISH_ENABLED` is `true`, with
+  `contents: read` and `id-token: write`, and publishes the very tarballs the
+  release checks inspected
+  (`pnpm publish <tarball> --provenance --ignore-scripts`). A published manifest
+  carries no lifecycle script (the tarball check refuses one). The Wrapper
+  bundle is released as one artifact identified by its digest (below), with a
+  SHA-256 manifest of every file and a build-provenance attestation. The release
+  jobs restore nothing from a cache (the setup action with `cache: "false"`).
+  The publish gate (`tools/release-readiness.ts`) refuses pending changesets, a
+  `private` or 0.0.0 library, and a missing or different Wrapper digest; a
+  version already on the registry is skipped only when the registry holds the
+  same bytes (`dist.integrity`). **A real publish requires a split job**
+  (decided): stripping variables from a child's environment is not isolation, so
+  the job that holds `id-token: write` runs no repository tooling; it only
+  verifies the digests of the tarballs and the artifact a build job without
+  `id-token` produced, and publishes them.
+  <!-- TODO(#12, ADR-005): the split into a build job and a publish-only job; required before RELEASE_PUBLISH_ENABLED is set (runbook, Bootstrap step 7). -->
+  <!-- TODO(#12): the attestation and the GitHub release that carries the artifact; an ADR to come proposes `actions/attest-build-provenance` and `actions/upload-artifact`. -->
 - **Credentials.** The publishing credential is never in the repository. The
   preferred form is npm trusted publishing from the release workflow (no
   long-lived token); otherwise a token in a protected GitHub environment with
@@ -66,6 +87,14 @@ the attack surface a player cannot see. The rules:
   `tools/tsdown-bundling.test.ts` builds a fixture each way.
 - **Reproducible build.** The Wrapper build is deterministic for a commit and a
   lockfile, so anyone can rebuild a release and compare its manifest. The
+  release artifact is `se-client-wrapper-<version>.tar`, a tar of the release
+  output with entries sorted by path, mode 0644, owner 0, mtime 0, no directory
+  entries, and no compression (gzip records the operating system), and its
+  **digest** is `sha256:` and the SHA-256 of that file
+  (`tools/wrapper-artifact.ts`). The release dry run
+  (`tools/release-dry-run.ts`) builds it in two scratch copies of different
+  paths and time zones and fails unless the digests are equal; it also requires
+  the five `pnpm pack` tarballs of both copies to be byte-identical. The
   packages (tsdown) are too: building the same sources twice from a clean state,
   in two different directories, gave byte-identical `dist/` trees (JavaScript,
   its source maps, and declarations; chunk names are content hashes).
