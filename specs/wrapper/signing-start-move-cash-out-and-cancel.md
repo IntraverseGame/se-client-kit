@@ -8,7 +8,14 @@ Part of the [Wrapper spec](../wrapper.md), section
   the canonical action text and path itself from the game's request and MUST
   never sign any other spelling
   ([What this spec does not own](../wrapper.md#what-this-spec-does-not-own)).
-  <!-- TODO(signed-action spec): the action grammar for Coin Flip (`pick`, the 0-based `path`), the `PlayerCancel` fields, and the vectors. -->
+  The signed-action specification publishes the grammar
+  (`pick row <r> tile <o>`, 0-based, with `r = len(path) − 1`; `cash out`;
+  `cancel`) and the `PlayerCancel` type, whose fields are those of W-25. A
+  `path` entry is the step's `config.steps[].index` in the Snapshot, never the
+  tile: the steps survived, then the step played. Coin Flip's only move is
+  `pick row 0 tile <o>` with path `[0]`; it has one step, so no cash-out
+  ([OQ-3](../wrapper.md#decided-questions)).
+  <!-- TODO(signed-action spec): the `PlayerCancel` vector from an independent signer (#41). -->
 - **W-21.** Every signature MUST be canonical: 65 bytes `r ‖ s ‖ v`, `v` in
   `{27, 28}`, low `s`, deterministic (RFC 6979). The shell MUST reject any other
   length, `v`, or high `s`, and a recovered zero address, when it checks a
@@ -57,13 +64,19 @@ Part of the [Wrapper spec](../wrapper.md), section
   with no move applied can be canceled: a cancel after a move, or of a round
   that is not `active`, is a 422 `FAILED_PRECONDITION`; a cancel the engine
   refuses (a wrong signer, sequence, or `previous`) is a 400 `INVALID_ARGUMENT`
-  and leaves the round `active`. A cancel is not answered from a log as a
-  repeated move is: after a lost response or a 503 `UNAVAILABLE`, the shell MUST
-  read the Snapshot (`GET /play/v1/snapshot`) before it sends the cancel again,
-  and `play-client` never repeats it on its own. The shell does not sign a
-  cancel yet: the `PlayerCancel` fields and vectors are still to be published
-  (the signed-action TODO under W-20), so W-25 and the cancel path of W-26
-  cannot complete until they are.
+  and leaves the round `active`, as the Play API document states. The kit
+  declines that document's "a corrected cancel may follow": the shell MUST NEVER
+  sign a second cancel at `(round, 1)` (W-15; decided by human review,
+  2026-10-17): after a refused cancel, a 400 included, it reads the Snapshot and
+  signs nothing at that sequence again, so the round ends by its expiry rule
+  unless the Snapshot shows the cancel applied (`canceled`). A cancel is not
+  answered from a log as a repeated move is: after a lost response or a 503
+  `UNAVAILABLE`, the shell MUST read the Snapshot (`GET /play/v1/snapshot`)
+  before it sends the same signed cancel again, and `play-client` never repeats
+  it on its own. The shell does not sign a cancel yet: the `PlayerCancel` type
+  is published, but its vector from an independent signer is not (the
+  signed-action TODO under W-20, #41), so W-25 and the cancel path of W-26
+  cannot complete until it is.
 - **W-26.** **Checks before the first signature and before the game is shown as
   ready.** The Snapshot is `starting` while the round prepares. The shell MUST
   NOT show the game as ready, and MUST NOT sign anything except the

@@ -19,12 +19,26 @@ defaults.
   the query string, never forwards it (in a request, a log line, a message, or
   the DOM), and never stores it: it ignores the query string and treats the
   launch as having no code (W-1a). The operator launch contract (owned
-  elsewhere, named here only) must therefore place the launch code in the
-  fragment.
-  <!-- TODO(Play API): the parameter name and the exact fragment format come from the operator launch contract. Only the placement (the fragment) is decided here. -->
+  elsewhere, named here only) places the launch code in the fragment, in the
+  form the operator launch already uses (decided by human review, 2026-10-17):
+  `launchUrl` is the play launch URL, then `#`, then the launch code, so the
+  code is the **whole fragment**, with no parameter name (for example
+  `https://play.example/l#lc_…`). A code starts with `lc_` today (the Play API
+  document gives `lc_` and 43 base64url characters), and the redeem accepts 1 to
+  128 characters. The Wrapper checks the length only, never the prefix, which
+  the backend may change (decided by human review, 2026-10-17): it measures the
+  raw `location.hash` without its `#`, with no decoding, and an empty value or
+  one of more than 128 characters is no code (W-1a). It is single use, with a
+  short expiry the backend sets; the Wrapper does not rely on its length. The
+  Wrapper reads the fragment without its `#`, strips it with
+  `history.replaceState`, and sends it as `launchCode` to the Play API's
+  `POST /play/v1/sessions:redeem` (W-2). The operator launch serves the Play API
+  on the Wrapper's own origin; the Wrapper does not enforce that, and
+  `playApiBaseUrl` stays a configured `https:` base (W-3).
 - **W-1a.** **No launch code.** When the fragment holds no launch code (it is
-  absent or empty, or the code was placed only in the query string), the Wrapper
-  MUST NOT call the redeem call and MUST sign nothing. It shows the
+  absent or empty, more than 128 characters of the raw `location.hash` without
+  its `#`, or the code was placed only in the query string), the Wrapper MUST
+  NOT call the redeem call and MUST sign nothing. It shows the
   [session-ended state](../wrapper.md#error-and-degraded-states) with the
   instruction to relaunch from the operator, the same state W-2 shows for a
   rejected code.
