@@ -74,14 +74,25 @@ build-output check, and the Vite guard of the Wrapper are described in
 [`specs/client-kit/the-contracts-package.md`](./specs/client-kit/the-contracts-package.md).
 
 Playwright browsers are not installed by `pnpm install` (lifecycle scripts are
-off). When a suite exists, run `pnpm exec playwright install chromium` once.
+off). Run
+`pnpm --filter @intraverse/se-client-e2e exec playwright install chromium` once
+before `pnpm test:e2e`. Where Playwright's browser download is not available,
+`SE_E2E_BROWSER_CHANNEL=chrome pnpm test:e2e` runs the suite on an installed
+Chrome instead. That variable is for local development only: CI does not use it
+and always runs Playwright's own Chromium.
+
+To repeat the suite (to catch a flaky test), pass Playwright's flag through the
+e2e workspace's own script:
+`pnpm --filter @intraverse/se-client-e2e test -- --repeat-each=3`. Through the
+root script it does not reach Playwright: `pnpm test:e2e --repeat-each=3` and
+`pnpm test:e2e -- --repeat-each=3` both silently run the suite once.
 
 ## Repository at a glance
 
 ```text
 packages/    contracts (data only), signing, snapshot, play-client, shell (empty skeletons)
 apps/        wrapper (the UI) and a reference game                        (empty skeletons)
-e2e/         Playwright suite and the fake Play API                       (no suites yet)
+e2e/         Playwright suite and the fake Play API                       (harness; T-rows pending)
 tools/       repository checks and their tests (allow-list, contracts entry, lint rules)
 specs/       current behavior and contracts (source of truth)
 decisions/   accepted decisions (ADRs)

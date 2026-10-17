@@ -232,6 +232,9 @@ importers:
       '@axe-core/playwright':
         specifier: 4.13.0
         version: 4.13.0(playwright-core@1.64.0)
+      '@intraverse/se-client-contracts':
+        specifier: workspace:*
+        version: link:../packages/contracts
       '@playwright/test':
         specifier: 1.64.0
         version: 1.64.0

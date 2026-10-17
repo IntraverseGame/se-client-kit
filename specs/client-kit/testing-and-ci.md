@@ -33,9 +33,12 @@ Play API document's types, and the vector catalog). `contracts-drift` and
 `release` are not defined yet. `build` builds every workspace; the manifest and
 size budget join it with the first release build, and the job also runs
 `pnpm check:build-output` (the no-vector content check, now over the vendored
-vectors) and `pnpm check:package-files`. `e2e-fake` has no suites yet. The
-workflows hold no secret, run with `permissions: {}` at the top and
-`contents: read` per job, and pin every Action by full commit SHA.
+vectors) and `pnpm check:package-files`. `e2e-fake` installs Playwright's
+Chromium and runs the e2e harness's own tests and a smoke run on the Wrapper's
+release bundle; the browser rows of the Wrapper's test plan are pending
+([The e2e harness](#the-e2e-harness)). The workflows hold no secret, run with
+`permissions: {}` at the top and `contents: read` per job, and pin every Action
+by full commit SHA.
 
 ## Task orchestration and caching
 
@@ -99,6 +102,156 @@ frontmatter some agent tools require). The Snapshot types come from
 `json-schema-to-typescript`, the typed client's from `openapi-typescript`; both
 are development dependencies that write committed, generated files
 ([ADR-001](../../decisions/ADR-001-toolchain-and-signing.md)).
+
+## The e2e harness
+
+The Playwright suite (`e2e/`, the private `@intraverse/se-client-e2e` workspace)
+stands on fixtures in `e2e/tests/harness/`. None of it is shipped; it is
+development-only, so it may import the test-only entry of `contracts`.
+
+- **Hermetic origins.** Every origin is a Playwright route on the test's browser
+  context, under the reserved `.test` top-level domain: the Wrapper's release
+  bundle (`apps/wrapper/dist`, unmodified) at `https://wrapper.e2e.test`, and
+  the suite's own test pages (`e2e/tests/pages/`) at `https://pages.e2e.test`.
+  The bundle holds no environment values, so the harness also serves the
+  Wrapper's environment configuration document at the path the Wrapper reads
+  (`/environment-config.json`, provisional like the Wrapper's own path): a valid
+  `preview` document (`e2e/tests/harness/environment-config.ts`) whose
+  `playApiBaseUrl` is the fake Play API's and whose other hosts are all under
+  `.test`, with two RPC endpoints of distinct providers so no degraded indicator
+  is shown. A catch-all route, registered first, refuses every other HTTP
+  request, and a catch-all WebSocket route closes every WebSocket a page or
+  frame opens (code 1008) before it connects; both are recorded, and a test that
+  made either fails. The routes do not see a WebSocket opened by a dedicated
+  worker or a service worker, nor WebRTC or other traffic outside a route; such
+  traffic is not recorded. Behind the routes, the Chromium project runs with
+  `--host-resolver-rules=MAP * ~NOTFOUND` (`e2e/tests/harness/browser-flags.ts`,
+  development and CI alike, the installed-Chrome channel included), so no host
+  name resolves and nothing outside a route can reach a host by name (WebRTC's
+  STUN and TURN servers named by host included); routed requests resolve no
+  name, so the fake origins still answer. An address written as an IP literal is
+  not a host name, and this flag is not relied on to stop it.
+  `e2e/tests/hermetic-workers.spec.ts` proves the block: a socket from a
+  dedicated worker and one from a service worker's install handler, aimed by
+  name at a loopback listener the test owns, never reach it, and a control
+  launch without the flag reaches it with the same socket (both launches turn
+  off Chrome's local network access checks, which would otherwise stop a public
+  origin's socket to loopback and make the test pass for the wrong reason). That
+  listener is the suite's only open socket and takes nothing but connections.
+  Firefox and WebKit need their own equivalent of the block when their projects
+  are added (T-9a). No server or port is opened otherwise. The static origins
+  answer a missing file, or a path with a malformed `%` escape, with a 404.
+- **The fake Play API** is a route at the configuration's `playApiBaseUrl`
+  (default `https://wrapper.e2e.test/play/v1`; a test may move it). It answers
+  from the vendored contract only. Its routes, each operation's listed statuses,
+  and each request body's fields are tables held to the Play API document's
+  generated types at compile time, so a document change breaks the fake instead
+  of loosening it. Request bodies are decoded strictly (an unknown or missing
+  field is `INVALID_ARGUMENT`), and every route but the redeem needs a valid
+  play token (`UNAUTHENTICATED` otherwise). A test scripts each operation's
+  answers in order: a Snapshot is a `valid/` Snapshot vector, sent as vendored;
+  a problem is a `valid/` `PlayProblem` vector, sent with its own status, which
+  must be one the operation lists; a `network-failure` aborts the connection; a
+  `hang` never answers. A script that names an unknown vector, a vector of the
+  wrong definition, or an unlisted status is refused when it is queued. The
+  redeem and refresh answers are the fake's own, typed by the document: one
+  single-use launch code, play tokens that a refresh rotates (the older ones
+  revoked), `Cache-Control: no-store`, and deadlines from a fixed server time.
+  The launch code, session id, and tokens are derived from a seed with SHA-256,
+  so a run is reproducible. A call the script has no answer for, or a request to
+  an unknown route, is answered `INTERNAL` or `NOT_FOUND` and fails the test.
+  The fake answers an operation only with a status the document lists for it: a
+  problem it writes itself (`UNAUTHENTICATED`, `INVALID_ARGUMENT`) whose status
+  the operation does not list (for example a body sent to `refreshPlayToken`,
+  which lists no 400) fails the test as an unscripted call, answered `INTERNAL`
+  (500, which a type-level check in `play-api-document.ts` requires every
+  operation to list); no status is invented. Field values are not checked
+  against the document's patterns, and responses are not re-validated against
+  the schema at run time (decided, 2026-10-17): the compile-time types and the
+  per-vector definition and status check are enough, because a vector's validity
+  is the `snapshot` package's T-5 replay and the document's `Snapshot` and
+  `PlayProblem` components are generated from the same schema; and the e2e suite
+  does not import `snapshot` (the dependency direction keeps e2e on `contracts`
+  only).
+- **The launch URL** is `fake.launchUrl(wrapperUrl)`: `<wrapper-url>#<code>`,
+  the whole fragment being the launch code (`#lc_…`, no parameter name), the
+  form the launch contract uses. The T-rows build their launch URLs with it.
+- **The seeded random source** (T-13): `crypto.getRandomValues` is replaced in
+  every page and frame with `addInitScript` by a seeded generator (mulberry32),
+  after the platform's own checks, which still throw (`QuotaExceededError` above
+  65,536 bytes, `TypeMismatchError` for a float array) and report nothing; every
+  draw is reported to the test, so the suite knows the key's bytes, and a scan
+  first waits until every live frame's draws have arrived. Each document
+  restarts the stream from the seed, so a reload draws the same bytes. Workers
+  and `crypto.randomUUID` are not stubbed.
+- **The secret scan** (T-13) records, for the whole context: console messages
+  (text and arguments, serialized in the page) and uncaught page errors; every
+  request, response, and WebSocket URL; every URL a frame navigated to, the
+  history API included; and, at scan time, each frame's document URL,
+  `history.state`, `localStorage`, `sessionStorage`, IndexedDB (every database,
+  store, key, and value), Cache Storage (request URLs and response bodies),
+  cookies (the context's, `HttpOnly` included, and `document.cookie`), service
+  worker registrations, and the origin private file system
+  (`navigator.storage.getDirectory()`, recursively: every name and every file's
+  contents). It looks for the fake's launch code and every play token it issued,
+  every 32-byte draw of the random source, and any secret a test adds: a string
+  raw, URL-encoded, and in base64 and base64url; bytes in hex (any case),
+  base64, base64url, comma-separated decimals, and one decimal number (the bytes
+  read big-endian, as a `bigint` prints; binary values in the page are
+  serialized to those forms). Anything shaped like a launch code or a play token
+  (`lc_` or `pt_` and 43 base64url characters) is a finding too. The one
+  navigation the test makes to the launch URL is allowed, once; the document URL
+  after it is not. The generic scan does not see history entries (no web API
+  lists them); T-13 itself checks that going back does not return to the launch
+  URL. A finding names the channel and the secret's label, never its value. **A
+  read error fails the scan** (decided 2026-10-17): a channel, a frame, or a
+  console argument that cannot be read is an `unreadable` finding naming the
+  channel and the error's name, never a value; the one excuse is a
+  `SecurityError` in a frame whose origin is `"null"` (a sandboxed frame, which
+  has no such storage), where the origin is the one an init script recorded
+  before any page code ran, not `self.origin`, which a page can overwrite. A
+  `SecurityError` in a frame with a real origin, or in a page that wrote
+  `"null"` over `self.origin`, is reported. Not covered: request and response
+  bodies, a base64 form not aligned with the start of a larger base64 string,
+  and workers. The scan runs in the page's own world and trusts the page's
+  built-in APIs: a page that replaces a built-in (a storage getter, `console`,
+  `history`) can hide what it holds from the scan; the Wrapper is tested as
+  built, not as an adversary of the suite. Its negative tests run a deliberately
+  leaking test page that opens a session against the fake and leaks one secret
+  through one channel; the scan must fail for each channel (WebSocket,
+  `history.state`, the origin private file system, and the key as a decimal
+  number included), pass the same page leaking nothing, fail on an unreadable
+  channel and an unserializable console argument, excuse an opaque frame, and
+  see a draw made just before it. The forms and the redaction are tested in Node
+  alone (`e2e/tests/secret-needles.spec.ts`).
+- **The accessibility audit** (T-14) is an axe scan (`@axe-core/playwright`)
+  with the WCAG 2.2 A and AA tags (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`,
+  `wcag22aa`), optionally limited to a selector; axe's best-practice rules are
+  not applied. A test page with known violations proves it fails.
+- **The network control** (T-15): `goOffline` and `goOnline` toggle the
+  browser's offline emulation and cut the fake Play API with it; `cutPlayApi`
+  fails only the Play API while the page stays online. A single failing or
+  never-answering call is scripted on the fake.
+- **What runs today**: the harness's own tests, and a smoke run on the Wrapper's
+  bundle as it renders today (it loads and accepts the served configuration with
+  no outside request, error, or warning, passes the audit, leaves nothing for
+  the scan, and goes offline and back; a control serves a broken document and
+  sees the configuration-error state). The rows of the Wrapper's test plan that
+  need a session, a rendered state, or the reference game are declared with
+  `test.fixme` in `e2e/tests/pending.spec.ts`, reported as skipped, never as
+  passed ([wrapper.md, Test plan](../wrapper.md#test-plan)). The Firefox and
+  WebKit projects join with the W-49 paths (T-9a).
+- **Locally**, `pnpm exec playwright install chromium` (in `e2e/`) installs the
+  browser once. Where Playwright's download is unavailable,
+  `SE_E2E_BROWSER_CHANNEL=chrome` runs the Chromium project on an installed
+  Chrome. It is a development-only option: CI does not use it and always runs
+  Playwright's own Chromium.
+- **Telemetry**: the harness writes nothing but Playwright's own report. A
+  finding's detail, a refused URL or WebSocket, and the fake's record of
+  unexpected calls have every form of every known secret (the fake's launch code
+  and tokens, and the 32-byte draws) and anything secret-shaped replaced by
+  `[redacted]`; the fake keeps whether a request was authorized, never the
+  token.
 
 **Where the preview-stack e2e runs.** The SuperEngine preview stack is private,
 so a public CI job cannot reach it without a credential. This repository owns

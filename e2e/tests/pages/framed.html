@@ -1,0 +1,28 @@
+<!doctype html>
+<!--
+  A page with two child frames: a same-origin one (the random stub must reach
+  it) and a sandboxed one with an opaque origin (its storage cannot be read,
+  and the secret scan must excuse exactly that). Test-only.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Framed test page</title>
+  </head>
+  <body>
+    <main>
+      <h1>Framed test page</h1>
+      <iframe
+        name="child"
+        title="Same-origin child"
+        src="blank.html"
+      ></iframe>
+      <iframe
+        name="opaque"
+        title="Sandboxed child"
+        sandbox="allow-scripts"
+        srcdoc="<!doctype html><html lang='en'><title>Opaque</title><p>Opaque frame</p></html>"
+      ></iframe>
+    </main>
+  </body>
+</html>
