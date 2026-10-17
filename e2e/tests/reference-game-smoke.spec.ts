@@ -4,17 +4,17 @@
 // game's side of `se.controller/1` across a real origin boundary: the `hello`
 // reaches the host at its origin, a Snapshot from the host renders, a click
 // asks for a pick, a reject shows in the alert, a message the game posts to
-// itself is ignored, and the page passes the audit. A whole round through the
-// Wrapper is T-10 and T-11 (pending.spec.ts): it needs the Wrapper to mount
-// the game, once the redeem answer carries D (W-37), and a round W-26 passes.
+// itself is ignored, and the page passes the audit. The fixtures serve the game
+// at D for every test (serve-origins.ts). A whole round through the Wrapper is
+// T-10 and T-11 (pending.spec.ts): the Wrapper mounts the game at the redeem
+// answer's D (W-37), but a round W-26 passes is still needed.
 
 import type { Frame, Page } from "@playwright/test";
 
 import { auditAccessibility } from "./harness/accessibility.ts";
 import { expect, test } from "./harness/fixtures.ts";
 import { frameNamed } from "./harness/frames.ts";
-import { PAGES_ORIGIN } from "./harness/origins.ts";
-import { GAME_ORIGIN, serveReferenceGame } from "./harness/reference-game.ts";
+import { GAME_ORIGIN, PAGES_ORIGIN } from "./harness/origins.ts";
 
 type Received = {
   readonly origin: string;
@@ -60,7 +60,6 @@ const postToGame = async (page: Page, message: unknown): Promise<void> => {
 };
 
 const openHost = async (page: Page): Promise<Frame> => {
-  await serveReferenceGame(page.context());
   await page.goto(`${PAGES_ORIGIN}/game-host.html`);
   const game = await frameNamed(page, "game");
   await expect
@@ -167,7 +166,6 @@ test.describe("the reference game", () => {
   });
 
   test("talks to nobody when it is not framed", async ({ page }) => {
-    await serveReferenceGame(page.context());
     await page.goto(`${GAME_ORIGIN}/`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       "Coin Flip runs inside the SuperEngine Wrapper",

@@ -9,7 +9,7 @@
 
 import type { BrowserContext } from "@playwright/test";
 
-import { WRAPPER_ORIGIN } from "./origins.ts";
+import { GAME_ORIGIN, WRAPPER_ORIGIN } from "./origins.ts";
 
 /**
  * Where the Wrapper reads the document, relative to its page. PROVISIONAL, as
@@ -45,7 +45,7 @@ export const environmentConfig = (
   entropyChainId: { [SOURCE]: 8453 },
   minRpcQuorum: 2,
   tipLagMargin: { [SOURCE]: 2 },
-  gameOrigins: ["https://game.e2e.test"],
+  gameOrigins: [GAME_ORIGIN],
   operatorOrigins: [],
 });
 

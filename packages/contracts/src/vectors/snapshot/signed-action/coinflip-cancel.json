@@ -1,0 +1,75 @@
+{
+  "vector": "snapshot/signed-action/coinflip-cancel",
+  "description": "Coin Flip, a signed cancel before the first move: the PlayerCancel EIP-712 message of the round in snapshot/valid/coinflip-active-ready-hash (its domain, its roundId as round, its readyHash T_0 as previous), whose typedData is snapshot/typed-data/coinflip-cancel, signed by the round's action key. structHash is T_1. The hashes, digest and signature were made with Foundry cast alone (generatedWith), not with the engine's own EIP-712 code, so a shell that reproduces them agrees with an independent signer. testKey is a public test key: never use it for anything of value.",
+  "sources": {
+    "round": "snapshot/valid/coinflip-active-ready-hash",
+    "typedData": "snapshot/typed-data/coinflip-cancel"
+  },
+  "typedData": {
+    "hex": "0x0803120663616e63656c20012a201bb96dc769cd08816e9ed82a7155b464b2730a9df1d46bdf86dabf94485fc510",
+    "base64": "CAMSBmNhbmNlbCABKiAbuW3Hac0IgW6e2CpxVbRksnMKnfHUa9+G2r+USF/FEA=="
+  },
+  "eip712": {
+    "types": {
+      "EIP712Domain": [
+        { "name": "name", "type": "string" },
+        { "name": "version", "type": "string" },
+        { "name": "chainId", "type": "uint256" },
+        { "name": "verifyingContract", "type": "address" }
+      ],
+      "PlayerCancel": [
+        { "name": "action", "type": "string" },
+        { "name": "path", "type": "uint8[]" },
+        { "name": "sequence", "type": "uint32" },
+        { "name": "round", "type": "bytes32" },
+        { "name": "previous", "type": "bytes32" }
+      ]
+    },
+    "primaryType": "PlayerCancel",
+    "domain": {
+      "name": "SuperEngine",
+      "version": "1",
+      "chainId": 31337,
+      "verifyingContract": "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+    },
+    "message": {
+      "action": "cancel",
+      "path": [],
+      "sequence": 1,
+      "round": "0x01927c5e8b3a7f219c4d5e6f7a8b9c0d00000000000000000000000000000000",
+      "previous": "0x1bb96dc769cd08816e9ed82a7155b464b2730a9df1d46bdf86dabf94485fc510"
+    }
+  },
+  "encodeType": "PlayerCancel(string action,uint8[] path,uint32 sequence,bytes32 round,bytes32 previous)",
+  "typeHash": "0xacaf7a5ad98f54f1cf2ba32c94a782121894bc4306dbb28b7683c5ef579a9ce6",
+  "domainSeparator": "0xa198bbd7e02bac6b3c31ac524252d3e7dbbd0d56cb09d904b955de4948d15299",
+  "structHash": "0x744dd00b77bf7034538dc0c96ce957e12519421cd690799ab49ee5e54a4a805e",
+  "digest": "0x5e450a621e626507a3b30b7bf7715f87bb9c0d2e271fa50abbc7de8755ac982e",
+  "testKey": {
+    "note": "TEST KEY ONLY. The well-known account at index 3 of the default anvil and Hardhat test mnemonic, public by design; never fund it or use it outside tests. Its address is the round's actionKey.",
+    "privateKey": "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
+    "address": "0x90f79bf6eb2c4f870365e785982e1f101e93b906"
+  },
+  "signature": {
+    "hex": "0xc1027093bcc7cc7891fcf40103acea717485e2a7dfdca26867ab42ea681adf6d2e345bcaedb1c2d00c66c46a96e0a7f0640905d994efeb809275fbc6651867601b",
+    "r": "0xc1027093bcc7cc7891fcf40103acea717485e2a7dfdca26867ab42ea681adf6d",
+    "s": "0x2e345bcaedb1c2d00c66c46a96e0a7f0640905d994efeb809275fbc665186760",
+    "v": 27
+  },
+  "generatedWith": {
+    "tool": "Foundry cast",
+    "version": "1.3.6-v1.3.6 (commit d2415887096b10226d13af9240b5bef5e6b0d815)",
+    "image": "ghcr.io/foundry-rs/foundry:v1.3.6",
+    "input": "player-cancel.json holds the eip712 member of this vector.",
+    "commands": [
+      "cast wallet address --private-key 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
+      "cast keccak 'PlayerCancel(string action,uint8[] path,uint32 sequence,bytes32 round,bytes32 previous)'",
+      "cast keccak $(cast abi-encode 'f(bytes32,bytes32,bytes32,uint256,address)' $(cast keccak 'EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)') $(cast keccak SuperEngine) $(cast keccak 1) 31337 0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e)",
+      "cast keccak $(cast abi-encode 'f(bytes32,bytes32,bytes32,uint32,bytes32,bytes32)' 0xacaf7a5ad98f54f1cf2ba32c94a782121894bc4306dbb28b7683c5ef579a9ce6 $(cast keccak cancel) $(cast keccak 0x) 1 0x01927c5e8b3a7f219c4d5e6f7a8b9c0d00000000000000000000000000000000 0x1bb96dc769cd08816e9ed82a7155b464b2730a9df1d46bdf86dabf94485fc510)",
+      "cast keccak $(cast concat-hex 0x1901 0xa198bbd7e02bac6b3c31ac524252d3e7dbbd0d56cb09d904b955de4948d15299 0x744dd00b77bf7034538dc0c96ce957e12519421cd690799ab49ee5e54a4a805e)",
+      "cast wallet sign --data --from-file player-cancel.json --private-key 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
+      "cast wallet sign --no-hash 0x5e450a621e626507a3b30b7bf7715f87bb9c0d2e271fa50abbc7de8755ac982e --private-key 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"
+    ],
+    "outputs": "The commands print, in order: the address (EIP-55 cased), typeHash, domainSeparator, structHash, digest, and the signature twice. Both signing commands print the same signature, so cast's own EIP-712 digest of the input equals digest."
+  }
+}

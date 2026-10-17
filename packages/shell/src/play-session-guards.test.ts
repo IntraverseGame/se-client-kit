@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { createFakeGame, HELLO, mountOf } from "./fixtures/fake-game.ts";
 import { deferred, ok } from "./fixtures/fake-play.ts";
-import { GAME, open, sessionOf, settleMany } from "./fixtures/play-session.ts";
+import { open, sessionOf, settleMany } from "./fixtures/play-session.ts";
 import { ROUND_REQUEST } from "./fixtures/round-auth.ts";
 import { issued, issuedSteps, stepsAt } from "./fixtures/session-round.ts";
 import { snapshot } from "./fixtures/vectors.ts";
@@ -65,7 +65,6 @@ describe("one cash-out at a time (W-24)", () => {
   it("two cash-outs at once sign and send one: the second is refused busy", async () => {
     const opened = await open({
       config: issuedSteps.config,
-      gameOrigin: () => GAME,
     });
     const session = sessionOf(opened);
     opened.play.answer("startRound", ok(issuedSteps.snapshot));

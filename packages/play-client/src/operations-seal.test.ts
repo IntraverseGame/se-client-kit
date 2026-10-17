@@ -90,7 +90,7 @@ describe("the sealed token answers", () => {
     expectTypeOf<Redeemed["playToken"]>().toEqualTypeOf<TestSealed>();
     expectTypeOf<Refreshed["playToken"]>().toEqualTypeOf<TestSealed>();
     expectTypeOf<StringKeys<Redeemed>>().toEqualTypeOf<
-      "sessionId" | "tokenExpiresAt" | "sessionExpiresAt"
+      "sessionId" | "tokenExpiresAt" | "sessionExpiresAt" | "gameOrigin"
     >();
     expectTypeOf<StringKeys<Refreshed>>().toEqualTypeOf<"tokenExpiresAt">();
   });

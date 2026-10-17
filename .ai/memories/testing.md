@@ -14,10 +14,14 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - **Unit** (Vitest) beside the code of each package: no real network, disk,
   timers, or clock; inject a clock and a random source; one behavior per test.
 - **Vector replay:** wire and crypto formats are tested by replaying vendored
-  vector files (signing vectors, Snapshot `valid/`, `invalid/`, `signature/`, and `typed-data/` vectors, the
-  signed-action vectors) read through the test-only entry of the `contracts`
-  package; only tests may import that entry, and no vector may reach a bundle
-  (a lint rule and a build check). Prefer adding a vector to adding a one-off assertion.
+  vector files (signing vectors, Snapshot `valid/`, `invalid/`, `signature/`,
+  and `typed-data/` vectors) read through the test-only entry of the `contracts`
+  package. The `signed-action/` vectors (`snapshotVectors.signedAction`) are
+  vendored but not replayed yet (#41); `tools/contracts-signed-action.test.ts`
+  checks their pairing with `typed-data/` and `valid/` and that their embedded
+  key is signing's `PLAYER_KEY`. Only tests may import that entry, and no
+  vector may reach a bundle (a lint rule and a build check). Prefer adding a
+  vector to adding a one-off assertion.
   Released vector files are never edited. The vectors were produced by an
   independent implementation in another language; that independence is the
   point, so do not regenerate them from this repository's code.
@@ -88,9 +92,12 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `PAGES_ORIGIN` (Chromium has `ancestorOrigins`); the Firefox path is a
   component test (`boot-session.test.ts`). Rows that cannot run yet stay `test.fixme` in
   `pending.spec.ts`, never a body that passes. The reference game's build is
-  served at `https://game.e2e-games.test` by the specs that use it
-  (`harness/reference-game.ts`); `reference-game-smoke.spec.ts` runs it in a
-  stand-in host page (`pages/game-host.html`), not the Wrapper. Locally,
+  served at D, `https://game.e2e-games.test` (`GAME_ORIGIN`, origins.ts), for
+  every test (`serve-origins.ts`): the fake's redeem answers it as `gameOrigin`
+  and it is the configuration's only `gameOrigins` entry, so every Wrapper
+  session mounts it; a test that serves another game at D registers its route
+  after. `reference-game-smoke.spec.ts` runs it in a stand-in host page
+  (`pages/game-host.html`), not the Wrapper. Locally,
   `SE_E2E_BROWSER_CHANNEL=chrome` runs on an installed Chrome when Playwright's
   download is unavailable.
 - **Contracts check:** CI recomputes the hash of every file in the `contracts` package

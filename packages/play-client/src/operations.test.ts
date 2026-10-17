@@ -130,7 +130,7 @@ describe("redeemLaunchCode", () => {
     expect(h.server.served[0]?.url).not.toContain(FIXTURE_LAUNCH_CODE);
   });
 
-  it("answers the session, the sealed token, and both deadlines", async () => {
+  it("answers the session, the sealed token, both deadlines, and the game origin", async () => {
     h.server.answer("redeemLaunchCode", {
       kind: "success",
       body: redeemAnswer,
@@ -148,6 +148,27 @@ describe("redeemLaunchCode", () => {
     });
     expect(parseDeadline(result.body.tokenExpiresAt)).toBeDefined();
   });
+
+  it.each([
+    ["one character", "x"],
+    ["267 characters", `https://${"a".repeat(259)}`],
+    // JSON Schema counts code points: 267 of them, 534 UTF-16 code units.
+    ["267 code points outside the BMP", "\u{1F3B2}".repeat(267)],
+  ])(
+    "accepts a gameOrigin of %s, as the document bounds it",
+    async (_name, gameOrigin) => {
+      h.server.answer("redeemLaunchCode", {
+        kind: "success",
+        body: { ...redeemAnswer, gameOrigin },
+      });
+      const { body } = await redeemLaunchCode(
+        h.transport,
+        { launchCode: FIXTURE_LAUNCH_CODE },
+        { seal: h.seal },
+      );
+      expect(body.gameOrigin).toBe(gameOrigin);
+    },
+  );
 
   it("drops a field the document does not list", async () => {
     h.server.answer("redeemLaunchCode", {

@@ -38,7 +38,8 @@ export type PlaySessionParts = {
   /** The round flows' options: the signing session, transport, token, checks. */
   readonly flow: RoundFlowOptions;
   readonly randomUuid: RandomUuid;
-  readonly gameOrigin?: () => string | undefined;
+  /** D, the redeem answer's `gameOrigin`, fixed at open (W-37). */
+  readonly gameOrigin: string;
   /** The configuration's allow-list of game origins, fixed at open (W-37). */
   readonly gameOrigins: readonly string[];
   /** The Wrapper's own origin, the SE origin, fixed at open. */
@@ -219,12 +220,12 @@ export const createPlaySession = (
     });
   };
 
-  const gameOrigin = (): string | undefined => parts.gameOrigin?.();
+  const gameOrigin = (): string => parts.gameOrigin;
 
   const mountGame = (mount: GameMountOptions): GameMount => {
     const origin = gameOrigin();
-    if (origin === undefined || ended()) {
-      return Object.freeze({ ok: false, refusal: "no-game-origin" });
+    if (ended()) {
+      return Object.freeze({ ok: false, refusal: "session-ended" });
     }
     const result = createControllerBridge({
       ...mount,

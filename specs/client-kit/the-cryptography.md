@@ -134,10 +134,12 @@ Part of the [Client kit spec](../client-kit.md), section
   test-only entry of the `contracts` package, where they are copied with their
   source commit noted. The signed-action specification publishes no separate
   player-facing vector file: its independent vectors for `PlayerAction` and
-  `PlayerCashOut` are these signing vectors, and `PlayerCancel` has none yet
-  (#41). The vector file names its two signing keys (the action key `player` and
-  the admin `engine`) as the well-known local development accounts but does not
-  carry them, so the tests hold those two keys in a test fixture
+  `PlayerCashOut` are these signing vectors. An independent `PlayerCancel`
+  vector is vendored (`snapshotVectors.signedAction["coinflip-cancel"]`, signed
+  with `PLAYER_KEY`) but not replayed yet (#41). The signing vector file names
+  its two signing keys (the action key `player` and the admin `engine`) as the
+  well-known local development accounts but does not carry them, so the tests
+  hold those two keys in a test fixture
   (`packages/signing/src/fixtures/keys.ts`). They are the vectors' test keys
   (the AGENTS.md exception): public by design, the default accounts of the local
   Ethereum development node, holding nothing and never used outside tests. The

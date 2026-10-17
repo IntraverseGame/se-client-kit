@@ -120,17 +120,17 @@ export const gameUrlOf = (gameOrigin: string, ownOrigin: string): string => {
 };
 
 /**
- * Mounts the game iframe for the session's D (W-37): sandboxed, titled, and
- * pointed at D only once the shell's bridge accepted it (D a serialized origin,
- * on the `gameOrigins` the session was opened with, and not the Wrapper's own).
- * With no D, or a refused one, nothing is mounted and nothing is loaded.
+ * Mounts the game iframe for the session's D, the redeem answer's `gameOrigin`
+ * (W-37): sandboxed, titled, and pointed at D only once the shell's bridge
+ * accepted it (D a serialized origin, on the `gameOrigins` the session was
+ * opened with, and not the Wrapper's own). A refused D is never loaded: the
+ * frame is removed without a `src`.
  */
 const mountGame = (
   options: SessionWiringOptions,
   session: PlaySession,
 ): void => {
   const { app, doc, window } = options;
-  if (session.gameOrigin() === undefined) return;
   const frame = doc.createElement("iframe");
   frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
   frame.setAttribute("referrerpolicy", "no-referrer");

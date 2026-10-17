@@ -86,7 +86,10 @@ test.describe("T-16: typed errors (W-42)", () => {
     });
     await launchAndStart(page, fakePlayApi);
     await expect(statusHeading(page)).toHaveText(TEXT.active);
-    await expect(page.locator("iframe")).toHaveCount(0);
+    // The game is mounted at D (the redeem answer's), but kept hidden: this
+    // page holds no round it can move in (W-31, W-37).
+    await expect(page.locator("iframe")).toHaveCount(1);
+    await expect(page.locator("iframe")).toBeHidden();
     expect(await auditAccessibility(page)).toEqual([]);
   });
 });

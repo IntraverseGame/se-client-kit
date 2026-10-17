@@ -5,8 +5,8 @@
       "path": "src/schemas/play.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "play/v1 OpenAPI document",
-      "sourceCommit": "ce973d58924016d9d5773e1241c56c202fb7d14a",
-      "sha256": "5cfcd084c60e59984d1a048defc0812709e6e4b993706d520ffec0b60cd65bdc"
+      "sourceCommit": "9fd9d8b384cb1eb8f1c7ab38acadf7e13c63f979",
+      "sha256": "ef858220666e52d00da58272c835f593a8a02bff1eb7bf031986a19ad52e83a8"
     },
     {
       "path": "src/schemas/se.snapshot.v1.schema.json",
@@ -539,6 +539,13 @@
       "sourceName": "se.snapshot/1 vectors/signature/create-round-auth-unpinned-signer.json",
       "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
       "sha256": "9828bf962e62f6db854087ef4aeddc2b5bb6b569f776b3b0eaf66c50778fe693"
+    },
+    {
+      "path": "src/vectors/snapshot/signed-action/coinflip-cancel.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/signed-action/coinflip-cancel.json",
+      "sourceCommit": "cc0d944f314f817889186a5cf6c9ccaeda39ec31",
+      "sha256": "0ca20df9cd2fbde81830dd2dcb3368ad5d2dcfa1f46e41acf331dc134ef54d79"
     },
     {
       "path": "src/vectors/snapshot/typed-data/cash-out.json",

@@ -28,8 +28,9 @@ export const GAME = "https://game.example.net";
 /** The Wrapper's own origin, the SE origin. */
 export const SE_ORIGIN = "https://play.example.com";
 
-const redeemed =
-  (now: () => number): Responder =>
+/** The redeem answer, with `gameOrigin` as D (the session's only source). */
+export const redeemed =
+  (now: () => number, gameOrigin: string = GAME): Responder =>
   (): PlayResponse => ({
     status: 200,
     body: {
@@ -37,6 +38,7 @@ const redeemed =
       playToken: TOKEN,
       tokenExpiresAt: "2026-10-16T12:15:00.000Z",
       sessionExpiresAt: "2026-10-16T14:00:00.000Z",
+      gameOrigin,
     },
     receivedAtMs: now(),
     clockOffsetMs: 0,
@@ -53,13 +55,19 @@ export type Overrides = Partial<SessionParts> & {
   readonly href?: string;
   readonly play?: FakePlay;
   readonly redeem?: Responder;
+  /** D, as the redeem answers it (`GAME` by default). */
+  readonly gameOrigin?: string;
 };
 
 export const open = async (overrides: Overrides = {}): Promise<Opened> => {
+  const { gameOrigin: _answered, ...parts } = overrides;
   const events: string[] = [];
   const clock = createWallClock(NOW);
   const play = overrides.play ?? createFakePlay();
-  play.answer("redeemLaunchCode", overrides.redeem ?? redeemed(clock.now));
+  play.answer(
+    "redeemLaunchCode",
+    overrides.redeem ?? redeemed(clock.now, overrides.gameOrigin),
+  );
   const href = overrides.href ?? `${LAUNCH}#${CODE}`;
   const url = new URL(href);
   const transport = {
@@ -88,7 +96,7 @@ export const open = async (overrides: Overrides = {}): Promise<Opened> => {
     bindMode: "tip",
     gameOrigins: [GAME],
     ownOrigin: SE_ORIGIN,
-    ...overrides,
+    ...parts,
   });
   return { opening, play, events, clock };
 };

@@ -121,21 +121,23 @@ development-only, so it may import the test-only entry of `contracts`.
   bundle (`apps/wrapper/dist`, unmodified) at `https://wrapper.e2e.test`, and
   the suite's own test pages (`e2e/tests/pages/`) at `https://pages.e2e.test`.
   The reference game's build (`apps/reference-game/dist`, unmodified) is served
-  at the game origin `https://game.e2e-games.test`, on another registrable
-  domain (W-37), by the specs that use it
-  (`e2e/tests/harness/reference-game.ts`). The bundle holds no environment
-  values, so the harness also serves the Wrapper's environment configuration
-  document at the path the Wrapper reads (`/environment-config.json`,
-  provisional like the Wrapper's own path): a valid `preview` document
-  (`e2e/tests/harness/environment-config.ts`) whose `playApiBaseUrl` is the fake
-  Play API's and whose other hosts are all under `.test`, with two RPC endpoints
-  of distinct providers so no degraded indicator is shown. A catch-all route,
-  registered first, refuses every other HTTP request, and a catch-all WebSocket
-  route closes every WebSocket a page or frame opens (code 1008) before it
-  connects; both are recorded, and a test that made either fails. The routes do
-  not see a WebSocket opened by a dedicated worker or a service worker, nor
-  WebRTC or other traffic outside a route; such traffic is not recorded. Behind
-  the routes, the Chromium project runs with
+  at the game origin D, `https://game.e2e-games.test`, on another registrable
+  domain (W-37), for every test (`e2e/tests/harness/serve-origins.ts`): it is
+  the fake Play API's redeem `gameOrigin` and the configuration's only
+  `gameOrigins` entry, so every Wrapper session mounts it. A test that serves
+  another game at D registers its route after these. The bundle holds no
+  environment values, so the harness also serves the Wrapper's environment
+  configuration document at the path the Wrapper reads
+  (`/environment-config.json`, provisional like the Wrapper's own path): a valid
+  `preview` document (`e2e/tests/harness/environment-config.ts`) whose
+  `playApiBaseUrl` is the fake Play API's and whose other hosts are all under
+  `.test`, with two RPC endpoints of distinct providers so no degraded indicator
+  is shown. A catch-all route, registered first, refuses every other HTTP
+  request, and a catch-all WebSocket route closes every WebSocket a page or
+  frame opens (code 1008) before it connects; both are recorded, and a test that
+  made either fails. The routes do not see a WebSocket opened by a dedicated
+  worker or a service worker, nor WebRTC or other traffic outside a route; such
+  traffic is not recorded. Behind the routes, the Chromium project runs with
   `--host-resolver-rules=MAP * ~NOTFOUND` (`e2e/tests/harness/browser-flags.ts`,
   development and CI alike, the installed-Chrome channel included), so no host
   name resolves and nothing outside a route can reach a host by name (WebRTC's
@@ -168,12 +170,13 @@ development-only, so it may import the test-only entry of `contracts`.
   redeem and refresh answers are the fake's own, typed by the document: one
   single-use launch code (`redeemAgain()` allows one more redeem of it, for the
   same session id with a new token: the cloned tab of T-17), play tokens that a
-  refresh rotates (the older ones revoked), `Cache-Control: no-store`, and
-  deadlines from a fixed server time. The launch code, session id, and tokens
-  are derived from a seed with SHA-256, so a run is reproducible. A call the
-  script has no answer for, or a request to an unknown route, is answered
-  `INTERNAL` or `NOT_FOUND` and fails the test. The fake answers an operation
-  only with a status the document lists for it: a problem it writes itself
+  refresh rotates (the older ones revoked), `Cache-Control: no-store`, deadlines
+  from a fixed server time, and the redeem's `gameOrigin`, the one origin on the
+  suite's `gameOrigins`. The launch code, session id, and tokens are derived
+  from a seed with SHA-256, so a run is reproducible. A call the script has no
+  answer for, or a request to an unknown route, is answered `INTERNAL` or
+  `NOT_FOUND` and fails the test. The fake answers an operation only with a
+  status the document lists for it: a problem it writes itself
   (`UNAUTHENTICATED`, `INVALID_ARGUMENT`) whose status the operation does not
   list (for example a body sent to `refreshPlayToken`, which lists no 400) fails
   the test as an unscripted call, answered `INTERNAL` (500, which a type-level
@@ -261,13 +264,13 @@ development-only, so it may import the test-only entry of `contracts`.
   are ignored, the page passes the audit, and an unframed game talks to nobody
   ([The reference game](./the-reference-game.md)); the session's open
   (`session-open.spec.ts`); and the Wrapper's browser rows that the fake's
-  vectors can drive: T-13, T-14a, T-17, and parts of T-15 and T-16 (their own
-  spec files; [wrapper.md, Test plan](../wrapper.md#test-plan) lists which). The
-  rows that need the reference game mounted by the Wrapper (it mounts a game
-  only once the redeem answer carries D, W-37), a round W-26 passes (the vectors
-  are not issued for the session's own key), or W-49's handshake are declared
-  with `test.fixme` in `e2e/tests/pending.spec.ts`, reported as skipped, never
-  as passed. The Firefox and WebKit projects join with the W-49 paths (T-9a).
+  vectors can drive: T-13, T-14a, T-17, T-18, the game's mount at the redeem
+  answer's D (`game-mount.spec.ts`), and parts of T-15 and T-16 (their own spec
+  files; [wrapper.md, Test plan](../wrapper.md#test-plan) lists which). The rows
+  that need a round W-26 passes (the vectors are not issued for the session's
+  own key), a multi-step game, or W-49's handshake are declared with
+  `test.fixme` in `e2e/tests/pending.spec.ts`, reported as skipped, never as
+  passed. The Firefox and WebKit projects join with the W-49 paths (T-9a).
 - **Locally**, `pnpm exec playwright install chromium` (in `e2e/`) installs the
   browser once. Where Playwright's download is unavailable,
   `SE_E2E_BROWSER_CHANNEL=chrome` runs the Chromium project on an installed

@@ -26,6 +26,7 @@ export const redeemAnswer: RedeemLaunchCodeResponse = {
   playToken: FIXTURE_TOKEN,
   tokenExpiresAt: shortToken.tokenExpiresAt,
   sessionExpiresAt: longToken.tokenExpiresAt,
+  gameOrigin: "https://game.example",
 };
 
 export const refreshAnswer: RefreshPlayTokenResponse = {

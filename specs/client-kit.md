@@ -282,9 +282,11 @@ A public repository cannot take content back once it is cloned, forked, or
 cached. The following never enter the kit, in any file, commit, issue, pull
 request, workflow log, agent output, or release note:
 
-- secrets: credentials, tokens, private keys (the test keys in the vectors are
-  public by design and are the only exception), connection strings, signing
-  keys, npm or deploy credentials;
+- secrets: credentials, tokens, private keys (the test keys the vectors were
+  signed with are public by design and are the only exception: in
+  `packages/signing/src/fixtures/keys.ts`, and in the vendored `signed-action/`
+  vectors, which embed the same public test key and cannot be edited),
+  connection strings, signing keys, npm or deploy credentials;
 - internal hostnames, internal URLs, dashboard links, account identifiers, cloud
   resource names;
 - unpublished backend internals: only the player-facing contracts (the Play API

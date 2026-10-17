@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { alertText, allText, statusHeading } from "./fixtures/app.ts";
-import { snapshotRead } from "./fixtures/fake-session.ts";
+import { FAKE_GAME_ORIGIN, snapshotRead } from "./fixtures/fake-session.ts";
 import { ACTIVE, round, SE_ORIGIN, wired } from "./fixtures/wired.ts";
 import { messagesFor } from "./messages.ts";
 
@@ -43,17 +43,17 @@ describe("answers outside a call, and the end", () => {
 });
 
 describe("the game iframe (W-37, W-38)", () => {
-  const D = "https://game.example.net";
+  const D = FAKE_GAME_ORIGIN;
 
-  it("mounts nothing without a game origin", async () => {
+  it("asks the session to mount its own D once, and loads nothing it refuses", async () => {
+    // The stand-in refuses by default, as an ended session does.
     const ui = await wired();
+    expect(ui.fake.mounts).toHaveLength(1);
     expect(ui.host.querySelector("iframe")).toBeNull();
-    expect(ui.fake.mounts).toEqual([]);
   });
 
   it("mounts a sandboxed, titled frame on D once the bridge accepts it", async () => {
     const ui = await wired(fake => {
-      fake.setGameOrigin(D);
       fake.setMount(() => ({ ok: true, gameOrigin: D }));
     });
     const frame = ui.host.querySelector("iframe");
@@ -85,7 +85,6 @@ describe("the game iframe (W-37, W-38)", () => {
     // Whether each frame has a `src` when the shell's bridge is asked.
     const atMount: boolean[] = [];
     const ui = await wired(fake => {
-      fake.setGameOrigin(D);
       fake.setMount(() => {
         const frames = [...globalThis.document.querySelectorAll("iframe")];
         atMount.push(...frames.map(frame => frame.hasAttribute("src")));
@@ -102,7 +101,6 @@ describe("the game iframe (W-37, W-38)", () => {
 
   it("an incompatible game shows the error", async () => {
     const ui = await wired(fake => {
-      fake.setGameOrigin(D);
       fake.setMount(options => {
         options.onIncompatible();
         return { ok: true, gameOrigin: D };

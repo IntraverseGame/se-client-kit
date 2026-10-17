@@ -6,8 +6,16 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { createFakeLockManager } from "./fixtures/fake-locks.ts";
-import { lost, problem } from "./fixtures/fake-play.ts";
-import { CODE, LAUNCH, open } from "./fixtures/play-session.ts";
+import { lost, problem, type Responder } from "./fixtures/fake-play.ts";
+import {
+  CODE,
+  GAME,
+  LAUNCH,
+  NOW,
+  open,
+  redeemed,
+  sessionOf,
+} from "./fixtures/play-session.ts";
 import type { PlaySessionOptions, SessionParts } from "./session-options.ts";
 
 describe("session open (W-1, W-1a, W-2)", () => {
@@ -43,6 +51,46 @@ describe("session open (W-1, W-1a, W-2)", () => {
     expect(opened.opening.kind).toBe("redeem-failed");
     expect(opened.play.all()).toHaveLength(1);
     expect(opened.clock.dueTimes()).toEqual([]);
+  });
+});
+
+/** The fixture's redeem answer without its `gameOrigin`. */
+const withoutGameOrigin: Responder = async request => {
+  const answer = await redeemed(() => NOW)(request);
+  const { gameOrigin: _dropped, ...body } = answer.body as Record<
+    string,
+    unknown
+  >;
+  return { ...answer, body };
+};
+
+describe("the game origin D comes from the redeem answer (W-37)", () => {
+  it("takes D from the redeem answer's gameOrigin", async () => {
+    const session = sessionOf(await open({ gameOrigin: "https://d.example" }));
+    expect(session.gameOrigin()).toBe("https://d.example");
+  });
+
+  it("has no option through which the Wrapper could give D", () => {
+    expectTypeOf<PlaySessionOptions>().not.toHaveProperty("gameOrigin");
+    expectTypeOf<SessionParts>().not.toHaveProperty("gameOrigin");
+  });
+
+  it.each([
+    ["without a gameOrigin", withoutGameOrigin],
+    ["with an empty gameOrigin", redeemed(() => NOW, "")],
+    [
+      "with a gameOrigin of 268 characters",
+      redeemed(() => NOW, `https://${"a".repeat(260)}`),
+    ],
+  ])("opens no session for a redeem answer %s", async (_what, redeem) => {
+    const opened = await open({ redeem });
+    expect(opened.opening.kind).toBe("redeem-failed");
+    expect(opened.play.all()).toHaveLength(1);
+    expect(opened.clock.dueTimes()).toEqual([]);
+  });
+
+  it("answers GAME by default, the fixture's one allowed origin", async () => {
+    expect(sessionOf(await open()).gameOrigin()).toBe(GAME);
   });
 });
 

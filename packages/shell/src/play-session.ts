@@ -86,7 +86,9 @@ export const openSessionOver = async (
   } finally {
     disposeSecret(code);
   }
-  const { sessionId, playToken, tokenExpiresAt } = redeemed.body;
+  // D, the launched game's origin, comes from this answer only (W-37);
+  // play-client refused an answer without one of the document's bounds.
+  const { sessionId, playToken, tokenExpiresAt, gameOrigin } = redeemed.body;
 
   const { registryDomain } = options.config;
   const signing = await openSigningSession({
@@ -155,9 +157,7 @@ export const openSessionOver = async (
   const handle = createPlaySession({
     flow,
     randomUuid: options.randomUuid,
-    ...(options.gameOrigin === undefined
-      ? {}
-      : { gameOrigin: options.gameOrigin }),
+    gameOrigin,
     gameOrigins: options.gameOrigins,
     ownOrigin: options.ownOrigin,
     ended: keeper.ended,

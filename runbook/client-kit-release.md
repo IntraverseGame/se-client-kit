@@ -121,14 +121,14 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
    machine). One entry per group: `play-api-document`, `snapshot-schema`,
    `snapshot-vectors-valid`, `snapshot-vectors-invalid`,
    `snapshot-vectors-signature`, `snapshot-vectors-typed-data`,
-   `signing-vectors`. Each has `name` (the repository, recorded in the lock),
-   `repo` (your local checkout), `ref` (for example the default branch on
-   `origin`) and `path` (the file or directory in that repository). The lock
-   records only public names, so the paths are not in this repository: the
-   source's own documentation names them, or ask its owners. Keep your sources
-   file for the next sync. Copy only the Play and verify OpenAPI documents, the
-   Snapshot schema and vectors, and the signing vectors; never another surface's
-   document.
+   `snapshot-vectors-signed-action`, `signing-vectors`. Each has `name` (the
+   repository, recorded in the lock), `repo` (your local checkout), `ref` (for
+   example the default branch on `origin`) and `path` (the file or directory in
+   that repository). The lock records only public names, so the paths are not in
+   this repository: the source's own documentation names them, or ask its
+   owners. Keep your sources file for the next sync. Copy only the Play and
+   verify OpenAPI documents, the Snapshot schema and vectors, and the signing
+   vectors; never another surface's document.
 3. Run `pnpm exec tsx tools/sync-contracts.ts --sources <file>`. It copies the
    files and rewrites `packages/contracts/contracts.lock.json` together. It
    refuses to change or remove a vector that is already locked; pass

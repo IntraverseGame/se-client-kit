@@ -38,9 +38,10 @@ related but are not this repository's to close alone:
 - `TODO(Play API)` in
   [`rendering-from-the-snapshot.md`](../../specs/wrapper/rendering-from-the-snapshot.md)
   (W-30): the carrier of the Wrapper's capability declaration;
-- `TODO(Play API, catalog)` in
+- the game origin D in
   [`the-game-iframe-and-the-controller-boundary.md`](../../specs/wrapper/the-game-iframe-and-the-controller-boundary.md)
-  (W-37): the catalog field that serves the game origin D.
+  (W-37): no longer open, since the redeem answer now serves D
+  (`RedeemResponse.gameOrigin`, the catalog value).
 
 **What the backend has said** (as relayed for this RFC, 2026-10-17): the launch
 handshake is this repository's to design; the backend has no mechanism for
@@ -383,10 +384,10 @@ it.
 ### What this RFC does not decide
 
 - **Where D comes from** is decided (the launched game's catalog entry, by the
-  product owner, 2026-10-17, W-37). The catalog field is backend-owned and not
-  served yet (`TODO(Play API, catalog)`). This RFC only confirms that no
-  `se.operator/1` message carries D, a game id, or any input to the game's
-  mount.
+  product owner, 2026-10-17, W-37). The catalog field is backend-owned, and the
+  redeem answer now serves it (`RedeemResponse.gameOrigin`). This RFC only
+  confirms that no `se.operator/1` message carries D, a game id, or any input to
+  the game's mount.
 - **The "different registrable domain" rule of W-37** needs a public suffix
   list, a new dependency, and so its own ADR (#42).
 - **The launch URL**, the launch code's form, and the operator's side of the
@@ -682,9 +683,10 @@ Wrapper app):**
   [`specs/wrapper.md`](../../specs/wrapper.md#operator-embedding). It does not
   close `TODO(Play API)` (W-30): the RFC names it as the Snapshot's variant
   negotiation, which the backend owns and has not built
-  ([Q9](#unresolved-questions)); the marker's text can be reworded to say so. It
-  does not close `TODO(Play API, catalog)` (W-37) either. Both wait on the
-  backend, and #42's acceptance criterion for them stays open.
+  ([Q9](#unresolved-questions)); the marker's text can be reworded to say so.
+  The former `TODO(Play API, catalog)` (W-37) is closed without it: the redeem
+  answer now serves D (`RedeemResponse.gameOrigin`). `TODO(Play API)` waits on
+  the backend, and #42's acceptance criterion for it stays open.
 - **Code (the implementer, after the spec):** an operator channel in the `shell`
   beside the controller bridge (it gates the session, so it belongs with the
   code that signs), with its closed parser; the Wrapper app's dispatch, its

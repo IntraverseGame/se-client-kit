@@ -69,7 +69,8 @@ const opening = await openPlaySession({
   randomUuid: () => crypto.randomUUID(),
   rpc,
   bindMode: "tip",
-  // The game allow-list and the page's own origin, fixed for the session.
+  // The game allow-list and the page's own origin, fixed for the session. D,
+  // the game's origin, is the redeem answer's `gameOrigin`: no option gives it.
   gameOrigins: config.gameOrigins,
   ownOrigin: globalThis.location.origin,
 });
@@ -108,7 +109,7 @@ const frame = iframe.contentWindow;
 if (frame === null) throw new Error("the game frame is not attached");
 
 const result = createControllerBridge({
-  gameOrigin, // D, from the game's catalog entry (Play API)
+  gameOrigin, // D: the redeem answer's `gameOrigin` (the game's catalog entry)
   gameOrigins: config.gameOrigins,
   ownOrigin: globalThis.location.origin,
   frame,

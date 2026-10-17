@@ -10,8 +10,21 @@ export const WRAPPER_ORIGIN = "https://wrapper.e2e.test";
 /** The suite's own test pages (`tests/pages`), such as the leaking page. */
 export const PAGES_ORIGIN = "https://pages.e2e.test";
 
+/**
+ * The game origin D of the suite, a different registrable domain from every
+ * other origin (W-37): the one the fake Play API's redeem answers as
+ * `gameOrigin`, the only one on the environment configuration's `gameOrigins`,
+ * and where the reference game's build is served.
+ */
+export const GAME_ORIGIN = "https://game.e2e-games.test";
+
 export const WRAPPER_DIST = fileURLToPath(
   new URL("../../../apps/wrapper/dist/", import.meta.url),
+);
+
+/** The reference game's build, `apps/reference-game/dist`, unmodified. */
+export const REFERENCE_GAME_DIST = fileURLToPath(
+  new URL("../../../apps/reference-game/dist/", import.meta.url),
 );
 
 export const TEST_PAGES = fileURLToPath(new URL("../pages/", import.meta.url));

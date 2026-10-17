@@ -92,11 +92,10 @@ if (host !== null) {
         // which an honest `future` bind also satisfies; the stricter rule waits
         // for the contract that carries the bind's mode.
         bindMode: "tip",
-        // The session checks D against these, fixed here (W-37).
+        // The session checks D, the redeem answer's `gameOrigin` and nothing
+        // else, against these, fixed here (W-37).
         gameOrigins: config.gameOrigins,
         ownOrigin: globalThis.location.origin,
-        // No `gameOrigin` source yet (TODO(Play API): gameOrigin on redeem):
-        // no game is mounted until the redeem answer carries D (W-37).
       }),
   });
 }

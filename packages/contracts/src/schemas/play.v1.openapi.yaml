@@ -39,9 +39,10 @@ paths:
       summary: Exchange a launch code for a play token
       description: |
         Redeems the single-use launch code of a launch URL and returns the
-        session's first play token. A code is redeemed at most once: a second
-        call, an expired code, and an unknown code are the same 401. A lost
-        response cannot be repeated; the player needs a new launch.
+        session's first play token and the origin to frame the game at. A code
+        is redeemed at most once: a second call, an expired code, and an
+        unknown code are the same 401. A lost response cannot be repeated; the
+        player needs a new launch.
       tags: [sessions]
       security: []
       requestBody:
@@ -261,7 +262,7 @@ components:
     RedeemResponse:
       type: object
       additionalProperties: false
-      required: [sessionId, playToken, tokenExpiresAt, sessionExpiresAt]
+      required: [sessionId, playToken, tokenExpiresAt, sessionExpiresAt, gameOrigin]
       properties:
         sessionId:
           type: string
@@ -276,6 +277,17 @@ components:
           type: string
           format: date-time
           description: The session's hard end; no token outlives it.
+        gameOrigin:
+          type: string
+          minLength: 1
+          maxLength: 267
+          description: >-
+            The origin to frame the game at, and the only origin to exchange
+            messages with: a serialized origin with no path, such as
+            `https://games.example.com`, exactly as a browser reports it in
+            `event.origin`. It is the same for the whole session. Frame the
+            game only if it is on your own allow-list.
+          example: https://games.example.com
     RefreshResponse:
       type: object
       additionalProperties: false
