@@ -37,7 +37,18 @@ Part of the [Wrapper spec](../wrapper.md), section
   | `canceled`  | "round canceled, your bet was returned", the round id and verify link, and with `closeReason: "expired"` the words "the time limit ended this round"                                                       | a new round                                                |
   | typed error | per [error and degraded states](../wrapper.md#error-and-degraded-states)                                                                                                                                   | per code                                                   |
 
-  <!-- TODO(Snapshot contract): `won` shows "the payout as `formatted`", but `se.snapshot/1` has no payout `Amount` on `won` (no golden vector carries `bankedAmount`). The Wrapper shows `bankedAmount.formatted` when present and no payout line otherwise; it never computes one from a multiplier (W-34). -->
+  <!-- TODO(Snapshot contract): `won` shows "the payout as `formatted`", but `se.snapshot/1` carries no payout today. The backend will add an optional, server-computed `payout` `Amount` (with `formatted`) on terminal statuses in a later re-vendor; `bankedAmount` is reserved for partial cash-out, is not served, and is not used. Until then the Wrapper shows no amount on `won`, and it never computes one from `currentMultiplier` or anything else (W-34). -->
+
+  How the Wrapper reads the shell's checks for this table (the round the shell
+  holds, W-26): an `active` round is shown as "preparing the round", with the
+  note that it is being checked, until the shell's verdict is `ready`; then it
+  is shown ready, with the game. A failed verdict shows "this round failed
+  verification" or "could not verify the chain" (W-26a), and an out-of-sync
+  round its state (W-44), in place of the round until it is over. A round the
+  shell does not hold (one resumed from `ROUND_ACTIVE`, W-42) is shown as its
+  status gives it, with no game and no control. The cash-out control is shown
+  only when the shell offers it (W-24: `active`, `ready`, at least one step
+  survived and one left, nothing in flight).
 
 - **W-32.** `won` is final. The Wrapper MUST NOT show or wait for the operator
   credit. The balance it shows is the Snapshot's `bet.balance.formatted`.
@@ -58,6 +69,11 @@ Part of the [Wrapper spec](../wrapper.md), section
   the notice is 15 s (W-43's request timeout) until this spec gives a number. A
   poll stops in every status but `starting` and `resolving`, on a typed error
   (until the player asks to try again), and in any blocking state (W-44).
+  Whether a round is over is decided in one place, the shell's `isRoundOver`,
+  which the Wrapper's polling and rendering read; the Wrapper keeps no status
+  list of its own. The rule that a `canceled` answering the shell's own cancel,
+  with no `closeReason`, is not final yet belongs to #41 and changes only that
+  check.
 - **W-36.** Idempotency. Each player intent (start, a move, cash-out, cancel)
   gets one `idempotencyKey` (`crypto.randomUUID()`), reused for every retry of
   that intent and never for another.

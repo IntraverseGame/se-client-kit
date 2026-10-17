@@ -1,0 +1,147 @@
+// T-16 (AC5, W-42, W-44): each typed error the fake can answer, as the answer
+// to a start, shows its message and `requestId` (a "try again" only when it is
+// retryable), and `ROUND_ACTIVE` resumes the open round; the degraded states
+// the fake can produce are each shown distinctly. Every state passes the
+// accessibility audit. The out-of-sync state needs a round W-26 passes, and
+// the session-ending codes and a rejected Snapshot need answers the fake's
+// vectors do not hold: those stay pending.
+
+import { auditAccessibility } from "./harness/accessibility.ts";
+import {
+  ENVIRONMENT_CONFIG_PATH,
+  environmentConfig,
+  serveEnvironmentConfig,
+} from "./harness/environment-config.ts";
+import { expect, test } from "./harness/fixtures.ts";
+import { validVector } from "./harness/vectors.ts";
+import {
+  alertPanel,
+  launch,
+  launchAndStart,
+  statusHeading,
+  TEXT,
+} from "./harness/wrapper-page.ts";
+
+/** Each problem vector the start may answer, with what the player reads. */
+const START_PROBLEMS: readonly (readonly [string, string])[] = [
+  ["problem-insufficient-funds", "Your balance is too low for this bet."],
+  ["problem-entropy-unavailable", "The round could not be prepared."],
+  [
+    "problem-default-code-invalid-argument",
+    "The request could not be completed.",
+  ],
+  ["problem-default-code-unavailable", "The game is unavailable right now."],
+  [
+    "problem-default-code-unavailable-not-retryable",
+    "The game is unavailable right now.",
+  ],
+  ["problem-default-code-unknown", "The request could not be completed."],
+];
+
+const fieldOf = (vector: string, key: string): unknown =>
+  validVector(vector, "PlayProblem").input[key];
+
+/** A "try again" is offered only for a retryable problem (W-42). */
+const retryButtons = (vector: string): number =>
+  fieldOf(vector, "retryable") === true ? 1 : 0;
+
+test.describe("T-16: typed errors (W-42)", () => {
+  for (const [vector, message] of START_PROBLEMS) {
+    test(`${vector} shows its message and reference`, async ({
+      page,
+      fakePlayApi,
+    }) => {
+      fakePlayApi.answerEvery("getSnapshot", {
+        kind: "snapshot",
+        vector: "coinflip-idle",
+      });
+      // Every answer, so a retryable one is the same on each repeat.
+      fakePlayApi.answerEvery("startRound", { kind: "problem", vector });
+      await launchAndStart(page, fakePlayApi);
+      await expect(alertPanel(page)).toContainText(TEXT.error, {
+        timeout: 15_000,
+      });
+      await expect(alertPanel(page)).toContainText(message);
+      await expect(alertPanel(page)).toContainText(
+        String(fieldOf(vector, "requestId")),
+      );
+      await expect(
+        alertPanel(page).getByRole("button", { name: "Try again" }),
+      ).toHaveCount(retryButtons(vector));
+      expect(await auditAccessibility(page)).toEqual([]);
+    });
+  }
+
+  test("ROUND_ACTIVE resumes the open round, which this page cannot move in", async ({
+    page,
+    fakePlayApi,
+  }) => {
+    fakePlayApi.answer("getSnapshot", {
+      kind: "snapshot",
+      vector: "coinflip-idle",
+    });
+    fakePlayApi.answer("startRound", {
+      kind: "problem",
+      vector: "problem-round-active",
+    });
+    await launchAndStart(page, fakePlayApi);
+    await expect(statusHeading(page)).toHaveText(TEXT.active);
+    await expect(page.locator("iframe")).toHaveCount(0);
+    expect(await auditAccessibility(page)).toEqual([]);
+  });
+});
+
+test.describe("T-16: degraded states (W-44)", () => {
+  test("the session ended", async ({ page, fakePlayApi }) => {
+    fakePlayApi.answer("redeemLaunchCode", {
+      kind: "problem",
+      vector: "problem-redeem-unavailable",
+    });
+    await launch(page, fakePlayApi);
+    await expect(statusHeading(page)).toHaveText(TEXT.sessionEnded);
+    expect(await auditAccessibility(page)).toEqual([]);
+  });
+
+  test("the round failed verification: nothing is shown as ready", async ({
+    page,
+    fakePlayApi,
+  }) => {
+    // The vendored round is signed by another signer than the one this
+    // environment pins (W-26, check 2).
+    fakePlayApi.answer("getSnapshot", {
+      kind: "snapshot",
+      vector: "coinflip-idle",
+    });
+    fakePlayApi.answer("startRound", {
+      kind: "snapshot",
+      vector: "coinflip-active-create-round-auth",
+    });
+    await launchAndStart(page, fakePlayApi);
+    await expect(alertPanel(page)).toContainText(TEXT.verificationFailed);
+    await expect(page.getByText(TEXT.active)).toHaveCount(0);
+    expect(await auditAccessibility(page)).toEqual([]);
+  });
+
+  test("the chain check is not independent (development)", async ({
+    page,
+    context,
+    fakePlayApi,
+    playApiBaseUrl,
+  }) => {
+    const base = environmentConfig(playApiBaseUrl);
+    await serveEnvironmentConfig(context, {
+      ...base,
+      environment: "local",
+      minRpcQuorum: 1,
+    });
+    fakePlayApi.answerEvery("getSnapshot", {
+      kind: "snapshot",
+      vector: "coinflip-idle",
+    });
+    await launch(page, fakePlayApi);
+    await expect(page.getByText(TEXT.chainNotIndependent)).toBeVisible();
+    await expect(statusHeading(page)).toHaveText(TEXT.idle);
+    expect(ENVIRONMENT_CONFIG_PATH).toBe("/environment-config.json");
+    expect(await auditAccessibility(page)).toEqual([]);
+  });
+});

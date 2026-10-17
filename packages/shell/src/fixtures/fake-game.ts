@@ -19,6 +19,7 @@ import {
   type RejectReason,
   ROUND_STATUSES,
 } from "../controller-protocol.ts";
+import type { GameMountOptions } from "../session-types.ts";
 import { snapshot } from "./vectors.ts";
 
 export const GAME_ORIGIN = "https://game.example.net";
@@ -158,4 +159,20 @@ export const ready = (
   bridge.sendSnapshot(snapshot("active"));
   game.posted.length = 0;
   return { ...game, bridge };
+};
+
+/**
+ * The mount a UI gives the session: the fake game's frame, its messages, and
+ * the notice; the game origin, the allow-list, the own origin, and the pick are
+ * the session's.
+ */
+export const mountOf = (game: FakeGame): GameMountOptions => {
+  const {
+    gameOrigin: _d,
+    gameOrigins: _list,
+    ownOrigin: _own,
+    pick: _pick,
+    ...frame
+  } = game.options;
+  return frame;
 };

@@ -99,8 +99,7 @@ describe("move (W-20, W-23)", () => {
     const setup = await setUpFlow();
     const flow = await startFlow({
       ...setup,
-      options: {
-        ...setup.options,
+      hooks: {
         encodeTypedData: () => {
           throw new Error("encoder failed");
         },

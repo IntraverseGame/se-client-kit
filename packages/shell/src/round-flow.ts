@@ -27,6 +27,8 @@ import {
   type TrackingEvidence,
   type TrackingOptions,
 } from "./round-tracking.ts";
+import { isRoundOver } from "./snapshot-reading.ts";
+import type { FlowTestHooks } from "./typed-data.ts";
 
 export type RoundFlowOptions = TrackingOptions & DeliveryOptions;
 
@@ -45,6 +47,8 @@ export type RoundFlow = RoundActions & {
   readonly phase: () => ReturnType<Signer["phase"]> | "unopened";
   /** The shell's latest validated Snapshot of the round. */
   readonly latest: () => ValidSnapshot;
+  /** Whether the latest Snapshot shows the round over (`isRoundOver`). */
+  readonly over: () => boolean;
   readonly cancel: () => CancelState;
   /** The last failure of a call the flow made, for the error state (W-42). */
   readonly lastError: () => Error | undefined;
@@ -55,11 +59,15 @@ export type RoundFlow = RoundActions & {
   readonly refresh: () => Promise<void>;
 };
 
-/** The flow of a round already started (its verdict reads `round.request`). */
+/**
+ * The flow of a round already started (its verdict reads `round.request`).
+ * `hooks` is test-only (typed-data.ts): production passes none.
+ */
 export const createRoundFlow = (
   options: RoundFlowOptions,
   round: TrackedRound,
   first: ValidSnapshot,
+  hooks: FlowTestHooks = {},
 ): RoundFlow => {
   const tracking = createRoundTracking(options, round, first);
   const host = {
@@ -71,7 +79,7 @@ export const createRoundFlow = (
     },
     signer: tracking.signer,
   };
-  const delivery = createRoundDelivery(options, host);
+  const delivery = createRoundDelivery(options, host, hooks);
   const cancel = createRoundCancel(
     options,
     {
@@ -82,6 +90,7 @@ export const createRoundFlow = (
       },
     },
     delivery,
+    hooks,
   );
   const actions = createRoundActions(options.session, tracking, delivery);
 
@@ -108,6 +117,7 @@ export const createRoundFlow = (
     phase: (): ReturnType<Signer["phase"]> | "unopened" =>
       tracking.signer()?.phase() ?? "unopened",
     latest: tracking.latest,
+    over: (): boolean => isRoundOver(tracking.latest()),
     cancel: cancel.state,
     lastError: (): Error | undefined =>
       delivery.lastError() ?? tracking.tipError(),

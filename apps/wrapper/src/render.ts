@@ -22,7 +22,7 @@ import {
 } from "./dom.ts";
 import { icon } from "./icons.ts";
 import { type Localized, messagesFor } from "./messages.ts";
-import { TERMINAL_STATUSES } from "./round-input.ts";
+import { roundIsOver } from "./round-input.ts";
 import { roundView } from "./round-view.ts";
 import {
   alertContent,
@@ -35,7 +35,26 @@ import type { WrapperState } from "./wrapper-state.ts";
 
 export type View = {
   readonly root: HTMLElement;
+  /**
+   * Where the game iframe is mounted (W-37). It is built once and never
+   * re-rendered, so the frame survives every update; it is hidden unless the
+   * round is shown ready (W-26, W-31).
+   */
+  readonly gameHost: HTMLElement;
   readonly update: (state: WrapperState, cause: ChangeCause) => void;
+};
+
+/**
+ * Whether the game is shown: `active` once the shell's checks passed, or
+ * `resolving` (W-31).
+ */
+const showsGame = (state: WrapperState): boolean => {
+  const status = state.snapshot?.status;
+  return (
+    state.blocking === undefined &&
+    state.check?.verdict === "ready" &&
+    (status === "active" || status === "resolving")
+  );
 };
 
 const languageOf = (state: WrapperState): Localized =>
@@ -52,6 +71,8 @@ export const createView = (
   const alert = el("div", { class: "se-alert", role: "alert" });
   const status = el("section", { class: "se-status" });
   const ended = el("section", { class: "se-ended" });
+  const gameHost = el("div", { class: "se-game" });
+  gameHost.hidden = true;
   const live = el("div", {
     class: "se-visually-hidden",
     "aria-live": "polite",
@@ -59,7 +80,7 @@ export const createView = (
   });
   const root = el("div", { class: "se-wrapper" }, [
     notices,
-    el("main", { class: "se-main" }, [alert, status, ended]),
+    el("main", { class: "se-main" }, [alert, status, gameHost, ended]),
     live,
   ]);
   host.replaceChildren(root);
@@ -96,7 +117,8 @@ export const createView = (
     const final =
       state.blocking === "configuration-error" ||
       state.blocking === "session-ended" ||
-      state.blocking === "other-tab";
+      state.blocking === "other-tab" ||
+      state.blocking === "unsupported-browser";
 
     section(
       notices,
@@ -142,7 +164,9 @@ export const createView = (
         localized.language,
         state.blocking ?? null,
         showRound ? snapshot.version : null,
+        showRound ? (state.check ?? null) : null,
         options.intents.start !== undefined,
+        options.intents.cashOut !== undefined,
         options.intents.newRound !== undefined,
         state.blocking === "session-ended"
           ? (snapshot?.context.links?.lobby ?? null)
@@ -150,7 +174,14 @@ export const createView = (
       ]),
       () =>
         showRound
-          ? roundView(el, doc, localized, snapshot, options.intents)
+          ? roundView(
+              el,
+              doc,
+              localized,
+              snapshot,
+              options.intents,
+              state.check,
+            )
           : blockingView(el, doc, m, state),
     );
 
@@ -188,9 +219,7 @@ export const createView = (
       const target =
         error !== undefined && alertChanged
           ? root.querySelector<HTMLElement>(`#${ALERT_HEADING_ID}`)
-          : snapshot !== undefined &&
-              TERMINAL_STATUSES.has(snapshot.status) &&
-              showRound
+          : snapshot !== undefined && roundIsOver(snapshot) && showRound
             ? statusHeadingElement
             : null;
       if (target instanceof HTMLElement) {
@@ -199,5 +228,10 @@ export const createView = (
     }
   };
 
-  return Object.freeze({ root, update });
+  const updateAll = (state: WrapperState, cause: ChangeCause): void => {
+    update(state, cause);
+    gameHost.hidden = !showsGame(state);
+  };
+
+  return Object.freeze({ root, gameHost, update: updateAll });
 };

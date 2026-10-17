@@ -26,17 +26,12 @@ import {
   snapshotOf,
 } from "./round-request.ts";
 import type { RoundSigner } from "./round-signer.ts";
-import { encoderOf, type TypedDataEncoder } from "./typed-data.ts";
+import { encoderOf, type FlowTestHooks } from "./typed-data.ts";
 
 export type DeliveryOptions = {
   readonly transport: Transport;
   /** The play token's `Authorization` value, read once per attempt. */
   readonly authorization: Authorization;
-  /**
-   * Test-only: another typedData encoder. Production leaves it out, and the
-   * flow uses `signing`'s canonical encoding (typed-data.ts).
-   */
-  readonly encodeTypedData?: TypedDataEncoder;
 };
 
 export type DeliveryHost = {
@@ -78,11 +73,17 @@ export type RoundDelivery = {
 const routeOf = (action: PendingAction): Route =>
   action.kind === "cash-out" ? cashOutRound : continueRound;
 
+/**
+ * `hooks` is test-only (typed-data.ts): production passes none, and the typed
+ * data is `signing`'s canonical encoding.
+ */
 export const createRoundDelivery = (
   options: DeliveryOptions,
   host: DeliveryHost,
+  hooks: FlowTestHooks = {},
 ): RoundDelivery => {
   const { transport, authorization } = options;
+  const encode = encoderOf(hooks);
   const signed: PendingAction[] = [];
   let lastSent: Sent | undefined;
   let lastError: Error | undefined;
@@ -124,7 +125,7 @@ export const createRoundDelivery = (
   const sign = (signer: RoundSigner, request: TranscriptRequest): Sent =>
     record(
       signedBody(
-        encoderOf(options),
+        encode,
         host.roundId,
         request.kind,
         {

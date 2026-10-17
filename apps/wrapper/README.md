@@ -13,9 +13,14 @@ start and refuses to start on an invalid one (for example `production` with
 fewer than two independent RPC endpoints), and it renders the round from
 validated Snapshots: every status, the typed errors, the degraded and
 connection-problem states, the round id with its verify link after a round ends,
-and polling while a round is prepared or resolved. Opening a session from a
-launch code, the start, move, and cash-out actions, the game iframe, and
-operator embedding are not built yet.
+and polling while a round is prepared or resolved. It opens a session from the
+launch code in the URL fragment (removed from the URL before any request),
+starts a round, shows it ready only once the shell's checks passed, and offers a
+cash-out when the shell does. The game iframe is mounted only once the game's
+origin comes from the session, which the Play API does not serve yet. Framed by
+another page, it opens a session only when the browser can show that every
+framing page is a listed operator; the operator handshake is not built yet, so
+where the browser cannot show it (Firefox), a framed Wrapper opens no session.
 
 ## What it guarantees
 
@@ -28,9 +33,10 @@ operator embedding are not built yet.
   storage unless its specification says so; the key is never persisted.
 - Amounts are shown from strings or `bigint`, never `number`.
 
-Specified, partly implemented: rendering only validated Snapshots and showing
-amounts from `formatted` strings hold today; the key, the game iframe, and the
-controller protocol arrive with the session and the game.
+Specified, partly implemented: rendering only validated Snapshots, showing
+amounts from `formatted` strings, and keeping the key and the token in the shell
+hold today; the game iframe and the controller protocol are wired and wait for
+the game's origin to be served.
 
 ## Accessibility
 

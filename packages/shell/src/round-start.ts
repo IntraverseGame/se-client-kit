@@ -17,6 +17,7 @@ import {
   type RoundFlowOptions,
 } from "./round-flow.ts";
 import { roundSnapshotOf } from "./round-request.ts";
+import type { FlowTestHooks } from "./typed-data.ts";
 
 /** The bet of a `start`, copied from the Snapshot's own `Amount` fields. */
 export type Bet = {
@@ -36,10 +37,12 @@ export type StartRoundFlowOptions = RoundFlowOptions & {
  * read that first Snapshot. A bet that is not an `AmountRequest` is
  * `invalid-input`, and a page without the signer lock `lock-not-held`, before
  * anything is sent; an answer that is not a valid Snapshot of a round is
- * `snapshot-rejected`.
+ * `snapshot-rejected`. `hooks` is test-only (typed-data.ts): production passes
+ * none.
  */
 export const startRoundFlow = async (
   options: StartRoundFlowOptions,
+  hooks: FlowTestHooks = {},
 ): Promise<RoundFlow> => {
   const bet = validateAmountRequest(options.bet);
   if (!bet.ok) throw new ShellError("invalid-input");
@@ -61,6 +64,7 @@ export const startRoundFlow = async (
       },
     },
     snapshot,
+    hooks,
   );
   await flow.observe(snapshot);
   return flow;

@@ -68,13 +68,13 @@ const setUp = async (
     {
       transport: play.transport,
       authorization: () => "Bearer placeholder",
-      encodeTypedData: recordingEncoder(),
     },
     {
       roundId: signer.roundId,
       observe: () => Promise.resolve(),
       signer: () => signer,
     },
+    { encodeTypedData: recordingEncoder() },
   );
   return {
     actions: createRoundActions(session, tracking, delivery),

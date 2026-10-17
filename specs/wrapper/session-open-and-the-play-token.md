@@ -98,3 +98,30 @@ defaults.
   on the backend. The Wrapper MUST NOT send calls only to keep a session alive:
   a tab left open expires by the backend's idle timeout, and the Wrapper shows
   the session-ended state when it learns that.
+
+**How it is built (2026-10-17).** Before the session opens, a framed Wrapper
+applies W-49's fail-closed minimum
+([Operator embedding](../wrapper.md#operator-embedding)): framed by a page it
+cannot show is on `operatorOrigins`, it redeems nothing (the code is never sent)
+and shows the configuration-error state. This is the minimum until RFC-001, the
+operator launch contract, is accepted and built. The Wrapper's entry calls the
+shell's `takeLaunchCode` first, before it fetches the environment configuration
+document, so the fragment is gone before any request or log line (W-1). The code
+stays sealed (it prints `[redacted]`) and only the shell's `openPlaySession`
+reveals it, for the one redeem, then forgets it. When the Wrapper opens no
+session with it (its configuration or its framing was refused), it discards the
+code (the shell's `discardLaunchCode`), so the code is forgotten then too. A
+`replaceState` that throws leaves the code unread (no redeem). The session holds
+the play token in the shell (`token-keeper.ts`): the refresh point is
+play-client's `refreshAtMs` over `tokenExpiresAt` and the redeem's `Date`
+offset, at most one refresh is in flight, the new token replaces the old one
+only once its answer arrived, a retryable failure is tried again after
+play-client's backoff while the old token is valid, a refusal that does not end
+the session leaves the old token in use until its deadline, and the deadline or
+a session-ending answer to any call ends the session (the key is destroyed, the
+token forgotten, and the Wrapper shows the session-ended state). The refresh is
+the only call made without the player or a poll (W-8). The session uses a wall
+clock (milliseconds since the epoch), since every deadline is a timestamp. A tab
+that does not get the signer lock forgets the token and opens nothing (W-14); a
+browser without Web Locks shows its own state, "this browser cannot keep your
+session safe", and signs nothing.

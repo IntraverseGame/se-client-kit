@@ -40,12 +40,12 @@ checks its manifest; the size budget is not defined yet), and the job also runs
 `pnpm check:build-output` (the no-vector content check, now over the vendored
 vectors) and `pnpm check:package-files`. `e2e-fake` installs Playwright's
 Chromium and runs the e2e harness's own tests, a smoke run on the Wrapper's
-release bundle, and a smoke run on the reference game's build; the browser rows
-of the Wrapper's test plan are pending ([The e2e harness](#the-e2e-harness)).
-The workflows hold no secret, run with `permissions: {}` at the top and
-`contents: read` per job (the release workflow's `publish` job adds
-`id-token: write`, for provenance and trusted publishing), and pin every Action
-by full commit SHA.
+release bundle, the browser rows of the Wrapper's test plan that run on the fake
+Play API, and a smoke run on the reference game's build; the others are pending
+([The e2e harness](#the-e2e-harness)). The workflows hold no secret, run with
+`permissions: {}` at the top and `contents: read` per job (the release
+workflow's `publish` job adds `id-token: write`, for provenance and trusted
+publishing), and pin every Action by full commit SHA.
 
 ## Task orchestration and caching
 
@@ -166,27 +166,32 @@ development-only, so it may import the test-only entry of `contracts`.
   `hang` never answers. A script that names an unknown vector, a vector of the
   wrong definition, or an unlisted status is refused when it is queued. The
   redeem and refresh answers are the fake's own, typed by the document: one
-  single-use launch code, play tokens that a refresh rotates (the older ones
-  revoked), `Cache-Control: no-store`, and deadlines from a fixed server time.
-  The launch code, session id, and tokens are derived from a seed with SHA-256,
-  so a run is reproducible. A call the script has no answer for, or a request to
-  an unknown route, is answered `INTERNAL` or `NOT_FOUND` and fails the test.
-  The fake answers an operation only with a status the document lists for it: a
-  problem it writes itself (`UNAUTHENTICATED`, `INVALID_ARGUMENT`) whose status
-  the operation does not list (for example a body sent to `refreshPlayToken`,
-  which lists no 400) fails the test as an unscripted call, answered `INTERNAL`
-  (500, which a type-level check in `play-api-document.ts` requires every
-  operation to list); no status is invented. Field values are not checked
-  against the document's patterns, and responses are not re-validated against
-  the schema at run time (decided, 2026-10-17): the compile-time types and the
-  per-vector definition and status check are enough, because a vector's validity
-  is the `snapshot` package's T-5 replay and the document's `Snapshot` and
-  `PlayProblem` components are generated from the same schema; and the e2e suite
-  does not import `snapshot` (the dependency direction keeps e2e on `contracts`
-  only).
+  single-use launch code (`redeemAgain()` allows one more redeem of it, for the
+  same session id with a new token: the cloned tab of T-17), play tokens that a
+  refresh rotates (the older ones revoked), `Cache-Control: no-store`, and
+  deadlines from a fixed server time. The launch code, session id, and tokens
+  are derived from a seed with SHA-256, so a run is reproducible. A call the
+  script has no answer for, or a request to an unknown route, is answered
+  `INTERNAL` or `NOT_FOUND` and fails the test. The fake answers an operation
+  only with a status the document lists for it: a problem it writes itself
+  (`UNAUTHENTICATED`, `INVALID_ARGUMENT`) whose status the operation does not
+  list (for example a body sent to `refreshPlayToken`, which lists no 400) fails
+  the test as an unscripted call, answered `INTERNAL` (500, which a type-level
+  check in `play-api-document.ts` requires every operation to list); no status
+  is invented. Field values are not checked against the document's patterns, and
+  responses are not re-validated against the schema at run time (decided,
+  2026-10-17): the compile-time types and the per-vector definition and status
+  check are enough, because a vector's validity is the `snapshot` package's T-5
+  replay and the document's `Snapshot` and `PlayProblem` components are
+  generated from the same schema; and the e2e suite does not import `snapshot`
+  (the dependency direction keeps e2e on `contracts` only).
 - **The launch URL** is `fake.launchUrl(wrapperUrl)`: `<wrapper-url>#<code>`,
   the whole fragment being the launch code (`#lc_…`, no parameter name), the
-  form the launch contract uses. The T-rows build their launch URLs with it.
+  form the launch contract uses. The T-rows build their launch URLs with it,
+  through `e2e/tests/harness/wrapper-page.ts` (`launch`, `launchAndStart`, the
+  status heading, alert, and live region, and the English texts they read). A
+  launch is a new navigation: a fragment-only change of an open page does not
+  reload it, so the Wrapper does not read it.
 - **The seeded random source** (T-13): `crypto.getRandomValues` is replaced in
   every page and frame with `addInitScript` by a seeded generator (mulberry32),
   after the platform's own checks, which still throw (`QuotaExceededError` above
@@ -243,22 +248,26 @@ development-only, so it may import the test-only entry of `contracts`.
   browser's offline emulation and cut the fake Play API with it; `cutPlayApi`
   fails only the Play API while the page stays online. A single failing or
   never-answering call is scripted on the fake.
-- **What runs today**: the harness's own tests, and a smoke run on the Wrapper's
-  bundle as it renders today (it loads and accepts the served configuration with
-  no outside request, error, or warning, passes the audit, leaves nothing for
-  the scan, and goes offline and back; a control serves a broken document and
-  sees the configuration-error state); and a smoke run on the reference game's
-  build in a stand-in host page (`e2e/tests/pages/game-host.html`, which frames
-  it sandboxed at the game origin and records what it receives): the `hello`
-  reaches the host from the game origin, a Snapshot renders, a click asks for a
-  pick, a reject shows in the alert, a message the game posts to itself and a
-  message outside the schema are ignored, the page passes the audit, and an
-  unframed game talks to nobody ([The reference game](./the-reference-game.md)).
-  The rows of the Wrapper's test plan that need a session, a rendered state, or
-  the reference game are declared with `test.fixme` in
-  `e2e/tests/pending.spec.ts`, reported as skipped, never as passed
-  ([wrapper.md, Test plan](../wrapper.md#test-plan)). The Firefox and WebKit
-  projects join with the W-49 paths (T-9a).
+- **What runs today**: the harness's own tests; a smoke run on the Wrapper's
+  bundle opened with no launch code (it loads and accepts the served
+  configuration with no outside request, error, or warning, passes the audit,
+  leaves nothing for the scan, and goes offline and back; a control serves a
+  broken document and sees the configuration-error state); a smoke run on the
+  reference game's build in a stand-in host page
+  (`e2e/tests/pages/game-host.html`, which frames it sandboxed at the game
+  origin and records what it receives): the `hello` reaches the host from the
+  game origin, a Snapshot renders, a click asks for a pick, a reject shows in
+  the alert, a message the game posts to itself and a message outside the schema
+  are ignored, the page passes the audit, and an unframed game talks to nobody
+  ([The reference game](./the-reference-game.md)); the session's open
+  (`session-open.spec.ts`); and the Wrapper's browser rows that the fake's
+  vectors can drive: T-13, T-14a, T-17, and parts of T-15 and T-16 (their own
+  spec files; [wrapper.md, Test plan](../wrapper.md#test-plan) lists which). The
+  rows that need the reference game mounted by the Wrapper (it mounts a game
+  only once the redeem answer carries D, W-37), a round W-26 passes (the vectors
+  are not issued for the session's own key), or W-49's handshake are declared
+  with `test.fixme` in `e2e/tests/pending.spec.ts`, reported as skipped, never
+  as passed. The Firefox and WebKit projects join with the W-49 paths (T-9a).
 - **Locally**, `pnpm exec playwright install chromium` (in `e2e/`) installs the
   browser once. Where Playwright's download is unavailable,
   `SE_E2E_BROWSER_CHANNEL=chrome` runs the Chromium project on an installed

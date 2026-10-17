@@ -48,6 +48,26 @@ test.describe("the fake Play API", () => {
     });
   });
 
+  test("redeems the code once more for a cloned tab, for the same session with a new token", async ({
+    page,
+    fakePlayApi,
+  }) => {
+    const redeem = (): ReturnType<typeof call> =>
+      call(page, "/play/v1/sessions:redeem", {
+        body: { launchCode: fakePlayApi.launchCode },
+      });
+    const first = await redeem();
+    fakePlayApi.redeemAgain();
+    const second = await redeem();
+    const third = await redeem();
+    expect(second.status).toBe(200);
+    expect(second.body).toMatchObject({
+      sessionId: (first.body as { readonly sessionId: string }).sessionId,
+    });
+    expect(tokenOf(second)).not.toBe(tokenOf(first));
+    expect(third.status).toBe(401);
+  });
+
   test("requires the play token on every other route", async ({
     page,
     fakePlayApi,

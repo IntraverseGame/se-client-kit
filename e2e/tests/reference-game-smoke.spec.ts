@@ -5,8 +5,8 @@
 // reaches the host at its origin, a Snapshot from the host renders, a click
 // asks for a pick, a reject shows in the alert, a message the game posts to
 // itself is ignored, and the page passes the audit. A whole round through the
-// Wrapper is T-10 and T-11 (pending.spec.ts): it needs the Wrapper's session
-// (#9).
+// Wrapper is T-10 and T-11 (pending.spec.ts): it needs the Wrapper to mount
+// the game, once the redeem answer carries D (W-37), and a round W-26 passes.
 
 import type { Frame, Page } from "@playwright/test";
 

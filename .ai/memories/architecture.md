@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-17 (reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-17 (Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -11,9 +11,11 @@ them. `contracts`, `signing`, `snapshot`, and `play-client` have code; `shell`
 has five slices (redaction, logger, key custody, the signer lock, the
 transcript state; the chain configuration and tip check; the W-26
 `CreateRoundAuth` checks and the round's verdict; the `se.controller/1` game
-bridge; the round flows, the pick use case, and the UI's Snapshot reader); the Wrapper app has its first slice (configuration, rendering,
-accessibility, the release check) and `reference-game` is the Coin Flip
-sample (types only from `shell`'s `controller` subpath). Flag any
+bridge; the round flows, the pick use case, and the UI's Snapshot reader; the
+session: the launch code, the redeem, the token keeper, and the UI's use cases);
+the Wrapper app opens a session and renders from it (configuration, rendering,
+accessibility, the release check, the session wiring) and `reference-game` is
+the Coin Flip sample (types only from `shell`'s `controller` subpath). Flag any
 divergence from the
 structure below.
 
@@ -74,12 +76,27 @@ structure below.
   the working rule until a second consumer appears; then the types split into
   a `controller` package. Do not add a value to it. The reference game takes its
   parent's origin from its `parentOrigin` URL parameter (checked against
-  `location.ancestorOrigins`): the Wrapper's mount must append it (open, #9). The tip check and its pass-or-fail decision, the
+  `location.ancestorOrigins`): the Wrapper's mount appends it (`gameUrlOf` in
+  `session-wiring.ts`). The tip check and its pass-or-fail decision, the
   W-26 `CreateRoundAuth` checks, and the round's verdict
   (`round-verification.ts`, which alone settles `T_0`, typed
   `SettledInitial`, and says when a `PlayerCancel` must be signed), the round
   flows (`round-flow.ts`), and the pick use case (`pick-use-case.ts`) are
-  internal until the Wrapper wires them. The environment configuration, never a
+  internal: the UI reaches them only through the session (`openPlaySession`,
+  `session-play.ts`), whose use cases (`read`, `start`, `cashOut`, `mountGame`
+  with the session's pick use case) and read-only `RoundState` are public.
+  The session runs one start or cash-out at a time (`busy`) and refuses a
+  start beside an open held round (`round-exists`); the game allow-list and
+  the own origin are `SessionParts`, fixed at open, so `GameMountOptions` is
+  only the frame, its listener, and the incompatible notice. A launch code
+  that will not be redeemed is forgotten with `discardLaunchCode`. The
+  play token lives only in `token-keeper.ts` (sealed, refreshed there); a
+  session-ending answer to any call ends the session through the transport
+  wrapper in `play-session.ts`. Whether a round is over is decided only by
+  `isRoundOver` (`snapshot-reading.ts`); the Wrapper reads it and keeps no
+  status list, so #41's non-final `canceled` changes that one function. The
+  launch code is taken by `takeLaunchCode`, which the Wrapper's entry calls
+  before any request. The environment configuration, never a
   Snapshot or a response, pins the backend signer, the registry domain, and
   each entropy source's chain id (every tip-check endpoint must report it with
   `eth_chainId`; one that reports another chain fails the check). The
@@ -102,8 +119,11 @@ structure below.
   `createSnapshotReader` is built only by the shell or the Wrapper's
   composition root; only the reader object reaches the UI.
   The `typedData` the flows send is `signing`'s `encodeTypedData` in base64
-  (`typed-data.ts`); the encoder option exists only for tests, and the
-  Wrapper passes none.
+  (`typed-data.ts`); no options type carries an encoder: a test passes one
+  only as the separate `FlowTestHooks` argument of the internal constructors,
+  and the session passes none. Do not move it back into an options type.
+  Provisional session inputs: `bindMode` (the Wrapper wires `tip`) and the
+  `gameOrigin` source (none wired until the redeem's `gameOrigin` is vendored).
 - **A Snapshot is untrusted until validated.** `play-client` returns it as
   `unknown`; only `snapshot`'s validator produces a typed value, so an
   unvalidated Snapshot cannot reach the renderer by construction.
@@ -178,10 +198,19 @@ structure below.
   the shell's `validateChainConfig` for the chain part and both boot rules);
   `wrapper-app.ts` holds the UI state (`wrapper-state.ts`, pure transitions),
   renders it (`render.ts` with `round-view.ts`, `state-views.ts`, `dom.ts`),
-  and polls (`snapshot-poller.ts`). The UI reads only its input types
-  (`round-input.ts`), handed over already validated by a read port the session
-  will supply; it imports only `shell` (lint), which does not yet export the
-  Snapshot validator or its types. The build adds SRI, a `<meta>` CSP, the
+  and polls (`snapshot-poller.ts`). `main.ts` takes the launch code first;
+  `boot.ts` opens the session once configured, and `session-wiring.ts` shows
+  the opening, connects the session's read and intents, maps the shell's
+  `RoundState` to the UI's `RoundCheck`, and mounts the game frame (sandboxed,
+  `src` set only after the bridge accepted D, with `?parentOrigin=`), into a
+  game host `render.ts` builds once and never re-renders. `json-rpc.ts` is the
+  tip check's transport. `embedding.ts` is W-49's fail-closed minimum, checked
+  in `boot.ts` before the session opens: a framed page needs
+  `location.ancestorOrigins` with every entry on `operatorOrigins` (`"null"`
+  refuses; no list, as in Firefox, refuses) until RFC-001's handshake is built.
+  Do not relax it to "allow when unknown". The UI reads only its input types (`round-input.ts`),
+  handed over already validated by the session; it imports only `shell`
+  (lint). The build adds SRI, a `<meta>` CSP, the
   headers file, and the integrity manifest, then verifies the output directory
   on disk against the manifest (`release-integrity.ts`, `release-headers.ts`).
   There is no `publicDir`, and no dynamic `import()` (its chunk would get no

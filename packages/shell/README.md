@@ -6,11 +6,16 @@ game.
 
 **Status:** pre-release. Not published to npm yet. Today the public entry holds
 the redacting logger, the package's error type, the validation of the chain part
-of the environment configuration, and the game bridge with the `se.controller/1`
-message types. Key custody, the signer lock, the transcript state, the chain tip
-check, and the round's `CreateRoundAuth` and `T_0` checks are built and tested
-inside the package, but are not exposed: they are reached through the use cases
-(`start`, `pick`, `cashOut`), which are specified, not implemented yet.
+of the environment configuration, the game bridge with the `se.controller/1`
+message types, the Snapshot reader, and the session: `takeLaunchCode`,
+`discardLaunchCode`, and `openPlaySession`, whose use cases (`read`, `start`,
+`cashOut`, the game's pick through `mountGame`) and read-only round state are
+what a UI gets. Key custody, the signer lock, the transcript state, the play
+token and its refresh, the chain tip check, and the round's `CreateRoundAuth`
+and `T_0` checks are built and tested inside the package and are not exposed.
+Signing a cancel waits on an independent test vector, and the game origin and
+the bind mode are provisional inputs until the contracts that carry them are
+published.
 
 ## Install
 
@@ -46,6 +51,39 @@ try {
   logger.error("wrapper.failed", { cause: error });
 }
 ```
+
+Opening the session from the launch URL (the code is the whole fragment, taken
+out of the URL before any request):
+
+```ts
+import { openPlaySession, takeLaunchCode } from "@intraverse/se-client-shell";
+
+const launchCode = takeLaunchCode(globalThis.location, globalThis.history);
+const opening = await openPlaySession({
+  launchCode,
+  playApiBaseUrl: config.playApiBaseUrl,
+  fetch: (url, init) => globalThis.fetch(url, init),
+  clock,
+  config: config.chain,
+  locks: navigator.locks,
+  randomUuid: () => crypto.randomUUID(),
+  rpc,
+  bindMode: "tip",
+  // The game allow-list and the page's own origin, fixed for the session.
+  gameOrigins: config.gameOrigins,
+  ownOrigin: globalThis.location.origin,
+});
+if (opening.kind === "open") {
+  // Use cases and read-only state only: no key, no token.
+  render(await opening.session.read());
+  // One start at a time: a second while one is in flight is refused `busy`,
+  // and one while the held round is not over `round-exists`; nothing is sent.
+  render(await opening.session.start(bet));
+}
+```
+
+A code that will not be redeemed, because the configuration or the framing was
+refused and no session opens, is forgotten with `discardLaunchCode(launchCode)`.
 
 Validating the environment configuration at boot:
 

@@ -18,15 +18,17 @@ export type MessageKey =
   | "detail.resolving"
   | "detail.canceled"
   | "detail.expired"
+  | "detail.verifying"
   | "label.balance"
   | "label.bet"
   | "label.betUnavailable"
   | "label.multiplier"
-  | "label.payout"
+  | "label.game"
   | "label.roundId"
   | "label.requestId"
   | "action.start"
   | "action.newRound"
+  | "action.cashOut"
   | "action.copyRoundId"
   | "action.retry"
   | "action.verify"
@@ -42,6 +44,10 @@ export type MessageKey =
   | "state.sessionEndedDetail"
   | "state.otherTab"
   | "state.otherTabDetail"
+  | "state.unsupported"
+  | "state.unsupportedDetail"
+  | "state.chainUnverified"
+  | "state.chainUnverifiedDetail"
   | "state.connection"
   | "state.connectionDetail"
   | "state.offline"
@@ -53,6 +59,7 @@ export type MessageKey =
   | "state.rejectedDetail"
   | "error.heading"
   | "error.generic"
+  | "error.gameIncompatible"
   | "error.INSUFFICIENT_FUNDS"
   | "error.LIMIT_EXCEEDED"
   | "error.PLAYER_RESTRICTED"
@@ -82,15 +89,17 @@ const EN: Messages = {
   "detail.resolving": "The result is being settled.",
   "detail.canceled": "Round canceled, your bet was returned.",
   "detail.expired": "The time limit ended this round.",
+  "detail.verifying": "The round is being checked before you play.",
   "label.balance": "Balance",
   "label.bet": "Bet",
   "label.betUnavailable": "above your balance",
   "label.multiplier": "Multiplier",
-  "label.payout": "Payout",
+  "label.game": "Game",
   "label.roundId": "Round ID",
   "label.requestId": "Reference",
   "action.start": "Start round",
   "action.newRound": "New round",
+  "action.cashOut": "Cash out",
   "action.copyRoundId": "Copy round ID",
   "action.retry": "Try again",
   "action.verify": "Verify this round",
@@ -108,6 +117,12 @@ const EN: Messages = {
     "To play again, relaunch the game from the lobby.",
   "state.otherTab": "This session is open in another tab",
   "state.otherTabDetail": "Continue playing in the other tab.",
+  "state.unsupported": "This browser cannot keep your session safe",
+  "state.unsupportedDetail":
+    "Nothing was signed. Relaunch the game from the lobby in an up-to-date browser.",
+  "state.chainUnverified": "Could not verify the chain",
+  "state.chainUnverifiedDetail":
+    "Nothing more is signed for this round. It ends by its time limit.",
   "state.connection": "Connection problem",
   "state.connectionDetail":
     "Your round is not lost. The game keeps trying to reconnect.",
@@ -122,6 +137,7 @@ const EN: Messages = {
   "state.rejectedDetail": "Something went wrong. Nothing was signed.",
   "error.heading": "Something went wrong",
   "error.generic": "The request could not be completed.",
+  "error.gameIncompatible": "This game is not compatible with the player.",
   "error.INSUFFICIENT_FUNDS": "Your balance is too low for this bet.",
   "error.LIMIT_EXCEEDED": "This bet is over your limit.",
   "error.PLAYER_RESTRICTED": "Play is not available for your account.",

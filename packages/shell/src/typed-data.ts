@@ -6,8 +6,9 @@
 // it, base64-encodes the bytes, and keeps the Play API document's limits.
 //
 // The encoder is a seam only for tests: the round flow uses
-// `canonicalTypedData` unless a test passes another one (a fail-closed test
-// passes one that changes the message it was given). The Wrapper passes none.
+// `canonicalTypedData` unless a test passes another one through its test hooks
+// (a fail-closed test passes one that changes the message it was given). The
+// session never passes one, and no public type can carry one.
 
 import {
   encodeTypedData,
@@ -47,10 +48,21 @@ export const canonicalTypedData: TypedDataEncoder = ({ kind, message }) =>
     previous: message.previous,
   });
 
+/**
+ * Test-only seams of the round flows, passed as a separate argument of the
+ * internal constructors (`startRoundFlow`, `createRoundFlow`,
+ * `createRoundDelivery`), never through an options type: no public type names
+ * them, and the session (`openPlaySession`) passes none, so production always
+ * uses the canonical encoding.
+ */
+export type FlowTestHooks = {
+  /** Another typedData encoder (a fail-closed test changes the message). */
+  readonly encodeTypedData?: TypedDataEncoder;
+};
+
 /** The encoder the flow uses: the canonical one unless a test passes one. */
-export const encoderOf = (options: {
-  readonly encodeTypedData?: TypedDataEncoder | undefined;
-}): TypedDataEncoder => options.encodeTypedData ?? canonicalTypedData;
+export const encoderOf = (hooks: FlowTestHooks = {}): TypedDataEncoder =>
+  hooks.encodeTypedData ?? canonicalTypedData;
 
 /** The Play API document's `typedData` limit, in base64 characters. */
 const MAX_TYPED_DATA = 4096;

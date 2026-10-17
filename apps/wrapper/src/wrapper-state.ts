@@ -4,23 +4,27 @@
 
 import {
   type ProblemInput,
+  type RoundCheck,
+  roundIsOver,
   type RoundStatus,
   type SnapshotInput,
   type SnapshotRead,
-  TERMINAL_STATUSES,
 } from "./round-input.ts";
 
 /**
  * The states that replace the round view (W-44), each shown distinctly. The
- * shell decides `other-tab` (W-14), `verification-failed` (W-26), and
- * `out-of-sync` (W-19); the UI only shows them.
+ * shell decides `other-tab` and `unsupported-browser` (W-14),
+ * `verification-failed` and `chain-unverified` (W-26, W-26a), and `out-of-sync`
+ * (W-19); the UI only shows them.
  */
 export type BlockingState =
   | "loading"
   | "configuration-error"
   | "session-ended"
   | "other-tab"
+  | "unsupported-browser"
   | "verification-failed"
+  | "chain-unverified"
   | "out-of-sync"
   | "snapshot-rejected";
 
@@ -34,6 +38,12 @@ export type WrapperState = {
   readonly blocking?: BlockingState;
   /** The last accepted Snapshot. */
   readonly snapshot?: SnapshotInput;
+  /** The shell's checks of that Snapshot's round, when it holds the round. */
+  readonly check?: RoundCheck;
+  /** The shell did not act on the player's last request (nothing was sent). */
+  readonly refused?: true;
+  /** The game's `hello` did not declare what the Wrapper sends (W-38). */
+  readonly gameIncompatible?: true;
   readonly endedRound?: EndedRound;
   /** The typed error of the last call, shown beside the round (W-42). */
   readonly problem?: ProblemInput;
@@ -67,11 +77,13 @@ const FINAL_STATES: ReadonlySet<BlockingState> = new Set([
   "configuration-error",
   "session-ended",
   "other-tab",
+  "unsupported-browser",
 ]);
 
 /** States of one round: only its end, or another round, clears them. */
 const ROUND_STATES: ReadonlySet<BlockingState> = new Set([
   "verification-failed",
+  "chain-unverified",
   "out-of-sync",
 ]);
 
@@ -82,7 +94,7 @@ const isFinal = (state: WrapperState): boolean =>
 const lifts = (state: WrapperState, snapshot: SnapshotInput): boolean =>
   state.blocking === undefined ||
   !ROUND_STATES.has(state.blocking) ||
-  TERMINAL_STATUSES.has(snapshot.status);
+  roundIsOver(snapshot);
 
 const without = <K extends keyof WrapperState>(
   state: WrapperState,
@@ -93,14 +105,42 @@ const without = <K extends keyof WrapperState>(
   return next;
 };
 
+/** The blocking state the shell's checks call for, if any (W-19, W-26, W-44). */
+const checkBlocking = (check: RoundCheck): BlockingState | undefined => {
+  if (check.verdict === "verification-failed") return "verification-failed";
+  if (check.verdict === "chain-unverified") return "chain-unverified";
+  return check.outOfSync ? "out-of-sync" : undefined;
+};
+
+/**
+ * Records the shell's checks of the shown round. A failed check blocks the
+ * round until it is over (W-26: the round ends by its expiry rule); a round
+ * that is over shows its result.
+ */
+const withCheck = (
+  state: WrapperState,
+  check: RoundCheck | undefined,
+): WrapperState => {
+  const shown = state.snapshot;
+  if (check === undefined) return without(state, "check");
+  const next = { ...state, check };
+  const blocking = checkBlocking(check);
+  return blocking === undefined || shown === undefined || roundIsOver(shown)
+    ? next
+    : block(next, blocking);
+};
+
 /**
  * Accepts a validated Snapshot, or ignores it when its `version` is lower than
- * the last accepted one, or equal to it (W-29). A round that ended is kept as
- * `endedRound` and stays until the player starts another round (W-40).
+ * the last accepted one, or equal to it (W-29); the shell's checks of the
+ * round, which may have decided since, are applied either way. A round that
+ * ended is kept as `endedRound` and stays until the player starts another round
+ * (W-40).
  */
 export const acceptSnapshot = (
   state: WrapperState,
   snapshot: SnapshotInput,
+  check?: RoundCheck,
 ): WrapperState => {
   if (isFinal(state)) {
     return state;
@@ -109,11 +149,15 @@ export const acceptSnapshot = (
     state.snapshot !== undefined &&
     snapshot.version <= state.snapshot.version
   ) {
-    return state.connectionProblem
-      ? { ...state, connectionProblem: false }
-      : state;
+    const kept =
+      check !== undefined && snapshot.roundId === state.snapshot.roundId
+        ? withCheck(state, check)
+        : state;
+    return kept.connectionProblem
+      ? { ...kept, connectionProblem: false }
+      : kept;
   }
-  const base = without(state, "problem");
+  const base = without(without(state, "problem"), "refused");
   let next: WrapperState = {
     ...(lifts(state, snapshot) ? without(base, "blocking") : base),
     snapshot,
@@ -122,10 +166,7 @@ export const acceptSnapshot = (
   if (state.snapshot?.status !== snapshot.status) {
     next = { ...next, slow: false };
   }
-  if (
-    TERMINAL_STATUSES.has(snapshot.status) &&
-    snapshot.roundId !== undefined
-  ) {
+  if (roundIsOver(snapshot) && snapshot.roundId !== undefined) {
     next = {
       ...next,
       endedRound: {
@@ -134,7 +175,7 @@ export const acceptSnapshot = (
       },
     };
   }
-  return next;
+  return withCheck(next, check);
 };
 
 /** A validated typed error (W-42). */
@@ -165,7 +206,7 @@ export const acceptRead = (
 ): WrapperState => {
   switch (read.kind) {
     case "snapshot": {
-      return acceptSnapshot(state, read.snapshot);
+      return acceptSnapshot(state, read.snapshot, read.check);
     }
     case "problem": {
       return acceptProblem(state, read.problem);
@@ -175,6 +216,12 @@ export const acceptRead = (
     }
     case "network": {
       return isFinal(state) ? state : { ...state, connectionProblem: true };
+    }
+    case "session-ended": {
+      return block(state, "session-ended");
+    }
+    case "refused": {
+      return isFinal(state) ? state : { ...state, refused: true };
     }
     default: {
       return state;
@@ -196,7 +243,10 @@ export const block = (
  * do the previous round's error and round-scoped state.
  */
 export const startNewRound = (state: WrapperState): WrapperState => {
-  const next = without(without(state, "endedRound"), "problem");
+  const next = without(
+    without(without(state, "endedRound"), "problem"),
+    "refused",
+  );
   return next.blocking !== undefined && ROUND_STATES.has(next.blocking)
     ? without(next, "blocking")
     : next;

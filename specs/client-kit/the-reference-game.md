@@ -89,8 +89,10 @@ else.
   The build has no inline script or style for it to refuse (the build test
   checks both). `frame-ancestors` cannot be set in a `<meta>`; the server that
   hosts a game sets it.
-- **The parent's origin** (the reference game's choice, not a protocol rule;
-  open for review with #9). The game accepts a message only when `event.source`
+- **The parent's origin** (the reference game's choice, not a protocol rule).
+  The Wrapper's mount appends its own origin as `parentOrigin` to the game's URL
+  ([W-37](../wrapper/the-game-iframe-and-the-controller-boundary.md), decided in
+  human review, 2026-10-17). The game accepts a message only when `event.source`
   is `window.parent` and `event.origin` is the parent's origin, and posts only
   with `targetOrigin` set to it. It learns the origin from its own URL, the
   `parentOrigin` query parameter, and from `location.ancestorOrigins[0]` where
@@ -105,7 +107,6 @@ else.
   that the game runs inside the Wrapper, and sends nothing. A framer that names
   another origin gains nothing: what the game posts to that origin is dropped by
   the browser, and the framer's own messages carry its real origin.
-  <!-- TODO(#9, the Wrapper's mount): the Wrapper appends `parentOrigin` (its own origin) to the game URL when it mounts the iframe; until then only browsers with `location.ancestorOrigins` reach the game. -->
 - **Messages.** On load the game sends one `hello`: `presentations: ["steps"]`
   and all seven statuses. It parses every message against `se.controller/1`
   (`protocol.ts`, `game-snapshot.ts`): a plain object with exactly its fields,

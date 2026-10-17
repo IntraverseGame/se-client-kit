@@ -59,6 +59,12 @@ export type FakePlayApi = {
    * queued; the queue is kept for when the connection is restored.
    */
   readonly cut: () => void;
+  /**
+   * Lets the launch code be redeemed once more, for the same session id with a
+   * new token: a tab cloned with its session (T-17). The real API redeems a
+   * code once, so a second launch of one code is otherwise refused.
+   */
+  readonly redeemAgain: () => void;
   readonly restore: () => void;
   /** The launch code and every play token issued so far. */
   readonly secrets: () => readonly FakeSecret[];

@@ -24,6 +24,11 @@ export type RoundActions = {
   readonly pick: PickUseCase;
   readonly cashOut: () => Promise<PickOutcome>;
   /**
+   * Whether `cashOut` would sign now (W-24): the same gate and legality, with
+   * nothing signed or sent. The UI offers the cash-out control only then.
+   */
+  readonly cashOutOffered: () => boolean;
+  /**
    * Sends the pending move or cash-out again with the same bytes and key.
    * `not_active` when nothing may be resent: no pending move or cash-out, a
    * cancel (sent again only after a Snapshot read, W-25), or a round held after
@@ -110,6 +115,14 @@ export const createRoundActions = (
     );
   };
 
+  const cashOutOffered = (): boolean => {
+    const signer = gate();
+    return (
+      typeof signer !== "string" &&
+      legalCashOut(tracking.latest(), signer.nextSequence() - 1).legal
+    );
+  };
+
   const resend = async (): Promise<PickOutcome> => {
     if (delivery.busy()) return rejected("busy");
     const action = tracking.signer()?.resendable();
@@ -121,5 +134,5 @@ export const createRoundActions = (
     return ACCEPTED;
   };
 
-  return Object.freeze({ pick, cashOut, resend });
+  return Object.freeze({ pick, cashOut, cashOutOffered, resend });
 };
