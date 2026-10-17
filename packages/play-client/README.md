@@ -4,8 +4,8 @@ A typed `fetch` client for the SuperEngine Play API (`/play/v1`) and the verify
 read the Wrapper needs.
 
 **Status:** pre-release. Not published to npm yet. The package holds one typed
-function per Play API operation (redeem, refresh, start, continue, cash-out, the
-Snapshot read), typed from the Play API document in
+function per Play API operation (redeem, refresh, start, continue, cash-out,
+cancel, the Snapshot read), typed from the Play API document in
 `@intraverse/se-client-contracts`, and the request layer under them: the request
 options, the timeout, the typed errors, problem mapping, bounded retries,
 idempotency keys, and the play token's refresh schedule. The verify read is
@@ -72,7 +72,9 @@ try {
     `redeemLaunchCode(transport, { launchCode }, { seal })` (no credential,
     never repeated),
     `refreshPlayToken(transport, { authorization, seal, notAfterMs })`,
-    `startRound(transport, body, options)`, `continueRound`, `cashOutRound`, and
+    `startRound(transport, body, options)`, `continueRound`, `cashOutRound`,
+    `cancelRound` (never repeated: after a lost response or a `503`, read the
+    Snapshot before you send the cancel again), and
     `getSnapshot(transport, options)`. Each resolves with
     `{ body, receivedAtMs, clockOffsetMs }`. The redeem and refresh answers are
     checked and typed; their new play token is handed to the `seal` you pass
@@ -89,10 +91,10 @@ try {
     `referrerPolicy: "no-referrer"`, and `redirect: "error"`. It times the
     request out (`DEFAULT_REQUEST_TIMEOUT_MS`, 15 s), stops it when the
     request's `signal` aborts, and repeats it by its retry class: `never` (a
-    launch-code redeem), `refresh` (which must name the old token's deadline as
-    `notAfterMs`), or `idempotent`. Only a lost response or a problem whose
-    `retryable` is `true` is repeated, with the same bytes, a bounded number of
-    times with backoff (`DEFAULT_RETRY_CONFIG`, provisional).
+    launch-code redeem, a cancel), `refresh` (which must name the old token's
+    deadline as `notAfterMs`), or `idempotent`. Only a lost response or a
+    problem whose `retryable` is `true` is repeated, with the same bytes, a
+    bounded number of times with backoff (`DEFAULT_RETRY_CONFIG`, provisional).
   - `bearerAuthorization` builds the `Authorization` value from a token:
     `Bearer <token>`.
   - `NetworkError` (no response: `timeout`, `network`, or `aborted`; a refused

@@ -38,7 +38,7 @@ export type RedeemLaunchCodeResponse = PlaySuccessBody<"redeemLaunchCode">;
 export type RefreshPlayTokenResponse = PlaySuccessBody<"refreshPlayToken">;
 /** `POST /play/v1/rounds:start`: the intent's key, the bet, the action key. */
 export type StartRoundRequest = PlayRequestBody<"startRound">;
-/** A signed move or cash-out, passed to the engine unread. */
+/** A signed move, cash-out, or cancel, passed to the engine unread. */
 export type RoundActionRequest = PlayRequestBody<"continueRound">;
 
 type DocumentPath = keyof PlayApiPaths;
@@ -110,5 +110,6 @@ export const PLAY_ROUTES: Readonly<Record<PlayOperationId, PlayRoute>> =
       "/play/v1/rounds:continue",
     ),
     cashOutRound: playRoute("cashOutRound", "post", "/play/v1/rounds:cashOut"),
+    cancelRound: playRoute("cancelRound", "post", "/play/v1/rounds:cancel"),
     getSnapshot: playRoute("getSnapshot", "get", "/play/v1/snapshot"),
   });

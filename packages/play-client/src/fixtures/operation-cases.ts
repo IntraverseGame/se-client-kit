@@ -5,6 +5,7 @@
 import type { ErrorCode } from "@intraverse/se-client-contracts";
 
 import {
+  cancelRound,
   cashOutRound,
   continueRound,
   getSnapshot,
@@ -38,6 +39,12 @@ export const TIMEOUT_WAIT_MS: number =
 /** A code the document does not list: a newer backend's (W-42). */
 export const UNKNOWN_CODE = "NEWER_BACKEND_CODE";
 
+/** The operations whose class is `never`: one attempt, whatever the failure. */
+const NEVER_REPEATED: ReadonlySet<PlayOperationId> = new Set([
+  "redeemLaunchCode",
+  "cancelRound",
+]);
+
 /** An answer that does not depend on the operation. */
 type AnyAnswer = Extract<
   Answer<PlayOperationId>,
@@ -69,7 +76,7 @@ const operation = <Id extends PlayOperationId>(
   success: Extract<Answer<Id>, { readonly kind: "success" }>,
 ): Case => ({
   id,
-  attempts: id === "redeemLaunchCode" ? 1 : DEFAULT_RETRY_CONFIG.maxAttempts,
+  attempts: NEVER_REPEATED.has(id) ? 1 : DEFAULT_RETRY_CONFIG.maxAttempts,
   call,
   problems,
   queueProblem: (x, status, code, retryable) => {
@@ -126,6 +133,14 @@ export const PROBLEMS = {
     [401, "UNAUTHENTICATED"],
     [404, "NOT_FOUND"],
     [409, "STALE_ACTION"],
+    [422, "FAILED_PRECONDITION"],
+    [500, "INTERNAL"],
+    [503, "UNAVAILABLE"],
+  ],
+  cancelRound: [
+    [400, "INVALID_ARGUMENT"],
+    [401, "UNAUTHENTICATED"],
+    [404, "NOT_FOUND"],
     [422, "FAILED_PRECONDITION"],
     [500, "INTERNAL"],
     [503, "UNAVAILABLE"],
@@ -193,6 +208,16 @@ export const CASES: readonly Case[] = [
         signal: x.cancel.signal,
       }),
     PROBLEMS.cashOutRound,
+    snapshotAnswer,
+  ),
+  operation(
+    "cancelRound",
+    x =>
+      cancelRound(x.transport, actionBody, {
+        ...x.auth,
+        signal: x.cancel.signal,
+      }),
+    PROBLEMS.cancelRound,
     snapshotAnswer,
   ),
   operation(

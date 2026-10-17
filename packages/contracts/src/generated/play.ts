@@ -59,6 +59,30 @@ export type paths = {
      */
     post: operations["cashOutRound"];
   };
+  "/play/v1/rounds:cancel": {
+    /**
+     * Cancel the round
+     * @description Passes the player's signed cancel (`PlayerCancel`, `sequence` 1, its
+     * `previous` the Snapshot's `readyHash`) and answers the round's
+     * Snapshot: `canceled` once the engine accepted it, the bet refunded or
+     * its refund on the way. Only an `active` round with no move played can
+     * be canceled. The API passes the cancel through unread: only the engine
+     * verifies it.
+     *
+     * A cancel after a move was applied, or of a round that is not
+     * `active`, is `FAILED_PRECONDITION`. A cancel the engine refuses (a
+     * wrong signer, `sequence` or `previous`) is `INVALID_ARGUMENT` and
+     * leaves the round `active`, so a corrected cancel may follow. When a
+     * move was accepted while the cancel was on its way, the answer is the
+     * round's Snapshot with that move played, and nothing is refunded.
+     *
+     * A cancel is not answered from a log as a repeated move is: once the
+     * engine took it, the same cancel again is `FAILED_PRECONDITION`. After
+     * a lost response or `UNAVAILABLE`, read `GET /play/v1/snapshot` before
+     * sending it again.
+     */
+    post: operations["cancelRound"];
+  };
   "/play/v1/snapshot": {
     /**
      * Read the Snapshot
@@ -107,7 +131,7 @@ export type components = {
       shape?: number[];
     };
     RoundActionRequest: {
-      /** @description The client's key of this call, 1 to 128 characters. The signed action's sequence number is what makes a repeat safe; the key is accepted for every transport's sake. */
+      /** @description The client's key of this call, 1 to 128 characters. For a move or a cash-out, the signed action's sequence number is what makes a repeat safe; a cancel is not repeated (see `rounds:cancel`). The key is accepted for every transport's sake. */
       idempotencyKey: string;
       roundId: components["schemas"]["RoundId"];
       /**
@@ -564,6 +588,48 @@ export type operations = {
     };
   };
   /**
+   * Cancel the round
+   * @description Passes the player's signed cancel (`PlayerCancel`, `sequence` 1, its
+   * `previous` the Snapshot's `readyHash`) and answers the round's
+   * Snapshot: `canceled` once the engine accepted it, the bet refunded or
+   * its refund on the way. Only an `active` round with no move played can
+   * be canceled. The API passes the cancel through unread: only the engine
+   * verifies it.
+   *
+   * A cancel after a move was applied, or of a round that is not
+   * `active`, is `FAILED_PRECONDITION`. A cancel the engine refuses (a
+   * wrong signer, `sequence` or `previous`) is `INVALID_ARGUMENT` and
+   * leaves the round `active`, so a corrected cancel may follow. When a
+   * move was accepted while the cancel was on its way, the answer is the
+   * round's Snapshot with that move played, and nothing is refunded.
+   *
+   * A cancel is not answered from a log as a repeated move is: once the
+   * engine took it, the same cancel again is `FAILED_PRECONDITION`. After
+   * a lost response or `UNAVAILABLE`, read `GET /play/v1/snapshot` before
+   * sending it again.
+   */
+  cancelRound: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RoundActionRequest"];
+      };
+    };
+    responses: {
+      /** @description The round's Snapshot. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Snapshot"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["Unprocessable"];
+      500: components["responses"]["InternalError"];
+      503: components["responses"]["Unavailable"];
+    };
+  };
+  /**
    * Read the Snapshot
    * @description Answers the session's Snapshot: its open round, or `idle` when none is
    * open. A round that has ended is not shown again: its Snapshot was the
@@ -594,5 +660,6 @@ export type operationRoutes = {
   startRound: { path: "/play/v1/rounds:start"; method: "post" };
   continueRound: { path: "/play/v1/rounds:continue"; method: "post" };
   cashOutRound: { path: "/play/v1/rounds:cashOut"; method: "post" };
+  cancelRound: { path: "/play/v1/rounds:cancel"; method: "post" };
   getSnapshot: { path: "/play/v1/snapshot"; method: "get" };
 };

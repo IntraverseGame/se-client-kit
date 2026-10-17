@@ -47,8 +47,23 @@ Part of the [Wrapper spec](../wrapper.md), section
   passes). Without a settled `T_0` it signs no cancel. Neither case applies
   after a re-issue (W-26), and the cancel control is withdrawn then. A signed
   `PlayerCancel` is sent only on its own route, never through `continue` or
-  `cashOut`.
-  <!-- TODO(Play API): sending a signed `PlayerCancel` is pending the `rounds:cancel` route (planned by the backend and cleared for this public repository on 2026-10-17; see #13). The backend has said it will be `POST /play/v1/rounds:cancel`, with the request shape of `continue` and `cashOut` (`roundId` and the signed `PlayerCancel`, sequence 1, `previous` = `readyHash`, that is `T_0`), answering the round's Snapshot, and accepted only for a config round that is `active` with no move applied; it is not in the vendored document yet and has no date. Until it is, the shell has no way to send a cancel, and W-25 and the cancel path of W-26 cannot complete. -->
+  `cashOut`. The route is `POST /play/v1/rounds:cancel` (`cancelRound` in the
+  Play API document, sent by `play-client`'s `cancelRound`). Its body has the
+  request shape of `continue` and `cashOut` (`idempotencyKey`, `roundId`, the
+  signed `PlayerCancel` as `typedData` in base64, and `signature`), and it
+  answers the round's Snapshot: `canceled` once the engine accepted the cancel,
+  or `active` with a move played when a move was accepted while the cancel was
+  on its way (then nothing is refunded). Only a config round that is `active`
+  with no move applied can be canceled: a cancel after a move, or of a round
+  that is not `active`, is a 422 `FAILED_PRECONDITION`; a cancel the engine
+  refuses (a wrong signer, sequence, or `previous`) is a 400 `INVALID_ARGUMENT`
+  and leaves the round `active`. A cancel is not answered from a log as a
+  repeated move is: after a lost response or a 503 `UNAVAILABLE`, the shell MUST
+  read the Snapshot (`GET /play/v1/snapshot`) before it sends the cancel again,
+  and `play-client` never repeats it on its own. The shell does not sign a
+  cancel yet: the `PlayerCancel` fields and vectors are still to be published
+  (the signed-action TODO under W-20), so W-25 and the cancel path of W-26
+  cannot complete until they are.
 - **W-26.** **Checks before the first signature and before the game is shown as
   ready.** The Snapshot is `starting` while the round prepares. The shell MUST
   NOT show the game as ready, and MUST NOT sign anything except the
@@ -134,9 +149,10 @@ Part of the [Wrapper spec](../wrapper.md), section
   round's evidence, MUST sign nothing more for the round (no cancel: a move may
   already be signed), and shows "this round failed verification"; the game's
   picks get `reject` (W-23), no cash-out is offered or signed (W-24), and the
-  round ends by its game's expiry rule. A W-16 resend of bytes already signed is
-  not a new signature and continues, so an action the backend may have applied
-  is never stranded.
+  round ends by its game's expiry rule. A W-16 resend of a move or a cash-out
+  already signed is not a new signature and continues, so an action the backend
+  may have applied is never stranded. This does not cover a cancel: a cancel is
+  sent again only after a Snapshot read (W-25), never as a blind resend.
 
   For a book round (not in the first release) the check can only flag; a book
   Snapshot that carries `proofs.createRoundAuth` is invalid (W-28).
