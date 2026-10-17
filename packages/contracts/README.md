@@ -32,8 +32,10 @@ or calling the Play API (use `@intraverse/se-client-play-client`).
   and the generated types of the Snapshot schema and of the Play API document.
   This is the public API.
 - `@intraverse/se-client-contracts/testing`: golden test vectors used by this
-  kit's own tests. It is not part of the public API, and the published package
-  will not contain it: vectors never ship in a bundle or a tarball.
+  kit's own tests: the signing vectors and the Snapshot vectors (valid, invalid,
+  signature, and the canonical `typedData` bytes of signed actions). It is not
+  part of the public API, and the published package will not contain it: vectors
+  never ship in a bundle or a tarball.
 
 ## Guarantees and constraints
 

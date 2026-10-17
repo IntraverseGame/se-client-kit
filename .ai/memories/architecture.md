@@ -97,6 +97,8 @@ structure below.
   general EIP-712 library. The key lives only in the closure of the signer
   `createSigner` returns (address, `sign`, `destroy`); the transcript helper
   (`createTranscript`) refuses a second, different message at one sequence;
+  `encodeTypedData` builds the canonical `ActionTypedData` bytes (`typedData`)
+  from plain fields, independent of the grammar module and of the transcript;
   the action grammar is a separate module, still named provisional: the
   signed-action spec has published it (0-based rows and tiles; see the Wrapper
   spec's "What this spec does not own"), and the code is not reconciled yet.

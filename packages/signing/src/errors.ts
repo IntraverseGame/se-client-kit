@@ -3,7 +3,10 @@
  * on the message text.
  */
 export type SigningErrorCode =
-  /** A value is not of the shape or range its EIP-712 field type allows. */
+  /**
+   * A value is not of the shape or range its field type allows (an EIP-712
+   * field, or a field of the typedData encoding).
+   */
   | "invalid-input"
   /** A signature is not exactly 65 bytes. */
   | "invalid-signature-length"
@@ -35,7 +38,7 @@ export type SigningErrorCode =
 // One fixed message per code. A message never carries an input value, so no
 // key, signature, or message content can reach an error.
 const MESSAGES: Readonly<Record<SigningErrorCode, string>> = {
-  "invalid-input": "a value does not fit its EIP-712 field type",
+  "invalid-input": "a value does not fit its field type",
   "invalid-signature-length": "a signature must be exactly 65 bytes",
   "invalid-signature-v": "a signature's v must be 27 or 28",
   "high-s": "a signature's s must be in the lower half of the curve order",

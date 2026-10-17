@@ -111,6 +111,10 @@ import vector104 from "./snapshot/signature/create-round-auth-action-key.json" w
 import vector105 from "./snapshot/signature/create-round-auth-secret-hash.json" with { type: "json" };
 import vector106 from "./snapshot/signature/create-round-auth-tampered.json" with { type: "json" };
 import vector107 from "./snapshot/signature/create-round-auth-unpinned-signer.json" with { type: "json" };
+import vector108 from "./snapshot/typed-data/cash-out.json" with { type: "json" };
+import vector109 from "./snapshot/typed-data/coinflip-cancel.json" with { type: "json" };
+import vector110 from "./snapshot/typed-data/coinflip-pick.json" with { type: "json" };
+import vector111 from "./snapshot/typed-data/pick-multi-path.json" with { type: "json" };
 import signing from "./signing.json" with { type: "json" };
 
 /** Every vector is data of unknown shape: a consumer validates what it reads. */
@@ -121,6 +125,8 @@ export type SnapshotVectors = {
   readonly invalid: VectorSet;
   /** Schema-valid Snapshots with the verdict of the shell's W-26 checks. */
   readonly signature: VectorSet;
+  /** The canonical typedData bytes of signed actions, from their fields. */
+  readonly typedData: VectorSet;
 };
 
 export const signingVectors: unknown = signing;
@@ -239,5 +245,11 @@ export const snapshotVectors: SnapshotVectors = {
     "create-round-auth-secret-hash": vector105,
     "create-round-auth-tampered": vector106,
     "create-round-auth-unpinned-signer": vector107,
+  },
+  typedData: {
+    "cash-out": vector108,
+    "coinflip-cancel": vector109,
+    "coinflip-pick": vector110,
+    "pick-multi-path": vector111,
   },
 };

@@ -54,6 +54,13 @@ export const GROUPS: readonly Group[] = [
     vectors: true,
   },
   {
+    id: "snapshot-vectors-typed-data",
+    kind: "directory",
+    destination: "src/vectors/snapshot/typed-data",
+    sourceName: "se.snapshot/1 vectors/typed-data",
+    vectors: true,
+  },
+  {
     id: "signing-vectors",
     kind: "file",
     destination: "src/vectors/signing.json",

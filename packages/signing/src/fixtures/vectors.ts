@@ -6,30 +6,30 @@ import { signingVectors } from "@intraverse/se-client-contracts/testing";
 
 import type { Address, Bytes32, Hex } from "../hex.ts";
 
-type Json = Readonly<Record<string, unknown>>;
+export type Json = Readonly<Record<string, unknown>>;
 
 const isRecord = (value: unknown): value is Json =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const record = (value: unknown, where: string): Json => {
+export const record = (value: unknown, where: string): Json => {
   if (!isRecord(value)) throw new TypeError(`${where}: not an object`);
   return value;
 };
 
-const at = (parent: Json, key: string, where: string): unknown => {
+export const at = (parent: Json, key: string, where: string): unknown => {
   if (!Object.hasOwn(parent, key))
     throw new TypeError(`${where}.${key}: missing`);
   return parent[key];
 };
 
-const text = (parent: Json, key: string, where: string): string => {
+export const text = (parent: Json, key: string, where: string): string => {
   const value = at(parent, key, where);
   if (typeof value !== "string")
     throw new TypeError(`${where}.${key}: not a string`);
   return value;
 };
 
-const hex = (parent: Json, key: string, where: string): Hex => {
+export const hex = (parent: Json, key: string, where: string): Hex => {
   const value = text(parent, key, where);
   if (!/^0x[0-9a-fA-F]*$/u.test(value)) {
     throw new TypeError(`${where}.${key}: not hex`);
@@ -37,7 +37,7 @@ const hex = (parent: Json, key: string, where: string): Hex => {
   return `0x${value.slice(2)}`;
 };
 
-const integer = (parent: Json, key: string, where: string): number => {
+export const integer = (parent: Json, key: string, where: string): number => {
   const value = at(parent, key, where);
   if (typeof value !== "number" || !Number.isSafeInteger(value)) {
     throw new TypeError(`${where}.${key}: not an integer`);

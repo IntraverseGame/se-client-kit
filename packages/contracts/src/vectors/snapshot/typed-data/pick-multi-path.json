@@ -1,0 +1,22 @@
+{
+  "vector": "snapshot/typed-data/pick-multi-path",
+  "description": "The third move: pick option 2 of row 2, path [0, 1, 2] packed (one tag, one length, three varints), sequence 3. It is the third pick of the registry's signing vectors (signing.json), which hold its digest and signature; previous is T_2, the structHash of the second pick there. The typedData the shell sends to rounds:continue.",
+  "fields": {
+    "kind": {
+      "name": "ACTION_KIND_ACTION",
+      "number": 1
+    },
+    "action": "pick row 2 tile 2",
+    "path": [
+      0,
+      1,
+      2
+    ],
+    "sequence": 3,
+    "previous": "0xa2c8ef10c8a2f7933e4877cbe6a8fe581cff9fdc4c3b8518e1b0333f907c0801"
+  },
+  "typedData": {
+    "hex": "0x080112117069636b20726f7720322074696c6520321a0300010220032a20a2c8ef10c8a2f7933e4877cbe6a8fe581cff9fdc4c3b8518e1b0333f907c0801",
+    "base64": "CAESEXBpY2sgcm93IDIgdGlsZSAyGgMAAQIgAyogosjvEMii95M+SHfL5qj+WBz/n9xMO4UY4bAzP5B8CAE="
+  }
+}

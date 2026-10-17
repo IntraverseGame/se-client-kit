@@ -1,0 +1,22 @@
+{
+  "vector": "snapshot/typed-data/cash-out",
+  "description": "A cash-out after three survived rows: action \"cash out\", path [0, 1, 2], sequence 4. It is the cash-out of the registry's signing vectors (signing.json), which hold its digest and signature; previous is T_3, the structHash of the third pick there. The typedData the shell sends to rounds:cashOut.",
+  "fields": {
+    "kind": {
+      "name": "ACTION_KIND_CASH_OUT",
+      "number": 2
+    },
+    "action": "cash out",
+    "path": [
+      0,
+      1,
+      2
+    ],
+    "sequence": 4,
+    "previous": "0xa6fe4f717d675ba2ea93260f68f5ca8cd5add31495e31ff95ed71c871fdee7cd"
+  },
+  "typedData": {
+    "hex": "0x0802120863617368206f75741a0300010220042a20a6fe4f717d675ba2ea93260f68f5ca8cd5add31495e31ff95ed71c871fdee7cd",
+    "base64": "CAISCGNhc2ggb3V0GgMAAQIgBCogpv5PcX1nW6LqkyYPaPXKjNWt0xSV4x/5Xtcchx/e580="
+  }
+}

@@ -37,6 +37,12 @@ export const SOURCES: Readonly<Record<string, GroupSource>> = {
     ref: "main",
     path: "s/signature",
   },
+  "snapshot-vectors-typed-data": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "s/typed-data",
+  },
   "signing-vectors": {
     name: "contracts",
     repo: "r",
@@ -59,6 +65,7 @@ export const memorySource = (): MemorySource => {
     ["s/valid/a.json", '{"a":1}\n'],
     ["s/invalid/b.json", '{"b":2}\n'],
     ["s/signature/d.json", '{"d":5}\n'],
+    ["s/typed-data/e.json", '{"e":6}\n'],
     ["p/play.yaml", "openapi: 3.0.3\n"],
     ["v/signing.json", '{"s":3}\n'],
   ]);
