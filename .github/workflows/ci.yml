@@ -119,6 +119,29 @@ jobs:
       - run: pnpm run check:build-output
       - run: pnpm run check:package-files
 
+  # The release dry run (tools/release-dry-run.ts): changesets applied on a
+  # scratch copy, the five tarballs packed and checked (exports, no vector,
+  # nothing of the contracts test-only entry), the packed packages imported as
+  # a consumer would, and the Wrapper artifact built twice with one digest. It
+  # publishes nothing and needs no token.
+  release-dry-run:
+    name: release-dry-run
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      # The CLI directly, not `pnpm release:dry-run -- --out ...`: wireit
+      # passes extra arguments to a `shell: true` spawn unescaped (Node's
+      # DEP0190 warning).
+      - run:
+          pnpm exec tsx tools/release-dry-run.ts --out
+          "$RUNNER_TEMP/release-dry-run"
+
   # Playwright against the in-repo fake Play API (e2e/), on Chromium. The
   # browser comes from Playwright's own download for the pinned
   # @playwright/test; lifecycle scripts are off, so it is installed here.
@@ -177,6 +200,7 @@ jobs:
       - allow-list
       - contracts
       - build
+      - release-dry-run
       - e2e-fake
       - audit
       - dependency-review

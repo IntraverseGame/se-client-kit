@@ -95,7 +95,10 @@ equivalent; Node and pnpm are pinned in `.node-version` and `packageManager`.
   allow-list) · `pnpm check:readmes` (every package and app README follows the
   public-README rules) · `pnpm check:contracts` (only tests import the
   `contracts` test-only entry) · `pnpm changeset` (add release notes) ·
-  `pnpm clean:cache` (forget cached task results)
+  `pnpm release:dry-run` (the release dry run: changesets on a scratch copy, the
+  five tarballs packed and checked, the Wrapper artifact built twice with one
+  digest; publishes nothing; not part of `pnpm check`) · `pnpm clean:cache`
+  (forget cached task results)
 
 The scripts are wireit scripts: each declares its inputs and outputs, and a
 script whose inputs did not change is skipped from the cache in `.wireit/`.

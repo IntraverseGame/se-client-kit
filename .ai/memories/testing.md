@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-17 (shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-17 (release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -77,6 +77,19 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   each library's `files` to its `dist/`: everything the runtime entry loads is
   selected, and in `contracts` nothing else (no test-only entry or chunk);
   covered by `tools/package-files.test.ts`, which also checks the manifests.
+- **Release dry run:** `pnpm release:dry-run` (and the `release-dry-run` CI
+  job; not part of `pnpm check`, it takes about 15 seconds) packs the five
+  libraries in a scratch copy and checks the tarballs
+  (`tools/package-tarball.ts`, covered by `tools/package-tarball.test.ts` with
+  synthetic tarballs written by `tools/tar.ts`), imports them as a consumer,
+  and builds the Wrapper artifact twice (`tools/wrapper-artifact.ts`, covered
+  by `tools/wrapper-artifact.test.ts`); `tools/tar.test.ts` covers the strict
+  tar reader and the deterministic writer, `tools/release-steps.test.ts` the
+  scratch environment's name filter and the `--out` rule,
+  `tools/release-readiness.test.ts` every refusal of the publish gate and the
+  registry comparison, and `tools/release-consumer.test.ts` which `exports`
+  entries the consumer check imports. The CLI itself is exercised by running
+  it, not by a unit test.
 - **Static:** lint, format check, `tsc --noEmit`, and the import-direction
   rules.
 

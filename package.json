@@ -21,7 +21,8 @@
     "clean:cache": "find . -name .wireit -type d -not -path '*/node_modules/*' -prune -exec rm -rf {} +",
     "check:build-output": "wireit",
     "check:package-files": "wireit",
-    "check:readmes": "wireit"
+    "check:readmes": "wireit",
+    "release:dry-run": "wireit"
   },
   "wireit": {
     "check": {
@@ -285,6 +286,9 @@
     },
     "check:readmes": {
       "command": "vitest run --config vitest.readmes.config.ts"
+    },
+    "release:dry-run": {
+      "command": "tsx tools/release-dry-run.ts"
     }
   },
   "devDependencies": {
