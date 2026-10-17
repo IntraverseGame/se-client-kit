@@ -29,7 +29,8 @@ describe("check 4, signature (recover-mismatch)", () => {
   });
 
   it("refuses a signature by another key than the pinned signer", () => {
-    expect(checked({ signWith: registryKey() })).toEqual(
+    // Seed 3: not the default seed `issueRound` pins the configuration with.
+    expect(checked({ signWith: registryKey(3) })).toEqual(
       refused("recover-mismatch"),
     );
   });

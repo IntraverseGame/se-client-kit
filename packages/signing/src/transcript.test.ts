@@ -12,7 +12,7 @@ import {
   separator,
 } from "./fixtures/helpers.ts";
 import { vectors } from "./fixtures/vectors.ts";
-import { provisionalGrammar } from "./grammar.ts";
+import { actionGrammar } from "./grammar.ts";
 import type { Bytes32 } from "./hex.ts";
 import type { Signature } from "./signature.ts";
 import {
@@ -103,8 +103,7 @@ const interleave = (
     const choice = nextChoice();
     const request: TranscriptRequest = {
       kind: "action",
-      action: provisionalGrammar.pick(transcript.nextSequence(), choice),
-      path: [choice],
+      ...actionGrammar.pick([choice], transcript.nextSequence()),
     };
     codes.add(codeOf(() => transcript.sign(request, sign)) ?? "signed");
     if (choice === 0 && transcript.pending() !== undefined) {
@@ -172,12 +171,17 @@ describe("createTranscript", () => {
     expect(transcript.nextSequence()).toBe(vectors.actions.length + 1);
   });
 
-  it("builds the worked round's action text from the provisional grammar", () => {
-    expect(vectors.actions.map(vector => vector.action)).toEqual([
-      provisionalGrammar.pick(0, 2),
-      provisionalGrammar.pick(1, 2),
-      provisionalGrammar.pick(2, 2),
-      provisionalGrammar.cashOut(),
+  it("builds the worked round's action text and path from the grammar", () => {
+    expect(
+      vectors.actions.map(vector => ({
+        action: vector.action,
+        path: vector.path,
+      })),
+    ).toEqual([
+      actionGrammar.pick([0], 2),
+      actionGrammar.pick([0, 1], 2),
+      actionGrammar.pick([0, 1, 2], 2),
+      actionGrammar.cashOut([0, 1, 2]),
     ]);
   });
 

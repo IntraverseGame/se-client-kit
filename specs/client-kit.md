@@ -144,7 +144,7 @@ provisional. See
 
 The fixed-type EIP-712 encoder and secp256k1 signing in `signing`: what it
 encodes today, key custody in the signer, the `SigningError` codes, the
-transcript helper, the provisional action grammar, and the vectors. See
+transcript helper, the action grammar, and the vectors. See
 [`client-kit/the-cryptography.md`](./client-kit/the-cryptography.md).
 
 ### How the kit gets its contracts

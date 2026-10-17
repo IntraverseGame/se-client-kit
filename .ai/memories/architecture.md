@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-17 (Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-17 (shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -8,10 +8,10 @@ last-verified: 2026-10-17 (Wrapper configuration and rendering pull request: the
 The contract is the kit's [client kit spec](../../specs/client-kit.md) and
 [Wrapper spec](../../specs/wrapper.md); this note is the orientation around
 them. `contracts`, `signing`, `snapshot`, and `play-client` have code; `shell`
-has four slices (redaction, logger, key custody, the signer lock, the
+has five slices (redaction, logger, key custody, the signer lock, the
 transcript state; the chain configuration and tip check; the W-26
 `CreateRoundAuth` checks and the round's verdict; the `se.controller/1` game
-bridge); the Wrapper app has its first slice (configuration, rendering,
+bridge; the round flows, the pick use case, and the UI's Snapshot reader); the Wrapper app has its first slice (configuration, rendering,
 accessibility, the release check) and `reference-game` is a skeleton. Flag any
 divergence from the
 structure below.
@@ -55,7 +55,10 @@ structure below.
   logger, `REDACTED`, `ShellError`, and the chain configuration's validation
   (`validateChainConfig`, for W-26a's boot rule) with the RPC transport types
   the Wrapper implements, and the game bridge (`createControllerBridge`) with
-  the `se.controller/1` message types. The bridge holds no secret: the pick use
+  the `se.controller/1` message types, and the UI's Snapshot reader
+  (`createSnapshotReader`: validated Snapshots and typed Play API errors only,
+  decided in human review 2026-10-17; never a key, a token, or a signing
+  capability). The bridge holds no secret: the pick use
   case is injected, and the game's copy of a Snapshot is built from an
   allow-list (W-38), never by deleting fields; do not "simplify" it into
   forwarding the Snapshot. The bridge's pick pre-check is an early filter, not
@@ -64,24 +67,34 @@ structure below.
   now; `reference-game` still may not import `shell` until the type-only
   subpath lands with the reference game. The tip check and its pass-or-fail decision, the
   W-26 `CreateRoundAuth` checks, and the round's verdict
-  (`round-verification.ts`, which alone settles `T_0` and says when a
-  `PlayerCancel` must be signed) are internal until the start flow exists. The environment configuration, never a
+  (`round-verification.ts`, which alone settles `T_0`, typed
+  `SettledInitial`, and says when a `PlayerCancel` must be signed), the round
+  flows (`round-flow.ts`), and the pick use case (`pick-use-case.ts`) are
+  internal until the Wrapper wires them. The environment configuration, never a
   Snapshot or a response, pins the backend signer, the registry domain, and
   each entropy source's chain id (every tip-check endpoint must report it with
   `eth_chainId`; one that reports another chain fails the check). The
   signing session (lock + key) and the per-round transcript state are not
   exported, so the UI cannot sign an arbitrary action text; they are reached
-  through use cases once those exist. Every use of the key checks the signer
+  through the round flows. Every use of the key checks the signer
   lock first (no lock, no Web Locks API, a lost lock: `lock-not-held`). Its
   injected seams are listed in `specs/client-kit/the-shell-package.md`
-  ("Provisional items"): `T_0`, the `bytes32` round id, the domain, and the
-  `PlayerCancel` type hash are now published by the signed-action spec, but
-  stay injected until the code is reconciled; the Snapshot-reading rule is the
-  shell's own. Do not hard-code them. After `STALE_ACTION` the code never signs
-  for the round again; W-19 now asks for a resync (a 400 or a 409 to a move or
-  cash-out is final, not resent: read the Snapshot, continue only if its own
-  pending action shows applied, never re-sign at that sequence), not built
-  yet.
+  ("Provisional items"): the domain, the `PlayerCancel` hash (#41), the
+  tip check with the bind mode, and the Snapshot-reading rule, which is
+  the shell's own. Do not hard-code them. After a 400 `INVALID_ARGUMENT` or a
+  409 `STALE_ACTION` a round holds and reads the Snapshot; it signs again, from
+  the next sequence, only when the Snapshot shows its own action applied
+  (W-19). A round signs at most one cancel, and a cancel is never resent
+  blindly: only after a lost response or a 503, and a read that shows the
+  round still `active` with no move, are the same bytes sent again, once. A
+  re-issue stops every new signature while a W-16 resend still goes out; any
+  other failed verdict puts the transcript state in `failed`. A pick needs both
+  a `ready` verdict and an `open` or `adopted` state: keep both guards.
+  `createSnapshotReader` is built only by the shell or the Wrapper's
+  composition root; only the reader object reaches the UI.
+  The `typedData` the flows send is `signing`'s `encodeTypedData` in base64
+  (`typed-data.ts`); the encoder option exists only for tests, and the
+  Wrapper passes none.
 - **A Snapshot is untrusted until validated.** `play-client` returns it as
   `unknown`; only `snapshot`'s validator produces a typed value, so an
   unvalidated Snapshot cannot reach the renderer by construction.
@@ -99,11 +112,10 @@ structure below.
   (`createTranscript`) refuses a second, different message at one sequence;
   `encodeTypedData` builds the canonical `ActionTypedData` bytes (`typedData`)
   from plain fields, independent of the grammar module and of the transcript;
-  the action grammar is a separate module, still named provisional: the
-  signed-action spec has published it (0-based rows and tiles; see the Wrapper
-  spec's "What this spec does not own"), and the code is not reconciled yet.
-  `PlayerCancel`'s type is published but waits on an independent vector (#41).
-  Draw-registry types are encoded internally for the vector
+  the action grammar (`actionGrammar`) is the signed-action spec's, with the
+  row derived from the path (`r = len(path) - 1`). `PlayerCancel`'s type is
+  published but waits on an independent vector (#41). Draw-registry types are
+  encoded internally for the vector
   replay only.
 
 ## Contracts and vectors

@@ -29,9 +29,14 @@ export type ShellErrorCode =
   | "round-stopped"
   /**
    * `PlayerCancel` cannot be signed: no cancel encoding was configured
-   * (provisional until the signed-action spec defines it).
+   * (injected until `signing` encodes the type, #41).
    */
-  | "cancel-unavailable";
+  | "cancel-unavailable"
+  /**
+   * A response that should be the round's Snapshot did not validate, or is not
+   * a round's Snapshot (W-28): the Snapshot-rejected state (W-44).
+   */
+  | "snapshot-rejected";
 
 // One fixed message per code. A message never carries an input value, so no
 // key, token, launch code, or signed bytes can reach an error (W-4, W-41).
@@ -44,6 +49,7 @@ const MESSAGES: Readonly<Record<ShellErrorCode, string>> = {
   equivocation: "a different action is already signed at this sequence",
   "round-stopped": "this round takes no new signatures",
   "cancel-unavailable": "no cancel encoding is configured",
+  "snapshot-rejected": "the response is not a valid Snapshot of the round",
 };
 
 /** The error the shell throws. Its message is fixed per `code`. */

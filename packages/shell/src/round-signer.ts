@@ -4,7 +4,9 @@
 // idempotency key of each signed action, recorded with it before anything is
 // sent (W-16); the exclusion of a cancel against the first move (W-17);
 // advancing `T` only when a validated Snapshot shows the action applied (W-18);
-// and stopping on `STALE_ACTION` (W-19).
+// holding on a refused move or cash-out until a Snapshot decides (W-19); and
+// the re-issue state of W-26, which signs nothing new while a W-16 resend of
+// an action already signed still goes out.
 
 import { newIntent, type RandomUuid } from "@intraverse/se-client-play-client";
 import {
@@ -20,11 +22,13 @@ import {
 } from "@intraverse/se-client-signing";
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
+import type { SettledInitial } from "./create-round-auth.ts";
 import { ShellError } from "./errors.ts";
 import type {
   CancelHasher,
   PendingAction,
   RoundPhase,
+  RoundSigner,
 } from "./pending-action.ts";
 import { redacting } from "./redaction.ts";
 import {
@@ -35,51 +39,14 @@ import {
   type SnapshotReading,
 } from "./snapshot-reading.ts";
 
-export type RoundSigner = {
-  /** The Snapshot `roundId` of the round. */
-  readonly roundId: string;
-  /** The round id as the signed messages carry it. */
-  readonly round: Bytes32;
-  readonly phase: () => RoundPhase;
-  /** The last accepted `T` (`T_0` until the first applied action). */
-  readonly last: () => Bytes32;
-  /** The sequence of the next new signature. */
-  readonly nextSequence: () => number;
-  /** The signed action awaiting its outcome: what a resend sends (W-16). */
-  readonly pending: () => PendingAction | undefined;
-  /**
-   * Signs a move or a cash-out at the next sequence and records it, with a new
-   * idempotency key, before it returns: the caller sends only what this
-   * returned. While an action is pending, the same request returns the same
-   * action (the same bytes and key) and any other request throws
-   * `equivocation`, as does a call made while another `sign` or `signCancel`
-   * runs (from inside an injected function).
-   */
-  readonly sign: (request: TranscriptRequest) => PendingAction;
-  /**
-   * Signs `PlayerCancel` (`action = "cancel"`, empty path, sequence 1,
-   * `previous = T_0`, W-25). Throws `equivocation` once a move is signed; a
-   * move asked after it throws `equivocation` too (W-17). A call made while
-   * another `sign` or `signCancel` runs throws `equivocation`.
-   */
-  readonly signCancel: () => PendingAction;
-  /**
-   * Reads a validated Snapshot: `T` advances only when it shows the pending
-   * move applied (W-18). After `stale`, a Snapshot of this round that shows it
-   * applied is adopted and one that does not puts the round out of sync; either
-   * way the round signs nothing more (W-19).
-   */
-  readonly observe: (snapshot: ValidSnapshot) => SnapshotReading;
-  /** The pending action was answered `STALE_ACTION`: stop signing (W-19). */
-  readonly stale: () => void;
-};
+export type { RoundSigner };
 
 export type RoundSignerOptions = {
   readonly domainSeparator: Bytes32;
   readonly roundId: string;
   readonly round: Bytes32;
-  /** `T_0`. */
-  readonly initial: Bytes32;
+  /** `T_0`, settled by the round's verdict (W-26). */
+  readonly initial: SettledInitial;
   /** Signs a digest with the session's key, or throws when it may not. */
   readonly sign: (digest: Bytes32) => Signature;
   /** Throws when the session may not sign (no lock, or ended). */
@@ -112,7 +79,10 @@ const transcriptFor = (options: RoundSignerOptions): Transcript => {
 export const createRoundSigner = (options: RoundSignerOptions): RoundSigner => {
   const { roundId, round, initial, domainSeparator, hashCancel } = options;
   const transcript = transcriptFor(options);
-  let phase: Exclude<RoundPhase, "ended"> = "open";
+  let phase: Exclude<RoundPhase, "ended" | "reissued"> = "open";
+  // Kept apart from `phase`: a re-issue stops new signatures for good, while
+  // a `stale` round still learns from its next Snapshot what was applied.
+  let reissued = false;
   let pending: PendingAction | undefined;
   let canceled = false;
   // Set while `sign` or `signCancel` runs. An injected function (the random
@@ -134,7 +104,9 @@ export const createRoundSigner = (options: RoundSignerOptions): RoundSigner => {
 
   const assertOpen = (): void => {
     options.assertLive();
-    if (phase !== "open") throw new ShellError("round-stopped");
+    if (reissued || (phase !== "open" && phase !== "adopted")) {
+      throw new ShellError("round-stopped");
+    }
   };
 
   // The action is recorded here, with its idempotency key, before the caller
@@ -230,6 +202,14 @@ export const createRoundSigner = (options: RoundSignerOptions): RoundSigner => {
           }),
     };
     const reading = readSnapshot(position, snapshot);
+    if (
+      phase === "stale" &&
+      reading === "not-applied" &&
+      snapshot.status === "resolving"
+    ) {
+      // The engine is still resolving a move: it decides nothing yet.
+      return reading;
+    }
     if (reading === "closed" && closingAppliesPending(position, snapshot)) {
       transcript.confirm();
       pending = undefined;
@@ -251,18 +231,42 @@ export const createRoundSigner = (options: RoundSignerOptions): RoundSigner => {
     return reading;
   };
 
+  const currentPhase = (): RoundPhase => {
+    if (options.isEnded()) return "ended";
+    if (reissued && (phase === "open" || phase === "adopted")) {
+      return "reissued";
+    }
+    return phase;
+  };
+
   return redacting({
     roundId,
     round,
-    phase: (): RoundPhase => (options.isEnded() ? "ended" : phase),
+    phase: currentPhase,
     last: (): Bytes32 => transcript.last(),
     nextSequence: (): number => transcript.nextSequence(),
     pending: (): PendingAction | undefined => pending,
+    resendable: (): PendingAction | undefined => {
+      const now = currentPhase();
+      return pending !== undefined &&
+        pending.kind !== "cancel" &&
+        (now === "open" || now === "adopted" || now === "reissued")
+        ? pending
+        : undefined;
+    },
     sign,
     signCancel,
     observe,
     stale: (): void => {
-      if (phase === "open") phase = "stale";
+      if (phase === "open" || phase === "adopted") phase = "stale";
+    },
+    fail: (): void => {
+      if (phase === "open" || phase === "adopted" || phase === "stale") {
+        phase = "failed";
+      }
+    },
+    reissue: (): void => {
+      reissued = true;
     },
   });
 };

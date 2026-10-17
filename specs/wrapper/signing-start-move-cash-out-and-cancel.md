@@ -73,10 +73,18 @@ Part of the [Wrapper spec](../wrapper.md), section
   answered from a log as a repeated move is: after a lost response or a 503
   `UNAVAILABLE`, the shell MUST read the Snapshot (`GET /play/v1/snapshot`)
   before it sends the same signed cancel again, and `play-client` never repeats
-  it on its own. The shell does not sign a cancel yet: the `PlayerCancel` type
-  is published, but its vector from an independent signer is not (the
-  signed-action TODO under W-20, #41), so W-25 and the cancel path of W-26
-  cannot complete until it is.
+  it on its own. When that read shows the round still `active` with no move (and
+  its `CreateRoundAuth` not re-issued), the shell sends the same signed cancel
+  bytes again, once, with the same `idempotencyKey`, never a new signature
+  (W-16; decided by human review, 2026-10-17); when it shows `canceled`, the
+  cancel is done; on anything else, or after a refusal (a 400 or a 422), it
+  sends nothing more. A resend that is also lost or answered 503 is followed by
+  another Snapshot read and never by a third send: the round ends by its expiry
+  rule unless the Snapshot shows it `canceled`. The shell signs a cancel only
+  with an injected `PlayerCancel` encoding (a `CancelHasher`), and the Wrapper
+  injects none until the type's vector from an independent signer is vendored
+  (the signed-action TODO under W-20, #41), so until then the cancel path of
+  W-26 ends with nothing signed.
 - **W-26.** **Checks before the first signature and before the game is shown as
   ready.** The Snapshot is `starting` while the round prepares. The shell MUST
   NOT show the game as ready, and MUST NOT sign anything except the
@@ -148,7 +156,12 @@ Part of the [Wrapper spec](../wrapper.md), section
     check that fails before check 5 has run waits for it, and if check 5 then
     fails the next branch applies. It keeps the round's evidence (W-27), shows
     "this round failed verification and was canceled", and the player's bet is
-    returned by the cancel.
+    returned by the cancel. The cancel is signed once and never signed again. A
+    refused cancel (a 400 or a 422) is never sent again; a cancel whose outcome
+    is unknown (a lost response or a 503) follows W-25's single resend of the
+    same signed bytes. When the cancel path ends without the Snapshot showing
+    `canceled`, the shell shows "this round failed verification", and the round
+    ends by its game's expiry rule (W-25).
   - **`T_0` not settled** (check 1, 2, 3, 4, or 5 failed): the shell MUST sign
     nothing for the round, not even `PlayerCancel`, because a cancel linked to
     an unconfirmed `previous` may be refused and can never be rebuilt at that

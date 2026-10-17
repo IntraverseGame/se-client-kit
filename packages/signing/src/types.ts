@@ -1,8 +1,11 @@
 // The fixed set of EIP-712 struct types. Each `encodeType` and type hash is
 // pinned by the vendored signing vectors (the tests compare them).
 //
-// Not here yet, because no vendored contract defines them: `PlayerCancel` and
-// `PayoutTerms` (they come with the signed-action spec).
+// Not here yet: `PlayerCancel`. Its type is final in the signed-action
+// specification (the fields of `PlayerAction`), but no independent signer has
+// produced a vector for it yet (#41), and a type is added here only with the
+// vector that pins it. `PayoutTerms` reaches the player only as
+// `newRound.payoutTermsHash`, so there is no player-side type to encode.
 
 import type { StructType } from "./eip712.ts";
 

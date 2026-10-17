@@ -6,6 +6,7 @@ import {
   type PlayerMessage,
 } from "@intraverse/se-client-signing";
 
+import type { SettledInitial } from "../create-round-auth.ts";
 import { ShellError, type ShellErrorCode } from "../errors.ts";
 import type { RoundSigner } from "../round-signer.ts";
 import {
@@ -21,8 +22,9 @@ export const SESSION_ID = "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N";
 
 /**
  * A stand-in `PlayerCancel` encoding for the tests: the `PlayerAction` struct
- * hash of the cancel message. The real type string is not published yet; the
- * shell takes the encoding as an injected, provisional dependency.
+ * hash of the cancel message. The type is published, but `signing` does not
+ * encode it until its independent vector exists (#41), so the shell takes the
+ * encoding as an injected dependency.
  */
 export const testCancelHash = (message: PlayerMessage): Bytes32 =>
   hashPlayerAction(message);
@@ -50,12 +52,19 @@ export const openTestSession = (
   );
 };
 
+/**
+ * A vector's `T_0` taken as settled. Test-only: in the shell, only check 5
+ * settles a `T_0` (W-26); the worked round's is the signing vectors' `ready`.
+ */
+export const settledForTest = (initial: Bytes32): SettledInitial =>
+  initial as SettledInitial;
+
 /** Opens the worked round (its round id and `T_0`) under `ROUND_ID`. */
 export const openWorkedRound = (session: SigningSession): RoundSigner =>
   session.openRound({
     roundId: ROUND_ID,
     round: workedRound,
-    initial: workedInitial,
+    initial: settledForTest(workedInitial),
   });
 
 /** The `code` of the `ShellError` that `run` throws, or undefined. */

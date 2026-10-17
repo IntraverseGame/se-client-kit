@@ -3,9 +3,12 @@
 
 import { describe, expect, it } from "vitest";
 
+import { checkCreateRoundAuth } from "./create-round-auth.ts";
 import {
   asStarting,
+  issueRound,
   type RoundParts,
+  ROUND_REQUEST,
   vendoredRound,
 } from "./fixtures/round-auth.ts";
 import { authOf, HASH } from "./fixtures/round-edits.ts";
@@ -29,6 +32,20 @@ describe("isReissue", () => {
     ],
   ])("is true when %s differs", (_, edit) => {
     expect(isReissue(first, vendoredRound(edit))).toBe(true);
+  });
+
+  it("is true for a second object that passes the checks on its own", () => {
+    const issued = issueRound();
+    const firstIssued = authOf(issued.snapshot);
+    const second = issueRound({
+      before: p => (p.auth["expiry"] = "1800000601"),
+    });
+    expect(
+      checkCreateRoundAuth(issued.config, ROUND_REQUEST, second.snapshot)
+        .status,
+    ).toBe("passed");
+    expect(isReissue(firstIssued, second.snapshot)).toBe(true);
+    expect(isReissue(firstIssued, issued.snapshot)).toBe(false);
   });
 
   it("is false for a read that carries none", () => {

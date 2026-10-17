@@ -2,7 +2,11 @@
 
 export { typedDataDigest, type UintValue } from "./eip712.ts";
 export { SigningError, type SigningErrorCode } from "./errors.ts";
-export { type ActionGrammar, provisionalGrammar } from "./grammar.ts";
+export {
+  type ActionGrammar,
+  actionGrammar,
+  type GrammarAction,
+} from "./grammar.ts";
 export type { Address, Bytes32, Hex } from "./hex.ts";
 export {
   type CloseRoundAuth,

@@ -26,10 +26,10 @@ set of types, not arbitrary typed data.
 
 ```ts
 import {
+  actionGrammar,
   createSigner,
   createTranscript,
   domainSeparator,
-  provisionalGrammar,
   recoverAddress,
 } from "@intraverse/se-client-signing";
 
@@ -46,7 +46,7 @@ const transcript = createTranscript({
 });
 
 const entry = transcript.sign(
-  { kind: "action", action: provisionalGrammar.pick(0, 2), path: [0] },
+  { kind: "action", ...actionGrammar.pick([0], 2) }, // "pick row 0 tile 2"
   signer.sign,
 );
 recoverAddress(entry.digest, entry.signature) === signer.address; // true
@@ -73,9 +73,10 @@ signer.destroy(); // at the end of the session
     cancel's typed data (`ActionTypedData`), the `typedData` a signed action
     sends in base64, from `kind`, `action`, `path`, `sequence`, and `previous`;
     with the types `TypedDataFields` and `TypedDataKind`.
-  - `provisionalGrammar`: the canonical action text (`pick row R tile T`,
-    `cash out`). It is provisional and will be replaced by the published action
-    grammar.
+  - `actionGrammar`: the canonical action text and path of the signed-action
+    specification (`pick row R tile T`, `cash out`, `cancel`; 0-based). A move's
+    path is the node ids survived, then the node played, and its row is derived
+    from it (`R = len(path) - 1`).
   - `SigningError`, whose `code` says why something was refused.
 
 ## Guarantees and constraints

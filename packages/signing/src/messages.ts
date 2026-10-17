@@ -34,7 +34,10 @@ export type PlayerMessage = {
   readonly action: string;
   /** Each entry is an integer in 0..255. */
   readonly path: readonly number[];
-  /** An integer in 0..2^32-1. */
+  /**
+   * A `uint32`; the transcript starts at 1, so the shell never signs a sequence
+   * of 0.
+   */
   readonly sequence: number;
   readonly round: Bytes32;
   readonly previous: Bytes32;

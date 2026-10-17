@@ -9,9 +9,11 @@ as far as the shell is concerned); then the chain configuration, the tip check,
 and the decision it leads to (W-26a, W-26b, and W-26's pass or fail); then the
 `CreateRoundAuth` and `T_0` checks (W-26 items 1 to 5), the re-issue rule, and
 the round's verdict that combines them with the tip check; then the
-`se.controller/1` game bridge (W-37, W-38, and W-23's pre-check). The session,
-start, move, and cash-out flows follow. The Wrapper requirements each rule
-serves are in brackets.
+`se.controller/1` game bridge (W-37, W-38, and W-23's pre-check); then the round
+flows (start, move, cash-out, the required cancel, the W-16 resend, and the W-19
+resynchronization), the pick use case, and the UI's Snapshot reader. The session
+flows (redeem and refresh) follow. The Wrapper requirements each rule serves are
+in brackets.
 
 - **Public API.** The redacting logger (`createLogger` and its types),
   `REDACTED`, `ShellError` with its `ShellErrorCode`, the chain configuration's
@@ -22,18 +24,38 @@ serves are in brackets.
   (`createControllerBridge` with its option, result, and state types) with the
   `se.controller/1` message types (`CONTROLLER_SCHEMA`, `ROUND_STATUSES`,
   `HelloMessage`, `ActionMessage`, `SnapshotMessage`, `RejectMessage`,
-  `GameSnapshot`, `GameStep`, `Pick`, `RejectReason`, and the unions). The
+  `GameSnapshot`, `GameStep`, `Pick`, `RejectReason`, and the unions), and the
+  UI's Snapshot reader (`createSnapshotReader` with `SnapshotReader`,
+  `SnapshotReaderOptions`, and `SnapshotRead`, and the re-exported
+  `ValidSnapshot` and `ValidPlayProblem` of the `snapshot` package). The
   validation is public because the Wrapper applies W-26a's boot rule before it
   starts; the transport types because the Wrapper supplies the transport (it
   owns `fetch` and the Content Security Policy); the bridge because the Wrapper
-  mounts the game iframe and owns the window it talks through. The protocol
-  types are on the main entry only: a type-only subpath for the `reference-game`
-  app comes with the change that builds that app (decided in human review,
-  2026-10-17; [Open items](../client-kit.md#open-items)). Key custody, the
-  signer lock, the transcript state, the tip check, its decision, the
-  `CreateRoundAuth` checks, and the round's verdict are internal: the UI is
-  meant to get use cases and read-only state, never a signing capability
-  ([Packages](./packages.md)), and those use cases do not exist yet.
+  mounts the game iframe and owns the window it talks through; the reader
+  because the Wrapper UI renders only what the shell validated (decided in human
+  review, 2026-10-17). The protocol types are on the main entry only: a
+  type-only subpath for the `reference-game` app comes with the change that
+  builds that app (decided in human review, 2026-10-17;
+  [Open items](../client-kit.md#open-items)). Key custody, the signer lock, the
+  transcript state, the tip check, its decision, the `CreateRoundAuth` checks,
+  the round's verdict, the round flows, and the pick use case are internal: the
+  UI gets use cases and read-only state, never a signing capability
+  ([Packages](./packages.md)), and the round flows become public with the change
+  that wires them into the Wrapper.
+- **The Snapshot reader (W-28, W-42, W-43).** `createSnapshotReader` takes the
+  Play API transport and the play token's `Authorization` and returns `read()`
+  and `latest()`. `read()` calls `getSnapshot` and resolves with one of:
+  `snapshot` (the body passed the `snapshot` validator), `problem` (a problem
+  body that passed the `PlayProblem` validator, a `ROUND_ACTIVE` one with its
+  embedded Snapshot validated too), `rejected` (a body that did not validate, or
+  a response the client could not read), or `network` (no response). `latest()`
+  is the last Snapshot a read validated. What it returns is data: no key, no
+  token (the reader never calls the `Authorization` itself; the transport does,
+  per attempt), and no signing capability. The reader is frozen and prints
+  `[redacted]`, and it logs nothing. Only the shell or the Wrapper's composition
+  root, which owns the session, builds a reader (decided in human review,
+  2026-10-17): only the reader object reaches the UI, never its options, the
+  transport, or the `Authorization`.
 - **Redacting types (W-4).** Everything that holds a secret, or a closure over
   the key, prints `[redacted]` under `String()`, `JSON.stringify`, template
   literals, `Symbol.toPrimitive`, and Node's inspect hook
@@ -59,8 +81,8 @@ serves are in brackets.
   itself logs nothing yet.
 - **Errors.** `ShellError` has a stable `code` (`lock-not-held`,
   `session-ended`, `invalid-input`, `key-generation`, `round-exists`,
-  `equivocation`, `round-stopped`, `cancel-unavailable`) and a fixed message per
-  code that never carries an input value (W-41).
+  `equivocation`, `round-stopped`, `cancel-unavailable`, `snapshot-rejected`)
+  and a fixed message per code that never carries an input value (W-41).
 - **The chain configuration (W-26a, W-26b, the Wrapper's Configuration).**
   `validateChainConfig(document)` reads the chain part of the parsed environment
   configuration document and returns `{ ok: true, config }` (typed, deeply
@@ -211,11 +233,11 @@ serves are in brackets.
   tip check that could not read the chain), `T_0` when it was settled, and
   `cancel`. `cancel` is `true` exactly when `T_0` is settled, only the tip check
   failed, the round's latest Snapshot is `active`, and there was no re-issue:
-  the shell must then sign `PlayerCancel`, which it cannot yet (the
-  `PlayerCancel` encoding below). A tip check that fails before check 5 has run
-  leaves the verdict `checking` until check 5 decides. A re-issue fails the
-  round at any point, with `cancel` `false`, even after `ready` or after a
-  tip-check failure that required a cancel.
+  the round flow then signs `PlayerCancel` (only with the injected cancel
+  encoding, below). A tip check that fails before check 5 has run leaves the
+  verdict `checking` until check 5 decides. A re-issue fails the round at any
+  point, with `cancel` `false`, even after `ready` or after a tip-check failure
+  that required a cancel.
 - **The game bridge (W-37, W-38, W-23's pre-check).**
   `createControllerBridge(options)` takes the game origin D, the configuration's
   `gameOrigins`, the Wrapper's own origin, the game frame's window (only its
@@ -269,9 +291,11 @@ serves are in brackets.
   that is not `signing` gets `lock-not-held` and draws no key. A page that did
   not get the lock does not ask again.
 - **The transcript state (W-15 to W-19).** One per round, opened with the
-  Snapshot `roundId` (UUIDv7 text), the `bytes32` round id, and `T_0`; a second
-  open of one round is `round-exists`. It sits on `signing`'s `createTranscript`
-  and adds:
+  Snapshot `roundId` (UUIDv7 text), the `bytes32` round id, and the settled
+  `T_0`; a second open of one round is `round-exists`. `T_0`'s type is
+  `SettledInitial`, which only check 5 makes, so the state cannot be opened with
+  an unchecked value (W-22, W-26). It sits on `signing`'s `createTranscript` and
+  adds:
   - **Recorded before it is sent (W-15, W-16).** `sign` (a move or a cash-out)
     and `signCancel` return the signed action (message, struct hash, digest,
     signature, and an idempotency key drawn from the injected `randomUUID`
@@ -288,37 +312,149 @@ serves are in brackets.
     cancel is `equivocation`. A round signs at most one cancel (W-15, W-25):
     after a refused cancel, a 400 included, the shell reads the Snapshot and
     signs nothing at sequence 1 again; the round ends by its expiry rule unless
-    the Snapshot shows it `canceled`.
+    the Snapshot shows it `canceled`. A second call returns the same signed
+    cancel, never a new one.
   - **`T` advances only on an applied Snapshot (W-18).** `observe` takes a
     validated Snapshot and returns what it shows: `other-round` (another round,
     or `idle`: nothing changes), `applied` (the pending move: `T` advances to
     its struct hash), `not-applied`, `closed` (`won`, `lost`, or `canceled`: the
     round takes no more signatures), or `out-of-sync` (progress the shell did
     not sign: it stops).
-  - **`STALE_ACTION` (W-19).** `stale` holds all signing for the round, the
-    resend included, until the next Snapshot of the round decides: when it shows
-    the pending move applied, the outcome is adopted (`T` advances to it, the
-    phase is `adopted`); when it does not, the round is out of sync. A terminal
-    Snapshot closes it. **Target (W-19, decided 2026-10-17):** a 400
-    `INVALID_ARGUMENT` to a move or a cash-out is handled the same way, and an
-    adopted round signs again from the next sequence; nothing is ever signed
-    again at the refused sequence. Today the code stops for good after
-    `STALE_ACTION`, even when the outcome is adopted, and has no path for a 400;
-    the code change that implements W-19 closes the gap.
+  - **A refused move or cash-out (W-19).** After a 400 `INVALID_ARGUMENT` or a
+    409 `STALE_ACTION`, `stale` holds all signing for the round, the resend
+    included, until the next Snapshot of the round decides (a `resolving` one
+    decides nothing): when it shows the shell's own pending action applied, the
+    outcome is adopted (`T` advances to it, the phase is `adopted`) and the
+    round signs again from the next sequence; when it does not, the round is out
+    of sync for good. Nothing is ever signed again at the refused sequence, and
+    `previous` is never guessed. A terminal Snapshot closes it.
+  - **Failed verification (W-26).** `fail` stops every new signature for the
+    round and every resend, for good (the phase is `failed`); it is a no-op on a
+    round already closed or out of sync.
+  - **Re-issue (W-26).** `reissue` stops every new signature for the round, a
+    cancel included (the phase is `reissued`), for good. `resendable` gives the
+    pending move or cash-out a W-16 resend may send again in the `open`,
+    `adopted`, and `reissued` phases, never while `stale`, and never a cancel
+    (W-25). Snapshots are still read, so an applied move still advances `T`.
+- **The round flows (W-16, W-19, W-22 to W-26).** `startRoundFlow` sends `start`
+  with a fresh idempotency key, the bet (validated as an `AmountRequest`), and
+  the action key's address; a page without the signer lock is `lock-not-held`
+  before anything is sent, and an answer that is not a valid Snapshot of a round
+  is `snapshot-rejected`. It signs nothing. The round's flow then reads every
+  validated Snapshot of its round (`observe`, or `refresh` through
+  `getSnapshot`) into the round's verdict, runs the injected tip check once
+  (with the first Snapshot that carries `proofs.randomnessProof`, unless the
+  verdict has already failed; a rejected tip check leaves the verdict
+  `checking`), and opens the transcript state with the verdict's settled `T_0`
+  only when the verdict is `ready`, or requires the cancel, and the page holds
+  the lock.
+  - **Move (W-20, W-23).** `pick` refuses a malformed pick (`invalid`), any pick
+    while an action of the round is in flight or pending (`busy`), any pick
+    unless the verdict is `ready`, the transcript state is `open` or `adopted`,
+    and the page holds the lock (`not_active`), and otherwise checks it against
+    the shell's own latest validated Snapshot: `active` (else `not_active`), a
+    steps round whose `step` equals the moves the shell has seen applied, the
+    step picked being the one at that position (`config.steps[step].index`), and
+    the option below its `optionCount` (else `not_legal`). A step the shell has
+    already signed a move for is `not_legal`, even when an older Snapshot shows
+    it again. The path is the node ids of the steps survived, then the one
+    played, the text `pick row <len(path) - 1> tile <option>` (`signing`'s
+    `actionGrammar`). A refusal signs nothing; `accepted` means signed and sent
+    at least once.
+  - **Cash-out (W-24).** `cashOut` refuses as `pick` does, and needs at least
+    one step survived and one left (Coin Flip, one step, never cashes out). Its
+    path is the node ids survived, its text `cash out`.
+  - **Sending (W-16).** The `typedData` of a move, a cash-out, or a cancel is
+    `signing`'s `encodeTypedData` of the message's kind, text, path, sequence,
+    and `previous` (the canonical encoding of `ActionTypedData`, pinned by the
+    vendored `typed-data/` vectors), in base64, 1 to 4096 characters (else
+    `invalid-input`, nothing signed). The encoding is the flow's own: its
+    options take another encoder only for a test (the fail-closed tests pass one
+    that changes the message), and the Wrapper passes none. The typed data is
+    encoded before the signature (an encoding that fails leaves nothing signed),
+    the action is recorded with its body (key, round id, typed data, signature),
+    then sent on its own route (`continue` or `cashOut`). The transport repeats
+    a lost response or a retryable problem with the same bytes; `resend` sends
+    the recorded body again later, in the phases `resendable` allows. Any other
+    failure leaves the action pending.
+  - **Resynchronization (W-19).** A 400 `INVALID_ARGUMENT` or a 409
+    `STALE_ACTION` calls `stale` and reads the Snapshot; when the read fails,
+    the round stays held until a later read decides.
+  - **The required cancel (W-25, W-26).** When the verdict's `cancel` is set,
+    the flow signs `PlayerCancel` once and sends it on `cancelRound` (never
+    repeated by the transport); nothing is ever signed at sequence 1 again. The
+    answer's Snapshot is read. After any failure the flow reads the Snapshot:
+    after a problem that is not retryable (a 400 or a 422) the cancel state is
+    `refused` and nothing more is sent; after no answer or a 503 it is
+    `unconfirmed`, and when the read (a fresh, successful one) shows the round
+    `active`, at `step` 0, and not re-issued, the same signed bytes are sent
+    again, once (decided by human review, 2026-10-17). A resend that is also
+    lost or answered 503 is followed by another read and never a third send. Any
+    other outcome (a move played, another status, a re-issue, a failed read, a
+    retryable problem other than 503, an answer that is not a Snapshot) ends the
+    cancel path: the round ends by its expiry rule unless a Snapshot shows it
+    `canceled`. The state is `unavailable` when the cancel is not sent: without
+    the cancel encoding nothing is signed, and when the signed cancel does not
+    match its typed data nothing is sent, the transcript state is `failed`, and
+    `lastError()` is `invalid-input`. Not resending after a re-issue is the
+    shell's own reading of W-26 ("sign nothing more"), the conservative side.
+  - **Re-issue (W-26).** A re-issued verdict calls `reissue`: picks and the
+    cash-out are `not_active`, and `resend` still sends a move or a cash-out
+    already signed.
+  - **Two guards before a new signature (W-26).** A pick or a cash-out needs a
+    `ready` verdict and a transcript state in `open` or `adopted`, each checked
+    on its own. Any other failed verdict calls `fail` on the transcript state
+    (once the required cancel, if any, is signed or could not be), so a failed
+    round never reports `open`.
+  - **Typed data fails closed (W-16, W-20).** After signing, the flow compares
+    the signed message, field by field, and its kind with the ones the typed
+    data was encoded from; on any difference it records and sends nothing, calls
+    `fail` on the transcript state, and keeps `invalid-input` as `lastError()`.
+    The round is then `failed`: it is no longer `busy`, every later pick,
+    cash-out, and resend is `not_active`, and the error state shows. The
+    signature already made stays in the transcript state and is never sent.
+  - **The flow's own reads are not ordered by `version`.** The latest validated
+    Snapshot of the round is the last one read. A late, older read can only fail
+    closed: its `step` is behind the moves the shell saw applied, so a pick or a
+    cash-out is `not_legal` until a current read arrives, and a round held after
+    W-19 that reads it goes out of sync. It never advances `T` or makes a step
+    already signed legal again.
+  - **Evidence (W-27).** The flow keeps the `CreateRoundAuth` objects, the tip
+    check's record, and every signed action. It emits no log, metric, or event.
+- **The pick use case (W-23).** `createPickUseCase(current)` is the bridge's
+  `PickUseCase` over the current round's flow: `not_active` when there is none,
+  and otherwise the flow's `pick`, which is the gate the bridge's pre-check is
+  not.
+- **Decided in human review (2026-10-17).** These choices of the round flows are
+  accepted as built:
+  - The reject reasons: `busy` while an action of the round is in flight or
+    pending; `not_legal` for a step already signed, and for an `equivocation`
+    refusal; `not_active` for no `ready` verdict, a transcript state that takes
+    no new signature, or no signer lock. `accepted` means signed and sent at
+    least once, whatever the outcome; the Snapshot then decides.
+  - `signing`'s `actionGrammar` replaces `provisionalGrammar`, with the row
+    derived from the path.
+  - A round held after W-19 stays held when the read gives an `idle` Snapshot or
+    another round's: only a Snapshot of the round decides.
+  - The Snapshot reader does not order Snapshots by `version`; W-29's ordering
+    is the UI's.
+  - The cancel resend (Q2): after a lost response or a 503, the same signed
+    cancel is sent again once when a fresh read shows the round still cancelable
+    (the required cancel above).
+  - The flow signs a cancel only with an injected `CancelHasher`; the Wrapper
+    injects none until the `PlayerCancel` vector is vendored (#41), so until
+    then the required cancel is `unavailable` and nothing is signed.
 - **Provisional items.** Each is one injected value or one module, replaced and
   its note removed as the matching contract item closes. The signed-action
   specification has published `T_0`, the `bytes32` round id, the domain, and the
   `PlayerCancel` type hash; the injected values below stay until the code is
   reconciled with it.
-  - `T_0` and the `bytes32` round id are inputs of a round's state; the
-    signed-action specification defines both (W-18, W-26). The round's verdict
-    settles `T_0` (check 5 recomputes it and compares it with
-    `proofs.fairnessProof.readyHash`); the start flow that would pass that
-    settled value to the round's state is not built, so the state still takes
-    `T_0` as an input. W-26 fixes the `bytes32` form of `newRound.roundId` (the
-    16 UUIDv7 bytes, left-aligned and zero-padded); the transcript's round id is
-    that same value, read from the Snapshot's
-    `proofs.createRoundAuth.newRound.roundId` once check 3 has passed.
+  - The round flow opens the transcript state with the `bytes32` form of the
+    round id W-26 fixes for `newRound.roundId` (the 16 UUIDv7 bytes,
+    left-aligned and zero-padded) and the `T_0` check 5 settled.
+  - The tip check reaches the round flow as an injected function that runs it
+    and applies the bind rule, because the bind's mode is not in a contract yet
+    (below).
   - The EIP-712 domain (published) is an input of the session. The environment
     configuration pins its `chainId` and `verifyingContract`; the session is not
     wired to the validated configuration yet.
@@ -331,18 +467,14 @@ serves are in brackets.
     the digest with are the Snapshot schema's constants: the environment
     configuration pins only `chainId` and `verifyingContract`
     ([OQ-7](../wrapper.md#decided-questions)).
-  - A re-issue is decided by the round's verdict (`reissued`), but the round's
-    transcript state has no phase that refuses new signatures while a W-16
-    resend continues, so nothing applies the verdict to it yet.
-    <!-- TODO(shell transcript): a re-issue (W-26) needs a transcript state that neither `stale` nor `closed` gives: no new signature, while a W-16 resend of an action already signed continues. -->
   - The `PlayerCancel` encoding is an injected function from the message to its
-    struct hash. Its type string and type hash are published, but `signing` does
-    not encode `PlayerCancel` until an independent vector pins it. Without one,
-    `signCancel` is `cancel-unavailable` and signs nothing (W-20, W-25). The
-    exclusion against the first move does not depend on it. `signCancel` does
-    not check that `T_0` is settled: whether a cancel may be signed at all
-    (W-25, W-26) is decided by the round's verdict, which the flow that calls it
-    reads (`cancel`, or `ready` for a cancel the player asks for).
+    struct hash; the type is published, but `signing` does not encode it until
+    an independent vector pins it (#41). Without one, `signCancel` is
+    `cancel-unavailable` and signs nothing (W-20, W-25). The exclusion against
+    the first move does not depend on it. `signCancel` does not check that `T_0`
+    is settled: whether a cancel may be signed at all (W-25, W-26) is decided by
+    the round's verdict, which the round flow reads (`cancel`); a cancel the
+    player asks for is not built.
   - Reading a Snapshot (`snapshot-reading.ts`): the move at sequence `s` is
     applied exactly when the Snapshot's `step` is `s` and its status is not
     `resolving`, since `step` counts the applied moves and the moves are a
@@ -414,4 +546,42 @@ serves are in brackets.
   fields and no proof, signature, session id, link, or amount; and a session
   that signs a move through the pick use case shows that the key's bytes, the
   token, the key's address, the signature, and the digest reach no message and
-  that no messaging, storage, or network global is touched.
+  that no messaging, storage, or network global is touched. The round flows
+  (T-4, T-4b, and the T-8 cases that need a flow) run against a scripted Play
+  API transport, a round issued for the session's own key (with three steps
+  where a cash-out is needed), a stand-in tip decision, and the canonical
+  encoder wrapped to record what it got: the start sends the key and the bet and
+  signs nothing; a move is signed at the next sequence with the canonical text
+  and path, and its body carries the encoder's bytes; a second pick for a step
+  already signed (pending, in flight, or shown again by an older Snapshot) is
+  refused; a W-16 resend sends the same body; a 400 `INVALID_ARGUMENT` and a 409
+  `STALE_ACTION` each adopt and continue from the next sequence, or put the
+  round out of sync, or stay held when the read fails; a failed check signs
+  nothing, not even a cancel; with `T_0` settled and only the tip check failed,
+  only the cancel is signed, once; after a 400 or a 422 it is never sent again;
+  after a lost response or a 503 the same bytes are sent again once when the
+  read shows the round still `active` with no move, never when it shows a move,
+  another status, a re-issue, or no Snapshot, and never a third time; a re-issue
+  rejects picks and the cash-out while a pending resend still goes out; and of
+  two tabs on one lock manager, the one without the lock cannot start or sign,
+  and after a steal neither signs at a sequence already used. A move, a
+  cash-out, and a cancel built by the shell carry exactly the vendored
+  `typed-data/` vectors' base64: the Coin Flip pick and cancel through the round
+  flow with no encoder passed, on `valid/coinflip-active-ready-hash` (the cancel
+  signed with the tests' stand-in `PlayerCancel` hash, #41), and the multi-path
+  pick and the cash-out through the request builder, on the worked round of
+  `signing.json`. The Snapshot reader's tests cover each outcome (`snapshot`,
+  `problem`, `rejected`, `network`) and that it prints `[redacted]`. The guards
+  of a new signature are pinned each on its own: in the flow, nothing is signed
+  while the tip check runs or after it rejects (its error kept), nor after a
+  failed verdict without a cancel encoding, a sent cancel, or a refused one (the
+  phase is then `failed`); with stand-ins for the tracking and the transcript
+  state, a verdict that is not `ready`, a phase that takes no signature, a step
+  already signed with no pending action, and a resendable action that is not the
+  one recorded are each refused alone; `legalMove` refuses a Snapshot off the
+  shell's own progress; a signed message that differs from the encoded one (a
+  cash-out whose path is a prefix of the other included) is never sent and fails
+  the round; `toBase64` matches RFC 4648's values and `typedData` keeps to 1 to
+  4096 characters; the `failed` phase holds from `open`, `stale`, and `adopted`,
+  even after a Snapshot shows an action applied; and a second refused move after
+  an adopted resync holds the round again.

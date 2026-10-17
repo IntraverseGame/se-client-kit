@@ -16,6 +16,7 @@ import {
   SigningError,
 } from "@intraverse/se-client-signing";
 
+import type { SettledInitial } from "./create-round-auth.ts";
 import { ShellError } from "./errors.ts";
 import type { CancelHasher } from "./pending-action.ts";
 import { redacting } from "./redaction.ts";
@@ -44,8 +45,9 @@ export type SigningSessionOptions = {
    */
   readonly domain: Domain;
   /**
-   * The `PlayerCancel` encoding. PROVISIONAL until the signed-action spec
-   * defines the type; without it a cancel is refused (`cancel-unavailable`).
+   * The `PlayerCancel` encoding, injected until `signing` encodes the type (its
+   * independent vector is missing, #41); without it a cancel is refused
+   * (`cancel-unavailable`).
    */
   readonly hashCancel?: CancelHasher;
 };
@@ -68,18 +70,17 @@ export type RoundOptions = {
   /** The Snapshot `roundId` (UUIDv7 text). */
   readonly roundId: string;
   /**
-   * The round id as the signed messages carry it (`bytes32`). PROVISIONAL:
-   * where the shell reads it is not published yet.
+   * The round id as the signed messages carry it (`bytes32`): the Snapshot
+   * schema's `RoundIdBytes32` form of `roundId`, the value check 3 compares
+   * `newRound.roundId` with (W-26).
    */
   readonly round: Bytes32;
   /**
-   * `T_0`, the Ready evidence hash the first message links to. PROVISIONAL: its
-   * definition belongs to the signed-action spec (W-18). It is expected in the
-   * Snapshot as the optional `proofs.fairnessProof.readyHash`, which comes from
-   * a later Snapshot schema version the kit has not vendored yet (the vendored
-   * `se.snapshot/1` does not have it), so the caller passes it.
+   * `T_0`, the Ready evidence hash the first message links to (W-18), as the
+   * round's verdict settled it (W-26, check 5). The type admits only a settled
+   * value: a round's transcript state is never opened with an unchecked one.
    */
-  readonly initial: Bytes32;
+  readonly initial: SettledInitial;
 };
 
 export type SigningSession = {
