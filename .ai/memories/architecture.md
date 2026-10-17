@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-17 (shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-17 (reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -12,7 +12,8 @@ has five slices (redaction, logger, key custody, the signer lock, the
 transcript state; the chain configuration and tip check; the W-26
 `CreateRoundAuth` checks and the round's verdict; the `se.controller/1` game
 bridge; the round flows, the pick use case, and the UI's Snapshot reader); the Wrapper app has its first slice (configuration, rendering,
-accessibility, the release check) and `reference-game` is a skeleton. Flag any
+accessibility, the release check) and `reference-game` is the Coin Flip
+sample (types only from `shell`'s `controller` subpath). Flag any
 divergence from the
 structure below.
 
@@ -25,7 +26,10 @@ structure below.
   `play-client` ← `shell` ← `wrapper` (app); `signing` ← `shell`; `signing`'s and
   `snapshot`'s tests read vectors from `contracts`' test-only entry (read only by
   tests; the consumers are listed in `specs/client-kit.md`);
-  `reference-game` depends on nothing but the controller protocol's types. No
+  `reference-game` depends on nothing but the controller protocol's types
+  (`import type` from `@intraverse/se-client-shell/controller`, a `types`-only
+  `exports` entry; a Vite guard fails its build on a runtime import of any package, kit or
+  third-party, and the lint bans bare specifiers in its non-test sources). No
   cycles; a package never imports an app; `snapshot` and `play-client` never
   import each other. Enforced by `no-restricted-imports` overrides in
   `.oxlintrc.json` (per package, with a separate entry for its test files) and
@@ -63,9 +67,14 @@ structure below.
   allow-list (W-38), never by deleting fields; do not "simplify" it into
   forwarding the Snapshot. The bridge's pick pre-check is an early filter, not
   the gate: the pick use case must re-check W-23 against the shell's own latest
-  Snapshot and refuse a step already signed (W-15). The protocol types are on the main entry only for
-  now; `reference-game` still may not import `shell` until the type-only
-  subpath lands with the reference game. The tip check and its pass-or-fail decision, the
+  Snapshot and refuse a step already signed (W-15). The protocol types are on
+  the main entry and, as types only, at the `controller` subpath
+  (`src/controller.ts`: type re-exports, no value; `exports` has `types` only,
+  and `check:build-output` proves the emitted module is empty). That subpath is
+  the working rule until a second consumer appears; then the types split into
+  a `controller` package. Do not add a value to it. The reference game takes its
+  parent's origin from its `parentOrigin` URL parameter (checked against
+  `location.ancestorOrigins`): the Wrapper's mount must append it (open, #9). The tip check and its pass-or-fail decision, the
   W-26 `CreateRoundAuth` checks, and the round's verdict
   (`round-verification.ts`, which alone settles `T_0`, typed
   `SettledInitial`, and says when a `PlayerCancel` must be signed), the round

@@ -65,6 +65,8 @@ the specs' headings.
     dependency allow-list, provenance, the reproducible build
   - [How the Wrapper reaches the SuperEngine origin](./client-kit.md#how-the-wrapper-reaches-the-superengine-origin)
   - [Never in the public repository](./client-kit.md#never-in-the-public-repository)
+  - [The reference game](./client-kit/the-reference-game.md) — the type-only
+    controller subpath, the game's message checks, Coin Flip
   - [Testing and CI](./client-kit/testing-and-ci.md) — test levels, CI jobs, and
     [task orchestration and caching](./client-kit/testing-and-ci.md#task-orchestration-and-caching)
   - [Environment configuration](./client-kit.md#environment-configuration)

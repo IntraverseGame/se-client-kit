@@ -9,6 +9,10 @@ import {
   findCanaryProblems,
   type CanaryDist,
 } from "./build-output-canary.ts";
+import {
+  findTypeOnlyProblems,
+  type TypeOnlyPackage,
+} from "./build-output-type-only.ts";
 import { loadVectors } from "./build-output-vectors.ts";
 import { type Dist, findBuildOutputProblems } from "./build-output.ts";
 
@@ -42,6 +46,7 @@ const exportTargets = (value: unknown): string[] => {
 
 const dists: Dist[] = [];
 const canaryDists: CanaryDist[] = [];
+const typeOnlyPackages: TypeOnlyPackage[] = [];
 const problems: string[] = [];
 for (const group of ["packages", "apps"]) {
   for (const name of readdirSync(join(root, group))) {
@@ -59,6 +64,11 @@ for (const group of ["packages", "apps"]) {
         ),
       );
       dists.push({ name, files: texts, exportTargets: targets });
+      typeOnlyPackages.push({
+        name,
+        files: texts,
+        exportsField: manifest.exports,
+      });
       canaryDists.push({
         name,
         files: name === "contracts" ? contractsScanScope(buffers) : buffers,
@@ -69,7 +79,10 @@ for (const group of ["packages", "apps"]) {
   }
 }
 
-problems.push(...findBuildOutputProblems(dists));
+problems.push(
+  ...findBuildOutputProblems(dists),
+  ...findTypeOnlyProblems(typeOnlyPackages),
+);
 const loaded = loadVectors(root);
 problems.push(
   ...loaded.problems,

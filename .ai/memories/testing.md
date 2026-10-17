@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-17 (release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-17 (reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -22,7 +22,20 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   independent implementation in another language; that independence is the
   point, so do not regenerate them from this repository's code.
 - **Component** (Vitest with jsdom): the Wrapper renders every valid Snapshot;
-  accessibility checks on components.
+  accessibility checks on components. The reference game's tests
+  (`apps/reference-game/src/*.test.ts`) drive the controller and the page with
+  a fake parent (`src/fixtures/parent.ts`: records posts, delivers a message
+  from the parent or any other source and origin) and hand-written game copies
+  of the Coin Flip Snapshots (`src/fixtures/snapshots.ts`): the game's tests may
+  import only types from the kit, so no vector and no shell code. `build.test.ts`
+  (Node environment) runs the real Vite build of the app in memory and the
+  package-import guard over scratch sources under `tmpdir()` (a kit or
+  third-party package fails a build; the dev server still resolves a
+  third-party one, so tests may import `vitest`). `plain-data.test.ts` and the
+  accessor and sparse-array cases of `protocol.test.ts` exist because those
+  parser mutants survived the message-level tests; keep them.
+  `tools/type-re-exports.test.ts` runs the inline-type re-export check over the
+  repository (oxlint has no non-type-aware rule for it).
 - **Signing tests** (`packages/signing/src/*.test.ts`) read vectors through
   `src/fixtures/vectors.ts` and `src/fixtures/typed-data-vectors.ts` (the only
   importers of the test-only entry there; `typed-data.test.ts` replays every
@@ -64,7 +77,10 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   plain function. `harness/vectors.ts` is the suite's only importer of the
   test-only entry. Test pages live in `e2e/tests/pages/` (the leaking page for
   the scan's negative tests). Rows that cannot run yet stay `test.fixme` in
-  `pending.spec.ts`, never a body that passes. Locally,
+  `pending.spec.ts`, never a body that passes. The reference game's build is
+  served at `https://game.e2e-games.test` by the specs that use it
+  (`harness/reference-game.ts`); `reference-game-smoke.spec.ts` runs it in a
+  stand-in host page (`pages/game-host.html`), not the Wrapper. Locally,
   `SE_E2E_BROWSER_CHANNEL=chrome` runs on an installed Chrome when Playwright's
   download is unavailable.
 - **Contracts check:** CI recomputes the hash of every file in the `contracts` package
@@ -72,7 +88,11 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - **Build output:** `pnpm check:build-output` (after `pnpm build`) inspects every
   `dist/`: only `.js` (with its `.js.map`) and `.d.ts` (no declaration map, no `sourceMappingURL` comment), no test file or build state, and no
   vector reachable from the `contracts` runtime entry (import graph plus source
-  maps), covered by `tools/build-output.test.ts`.
+  maps), covered by `tools/build-output.test.ts`. The Vite apps (`wrapper`,
+  `reference-game`) may hold other file types. `tools/build-output-type-only.ts`
+  (tests beside it) proves shell's `./controller` subpath is type-only (a
+  `types` condition only, a declaration of type re-exports, an empty module with
+  no map) and that the reference game's bundle names no kit package.
 - **Package files:** `pnpm check:package-files` (after the library builds) holds
   each library's `files` to its `dist/`: everything the runtime entry loads is
   selected, and in `contracts` nothing else (no test-only entry or chunk);
@@ -88,8 +108,12 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   scratch environment's name filter and the `--out` rule,
   `tools/release-readiness.test.ts` every refusal of the publish gate and the
   registry comparison, and `tools/release-consumer.test.ts` which `exports`
-  entries the consumer check imports. The CLI itself is exercised by running
-  it, not by a unit test.
+  entries the consumer check imports, which it treats as type-only, and that
+  each one's declaration file is among the tarball's paths;
+  `tools/type-only-outcome.test.ts` judges each type-only entry's run-time
+  import outcome as the consumer script prints it (only
+  `ERR_PACKAGE_PATH_NOT_EXPORTED` passes; a missing or unreadable outcome is a
+  problem). The CLI itself is exercised by running it, not by a unit test.
 - **Static:** lint, format check, `tsc --noEmit`, and the import-direction
   rules.
 
@@ -152,9 +176,10 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 
 ## Commands and CI jobs
 
-- `pnpm test` runs the `vitest run` of every workspace that has tests (today `apps/wrapper`, `packages/signing`, `packages/snapshot`, `packages/play-client`, and `packages/shell`; each must be listed in the root `test` dependencies; a package gets a `test` script with its first real test) plus the tooling tests in
+- `pnpm test` runs the `vitest run` of every workspace that has tests (today `apps/wrapper`, `apps/reference-game`, `packages/signing`, `packages/snapshot`, `packages/play-client`, and `packages/shell`; each must be listed in the root `test` dependencies; a package gets a `test` script with its first real test) plus the tooling tests in
   `tools/` (`test:tools`); `pnpm test:e2e` runs the Playwright suite (the
-  harness's tests, a smoke run on the Wrapper's bundle, and the pending T-rows
+  harness's tests, a smoke run on the Wrapper's bundle, one on the reference
+  game's build, and the pending T-rows
   as skipped). `pnpm check` is everything below.
 - `tools/import-direction.test.ts` is the proof that the dependency-direction
   and other lint rules fail on a violation: it runs the real oxlint binary and

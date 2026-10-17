@@ -4,7 +4,8 @@
 - Date: 2026-10-16 (proposed 2026-10-15; amended 2026-10-16 by the toolchain
   pull request: `wireit` and `@types/node` added to the dependency table, the
   pinned versions recorded, `prettier` removed, `tsx`, `stylelint` and `tsdown`
-  added, and the npm scope decided)
+  added, and the npm scope decided; amended 2026-10-17 by the reference game
+  pull request: Vite and stylelint cover both apps)
 
 Amendment note (2026-10-16, toolchain pull request): decision 3 and the
 dependency table named `prettier` for Markdown and YAML because `oxfmt` did not
@@ -24,12 +25,12 @@ added as development dependencies, at the root only.
   not because they would not run. Its `esbuild` dependency has an install script
   that only verifies a prebuilt binary delivered by a platform package; it stays
   denied in `allowBuilds`, so no lifecycle script runs.
-- `stylelint` lints the Wrapper's CSS for correctness and the project's
-  constraints (no unknown names, no `!important`, no remote URL or `@import`
-  under the Wrapper's CSP, no vendor prefixes). It is configured by a
-  hand-written `stylelint.config.mjs` with explicit rules and **no shared config
-  package or plugin**, so it adds no dependency beyond `stylelint` itself;
-  formatting stays with `oxfmt`.
+- `stylelint` lints the Wrapper's CSS (and, amended 2026-10-17, the reference
+  game's) for correctness and the project's constraints (no unknown names, no
+  `!important`, no remote URL or `@import` under the Wrapper's CSP, no vendor
+  prefixes). It is configured by a hand-written `stylelint.config.mjs` with
+  explicit rules and **no shared config package or plugin**, so it adds no
+  dependency beyond `stylelint` itself; formatting stays with `oxfmt`.
 
 Amendment note (2026-10-16, toolchain pull request): `tsdown` is added as a
 development dependency, at the root only, and replaces `tsc` as the emitter of
@@ -74,6 +75,15 @@ each changelog entry to its pull request, commit, and author. It brings
 a GitHub token only when `changeset version` runs, which the release job will do
 (see the release runbook); nothing at install, build, or `changeset status`
 needs one.
+
+Amendment note (2026-10-17, reference game pull request): **Vite** builds both
+apps, the Wrapper and the reference game (`apps/reference-game`, a page like the
+Wrapper's), and **stylelint** lints the CSS of both, with the same
+configuration. No dependency is added: `vite` and `stylelint` were already on
+the development list, and the reference game takes them as development
+dependencies only. Its build refuses every bare import (a kit package or any
+other package) in its production module graph, so neither tool, nor any other
+package, ships in the game.
 
 ## Context
 
@@ -143,11 +153,13 @@ from here). This ADR records the kit's own technical decisions.
      and declarations without declaration maps), configured by `tsdown.base.ts`
      and a `tsdown.config.ts` per package (amended 2026-10-16);
    - **tsx** to run the TypeScript scripts under `tools/`, and **stylelint** to
-     lint the Wrapper's CSS (a hand-written configuration, no shared config
-     package); both at the root only (amended 2026-10-16);
-   - **Vite** to build the Wrapper app, and **Vitest** for unit and component
-     tests, with **jsdom** as the DOM for component tests (the most complete DOM
-     for axe-core checks; Web Locks, `crypto`, and `fetch` are injected fakes);
+     lint the CSS of both apps (a hand-written configuration, no shared config
+     package); both at the root only (amended 2026-10-16; both apps amended
+     2026-10-17);
+   - **Vite** to build the two apps, the Wrapper and the reference game (amended
+     2026-10-17), and **Vitest** for unit and component tests, with **jsdom** as
+     the DOM for component tests (the most complete DOM for axe-core checks; Web
+     Locks, `crypto`, and `fetch` are injected fakes);
    - **oxc** for lint and format (`oxlint`, `oxfmt`). `oxfmt` formats
      TypeScript, JSON, Markdown, YAML, and HTML, so there is no second formatter
      (see the amendment note: this bullet first named prettier for Markdown and
@@ -293,7 +305,7 @@ from here). This ADR records the kit's own technical decisions.
 | `tsdown`                                                                                                                                                                             | development only             | builds the packages' `dist/` (bundled ESM, declarations, source maps) with a separate chunk per entry; no companion package, no install script                                                                                                                                       |
 | `@changesets/changelog-github`                                                                                                                                                       | development only             | the changelog generator of changesets: entries link to the pull request, commit, and author; used by `changeset version` in the release job                                                                                                                                          |
 | `tsx`                                                                                                                                                                                | development only             | runs the TypeScript scripts under `tools/` with one behavior across Node versions; no lifecycle script (its `esbuild` install script is denied)                                                                                                                                      |
-| `stylelint`                                                                                                                                                                          | development only             | lints the Wrapper's CSS for correctness and the CSP-driven constraints; hand-written config, no shared config package or plugin                                                                                                                                                      |
+| `stylelint`                                                                                                                                                                          | development only             | lints the CSS of both apps (the Wrapper and the reference game, amended 2026-10-17) for correctness and the CSP-driven constraints; hand-written config, no shared config package or plugin                                                                                          |
 | `undici`                                                                                                                                                                             | development only, transitive | the HTTP client `openapi-typescript` 6.x depends on; never used by the generator, and held at 6.29.0 for the generator only (the scoped pnpm override `openapi-typescript>undici`) because its 5.x releases have published advisories ([ADR-004](./ADR-004-openapi-typescript-6.md)) |
 
 Exact versions are pinned by the lockfile, the `packageManager` field, and

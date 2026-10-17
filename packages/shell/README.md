@@ -27,7 +27,8 @@ logic that holds the player's key and signs every action, without a UI. Most
 integrators use the Wrapper itself rather than this package.
 
 Do not use it for: writing a game (games talk to the Wrapper through the
-controller protocol `se.controller/1`) or any code that should not hold a key.
+controller protocol `se.controller/1`; a game may take that protocol's types
+from the type-only entry below) or any code that should not hold a key.
 
 ## Example
 
@@ -114,7 +115,7 @@ else showGenericError(); // rejected: not rendered
 
 ## Entry points
 
-- `@intraverse/se-client-shell`: the only entry.
+- `@intraverse/se-client-shell`: the main entry.
   - `createLogger(sink)` returns a logger with `warn` and `error` only. A line
     is a fixed event name and the request fields `method`, `path`, `status`,
     `requestId`, and `code`, plus a `cause` reduced to its `name` and `code`.
@@ -173,6 +174,20 @@ else showGenericError(); // rejected: not rendered
   - `ShellError` is the error the package throws, with a stable `code`
     (`ShellErrorCode`) and a fixed message per code that never carries an input
     value.
+- `@intraverse/se-client-shell/controller`: types only, for a game. It
+  re-exports the `se.controller/1` types (`HelloMessage`, `ActionMessage`,
+  `SnapshotMessage`, `RejectMessage`, `GameMessage`, `WrapperMessage`,
+  `GameSnapshot`, `GameStep`, `Pick`, `Presentation`, `RoundStatus`, and
+  `RejectReason`) and no value: import it with `import type`. Its `exports`
+  entry has a `types` condition only, so a runtime import of it does not
+  resolve, and none of its types describes a key, a token, or a signature.
+
+  ```ts
+  import type {
+    HelloMessage,
+    WrapperMessage,
+  } from "@intraverse/se-client-shell/controller";
+  ```
 
 ## Guarantees and constraints
 

@@ -1,0 +1,36 @@
+<!doctype html>
+<!--
+  A stand-in for the Wrapper's side of se.controller/1: it frames the
+  reference game the way W-37 says (sandboxed, at the game origin, told the
+  parent's origin) and records every message it receives with its origin and
+  whether it came from the game frame. The test posts to the game itself.
+  Test-only: it is not the Wrapper and checks nothing.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Game host test page</title>
+    <script>
+      window.received = [];
+      window.addEventListener("message", event => {
+        const frame = document.querySelector("iframe");
+        window.received.push({
+          origin: event.origin,
+          fromGame: frame !== null && event.source === frame.contentWindow,
+          data: event.data,
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <main>
+      <h1>Game host test page</h1>
+      <iframe
+        name="game"
+        title="Coin Flip"
+        sandbox="allow-scripts allow-same-origin"
+        src="https://game.e2e-games.test/?parentOrigin=https%3A%2F%2Fpages.e2e.test"
+      ></iframe>
+    </main>
+  </body>
+</html>

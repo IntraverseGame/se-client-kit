@@ -28,6 +28,9 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./controller": {
+      "types": "./dist/controller.d.ts"
     }
   },
   "dependencies": {

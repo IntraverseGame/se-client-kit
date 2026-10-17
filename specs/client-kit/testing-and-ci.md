@@ -9,7 +9,7 @@ The kit's tests are the executable half of
 | Level     | Tool                                 | What                                                                                                                                           |
 | --------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Unit      | Vitest                               | per package; the signing, Snapshot, and transcript vectors; the token schedule; redaction                                                      |
-| Component | Vitest and jsdom                     | the Wrapper renders every `valid/` Snapshot                                                                                                    |
+| Component | Vitest and jsdom                     | the Wrapper renders every `valid/` Snapshot; the reference game's message handling and rendering per status                                    |
 | e2e       | Playwright                           | win, loss, cash-out, offline, typed errors, two tabs, the sandbox, accessibility, the no-secret scan                                           |
 | Static    | oxlint, stylelint, oxfmt, TypeScript | lint (oxlint for TypeScript, stylelint for CSS), format check (oxfmt, for every file type it supports), `tsc --noEmit`, import-direction rules |
 | Tooling   | Vitest, tsx                          | `tools/`: the lint fixtures that prove a violation fails (TypeScript and CSS), the allow-list check, the test-only-entry check                 |
@@ -39,12 +39,13 @@ defined yet. `build` builds every workspace (the Wrapper's build writes and
 checks its manifest; the size budget is not defined yet), and the job also runs
 `pnpm check:build-output` (the no-vector content check, now over the vendored
 vectors) and `pnpm check:package-files`. `e2e-fake` installs Playwright's
-Chromium and runs the e2e harness's own tests and a smoke run on the Wrapper's
-release bundle; the browser rows of the Wrapper's test plan are pending
-([The e2e harness](#the-e2e-harness)). The workflows hold no secret, run with
-`permissions: {}` at the top and `contents: read` per job (the release
-workflow's `publish` job adds `id-token: write`, for provenance and trusted
-publishing), and pin every Action by full commit SHA.
+Chromium and runs the e2e harness's own tests, a smoke run on the Wrapper's
+release bundle, and a smoke run on the reference game's build; the browser rows
+of the Wrapper's test plan are pending ([The e2e harness](#the-e2e-harness)).
+The workflows hold no secret, run with `permissions: {}` at the top and
+`contents: read` per job (the release workflow's `publish` job adds
+`id-token: write`, for provenance and trusted publishing), and pin every Action
+by full commit SHA.
 
 ## Task orchestration and caching
 
@@ -119,18 +120,22 @@ development-only, so it may import the test-only entry of `contracts`.
   context, under the reserved `.test` top-level domain: the Wrapper's release
   bundle (`apps/wrapper/dist`, unmodified) at `https://wrapper.e2e.test`, and
   the suite's own test pages (`e2e/tests/pages/`) at `https://pages.e2e.test`.
-  The bundle holds no environment values, so the harness also serves the
-  Wrapper's environment configuration document at the path the Wrapper reads
-  (`/environment-config.json`, provisional like the Wrapper's own path): a valid
-  `preview` document (`e2e/tests/harness/environment-config.ts`) whose
-  `playApiBaseUrl` is the fake Play API's and whose other hosts are all under
-  `.test`, with two RPC endpoints of distinct providers so no degraded indicator
-  is shown. A catch-all route, registered first, refuses every other HTTP
-  request, and a catch-all WebSocket route closes every WebSocket a page or
-  frame opens (code 1008) before it connects; both are recorded, and a test that
-  made either fails. The routes do not see a WebSocket opened by a dedicated
-  worker or a service worker, nor WebRTC or other traffic outside a route; such
-  traffic is not recorded. Behind the routes, the Chromium project runs with
+  The reference game's build (`apps/reference-game/dist`, unmodified) is served
+  at the game origin `https://game.e2e-games.test`, on another registrable
+  domain (W-37), by the specs that use it
+  (`e2e/tests/harness/reference-game.ts`). The bundle holds no environment
+  values, so the harness also serves the Wrapper's environment configuration
+  document at the path the Wrapper reads (`/environment-config.json`,
+  provisional like the Wrapper's own path): a valid `preview` document
+  (`e2e/tests/harness/environment-config.ts`) whose `playApiBaseUrl` is the fake
+  Play API's and whose other hosts are all under `.test`, with two RPC endpoints
+  of distinct providers so no degraded indicator is shown. A catch-all route,
+  registered first, refuses every other HTTP request, and a catch-all WebSocket
+  route closes every WebSocket a page or frame opens (code 1008) before it
+  connects; both are recorded, and a test that made either fails. The routes do
+  not see a WebSocket opened by a dedicated worker or a service worker, nor
+  WebRTC or other traffic outside a route; such traffic is not recorded. Behind
+  the routes, the Chromium project runs with
   `--host-resolver-rules=MAP * ~NOTFOUND` (`e2e/tests/harness/browser-flags.ts`,
   development and CI alike, the installed-Chrome channel included), so no host
   name resolves and nothing outside a route can reach a host by name (WebRTC's
@@ -242,11 +247,18 @@ development-only, so it may import the test-only entry of `contracts`.
   bundle as it renders today (it loads and accepts the served configuration with
   no outside request, error, or warning, passes the audit, leaves nothing for
   the scan, and goes offline and back; a control serves a broken document and
-  sees the configuration-error state). The rows of the Wrapper's test plan that
-  need a session, a rendered state, or the reference game are declared with
-  `test.fixme` in `e2e/tests/pending.spec.ts`, reported as skipped, never as
-  passed ([wrapper.md, Test plan](../wrapper.md#test-plan)). The Firefox and
-  WebKit projects join with the W-49 paths (T-9a).
+  sees the configuration-error state); and a smoke run on the reference game's
+  build in a stand-in host page (`e2e/tests/pages/game-host.html`, which frames
+  it sandboxed at the game origin and records what it receives): the `hello`
+  reaches the host from the game origin, a Snapshot renders, a click asks for a
+  pick, a reject shows in the alert, a message the game posts to itself and a
+  message outside the schema are ignored, the page passes the audit, and an
+  unframed game talks to nobody ([The reference game](./the-reference-game.md)).
+  The rows of the Wrapper's test plan that need a session, a rendered state, or
+  the reference game are declared with `test.fixme` in
+  `e2e/tests/pending.spec.ts`, reported as skipped, never as passed
+  ([wrapper.md, Test plan](../wrapper.md#test-plan)). The Firefox and WebKit
+  projects join with the W-49 paths (T-9a).
 - **Locally**, `pnpm exec playwright install chromium` (in `e2e/`) installs the
   browser once. Where Playwright's download is unavailable,
   `SE_E2E_BROWSER_CHANNEL=chrome` runs the Chromium project on an installed

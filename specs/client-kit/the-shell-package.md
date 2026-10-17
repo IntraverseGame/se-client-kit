@@ -33,15 +33,16 @@ in brackets.
   owns `fetch` and the Content Security Policy); the bridge because the Wrapper
   mounts the game iframe and owns the window it talks through; the reader
   because the Wrapper UI renders only what the shell validated (decided in human
-  review, 2026-10-17). The protocol types are on the main entry only: a
-  type-only subpath for the `reference-game` app comes with the change that
-  builds that app (decided in human review, 2026-10-17;
-  [Open items](../client-kit.md#open-items)). Key custody, the signer lock, the
-  transcript state, the tip check, its decision, the `CreateRoundAuth` checks,
-  the round's verdict, the round flows, and the pick use case are internal: the
-  UI gets use cases and read-only state, never a signing capability
-  ([Packages](./packages.md)), and the round flows become public with the change
-  that wires them into the Wrapper.
+  review, 2026-10-17). The protocol types are also exported, as types only, at
+  the subpath `@intraverse/se-client-shell/controller` (`src/controller.ts`, a
+  `types` condition only, no value): the message types, `GameSnapshot`,
+  `GameStep`, `Pick`, `Presentation`, `RoundStatus`, and `RejectReason`, for the
+  `reference-game` app ([The reference game](./the-reference-game.md)). Key
+  custody, the signer lock, the transcript state, the tip check, its decision,
+  the `CreateRoundAuth` checks, the round's verdict, the round flows, and the
+  pick use case are internal: the UI gets use cases and read-only state, never a
+  signing capability ([Packages](./packages.md)), and the round flows become
+  public with the change that wires them into the Wrapper.
 - **The Snapshot reader (W-28, W-42, W-43).** `createSnapshotReader` takes the
   Play API transport and the play token's `Authorization` and returns `read()`
   and `latest()`. `read()` calls `getSnapshot` and resolves with one of:

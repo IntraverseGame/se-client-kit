@@ -77,7 +77,6 @@
     "eslint/prefer-const": "error",
     "import/no-cycle": "error",
     "eslint/max-lines-per-function": "off",
-    "unicorn/require-module-specifiers": "off",
     "eslint/default-case": "error",
     "eslint/object-shorthand": "error",
     "eslint/no-promise-executor-return": "error",
@@ -739,6 +738,13 @@
         "no-restricted-imports": [
           "error",
           {
+            "paths": [
+              {
+                "name": "@intraverse/se-client-shell/controller",
+                "allowTypeImports": true,
+                "message": "only `import type` (or `export type`) from the type-only controller subpath: no runtime code reaches the game (specs/client-kit/packages.md)"
+              }
+            ],
             "patterns": [
               {
                 "group": [
@@ -750,8 +756,6 @@
                   "@intraverse/se-client-snapshot/**",
                   "@intraverse/se-client-play-client",
                   "@intraverse/se-client-play-client/**",
-                  "@intraverse/se-client-shell",
-                  "@intraverse/se-client-shell/**",
                   "@intraverse/se-client-wrapper",
                   "@intraverse/se-client-wrapper/**"
                 ],
@@ -773,6 +777,75 @@
               {
                 "group": ["@superengine", "@superengine/**"],
                 "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
+              },
+              {
+                "group": [
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "!@intraverse/se-client-shell/controller"
+                ],
+                "message": "reference-game takes only the controller protocol's types: `import type` from @intraverse/se-client-shell/controller (specs/client-kit/packages.md)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/reference-game/src/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@intraverse/se-client-shell/controller",
+                "allowTypeImports": true,
+                "message": "only `import type` (or `export type`) from the type-only controller subpath: no runtime code reaches the game (specs/client-kit/packages.md)"
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "@intraverse/se-client-contracts",
+                  "@intraverse/se-client-contracts/**",
+                  "@intraverse/se-client-signing",
+                  "@intraverse/se-client-signing/**",
+                  "@intraverse/se-client-snapshot",
+                  "@intraverse/se-client-snapshot/**",
+                  "@intraverse/se-client-play-client",
+                  "@intraverse/se-client-play-client/**",
+                  "@intraverse/se-client-wrapper",
+                  "@intraverse/se-client-wrapper/**"
+                ],
+                "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
+              },
+              {
+                "group": [
+                  "@intraverse/se-client-*/src",
+                  "@intraverse/se-client-*/src/**",
+                  "@intraverse/se-client-*/dist",
+                  "@intraverse/se-client-*/dist/**"
+                ],
+                "message": "public entry points only (ADR-001)"
+              },
+              {
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|apps|packages)(/|$)",
+                "message": "no relative import into another package (ADR-001)"
+              },
+              {
+                "group": ["@superengine", "@superengine/**"],
+                "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
+              },
+              {
+                "group": [
+                  "*",
+                  "**",
+                  "!./**",
+                  "!../**",
+                  "!@intraverse/se-client-shell/controller"
+                ],
+                "message": "reference-game's sources import no package at run time: relative modules, and `import type` from @intraverse/se-client-shell/controller only (specs/client-kit/the-reference-game.md)"
               }
             ]
           }
@@ -792,6 +865,13 @@
         "no-restricted-imports": [
           "error",
           {
+            "paths": [
+              {
+                "name": "@intraverse/se-client-shell/controller",
+                "allowTypeImports": true,
+                "message": "only `import type` (or `export type`) from the type-only controller subpath: no runtime code reaches the game (specs/client-kit/packages.md)"
+              }
+            ],
             "patterns": [
               {
                 "group": [
@@ -803,8 +883,6 @@
                   "@intraverse/se-client-snapshot/**",
                   "@intraverse/se-client-play-client",
                   "@intraverse/se-client-play-client/**",
-                  "@intraverse/se-client-shell",
-                  "@intraverse/se-client-shell/**",
                   "@intraverse/se-client-wrapper",
                   "@intraverse/se-client-wrapper/**"
                 ],
@@ -826,6 +904,14 @@
               {
                 "group": ["@superengine", "@superengine/**"],
                 "message": "the old working scope; use @intraverse/se-client-* (ADR-001)"
+              },
+              {
+                "group": [
+                  "@intraverse/se-client-shell",
+                  "@intraverse/se-client-shell/**",
+                  "!@intraverse/se-client-shell/controller"
+                ],
+                "message": "reference-game takes only the controller protocol's types: `import type` from @intraverse/se-client-shell/controller (specs/client-kit/packages.md)"
               }
             ]
           }
@@ -886,7 +972,11 @@
       }
     },
     {
-      "files": ["packages/*/src/index.ts", "apps/*/src/index.ts"],
+      "files": [
+        "packages/*/src/index.ts",
+        "apps/*/src/index.ts",
+        "packages/shell/src/controller.ts"
+      ],
       "rules": {
         "eslint/no-duplicate-imports": [
           "error",

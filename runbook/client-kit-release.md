@@ -220,9 +220,12 @@ and no network, and publishes nothing:
    `exports` target present except the `contracts` test-only entry, which must
    be absent along with any `testing` or `vectors` path; the build-output checks
    and the vector canary over every packed file. It then unpacks the tarballs
-   into a consumer `node_modules`, imports every `exports` entry of every
-   package in Node, and requires `@intraverse/se-client-contracts/testing` not
-   to resolve. Last, it runs
+   into a consumer `node_modules`, imports every runtime `exports` entry of
+   every package in Node, requires of each type-only entry (a `types` condition
+   and nothing else, such as `@intraverse/se-client-shell/controller`) that its
+   `.d.ts` target is in the tarball and that importing it fails with
+   `ERR_PACKAGE_PATH_NOT_EXPORTED`, and requires
+   `@intraverse/se-client-contracts/testing` not to resolve. Last, it runs
    `pnpm publish <tarball> --access public --ignore-scripts --no-git-checks --dry-run --registry http://127.0.0.1:9/`
    for each tarball, so pnpm's own publish checks run against an address nothing
    listens on, with no network. Provenance is exercised only in Actions, where

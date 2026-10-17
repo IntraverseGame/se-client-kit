@@ -2,27 +2,37 @@
   "name": "@intraverse/se-client-reference-game",
   "version": "0.0.0",
   "private": true,
-  "description": "A minimal sandboxed game for tests and as a sample.",
+  "description": "A minimal Coin Flip game for the tests and as a sample for game developers.",
   "type": "module",
   "scripts": {
     "build": "wireit",
-    "typecheck": "wireit"
+    "typecheck": "wireit",
+    "test": "wireit"
   },
   "wireit": {
     "build": {
-      "command": "tsdown",
+      "command": "vite build",
       "files": [
+        "index.html",
+        "public/**",
         "src/**",
         "!src/**/*.test.ts",
+        "*.ts",
         "package.json",
         "tsconfig.json",
-        "tsdown.config.ts",
-        "../../tsdown.base.ts",
-        "../../tsconfig.base.json"
+        "../../tsconfig.base.json",
+        "postcss.config.*",
+        ".postcssrc",
+        ".postcssrc.*",
+        "../../package.json",
+        "../../pnpm-workspace.yaml",
+        ".env",
+        ".env.*"
       ],
       "output": [
         "dist/**"
       ],
+      "clean": "if-file-deleted",
       "packageLocks": [
         "pnpm-lock.yaml"
       ]
@@ -30,7 +40,9 @@
     "typecheck": {
       "command": "tsc -p tsconfig.json",
       "files": [
+        "index.html",
         "src/**",
+        "*.ts",
         "package.json",
         "tsconfig.json",
         "../../tsconfig.base.json"
@@ -38,7 +50,34 @@
       "output": [],
       "packageLocks": [
         "pnpm-lock.yaml"
+      ],
+      "dependencies": [
+        "../../packages/shell:build"
+      ]
+    },
+    "test": {
+      "command": "vitest run",
+      "files": [
+        "index.html",
+        "public/**",
+        "src/**",
+        "*.ts",
+        "package.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json",
+        "../../package.json",
+        "../../pnpm-workspace.yaml",
+        ".env",
+        ".env.*"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
       ]
     }
+  },
+  "devDependencies": {
+    "@intraverse/se-client-shell": "workspace:*",
+    "vite": "8.3.4"
   }
 }
