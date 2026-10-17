@@ -7,10 +7,10 @@ game.
 **Status:** pre-release. Not published to npm yet. Today the public entry holds
 the redacting logger, the package's error type, and the validation of the chain
 part of the environment configuration. Key custody, the signer lock, the
-transcript state, and the chain tip check are built and tested inside the
-package, but are not exposed: they are reached through the use cases (`start`,
-`pick`, `cashOut`), which are specified, not implemented yet, together with the
-`CreateRoundAuth` check and the game bridge.
+transcript state, the chain tip check, and the round's `CreateRoundAuth` and
+`T_0` checks are built and tested inside the package, but are not exposed: they
+are reached through the use cases (`start`, `pick`, `cashOut`), which are
+specified, not implemented yet, together with the game bridge.
 
 ## Install
 
@@ -116,6 +116,11 @@ if (!result.ok) {
 - The chain check asks every configured endpoint, needs `minRpcQuorum` of them
   to answer, all of them to report the source's pinned chain id, and all of them
   to agree, and never drops an outlier.
+- A round's `CreateRoundAuth` is trusted only when its domain, signer, and
+  entropy chain id equal the pinned configuration, its fields match the round
+  and what the shell sent, and its signature recovers to the pinned signer;
+  `T_0` is recomputed and must equal the Snapshot's `readyHash`. Until every
+  check passes, nothing is signed for the round.
 
 ## More
 

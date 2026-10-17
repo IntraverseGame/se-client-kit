@@ -154,9 +154,17 @@ Part of the [Wrapper spec](../wrapper.md), section
   may have applied is never stranded. This does not cover a cancel: a cancel is
   sent again only after a Snapshot read (W-25), never as a blind resend.
 
-  For a book round (not in the first release) the check can only flag; a book
-  Snapshot that carries `proofs.createRoundAuth` is invalid (W-28).
-  <!-- TODO(shell W-26 checks): the schema that carries `proofs.createRoundAuth` and `proofs.fairnessProof.readyHash`, and its vectors (with the `signature/` class of accept and refuse verdicts), are vendored in `contracts`, and the validator accepts them. Making `proofs.createRoundAuth` required within `se.snapshot/1` was a one-time pre-release exception to the additive-only rule (OQ-7), recorded in `client-kit.md` and `client-kit/how-the-kit-gets-its-contracts.md`. What remains is the shell's implementation of checks 1 to 5 and the replay of the `signature/` verdicts through them; until it lands, every round ends by the "`T_0` not settled" path. -->
+  A book round (not in the first release) carries no `proofs.createRoundAuth`; a
+  book Snapshot that carries one is invalid (W-28). Decided by human review,
+  2026-10-17: the first release ships config games only, so the shell refuses a
+  book round as `missing` (check 1) until a later increment defines its
+  evidence.
+
+  The shell builds checks 1 to 5 and the re-issue rule
+  ([the `shell` package](../client-kit/the-shell-package.md)); the backend's
+  `signature/` Snapshot vectors replay through them with their verdicts. The
+  vectors pin the domain and the signer, not the entropy source's chain id, so
+  check 3's wrong-chain case is covered by the shell's own unit tests (T-8).
   <!-- TODO(later increment): the shell also checks the domain, the signer, and the `CreateRoundAuth` against the registry on-chain. -->
 
 - **W-26a. Fewer than `minRpcQuorum` endpoints answer.** Decided (OQ-2,

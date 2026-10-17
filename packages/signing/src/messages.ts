@@ -1,14 +1,17 @@
 // Typed struct hashes for the messages the shell signs or verifies.
 
-import { hashStruct, type UintValue } from "./eip712.ts";
+import { hashAbiEncoded, hashStruct, type UintValue } from "./eip712.ts";
 import type { Address, Bytes32 } from "./hex.ts";
 import {
   CLOSE_ROUND_AUTH,
   CREATE_ROUND_AUTH,
   EIP712_DOMAIN,
   MARK_READY_AUTH,
+  NEW_ROUND,
   PLAYER_ACTION,
   PLAYER_CASH_OUT,
+  RANDOMNESS_TARGET,
+  READY,
 } from "./types.ts";
 
 /**
@@ -90,3 +93,58 @@ export const hashMarkReadyAuth = (message: MarkReadyAuth): Bytes32 =>
 
 export const hashCloseRoundAuth = (message: CloseRoundAuth): Bytes32 =>
   hashStruct(CLOSE_ROUND_AUTH, message);
+
+/**
+ * A round's `newRound`: the arguments of its on-chain creation, in `abi.encode`
+ * order. `currency` is the bet's unit as `bytes32` (ASCII, left-aligned,
+ * zero-padded).
+ */
+export type NewRound = {
+  readonly roundId: Bytes32;
+  readonly playerRef: Bytes32;
+  readonly currency: Bytes32;
+  /** `uint128` base units, as a `bigint` or a decimal string; never a `number`. */
+  readonly betAmount: UintValue;
+  /** `uint32`. */
+  readonly gameId: number | UintValue;
+  /** `uint32`. */
+  readonly gameVersion: number | UintValue;
+  /** `uint32`. */
+  readonly circuitVersion: number | UintValue;
+  readonly roundSecretHash: Bytes32;
+  readonly randomnessTarget: Bytes32;
+  readonly actionKey: Address;
+  readonly payoutTermsHash: Bytes32;
+};
+
+/** What a round's `randomnessTarget` is computed from. */
+export type RandomnessTarget = {
+  /**
+   * The entropy source identifier as `bytes32` (ASCII, left-aligned,
+   * zero-padded).
+   */
+  readonly source: Bytes32;
+  readonly entropyChainId: UintValue;
+  readonly blockNumber: UintValue;
+};
+
+/** What a round's `T_0` (the Ready evidence hash) is computed from. */
+export type Ready = {
+  readonly created: Bytes32;
+  readonly seedHash: Bytes32;
+};
+
+/** `created = keccak256(abi.encode(newRound))`. */
+export const hashNewRound = (newRound: NewRound): Bytes32 =>
+  hashAbiEncoded(NEW_ROUND, newRound);
+
+/**
+ * `keccak256(abi.encode(bytes32 source, uint256 entropyChainId, uint256
+ * blockNumber))`: the `randomnessTarget` a round's `newRound` commits to.
+ */
+export const hashRandomnessTarget = (target: RandomnessTarget): Bytes32 =>
+  hashAbiEncoded(RANDOMNESS_TARGET, target);
+
+/** `T_0 = keccak256(abi.encode(created, seedHash))`, the Ready evidence hash. */
+export const hashReady = (ready: Ready): Bytes32 =>
+  hashAbiEncoded(READY, ready);

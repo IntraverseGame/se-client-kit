@@ -174,3 +174,27 @@ export const signatureVectors: readonly SignatureVector[] = Object.entries(
     snapshot: result.value,
   };
 });
+
+/**
+ * A deep copy of a vendored Snapshot vector's `input`, by its set and name, for
+ * a test to change before it validates it.
+ */
+export const vectorInput = (
+  set: "valid" | "signature",
+  name: string,
+): Record<string, unknown> => {
+  const vectors: Readonly<Record<string, unknown>> = snapshotVectors[set];
+  const vector = record(vectors[name], name);
+  return structuredClone(record(vector["input"], `${name}.input`));
+};
+
+/** `input` validated, or a thrown error: a test never reads it unvalidated. */
+export const validated = (input: unknown): ValidSnapshot => {
+  const result = validateSnapshot(input);
+  if (!result.ok) {
+    throw new TypeError(
+      `not a valid Snapshot: ${result.issues.map(i => i.instancePath).join(", ")}`,
+    );
+  }
+  return result.value;
+};

@@ -1,8 +1,8 @@
 // The fixed set of EIP-712 struct types. Each `encodeType` and type hash is
 // pinned by the vendored signing vectors (the tests compare them).
 //
-// Not here yet, because no vendored contract defines them: `PlayerCancel`,
-// `NewRound`, and `PayoutTerms` (they come with the signed-action spec).
+// Not here yet, because no vendored contract defines them: `PlayerCancel` and
+// `PayoutTerms` (they come with the signed-action spec).
 
 import type { StructType } from "./eip712.ts";
 
@@ -81,5 +81,48 @@ export const RECORD_DRAW_AUTH: StructType = {
   fields: [
     { name: "closed", type: "bytes32" },
     { name: "expiry", type: "uint256" },
+  ],
+};
+
+// The `abi.encode` tuples the shell recomputes (W-26). They are not EIP-712
+// structs: each is hashed as `keccak256(abi.encode(...))`, with no type hash.
+// The field order and types are the Snapshot schema's (`NewRound`, "11 static
+// words in abi.encode order", and `randomnessTarget`) and the signing vectors'
+// (`created`, `seedHash`, `ready`), which the tests reproduce.
+
+/** `newRound`, whose hash is `created`. */
+export const NEW_ROUND: StructType = {
+  name: "NewRound",
+  fields: [
+    { name: "roundId", type: "bytes32" },
+    { name: "playerRef", type: "bytes32" },
+    { name: "currency", type: "bytes32" },
+    { name: "betAmount", type: "uint128" },
+    { name: "gameId", type: "uint32" },
+    { name: "gameVersion", type: "uint32" },
+    { name: "circuitVersion", type: "uint32" },
+    { name: "roundSecretHash", type: "bytes32" },
+    { name: "randomnessTarget", type: "bytes32" },
+    { name: "actionKey", type: "address" },
+    { name: "payoutTermsHash", type: "bytes32" },
+  ],
+};
+
+/** `(bytes32 source, uint256 entropyChainId, uint256 blockNumber)`. */
+export const RANDOMNESS_TARGET: StructType = {
+  name: "RandomnessTarget",
+  fields: [
+    { name: "source", type: "bytes32" },
+    { name: "entropyChainId", type: "uint256" },
+    { name: "blockNumber", type: "uint256" },
+  ],
+};
+
+/** `(bytes32 created, bytes32 seedHash)`, whose hash is `T_0`. */
+export const READY: StructType = {
+  name: "Ready",
+  fields: [
+    { name: "created", type: "bytes32" },
+    { name: "seedHash", type: "bytes32" },
   ],
 };

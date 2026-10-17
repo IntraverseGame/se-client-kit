@@ -19,8 +19,11 @@ import {
   hashCloseRoundAuth,
   hashCreateRoundAuth,
   hashMarkReadyAuth,
+  hashNewRound,
   hashPlayerAction,
   hashPlayerCashOut,
+  hashRandomnessTarget,
+  hashReady,
 } from "./messages.ts";
 import { recoverAddress } from "./signature.ts";
 import {
@@ -118,6 +121,81 @@ describe("the worked round's player actions", () => {
   it("gives a cash-out a different hash from an action of the same fields", () => {
     const vector = actionVector(0);
     expect(hashPlayerCashOut(messageOf(vector))).not.toBe(vector.structHash);
+  });
+});
+
+describe("the round's creation and ready hashes", () => {
+  it("reproduces created as keccak256(abi.encode(newRound))", () => {
+    expect(hashNewRound(vectors.newRound)).toBe(vectors.created);
+  });
+
+  it("takes the uint32 fields as numbers too", () => {
+    const { gameId, gameVersion, circuitVersion } = vectors.newRound;
+    expect(
+      hashNewRound({
+        ...vectors.newRound,
+        gameId: Number(gameId),
+        gameVersion: Number(gameVersion),
+        circuitVersion: Number(circuitVersion),
+      }),
+    ).toBe(vectors.created);
+  });
+
+  it("changes created when any word changes", () => {
+    expect(hashNewRound({ ...vectors.newRound, gameId: "2" })).not.toBe(
+      vectors.created,
+    );
+  });
+
+  it("refuses a bet that is a number or above uint128", () => {
+    expect(() =>
+      hashNewRound({
+        ...vectors.newRound,
+        // A number amount must be refused at run time.
+        betAmount: 1 as unknown as string,
+      }),
+    ).toThrowError(expect.objectContaining({ code: "invalid-input" }));
+    expect(() =>
+      hashNewRound({ ...vectors.newRound, betAmount: (1n << 128n).toString() }),
+    ).toThrowError(expect.objectContaining({ code: "invalid-input" }));
+  });
+
+  it("refuses a field the tuple does not have", () => {
+    expect(() =>
+      hashNewRound({ ...vectors.newRound, extra: "0x" } as never),
+    ).toThrowError(expect.objectContaining({ code: "invalid-input" }));
+  });
+
+  it("reproduces T_0 as keccak256(abi.encode(created, seedHash))", () => {
+    expect(
+      hashReady({ created: vectors.created, seedHash: vectors.seedHash }),
+    ).toBe(vectors.ready);
+  });
+
+  it("encodes the randomness target as three static words", () => {
+    // No vendored vector gives the target's inputs with the signing vectors;
+    // the shell's signature/ vectors pin it. This pins the tuple's shape: the
+    // order matters, and a number is refused for the uint256 fields.
+    const source = `0x65${"00".repeat(31)}` as const;
+    const a = hashRandomnessTarget({
+      source,
+      entropyChainId: 1n,
+      blockNumber: 2n,
+    });
+    const b = hashRandomnessTarget({
+      source,
+      entropyChainId: 2n,
+      blockNumber: 1n,
+    });
+    expect(a).not.toBe(b);
+    expect(() =>
+      hashRandomnessTarget({
+        source,
+        // A uint256 field takes no number.
+        entropyChainId: 1 as unknown as bigint,
+        blockNumber: 2n,
+      }),
+    ).toThrowError(expect.objectContaining({ code: "invalid-input" }));
   });
 });
 
