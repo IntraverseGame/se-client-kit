@@ -154,4 +154,22 @@ export const ruleCases: readonly Case[] = [
     rule: "eslint(no-duplicate-imports)",
     fails: true,
   },
+  {
+    name: "an empty export statement fails (no skeleton is left)",
+    file: "packages/shell/src/empty.ts",
+    source: "export {};\n",
+    rule: "unicorn(require-module-specifiers)",
+    fails: true,
+  },
+  {
+    // The import-direction rule lets an inline `import { type X }` through
+    // (every name is a type), but it is a side-effect import once the types are
+    // erased, so the game writes `import type` instead.
+    name: "an inline type import from the controller subpath fails",
+    file: src("apps/reference-game"),
+    source:
+      'import { type HelloMessage } from "@intraverse/se-client-shell/controller";\nexport type H = HelloMessage;\n',
+    rule: "typescript(no-import-type-side-effects)",
+    fails: true,
+  },
 ];

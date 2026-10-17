@@ -11,7 +11,8 @@
 //   3. in the first copy, runs the build-output and package-files checks, packs
 //      the five published libraries, checks every tarball's contents
 //      (tools/package-tarball.ts), and imports each packed package the way a
-//      consumer would, with the `contracts` test-only entry required not to
+//      consumer would (a type-only entry must have its declaration file and
+//      must not import), with the `contracts` test-only entry required not to
 //      resolve;
 //   4. runs `pnpm publish <tarball> --dry-run` for each tarball against an
 //      unreachable local registry address, so pnpm's own publish checks run

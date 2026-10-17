@@ -462,11 +462,13 @@ exists
 ([client-kit/testing-and-ci.md](./client-kit/testing-and-ci.md#the-e2e-harness)):
 the fake Play API, the seeded `crypto.getRandomValues`, the secret scan with its
 negative test, the axe audit, and the network control, each with its own tests,
-plus a smoke run on the Wrapper's release bundle. T-9a's browser half and T-10
-to T-18 are **pending**: they need the Wrapper to open a session and render its
-states, and T-10 to T-12, T-14, and T-18 also need the reference game. They are
-declared as skipped tests (`e2e/tests/pending.spec.ts`), never as passing ones,
-until each gets its real test.
+plus a smoke run on the Wrapper's release bundle and one on the reference game's
+build in a stand-in host page. T-9a's browser half and T-10 to T-18 are
+**pending**: they need the Wrapper to open a session and render its states (the
+reference game, which T-10 to T-12, T-14, and T-18 also need, exists:
+[client-kit/the-reference-game.md](./client-kit/the-reference-game.md)). They
+are declared as skipped tests (`e2e/tests/pending.spec.ts`), never as passing
+ones, until each gets its real test.
 
 The e2e suite runs in two places: against an in-repo fake Play API on every
 change here, and against the SuperEngine preview stack from a job owned by the

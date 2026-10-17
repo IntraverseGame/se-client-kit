@@ -36,7 +36,7 @@ pnpm lint                        # oxlint (with the dependency-direction rules) 
 pnpm format                      # writes: oxfmt formats everything it supports
 pnpm format:check                # the same, read-only
 pnpm typecheck
-pnpm build                       # packages: tsdown (bundled ESM with .js.map, and .d.ts); the Wrapper: Vite
+pnpm build                       # packages: tsdown (bundled ESM with .js.map, and .d.ts); the apps: Vite
 pnpm changeset                   # add release notes for a change to a published package
 pnpm release:dry-run             # the release dry run: versions, tarballs, Wrapper digest; publishes nothing
 ```
@@ -92,7 +92,7 @@ root script it does not reach Playwright: `pnpm test:e2e --repeat-each=3` and
 
 ```text
 packages/    contracts (data only), signing, snapshot, play-client, shell (empty skeletons)
-apps/        wrapper (the UI) and a reference game                        (empty skeletons)
+apps/        wrapper (the UI) and the Coin Flip reference game            (first slices)
 e2e/         Playwright suite and the fake Play API                       (harness; T-rows pending)
 tools/       repository checks and their tests (allow-list, contracts entry, lint rules)
 specs/       current behavior and contracts (source of truth)

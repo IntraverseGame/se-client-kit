@@ -42,6 +42,8 @@ export const CONTRACTS_TEST_ONLY_DECLARATION = "testing.d.ts";
 const RUNTIME_SOURCE = /^src\/(?:index\.ts|(?:schemas|generated)\/.+)$/u;
 
 const PACKAGE_FILE = /\.(?:js|js\.map|d\.ts)$/u;
+/** The apps Vite builds into a page (HTML, CSS, assets), not a library. */
+const VITE_APPS: ReadonlySet<string> = new Set(["wrapper", "reference-game"]);
 const FORBIDDEN_FILE = /(?:\.(?:test|spec)\.|tsbuildinfo)/u;
 /** A declaration file must not point at a map that is not there. */
 const DECLARATION_MAP_COMMENT = /\/\/# sourceMappingURL=/u;
@@ -117,7 +119,7 @@ const checkFileTypes = (dist: Dist): string[] => {
       problems.push(
         `${dist.name}/dist/${path}: a test file or build state must not be in dist`,
       );
-    } else if (dist.name !== "wrapper" && !PACKAGE_FILE.test(path)) {
+    } else if (!VITE_APPS.has(dist.name) && !PACKAGE_FILE.test(path)) {
       problems.push(
         `${dist.name}/dist/${path}: not an intended output (.js, its .js.map, and .d.ts)`,
       );

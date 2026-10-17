@@ -113,6 +113,7 @@
       "dependencies": [
         "./packages/signing:test",
         "./apps/wrapper:test",
+        "./apps/reference-game:test",
         "./packages/snapshot:test",
         "./packages/play-client:test",
         "./packages/shell:test",

@@ -25,6 +25,19 @@ const importing = (file: string, specifier: string, fails: boolean): Case => {
   };
 };
 
+/** A case with its own source text, for an import `importing` cannot write. */
+const using = (file: string, source: string, fails: boolean): Case => {
+  return {
+    name: `${file}: ${source}`,
+    file,
+    source: `${source}\nexport {};\n`,
+    rule: RESTRICTED,
+    fails,
+  };
+};
+
+const CONTROLLER = JSON.stringify("@intraverse/se-client-shell/controller");
+
 const src = (dir: string): string => `${dir}/src/index.ts`;
 const testFile = (dir: string): string => `${dir}/src/index.test.ts`;
 
@@ -92,6 +105,92 @@ export const cases: readonly Case[] = [
     importing(src("apps/reference-game"), `@intraverse/se-client-${p}`, true),
   ),
   importing(src("apps/reference-game"), "@intraverse/se-client-wrapper", true),
+
+  // ...but it takes the controller protocol's types from shell's type-only
+  // subpath, with `import type` or `export type` only, in its sources and its
+  // tests alike. A value import, `export *`, a side-effect import, a dynamic
+  // import, another shell subpath, and shell's internals all fail.
+  ...[src("apps/reference-game"), testFile("apps/reference-game")].flatMap(
+    file => [
+      using(file, `import type { HelloMessage } from ${CONTROLLER};`, false),
+      using(file, `export type { HelloMessage } from ${CONTROLLER};`, false),
+      using(file, `import { HelloMessage } from ${CONTROLLER};`, true),
+      importing(file, "@intraverse/se-client-shell/controller", true),
+      using(file, `import ${CONTROLLER};`, true),
+      using(file, `const m = await import(${CONTROLLER});`, true),
+      using(
+        file,
+        `import type { Logger } from "@intraverse/se-client-shell";`,
+        true,
+      ),
+      using(
+        file,
+        `import type { HelloMessage } from "@intraverse/se-client-shell/controller/x";`,
+        true,
+      ),
+      using(
+        file,
+        `import type { GameFrame } from "@intraverse/se-client-shell/bridge";`,
+        true,
+      ),
+      using(
+        file,
+        `import type { HelloMessage } from "@intraverse/se-client-shell/src/controller.ts";`,
+        true,
+      ),
+      using(
+        file,
+        `import type { HelloMessage } from "@intraverse/se-client-shell/dist/controller.js";`,
+        true,
+      ),
+    ],
+  ),
+  // The game's sources import no package at all at run time, third-party
+  // ones included; its tests and its build configuration may (Vitest, Vite).
+  ...[
+    'import { defineConfig } from "vite";',
+    'import type { UserConfig } from "vite";',
+    'import { describe } from "vitest";',
+    'import { readFileSync } from "node:fs";',
+    'import { a } from "@scope/package/sub";',
+    'export { a } from "lodash";',
+  ].map(source => using("apps/reference-game/src/game.ts", source, true)),
+  using(
+    "apps/reference-game/src/game.ts",
+    'import { a } from "./a.ts";',
+    false,
+  ),
+  using(
+    "apps/reference-game/src/deep/x.ts",
+    'import { a } from "../a.ts";',
+    false,
+  ),
+  using(
+    testFile("apps/reference-game"),
+    'import { describe } from "vitest";',
+    false,
+  ),
+  using(
+    "apps/reference-game/src/fixtures/a.ts",
+    'import { describe } from "vitest";',
+    false,
+  ),
+  using(
+    "apps/reference-game/vite.config.ts",
+    'import { defineConfig } from "vite";',
+    false,
+  ),
+  // Only the game gets that exception: a library still may not take shell.
+  importing(
+    src("packages/snapshot"),
+    "@intraverse/se-client-shell/controller",
+    true,
+  ),
+  importing(
+    src("packages/signing"),
+    "@intraverse/se-client-shell/controller",
+    true,
+  ),
 
   // Public entry points only, and no relative reach into another package.
   importing(

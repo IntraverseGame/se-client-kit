@@ -13,6 +13,7 @@
       "command": "playwright test",
       "dependencies": [
         "../apps/wrapper:build",
+        "../apps/reference-game:build",
         "../packages/contracts:build"
       ]
     },

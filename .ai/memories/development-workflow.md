@@ -89,7 +89,9 @@ Several agents and people work in one clone at once. Rules:
   auth pattern (`scratchEnvironment`; a name-pattern filter, hygiene only, **not
   isolation**: a child can still read its parent's environment, on Linux
   through `/proc/<pid>/environ`). It packs and checks the five tarballs, imports
-  every `exports` entry as a consumer, runs `pnpm publish <tarball> --dry-run`
+  every runtime `exports` entry as a consumer (a type-only entry, `types` and
+  nothing else, must instead have its `.d.ts` and fail to import with
+  `ERR_PACKAGE_PATH_NOT_EXPORTED`), runs `pnpm publish <tarball> --dry-run`
   against `http://127.0.0.1:9/` (offline; no provenance outside Actions), and
   builds the Wrapper artifact (`se-client-wrapper-<version>.tar`,
   deterministic tar, digest = its SHA-256) in both copies (different paths,
