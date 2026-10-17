@@ -180,14 +180,14 @@ serves are in brackets.
   its note removed as the matching contract item closes:
   - `T_0` and the `bytes32` round id are inputs of a round's state: their
     definition and where the shell reads them belong to the signed-action spec
-    and the Play API (W-18, W-26). `T_0` is expected in the Snapshot as an
-    optional `proofs.fairnessProof.readyHash`, absent until the round is
-    released. That field comes from a later Snapshot schema version the kit has
-    not vendored yet (the vendored `se.snapshot/1` does not have it), so it is
-    provisional and the caller passes `T_0` until a schema sync adds it. W-26
-    fixes the `bytes32` form of `newRound.roundId` (the 16 UUIDv7 bytes,
-    left-aligned and zero-padded); the transcript's round id is expected to be
-    that same value once check 3 has passed, pending the signed-action spec.
+    and the Play API (W-18, W-26). `T_0` is the Snapshot's optional
+    `proofs.fairnessProof.readyHash`, absent until the round is released; the
+    vendored `se.snapshot/1` has it (`valid/coinflip-active-ready-hash`), but
+    the shell does not read it yet: the caller passes `T_0` until the W-26
+    checks that recompute and compare it (check 5) are built. W-26 fixes the
+    `bytes32` form of `newRound.roundId` (the 16 UUIDv7 bytes, left-aligned and
+    zero-padded); the transcript's round id is expected to be that same value
+    once check 3 has passed, pending the signed-action spec.
   - The EIP-712 domain is an input of the session. The environment configuration
     pins its `chainId` and `verifyingContract`; the session is not wired to the
     validated configuration yet.
@@ -196,14 +196,18 @@ serves are in brackets.
   - The bind's mode (`future` or `tip`) and `N` are inputs of the decision: the
     Snapshot's `proofs.randomnessProof.blockNumber` is `N`, and the mode is not
     yet in a contract the kit has vendored.
-  - The `CreateRoundAuth` and `T_0` checks (W-26 items 1 to 5) are not built:
-    the Snapshot schema version that carries `proofs.createRoundAuth` is not
-    vendored yet, and the caller passes `T_0` instead of the shell recomputing
-    it and comparing it with `readyHash`. Its trust rule is decided
-    ([OQ-7](../wrapper.md#decided-questions)): the environment configuration
-    pins the signer and the domain, the Snapshot's per-round copy must equal
-    them or the shell refuses, and the Snapshot is never the trust anchor.
-    <!-- TODO(signed-action spec): the CreateRoundAuth check against the vendored Snapshot schema and its vectors. -->
+  - The `CreateRoundAuth` and `T_0` checks (W-26 items 1 to 5) are not built.
+    The Snapshot schema that carries `proofs.createRoundAuth` and
+    `proofs.fairnessProof.readyHash` is vendored, with the `signature/` vectors
+    whose verdicts the checks must reach (their shape is tested in
+    `create-round-auth-vectors.test.ts`; replaying the verdicts is part of the
+    change that builds the checks), and the caller passes `T_0` instead of the
+    shell recomputing it and comparing it with `readyHash`. Its trust rule is
+    decided ([OQ-7](../wrapper.md#decided-questions)): the environment
+    configuration pins the signer and the domain, the Snapshot's per-round copy
+    must equal them or the shell refuses, and the Snapshot is never the trust
+    anchor.
+    <!-- TODO(W-26 checks): build checks 1 to 5 against the vendored schema, and replay every `signature/` vector's verdict through them. -->
     <!-- TODO(shell transcript): a re-issue (W-26) needs a transcript state that neither `stale` nor `closed` gives: no new signature, while a W-16 resend of an action already signed continues. -->
   - The `PlayerCancel` encoding is an injected function from the message to its
     struct hash; `signing` does not encode `PlayerCancel` until a published
@@ -248,4 +252,6 @@ serves are in brackets.
   a disagreement just beyond the lag margin fails (and at it passes), `h_top` is
   reported, every answer is recorded, and the degraded mode records
   `tipCheck: "degraded"`; plus the calls' shape, untrusted answers, and the
-  request timeout (T-8a).
+  request timeout (T-8a). The `signature/` Snapshot vectors are read and
+  validated, and each one's verdict and reason are checked to be ones W-26
+  defines; the verdicts themselves are replayed when checks 1 to 5 are built.

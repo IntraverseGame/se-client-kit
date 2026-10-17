@@ -178,6 +178,16 @@ describe("the keyword profile", () => {
     ]);
   });
 
+  it("evaluates not after its siblings, so a member's own issue comes first", () => {
+    const schema = {
+      not: { required: ["a"] },
+      properties: { a: { not: {} } },
+    };
+    expect(issuesOf(schema, { a: 1 }).map(issue => issue.instancePath)).toEqual(
+      ["/a", ""],
+    );
+  });
+
   it("never puts a document value in an issue", () => {
     const marker = "MARKER-VALUE-0123456789";
     const schema = {

@@ -15,8 +15,19 @@ the attack surface a player cannot see. The rules:
   `pnpm-workspace.yaml`), no lifecycle script is allowed (`allowBuilds` has no
   `true` entry; `esbuild`, brought by `tsx`, is denied explicitly so the strict
   check passes), the trust policy is `no-downgrade`, and dependencies are saved
-  at an exact version. Dependabot's `cooldown` is 7 days to match, for the `npm`
-  and the `github-actions` ecosystems.
+  at an exact version. There is no install hook (`.pnpmfile.cjs`) and one
+  TypeScript: the generator of the Play API document's types is
+  `openapi-typescript` 6.7.6, the last major without a TypeScript compiler-API
+  dependency, since 7.x needs TypeScript 5's
+  ([ADR-004](../../decisions/ADR-004-openapi-typescript-6.md)). One override
+  exists (`overrides` in `pnpm-workspace.yaml`, checked by `check:deps` like any
+  other): the `undici` of `openapi-typescript` 6.7.6, which it declares as
+  `^5.28.4`, is held at exactly 6.29.0, outside that range, because every 5.x
+  release has published advisories. The selector is scoped
+  (`openapi-typescript>undici`), so every other package keeps the `undici` it
+  declares (`jsdom` its 8.x); it goes when the generator no longer pulls
+  `undici` or declares a range without them (ADR-004). Dependabot's `cooldown`
+  is 7 days to match, for the `npm` and the `github-actions` ecosystems.
 - **Runtime dependencies are an allow-list**: `@noble/curves` and
   `@noble/hashes`, and nothing else
   ([ADR-001](../../decisions/ADR-001-toolchain-and-signing.md)). Anything else

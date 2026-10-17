@@ -98,7 +98,11 @@ export const isPlaybackPresentation = <S extends ValidSnapshot>(
   snapshot: S,
 ): snapshot is S & PlaybackPresentation => snapshot.presentation === "playback";
 
-/** The codes the contract marks retryable (`retryable` is `true` for them). */
+/**
+ * The codes the contract marks retryable. `retryable` is `true` for each of
+ * them, except `UNAVAILABLE`, which is retryable by default but may be `false`
+ * (a call that is never repeated, the launch-code redeem, sends `false`).
+ */
 export type RetryableErrorCode =
   | "FUNDING_UNCONFIRMED"
   | "ENTROPY_UNAVAILABLE"
@@ -115,10 +119,11 @@ export type RoundActiveProblem = PlayProblem & {
 };
 
 export type RetryableProblem = PlayProblem & {
-  code: RetryableErrorCode;
-  retryable: true;
   snapshot?: never;
-};
+} & (
+    | { code: Exclude<RetryableErrorCode, "UNAVAILABLE">; retryable: true }
+    | { code: "UNAVAILABLE"; retryable: boolean }
+  );
 
 export type NonRetryableProblem = PlayProblem & {
   code: Exclude<ErrorCode, RetryableErrorCode | "ROUND_ACTIVE">;

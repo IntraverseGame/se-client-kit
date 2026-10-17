@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-16 (shell tip-check pull request; `shell` unit, property, and no-secret tests added)
+last-verified: 2026-10-17 (contracts vendoring pull request: the `signature/` vectors)
 ---
 
 # Testing (agent context)
@@ -14,7 +14,7 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - **Unit** (Vitest) beside the code of each package: no real network, disk,
   timers, or clock; inject a clock and a random source; one behavior per test.
 - **Vector replay:** wire and crypto formats are tested by replaying vendored
-  vector files (signing vectors, Snapshot `valid/` and `invalid/` vectors, the
+  vector files (signing vectors, Snapshot `valid/`, `invalid/`, and `signature/` vectors, the
   signed-action vectors) read through the test-only entry of the `contracts`
   package; only tests may import that entry, and no vector may reach a bundle
   (a lint rule and a build check). Prefer adding a vector to adding a one-off assertion.
@@ -59,6 +59,8 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   runs against a scripted JSON-RPC transport and a manual clock
   (`fixtures/fake-rpc.ts`): each provider's answer, a silence, a rejection, or
   a late answer is scripted, and timeouts fire only when the test fires them.
+  The `signature/` vectors are read (`fixtures/vectors.ts`) and their shape
+  checked; their verdicts are replayed when the W-26 checks exist.
 - **Property tests** use a seeded generator, never `Math.random`: the
   `snapshot` package's `src/test/arbitrary.ts` (mulberry32, arbitrary JSON and
   one-change mutations of a document). A package's tests that need types from

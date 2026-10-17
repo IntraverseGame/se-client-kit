@@ -16,7 +16,10 @@ Part of the [Client kit spec](../client-kit.md), section
   document (after `$ref` resolution, for example `/$defs/BaseUnits/pattern`),
   and the keyword. It never holds a value from the document, so `issues[0]` is
   what W-28 logs. `anyOf`, `oneOf`, `not`, `additionalProperties: false`, and
-  `required` report one issue at the object or keyword location;
+  `required` report one issue at the object or keyword location; within one
+  schema object the keywords are evaluated in schema order, except that `not`
+  comes last, so a sibling that rejects a member where it sits (such as
+  `properties` with `not: {}` for a field the status forbids) reports first;
   `additionalProperties` reports at the object in both forms (with `false`, and
   with a schema, whose issues for an extra member are at the object, since the
   member's name is document content); `allOf` and the `then`/`else` of an `if`
@@ -45,14 +48,22 @@ Part of the [Client kit spec](../client-kit.md), section
 - **Narrowing.** The generated contract types are flat. The validator checks the
   schema's conditional rules, so an accepted Snapshot is typed `ValidSnapshot`,
   a union discriminated by `status` that carries what each status guarantees:
-  `idle` has no round field; `starting` has `roundId` and no play fields;
-  `active` and `resolving` have `proofs` and no `closeReason`; `won` and `lost`
-  have `proofs.randomnessProof.roundSecret`; `canceled` has `proofs`.
-  `isStepsPresentation` (a `StepConfig`) and `isPlaybackPresentation` (a book
-  round with a `BookConfig`) narrow by `presentation`. An accepted Play API
-  error is `ValidPlayProblem`, discriminated by `code`: `ROUND_ACTIVE` carries a
-  `ValidSnapshot` and `retryable: false`, the six retryable codes have
-  `retryable: true`, every other code `retryable: false` and no `snapshot`.
+  `idle` has no round field (no `proofs`); `starting` has `roundId` and no play
+  fields, and `proofs` only once bound (a bound config round's `proofs` carry
+  `randomnessProof` and `createRoundAuth`; an unbound one has none, so `proofs`
+  stays optional there); `active` and `resolving` have `proofs` and no
+  `closeReason`; `won` and `lost` have `proofs.randomnessProof.roundSecret`;
+  `canceled` has `proofs`. `isStepsPresentation` (a `StepConfig`) and
+  `isPlaybackPresentation` (a book round with a `BookConfig`) narrow by
+  `presentation`. An accepted Play API error is `ValidPlayProblem`,
+  discriminated by `code`: `ROUND_ACTIVE` carries a `ValidSnapshot` and
+  `retryable: false`; of the six retryable codes, five have `retryable: true`
+  and `UNAVAILABLE` either value (retryable by default, but `false` on a call
+  that is never repeated, the launch-code redeem); every other code has
+  `retryable: false` and no `snapshot`. The `createRoundAuth` of a config round
+  is typed optional, as the generated types are: the schema requires it from the
+  bind on for `model: "config"`, which the narrowing by `status` does not
+  express.
 - **Money.** `parseBaseUnits` is the package's one reader of `Amount.value`: a
   base-10 string without sign or leading zero, at most 2^256 - 1, read as a
   `bigint` (`undefined` otherwise). `compareAmounts` compares two amounts of the
@@ -61,11 +72,12 @@ Part of the [Client kit spec](../client-kit.md), section
 - **What it emits.** Nothing: no logging, no telemetry, no storage. The issues
   are returned to the caller.
 - **Tests.** The vector runner (T-5) replays every `valid/` and `invalid/`
-  vector through the validator its `definition` names; seeded property tests (a
-  small mulberry32 generator in the package's test helpers, no new dependency)
-  check that the validators never throw, never modify the input, are
-  deterministic, and never reach the fail-closed paths on arbitrary JSON or on
-  mutations of the vectors; T-6a's `snapshot` half covers amounts above 2^53 and
-  at 2^256 - 1.
+  vector through the validator its `definition` names, and accepts every
+  `signature/` vector as a Snapshot (their verdicts are the shell's W-26
+  checks'); seeded property tests (a small mulberry32 generator in the package's
+  test helpers, no new dependency) check that the validators never throw, never
+  modify the input, are deterministic, and never reach the fail-closed paths on
+  arbitrary JSON or on mutations of the vectors; T-6a's `snapshot` half covers
+  amounts above 2^53 and at 2^256 - 1.
 - **Not yet.** The render helpers named in [Packages](./packages.md) follow with
   the Wrapper's rendering work.

@@ -65,9 +65,11 @@ describe("sync", () => {
     const { entries, problems } = readLock(packageDir);
     expect(problems).toEqual([]);
     expect(entries.map(entry => entry.path)).toEqual([
+      "src/schemas/play.v1.openapi.yaml",
       "src/schemas/se.snapshot.v1.schema.json",
       "src/vectors/signing.json",
       "src/vectors/snapshot/invalid/b.json",
+      "src/vectors/snapshot/signature/d.json",
       "src/vectors/snapshot/valid/a.json",
     ]);
     expect(entries.filter(e => e.path === "src/vectors/signing.json")).toEqual([
@@ -211,9 +213,9 @@ describe("verify", () => {
 
   it("fails on a sourceName that is a path in a private repository", () => {
     expect(
-      editFirstEntry({ sourceName: "internal/some/private/schema.json" }),
+      editFirstEntry({ sourceName: "internal/some/private/play.yaml" }),
     ).toEqual([
-      'src/schemas/se.snapshot.v1.schema.json: sourceName must be the public name "se.snapshot/1 schema"',
+      'src/schemas/play.v1.openapi.yaml: sourceName must be the public name "play/v1 OpenAPI document"',
     ]);
   });
 

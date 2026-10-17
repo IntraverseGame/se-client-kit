@@ -135,3 +135,42 @@ export const snapshot = (
   if (!result.ok) throw new TypeError(`${status}: the fixture is not valid`);
   return result.value;
 };
+
+/**
+ * A `signature/` vector: a valid Snapshot carrying `proofs.createRoundAuth`,
+ * the pinned values and the shell's own inputs it is checked with, and the
+ * verdict of the W-26 checks (`refuse` names the failing check's reason).
+ */
+export type SignatureVector = {
+  readonly name: string;
+  readonly verdict: "accept" | "refuse";
+  readonly reason: string | undefined;
+  readonly pinned: Json;
+  readonly shell: Json;
+  readonly snapshot: ValidSnapshot;
+};
+
+/** Every `signature/` vector, read and validated. */
+export const signatureVectors: readonly SignatureVector[] = Object.entries(
+  snapshotVectors.signature,
+).map(([name, file]): SignatureVector => {
+  const vector = record(file, name);
+  const verdict = text(vector, "verdict", name);
+  if (verdict !== "accept" && verdict !== "refuse") {
+    throw new TypeError(`${name}.verdict`);
+  }
+  const reason = vector["reason"];
+  if (reason !== undefined && typeof reason !== "string") {
+    throw new TypeError(`${name}.reason`);
+  }
+  const result = validateSnapshot(vector["input"]);
+  if (!result.ok) throw new TypeError(`${name}: the input is not valid`);
+  return {
+    name,
+    verdict,
+    reason,
+    pinned: record(vector["pinned"], `${name}.pinned`),
+    shell: record(vector["shell"], `${name}.shell`),
+    snapshot: result.value,
+  };
+});

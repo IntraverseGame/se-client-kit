@@ -169,7 +169,13 @@ additive changes, and review before publish. See
   [How the kit gets its contracts](./client-kit/how-the-kit-gets-its-contracts.md)).
   A breaking change is a new surface prefix (`/play/v2`) or `se.snapshot/2`,
   served alongside the old one for a deprecation window, and a new **major** of
-  the affected kit packages.
+  the affected kit packages. **One pre-release exception** (decided with
+  [OQ-7](./wrapper.md#decided-questions), before any release): `se.snapshot/1`
+  made `proofs.createRoundAuth` required on a config Snapshot that carries
+  `proofs`, and existing `valid/` and `invalid/` vectors were changed or removed
+  with it; the kit vendored that change as is
+  ([rule 4](./client-kit/how-the-kit-gets-its-contracts.md)). After the first
+  release, `/1` takes additive changes only.
 - The kit states what it was built against in `contracts.lock.json` and in each
   release's notes: the Play API prefix, the Snapshot schema id, and the signing
   vector set. A Wrapper release is served only against a matching backend

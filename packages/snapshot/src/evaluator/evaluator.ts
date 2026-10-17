@@ -176,6 +176,20 @@ const checkKeyword = (
   }
 };
 
+/**
+ * The keywords of one schema object in evaluation order: schema order, except
+ * that `not` comes last. A `not` reports one issue at the object itself, so a
+ * sibling keyword that names a member (such as `properties` rejecting a field
+ * where it sits) reports first, as the vectors' `failsAt` pointers expect.
+ */
+const evaluationOrder = (schema: JsonObject): readonly string[] => {
+  const keywords = Object.keys(schema);
+  return [
+    ...keywords.filter(keyword => keyword !== "not"),
+    ...keywords.filter(keyword => keyword === "not"),
+  ];
+};
+
 const evaluate = (
   context: Context,
   schema: unknown,
@@ -192,7 +206,7 @@ const evaluate = (
     return unsupported(site);
   }
   let valid = true;
-  for (const keyword of Object.keys(schema)) {
+  for (const keyword of evaluationOrder(schema)) {
     if (stops(valid, site)) {
       return false;
     }

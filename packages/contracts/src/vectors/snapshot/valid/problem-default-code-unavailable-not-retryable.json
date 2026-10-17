@@ -1,0 +1,14 @@
+{
+  "vector": "snapshot/valid/problem-default-code-unavailable-not-retryable",
+  "description": "UNAVAILABLE may carry retryable false: the schema no longer pins it to true. Was invalid/problem-default-code-retryable-mismatch.",
+  "definition": "PlayProblem",
+  "expected": "valid",
+  "input": {
+    "type": "about:blank",
+    "title": "Service unavailable",
+    "status": 503,
+    "requestId": "req_01J9ZK",
+    "code": "UNAVAILABLE",
+    "retryable": false
+  }
+}

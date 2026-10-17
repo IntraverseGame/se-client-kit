@@ -9,11 +9,19 @@ logic packages read it and never write to it.
 
 - **Contents.** The Play API OpenAPI document (the Play and verify documents
   only), the Snapshot JSON Schema, the signing vectors, the Snapshot vectors
-  (`valid/` and `invalid/`), later the signed-action vectors, the types
-  generated from the documents and the schema (`openapi-typescript` for the
-  OpenAPI documents; `json-schema-to-typescript` for the Snapshot schema, which
-  gives the structural types only: the conditional blindness rules stay with the
-  validator in `snapshot`; its `export interface` declarations are rewritten as
+  (`valid/`, `invalid/`, and `signature/`), later the signed-action vectors, the
+  types generated from the documents and the schema (`openapi-typescript` for
+  the OpenAPI documents, with `exportType` so every object is a `type` alias,
+  and `emptyObjectsUnknown` so an object schema without properties is a record
+  of `unknown` values; a leftover `export interface` fails the generation;
+  `openapi-typescript` is pinned at 6.7.6, which has no TypeScript dependency,
+  reads the document from a `file:` URL, and is given a `fetch` that refuses, so
+  a reference outside the document fails the generation; every `$ref` in the
+  vendored documents is local, which a test checks
+  ([ADR-004](../../decisions/ADR-004-openapi-typescript-6.md));
+  `json-schema-to-typescript` for the Snapshot schema, which gives the
+  structural types only: the conditional blindness rules stay with the validator
+  in `snapshot`; its `export interface` declarations are rewritten as
   `export type` aliases after generation, since it has no option for that, and
   its "This interface was referenced by ..." notes are dropped from the doc
   comments; an interface that extends another, or a note in another shape, fails
@@ -28,21 +36,24 @@ logic packages read it and never write to it.
     may import it.
 - **Source layout (pinned).** Inside `packages/contracts/src/`, the **runtime
   sources** are `index.ts` (the runtime entry), `schemas/` (the vendored OpenAPI
-  documents and the Snapshot schema), and `generated/` (the generated types).
-  The **test-only sources** are `testing.ts` (the test-only entry) and
-  `vectors/`: every vendored vector (`vectors/signing.json`, from the backend's
-  `test/vectors/signing.json`; `vectors/snapshot/valid/` and
-  `vectors/snapshot/invalid/`; later the signed-action vectors), and any module
-  that only the test-only entry uses. Nothing else belongs in `src/`. A module
-  that both entries import is a runtime module by definition, so it lives under
-  `schemas/` or `generated/` and holds no vector data. (`test/vectors/...` is
-  the path in the backend's contracts repository, which is already public by
+  documents, `schemas/play.v1.openapi.yaml` for `/play/v1`, and the Snapshot
+  schema), and `generated/` (the generated types). The **test-only sources** are
+  `testing.ts` (the test-only entry) and `vectors/`: every vendored vector
+  (`vectors/signing.json`, from the backend's `test/vectors/signing.json`;
+  `vectors/snapshot/valid/`, `vectors/snapshot/invalid/`, and
+  `vectors/snapshot/signature/`; later the signed-action vectors), and any
+  module that only the test-only entry uses. Nothing else belongs in `src/`. A
+  module that both entries import is a runtime module by definition, so it lives
+  under `schemas/` or `generated/` and holds no vector data. (`test/vectors/...`
+  is the path in the backend's contracts repository, which is already public by
   name; `contracts.lock.json` records each artifact's public name and the path
   in this package, never a path inside a private repository.) Today the runtime
-  modules are `schemas/snapshot.ts` (the schema as data of unknown shape) and
-  `generated/snapshot.ts` (its structural types); the test-only module is
-  `vectors/catalog.ts`, generated, which imports every vector.
-  <!-- TODO(Play API document): the backend has not published the Play and verify OpenAPI document yet; it joins `schemas/` with its `openapi-typescript` types under `generated/`. -->
+  modules are `schemas/snapshot.ts` (the schema as data of unknown shape),
+  `generated/snapshot.ts` (its structural types), and `generated/play.ts` (the
+  Play API document's types; the document itself is not imported by any module,
+  only read by the generator); the test-only module is `vectors/catalog.ts`,
+  generated, which imports every vector.
+  <!-- TODO(verify API): the verify API document is not published yet; it joins `schemas/` with its `openapi-typescript` types under `generated/`. -->
 - **Tarball.** What is published is the allow-list of check 3 below. The
   manifest still exports `./testing` for the kit's own tests; the published
   package has no such file. `contracts.lock.json` is not in the tarball: it
@@ -53,13 +64,29 @@ logic packages read it and never write to it.
   there, and a test fails while a generated type is neither exported nor
   deliberately left out. `Snapshot1` is left out: it is the generator's
   structural copy of `Snapshot`, which the schema refers to from
-  `PlayProblem.snapshot`.
+  `PlayProblem.snapshot`. The Play API document's types are its three roots,
+  renamed on export: `PlayApiPaths` (by path and method), `PlayApiOperations`
+  (by `operationId`), and `PlayApiComponents` (its schemas and responses); its
+  empty `webhooks`, `$defs`, and `external` are left out. The generator appends
+  one more type, `operationRoutes` (exported as `PlayApiOperationRoutes`): each
+  operation's literal path and method by `operationId`, read from the generated
+  `paths`, since two operations of one shape (a move and a cash-out) are the
+  same type structurally and `paths` alone cannot tell them apart; a `paths`
+  member it cannot read fails the generation. The document embeds a copy of the
+  Snapshot schema's definitions, so `PlayApiComponents["schemas"]["Snapshot"]`
+  duplicates `Snapshot`; `play-client` never reads it (a Snapshot answer stays
+  `unknown`).
 - **Display numbers are not amounts.** The generated Snapshot types carry two
   JSON numbers from the contract: `Amount.normalized` and `Multiplier`, both
   display-only by the contract's own definition. They are never an input to
   arithmetic on an amount; amounts are `Amount.value`, a string of base units,
   read as `bigint` (the money rule in `AGENTS.md`). The validator and render
-  helpers in `snapshot` follow this.
+  helpers in `snapshot` follow this, and so does the Play API document's copy of
+  the same definitions. The `CreateRoundAuth` integers (`entropyChainId`,
+  `prepareWindow`, `domain.chainId`, and `newRound`'s `gameId`, `gameVersion`,
+  `circuitVersion`) are JSON numbers bounded by the schema at or below 2^53 - 1
+  and are not amounts; `newRound.betAmount` and `expiry` are strings (`Uint128`,
+  `Uint256`), read as `bigint`.
 - **Vectors never reach a browser bundle.** Three checks, all required:
   1. a lint rule (an import restriction) fails any import of the test-only entry
      from a file that is not a test file or a test helper;
