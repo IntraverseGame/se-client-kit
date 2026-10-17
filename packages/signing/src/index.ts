@@ -38,3 +38,8 @@ export {
   type TranscriptOptions,
   type TranscriptRequest,
 } from "./transcript.ts";
+export {
+  encodeTypedData,
+  type TypedDataFields,
+  type TypedDataKind,
+} from "./typed-data.ts";

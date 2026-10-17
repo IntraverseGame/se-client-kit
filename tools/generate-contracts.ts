@@ -175,7 +175,8 @@ const vectorName = (file: string): string => {
   return match[1];
 };
 
-const catalog = (packageDir: string): string => {
+/** The text of `src/vectors/catalog.ts` for the vectors under `packageDir`. */
+export const catalogSource = (packageDir: string): string => {
   const root = join(packageDir, "src", "vectors");
   const lines = [
     BANNER("the vendored files under src/vectors/"),
@@ -183,7 +184,14 @@ const catalog = (packageDir: string): string => {
   ];
   const groups: string[] = [];
   let counter = 0;
-  for (const kind of ["valid", "invalid", "signature"] as const) {
+  // Each folder under src/vectors/snapshot/ and the key it is exported under.
+  const folders = [
+    ["valid", "valid"],
+    ["invalid", "invalid"],
+    ["signature", "signature"],
+    ["typed-data", "typedData"],
+  ] as const;
+  for (const [kind, key] of folders) {
     const names = findFiles(join(root, "snapshot", kind), () => true);
     const members: string[] = [];
     for (const file of names) {
@@ -194,7 +202,7 @@ const catalog = (packageDir: string): string => {
       );
       members.push(`    ${JSON.stringify(vectorName(file))}: ${identifier},`);
     }
-    groups.push(`  ${kind}: {\n${members.join("\n")}\n  },`);
+    groups.push(`  ${key}: {\n${members.join("\n")}\n  },`);
   }
   lines.push(
     'import signing from "./signing.json" with { type: "json" };',
@@ -207,6 +215,8 @@ const catalog = (packageDir: string): string => {
     "  readonly invalid: VectorSet;",
     "  /** Schema-valid Snapshots with the verdict of the shell's W-26 checks. */",
     "  readonly signature: VectorSet;",
+    "  /** The canonical typedData bytes of signed actions, from their fields. */",
+    "  readonly typedData: VectorSet;",
     "};",
     "",
     "export const signingVectors: unknown = signing;",
@@ -224,7 +234,7 @@ export const generateContractsFiles = async (
   new Map([
     [SNAPSHOT_TYPES, await snapshotTypes(packageDir)],
     [PLAY_TYPES, await playTypes(packageDir)],
-    [CATALOG, catalog(packageDir)],
+    [CATALOG, catalogSource(packageDir)],
   ]);
 
 /** Paths whose committed content differs from a regeneration. */

@@ -14,7 +14,7 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - **Unit** (Vitest) beside the code of each package: no real network, disk,
   timers, or clock; inject a clock and a random source; one behavior per test.
 - **Vector replay:** wire and crypto formats are tested by replaying vendored
-  vector files (signing vectors, Snapshot `valid/`, `invalid/`, and `signature/` vectors, the
+  vector files (signing vectors, Snapshot `valid/`, `invalid/`, `signature/`, and `typed-data/` vectors, the
   signed-action vectors) read through the test-only entry of the `contracts`
   package; only tests may import that entry, and no vector may reach a bundle
   (a lint rule and a build check). Prefer adding a vector to adding a one-off assertion.
@@ -24,7 +24,9 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - **Component** (Vitest with jsdom): the Wrapper renders every valid Snapshot;
   accessibility checks on components.
 - **Signing tests** (`packages/signing/src/*.test.ts`) read vectors through
-  `src/fixtures/vectors.ts` (the only importer of the test-only entry there)
+  `src/fixtures/vectors.ts` and `src/fixtures/typed-data-vectors.ts` (the only
+  importers of the test-only entry there; `typed-data.test.ts` replays every
+  `typed-data/` vector byte for byte in hex and base64)
   and use the two public development keys in `src/fixtures/keys.ts` via an
   injected random source. Tests are typechecked by `tsconfig.test.json` (Node
   and Vitest types); `tsconfig.json` covers the shipped source only, so the

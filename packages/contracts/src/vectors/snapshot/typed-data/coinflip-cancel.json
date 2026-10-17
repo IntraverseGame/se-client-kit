@@ -1,0 +1,18 @@
+{
+  "vector": "snapshot/typed-data/coinflip-cancel",
+  "description": "Coin Flip, a cancel before the first move: action \"cancel\", path [] (the encoding leaves the field out), sequence 1, previous the readyHash (T_0) of snapshot/valid/coinflip-active-ready-hash. The typedData the shell sends to rounds:cancel.",
+  "fields": {
+    "kind": {
+      "name": "ACTION_KIND_CANCEL",
+      "number": 3
+    },
+    "action": "cancel",
+    "path": [],
+    "sequence": 1,
+    "previous": "0x1bb96dc769cd08816e9ed82a7155b464b2730a9df1d46bdf86dabf94485fc510"
+  },
+  "typedData": {
+    "hex": "0x0803120663616e63656c20012a201bb96dc769cd08816e9ed82a7155b464b2730a9df1d46bdf86dabf94485fc510",
+    "base64": "CAMSBmNhbmNlbCABKiAbuW3Hac0IgW6e2CpxVbRksnMKnfHUa9+G2r+USF/FEA=="
+  }
+}

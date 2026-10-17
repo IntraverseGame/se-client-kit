@@ -69,6 +69,10 @@ signer.destroy(); // at the end of the session
   - `recoverAddress`: the signer's address (EIP-55) of a canonical signature.
   - `createTranscript`: the `previous` chain and sequence numbers of one round,
     with one signature per sequence.
+  - `encodeTypedData`: the canonical bytes of a move's, a cash-out's, or a
+    cancel's typed data (`ActionTypedData`), the `typedData` a signed action
+    sends in base64, from `kind`, `action`, `path`, `sequence`, and `previous`;
+    with the types `TypedDataFields` and `TypedDataKind`.
   - `provisionalGrammar`: the canonical action text (`pick row R tile T`,
     `cash out`). It is provisional and will be replaced by the published action
     grammar.
@@ -86,6 +90,10 @@ signer.destroy(); // at the end of the session
 - A transcript never signs two different messages at one sequence: the same
   request returns the same signed bytes, any other request is refused.
 - Every value is checked against its EIP-712 field type; nothing is truncated.
+- `encodeTypedData` is deterministic and refuses an unknown kind, an empty
+  action, an action with a lone surrogate, a path entry outside `uint8`, a
+  cancel with a path, a sequence of 0 or outside `uint32`, and a `previous` that
+  is not 32 bytes.
 - Amounts (`uint128`, `uint256` fields) are a `bigint` or a decimal string,
   never a `number`.
 - The only runtime dependencies are `@noble/curves` and `@noble/hashes`.

@@ -1,0 +1,20 @@
+{
+  "vector": "snapshot/typed-data/coinflip-pick",
+  "description": "Coin Flip, the first move: pick option 1 of row 0, path [0], sequence 1, previous the readyHash (T_0) of snapshot/valid/coinflip-active-ready-hash. The typedData the shell sends to rounds:continue.",
+  "fields": {
+    "kind": {
+      "name": "ACTION_KIND_ACTION",
+      "number": 1
+    },
+    "action": "pick row 0 tile 1",
+    "path": [
+      0
+    ],
+    "sequence": 1,
+    "previous": "0x1bb96dc769cd08816e9ed82a7155b464b2730a9df1d46bdf86dabf94485fc510"
+  },
+  "typedData": {
+    "hex": "0x080112117069636b20726f7720302074696c6520311a010020012a201bb96dc769cd08816e9ed82a7155b464b2730a9df1d46bdf86dabf94485fc510",
+    "base64": "CAESEXBpY2sgcm93IDAgdGlsZSAxGgEAIAEqIBu5bcdpzQiBbp7YKnFVtGSycwqd8dRr34bav5RIX8UQ"
+  }
+}

@@ -1,9 +1,20 @@
-import { readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { toTypeAliases, withoutReferenceNotes } from "./generate-contracts.ts";
+import {
+  catalogSource,
+  toTypeAliases,
+  withoutReferenceNotes,
+} from "./generate-contracts.ts";
 import { operationRoutes } from "./play-routes.ts";
 
 const generatedSnapshotTypes = (): string =>
@@ -184,5 +195,49 @@ describe("operationRoutes", () => {
     expect(generatedPlayTypes()).toContain(
       '  getSnapshot: { path: "/play/v1/snapshot"; method: "get" };',
     );
+  });
+});
+
+/** Run `run` on a temporary package with one vector in each folder. */
+const withVectors = (run: (packageDir: string) => void): void => {
+  const packageDir = mkdtempSync(join(tmpdir(), "contracts-catalog-"));
+  try {
+    const vectors = join(packageDir, "src", "vectors");
+    for (const [folder, file] of [
+      ["valid", "a.json"],
+      ["invalid", "b.json"],
+      ["signature", "c.json"],
+      ["typed-data", "d-e.json"],
+    ] as const) {
+      mkdirSync(join(vectors, "snapshot", folder), { recursive: true });
+      writeFileSync(join(vectors, "snapshot", folder, file), "{}\n");
+    }
+    writeFileSync(join(vectors, "signing.json"), "{}\n");
+    run(packageDir);
+  } finally {
+    rmSync(packageDir, { recursive: true, force: true });
+  }
+};
+
+describe("catalogSource", () => {
+  it("exports the typed-data/ folder under the key typedData", () => {
+    withVectors(packageDir => {
+      const source = catalogSource(packageDir);
+      expect(source).toContain(
+        'import vector3 from "./snapshot/typed-data/d-e.json" with { type: "json" };',
+      );
+      expect(source).toContain('  typedData: {\n    "d-e": vector3,\n  },');
+      expect(source).toContain("  readonly typedData: VectorSet;");
+      expect(source).not.toMatch(/^ {2}"typed-data": \{/mu);
+    });
+  });
+
+  it("keeps the other folders under their own names", () => {
+    withVectors(packageDir => {
+      const source = catalogSource(packageDir);
+      expect(source).toContain('  valid: {\n    "a": vector0,\n  },');
+      expect(source).toContain('  invalid: {\n    "b": vector1,\n  },');
+      expect(source).toContain('  signature: {\n    "c": vector2,\n  },');
+    });
   });
 });

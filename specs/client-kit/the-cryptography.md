@@ -74,6 +74,45 @@ Part of the [Client kit spec](../client-kit.md), section
   move, is refused with `equivocation`. `confirm` advances `T` to the pending
   message's struct hash. The shell still decides when an action is applied and
   owns the `idempotencyKey`; one transcript serves one round.
+- **The `typedData` encoding.** `encodeTypedData` builds the bytes a move, a
+  cash-out, or a cancel sends as `typedData` (base64 on the wire): the canonical
+  Protocol v1 encoding of `ActionTypedData`, which the Play API document names
+  and the engine reads. It takes plain fields (`kind`, `action`, `path`,
+  `sequence`, `previous`; not the round, which the request names) and returns
+  the deterministic protobuf wire encoding: fields in number order, and an empty
+  `path` (always so for a cancel) left out. An empty `action` and a `sequence`
+  of 0, which protobuf would leave out as defaults, are refused instead (fail
+  closed: the transcript starts at 1 and every action has text), so every
+  encoding carries all of `kind`, `action`, `sequence`, and `previous`. The
+  vectors name each kind by its published enum name and number:
+  `ACTION_KIND_ACTION` = 1, `ACTION_KIND_CASH_OUT` = 2, and
+  `ACTION_KIND_CANCEL` = 3. These names are part of the published contract
+  (decided by human review, 2026-10-17), so the vendored files keep them as they
+  are; the encoder takes the kind as `action`, `cash-out`, or `cancel`.
+
+  | Field | Tag    | Encoding                                                                   |
+  | ----- | ------ | -------------------------------------------------------------------------- |
+  | 1     | `0x08` | `kind`, a varint: `action` 1, `cash-out` 2, `cancel` 3; 0 is never written |
+  | 2     | `0x12` | `action`, length-delimited UTF-8, not empty (a lone surrogate is refused)  |
+  | 3     | `0x1a` | `path`, packed varints, each entry a `uint8`; a cancel has none            |
+  | 4     | `0x20` | `sequence`, a varint, a `uint32` from 1                                    |
+  | 5     | `0x2a` | `previous`, length-delimited, exactly 32 bytes                             |
+
+  Anything else is refused with `invalid-input`, never truncated: fields that
+  are not an object (`null` included), a kind other than the three, an empty
+  `action`, an `action` with a lone surrogate (which UTF-8 cannot encode
+  faithfully), a path entry outside `uint8`, a cancel with a path, a sequence of
+  0, outside `uint32`, or not a `number`, and a `previous` that is not 32 bytes
+  of `0x` hex. The tags and every byte are pinned by the backend's `typed-data/`
+  Snapshot vectors, which the tests replay byte for byte from their `fields`, in
+  hex and base64. Two of them are steps of `signing.json`: the third pick links
+  to `T_2` and the cash-out to `T_3`, with the action and path of those signed
+  messages, and the tests check both against that file; the Coin Flip pick and
+  cancel link to the `readyHash` of `valid/coinflip-active-ready-hash`. The
+  shell must base64-encode the bytes and apply the Play API document's
+  `typedData` limit (4096 base64 characters); that wiring belongs to the shell's
+  round flows (#8), not to this package.
+
 - **Action grammar.** The canonical action text is built by a small, separate
   module, `provisionalGrammar`, which holds only the spellings the vendored
   vectors pin (`pick row <row> tile <tile>`, `cash out`); nothing else in the

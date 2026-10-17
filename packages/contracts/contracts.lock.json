@@ -541,6 +541,34 @@
       "sha256": "9828bf962e62f6db854087ef4aeddc2b5bb6b569f776b3b0eaf66c50778fe693"
     },
     {
+      "path": "src/vectors/snapshot/typed-data/cash-out.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/typed-data/cash-out.json",
+      "sourceCommit": "56c5e9cfa94ce44707bbdd00c3f183932679cbbf",
+      "sha256": "9dde3847a09f6f811dba759c2fb6d28f5e5012cbd1c7a26256151727f5cc8acd"
+    },
+    {
+      "path": "src/vectors/snapshot/typed-data/coinflip-cancel.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/typed-data/coinflip-cancel.json",
+      "sourceCommit": "56c5e9cfa94ce44707bbdd00c3f183932679cbbf",
+      "sha256": "467b55ce42a0acaeb26ee9edf51e23758851ce1c6b88ed2e3f58dca9ed25a7c9"
+    },
+    {
+      "path": "src/vectors/snapshot/typed-data/coinflip-pick.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/typed-data/coinflip-pick.json",
+      "sourceCommit": "56c5e9cfa94ce44707bbdd00c3f183932679cbbf",
+      "sha256": "b6da26cee7ade84c608030103f38dfcd7babd1f959939013ef5d68810e5d7c27"
+    },
+    {
+      "path": "src/vectors/snapshot/typed-data/pick-multi-path.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/typed-data/pick-multi-path.json",
+      "sourceCommit": "56c5e9cfa94ce44707bbdd00c3f183932679cbbf",
+      "sha256": "910ad2df019fd2b1aad47e84562abde293244edcafd9246769a37272d9508eef"
+    },
+    {
       "path": "src/vectors/snapshot/valid/amount-request-minimal.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 vectors/valid/amount-request-minimal.json",

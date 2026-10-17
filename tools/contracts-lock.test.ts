@@ -70,6 +70,7 @@ describe("sync", () => {
       "src/vectors/signing.json",
       "src/vectors/snapshot/invalid/b.json",
       "src/vectors/snapshot/signature/d.json",
+      "src/vectors/snapshot/typed-data/e.json",
       "src/vectors/snapshot/valid/a.json",
     ]);
     expect(entries.filter(e => e.path === "src/vectors/signing.json")).toEqual([
