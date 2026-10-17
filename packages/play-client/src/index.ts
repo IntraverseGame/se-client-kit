@@ -1,10 +1,24 @@
-// The request layer of the Play API client. The operations (redeem, refresh,
-// start, continue, cash-out, the Snapshot read) join it once the Play API
-// document is vendored in `contracts`, with their wire types generated from it.
+// The Play API client: one function per operation of the vendored Play API
+// document (`/play/v1`), on the request layer.
 
 export type { RequestDescription } from "./errors.ts";
 export { newIntent, type Intent, type RandomUuid } from "./idempotency.ts";
 export { NetworkError, type NetworkFailure } from "./network-error.ts";
+export {
+  cashOutRound,
+  continueRound,
+  getSnapshot,
+  redeemLaunchCode,
+  refreshPlayToken,
+  startRound,
+  type AuthorizedCallOptions,
+  type CallOptions,
+  type PlayResult,
+  type RedeemCallOptions,
+  type RefreshCallOptions,
+  type Seal,
+  type Sealed,
+} from "./operations.ts";
 export type {
   AbortControllerLike,
   AbortSignalLike,
@@ -16,6 +30,18 @@ export type {
   ResponseLike,
   TimerHandle,
 } from "./platform.ts";
+export {
+  PLAY_ROUTES,
+  type PlayOperationId,
+  type PlayRequestBody,
+  type PlayRoute,
+  type PlaySuccessBody,
+  type RedeemLaunchCodeRequest,
+  type RedeemLaunchCodeResponse,
+  type RefreshPlayTokenResponse,
+  type RoundActionRequest,
+  type StartRoundRequest,
+} from "./play-api.ts";
 export { ProblemError } from "./problem-error.ts";
 export {
   SESSION_ENDING_CODES,

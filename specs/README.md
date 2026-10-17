@@ -51,7 +51,8 @@ the specs' headings.
   - [The `snapshot` package](./client-kit/the-snapshot-package.md) — validators,
     the keyword profile, narrowing, amounts
   - [The `play-client` request layer](./client-kit/the-play-client-request-layer.md)
-    — request options, errors, retry classes, the token schedule
+    — request options, errors, retry classes, the token schedule, and
+    [the operations](./client-kit/the-play-client-request-layer.md#operations)
   - [The `shell` package](./client-kit/the-shell-package.md) — redaction, the
     logger, key custody, the signer lock, the transcript state
   - [The cryptography](./client-kit/the-cryptography.md) — EIP-712 types, keys,

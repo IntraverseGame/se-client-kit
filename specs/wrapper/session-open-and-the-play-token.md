@@ -34,8 +34,13 @@ defaults.
   [session-ended state](../wrapper.md#error-and-degraded-states) with the
   instruction to relaunch from the operator. A rejected code is the same for an
   unknown, used, or expired one; the Wrapper cannot tell them apart and does not
-  try.
-  <!-- TODO(Play API): the redeem call and its response shape (session id, play token, `tokenExpiresAt`, `sessionExpiresAt`). -->
+  try. The redeem call is the Play API's `POST /play/v1/sessions:redeem`
+  (`redeemLaunchCode`), with the code in the body (`launchCode`) and no
+  credential; it answers the session id (`sessionId`), the first play token
+  (`playToken`), its deadline (`tokenExpiresAt`), and the session's hard end
+  (`sessionExpiresAt`, which no token outlives), both RFC 3339 `date-time`. A
+  rejected code is a `401` (`UNAUTHENTICATED`); a `503` to a redeem carries
+  `retryable: false`, and is not repeated either.
 - **W-3.** The play token MUST live only in a JavaScript variable inside the
   shell, for the lifetime of the page. It MUST NOT be written to any storage
   (`localStorage`, `sessionStorage`, IndexedDB, Cache Storage, cookies, the
@@ -46,8 +51,9 @@ defaults.
   followed, so the token is never sent on to another URL; it surfaces as a
   network failure). The Play API base MUST be an `https:` URL; `http:` is
   allowed only on a loopback host (`localhost`, `127.0.0.1`, `[::1]`), and any
-  other base is refused before a request is made.
-  <!-- TODO(Play API): confirm the bearer header form of the play token. -->
+  other base is refused before a request is made. The header is
+  `Authorization: Bearer <playToken>`, the Play API's `playToken` bearer scheme,
+  on every call but the redeem.
 - **W-4.** Every type that holds a token, a launch code, or the key MUST print
   `[redacted]` under `String()`, `JSON.stringify`, template literals, and the
   runtime's inspect hook. A thrown error and a log line MUST carry the method,

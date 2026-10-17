@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-17 (contracts vendoring pull request: the Play API document and the `signature/` Snapshot vectors vendored)
+last-verified: 2026-10-17 (play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -37,7 +37,11 @@ structure below.
   token). The UI gets use cases (`start`, `pick`, `cashOut`) and read-only
   state, never a secret. Do not "simplify" this by letting the UI sign or read
   a token. `play-client` sends the token but keeps none: each request takes its
-  `Authorization` value from a function the shell passes.
+  `Authorization` value from a function the shell passes. Its operations (one
+  function per `operationId` of the vendored Play API document) take their
+  routes and wire types from the document's generated types; a route that
+  drifts from the document does not compile. The redeem and refresh hand the
+  new token to a `seal` the shell passes and return only the sealed value.
 - **Shell internals stay internal.** The shell's public entry is the redacting
   logger, `REDACTED`, `ShellError`, and the chain configuration's validation
   (`validateChainConfig`, for W-26a's boot rule) with the RPC transport types

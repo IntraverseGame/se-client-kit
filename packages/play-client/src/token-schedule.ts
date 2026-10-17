@@ -120,13 +120,11 @@ const RFC_3339 =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
 
 /**
- * Reads a deadline field of a response as milliseconds since the epoch.
- * Provisional: the format of `tokenExpiresAt` is not fixed by a published Play
- * API document (W-2, marked in
- * specs/wrapper/session-open-and-the-play-token.md); a full RFC 3339 timestamp
- * with seconds and a zone (`Z` or `+hh:mm`) is assumed, and this is the one
- * place to change. A timestamp without a zone is refused: it would be read in
- * the device's local time.
+ * Reads a deadline field of a response (`tokenExpiresAt`, `sessionExpiresAt`:
+ * `date-time` in the Play API document, that is RFC 3339) as milliseconds since
+ * the epoch. It takes a full timestamp with seconds and a zone (`Z` or
+ * `+hh:mm`); one without a zone is refused, since it would be read in the
+ * device's local time.
  */
 export const parseDeadline = (value: unknown): number | undefined => {
   if (typeof value !== "string" || !RFC_3339.test(value)) {

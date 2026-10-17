@@ -29,8 +29,10 @@ Part of the [Wrapper spec](../wrapper.md), section
   checks it is legal in the Snapshot it holds (the step exists, the option is in
   range, the status is `active`), builds the canonical action, signs
   `PlayerAction` at the next sequence, and sends `continue` with the signed
-  bytes and a fresh `idempotencyKey`. A request that fails the check is rejected
-  to the game with a `reject` message and nothing is signed.
+  bytes and a fresh `idempotencyKey`. `continue` carries only a `PlayerAction`,
+  and `cashOut` (W-24) only a `PlayerCashOut`; a `PlayerCancel` is never sent
+  through either (W-25). A request that fails the check is rejected to the game
+  with a `reject` message and nothing is signed.
 - **W-24.** **Cash-out.** The shell signs `PlayerCashOut` when the player asks
   for it (the cash-out button, offered when the status is `active` and at least
   one step was survived), and only then. It never signs a cash-out on its own:
@@ -43,7 +45,10 @@ Part of the [Wrapper spec](../wrapper.md), section
   `active` with no move made, if the game offers it (config rounds only; W-31
   offers the control in the `active` row, which is shown only after W-26
   passes). Without a settled `T_0` it signs no cancel. Neither case applies
-  after a re-issue (W-26), and the cancel control is withdrawn then.
+  after a re-issue (W-26), and the cancel control is withdrawn then. A signed
+  `PlayerCancel` is sent only on its own route, never through `continue` or
+  `cashOut`.
+  <!-- TODO(Play API): sending a signed `PlayerCancel` is pending the `rounds:cancel` route (planned by the backend and cleared for this public repository on 2026-10-17; see #13). The backend has said it will be `POST /play/v1/rounds:cancel`, with the request shape of `continue` and `cashOut` (`roundId` and the signed `PlayerCancel`, sequence 1, `previous` = `readyHash`, that is `T_0`), answering the round's Snapshot, and accepted only for a config round that is `active` with no move applied; it is not in the vendored document yet and has no date. Until it is, the shell has no way to send a cancel, and W-25 and the cancel path of W-26 cannot complete. -->
 - **W-26.** **Checks before the first signature and before the game is shown as
   ready.** The Snapshot is `starting` while the round prepares. The shell MUST
   NOT show the game as ready, and MUST NOT sign anything except the

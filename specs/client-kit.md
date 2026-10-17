@@ -127,7 +127,8 @@ readers, and the tests. See
 The hand-written request layer under the Play API operations: no kept
 credential, the base URL and request options, timeout and cancel, the error
 types, the retry classes, the token schedule, idempotency keys, and what is
-provisional. See
+provisional; then the operations, one function per `operationId` of the vendored
+Play API document, and their fake-server tests. See
 [`client-kit/the-play-client-request-layer.md`](./client-kit/the-play-client-request-layer.md).
 
 ### The `shell` package

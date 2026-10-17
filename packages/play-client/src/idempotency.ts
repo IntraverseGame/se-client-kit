@@ -13,10 +13,10 @@ export type RandomUuid = () => string;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 
 /**
- * Starts a new intent with a fresh key from the injected random source.
- * Provisional: the key's length limits and where it travels (a body field or a
- * header) are not fixed by a published Play API document; a UUID
- * (`crypto.randomUUID()`, W-36) is assumed.
+ * Starts a new intent with a fresh key from the injected random source: a
+ * lowercase UUID (`crypto.randomUUID()`, W-36), 36 characters, inside the Play
+ * API document's limit of 1 to 128. It travels as the `idempotencyKey` field of
+ * the request body.
  */
 export const newIntent = (randomUuid: RandomUuid): Intent => {
   const idempotencyKey = randomUuid().toLowerCase();

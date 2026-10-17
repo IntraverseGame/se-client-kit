@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-17 (contracts vendoring pull request: the `signature/` vectors)
+last-verified: 2026-10-17 (play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -61,6 +61,14 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   a late answer is scripted, and timeouts fire only when the test fires them.
   The `signature/` vectors are read (`fixtures/vectors.ts`) and their shape
   checked; their verdicts are replayed when the W-26 checks exist.
+- **Play client operations** run against a fake Play API server built from the
+  vendored document (`packages/play-client/src/fixtures/fake-play-server.ts`):
+  its routes are `PLAY_ROUTES`, its scripted answers are typed by each
+  operation's responses in `PlayApiOperations`, and it refuses a call without
+  the token where the document requires one. `operation-cases.ts` tables every
+  operation's error statuses, and a test holds them equal to the document's.
+  The e2e suite has no fake Play API yet; when it gets one, it can answer from
+  the same document.
 - **Property tests** use a seeded generator, never `Math.random`: the
   `snapshot` package's `src/test/arbitrary.ts` (mulberry32, arbitrary JSON and
   one-change mutations of a document). A package's tests that need types from

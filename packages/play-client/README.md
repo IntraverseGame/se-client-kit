@@ -3,12 +3,13 @@
 A typed `fetch` client for the SuperEngine Play API (`/play/v1`) and the verify
 read the Wrapper needs.
 
-**Status:** pre-release. Not published to npm yet. Today the package holds the
-request layer: the request options, the timeout, the typed errors, problem
-mapping, bounded retries, idempotency keys, and the play token's refresh
-schedule. The Play API operations (redeem, refresh, start, continue, cash-out,
-the Snapshot read) are specified, not implemented yet: they join when the Play
-API document is part of `@intraverse/se-client-contracts`.
+**Status:** pre-release. Not published to npm yet. The package holds one typed
+function per Play API operation (redeem, refresh, start, continue, cash-out, the
+Snapshot read), typed from the Play API document in
+`@intraverse/se-client-contracts`, and the request layer under them: the request
+options, the timeout, the typed errors, problem mapping, bounded retries,
+idempotency keys, and the play token's refresh schedule. The verify read is
+specified, not implemented yet.
 
 ## Install
 
@@ -37,6 +38,7 @@ import {
   bearerAuthorization,
   createTransport,
   endsSession,
+  getSnapshot,
 } from "@intraverse/se-client-play-client";
 
 const transport = createTransport({
@@ -50,13 +52,10 @@ const transport = createTransport({
 });
 
 try {
-  const response = await transport.send({
-    method: "GET",
-    path: snapshotPath,
+  const { body } = await getSnapshot(transport, {
     authorization: () => bearerAuthorization(currentToken()),
-    retry: "idempotent",
   });
-  handle(response.body); // unknown: validate it before use
+  handle(body); // unknown: validate it before use
 } catch (error) {
   if (error instanceof ProblemError && endsSession(error.problem)) {
     endTheSession();
@@ -67,6 +66,24 @@ try {
 ## Entry points
 
 - `@intraverse/se-client-play-client`: the only entry.
+  - The operations, one per `operationId` of the Play API document, each taking
+    the transport, the request body when there is one, and the call's options
+    (the `Authorization` function, and an abort signal):
+    `redeemLaunchCode(transport, { launchCode }, { seal })` (no credential,
+    never repeated),
+    `refreshPlayToken(transport, { authorization, seal, notAfterMs })`,
+    `startRound(transport, body, options)`, `continueRound`, `cashOutRound`, and
+    `getSnapshot(transport, options)`. Each resolves with
+    `{ body, receivedAtMs, clockOffsetMs }`. The redeem and refresh answers are
+    checked and typed; their new play token is handed to the `seal` you pass
+    (`(token: string) => T`) and the answer holds only what it returns
+    (`Sealed<...Response, T>`), so the plain token never leaves the package. A
+    Snapshot answer is `unknown`.
+  - `PLAY_ROUTES` is each operation's method and path below the base, checked
+    against the document at compile time. The wire types are the document's
+    generated types: `RedeemLaunchCodeRequest`, `RedeemLaunchCodeResponse`,
+    `RefreshPlayTokenResponse`, `StartRoundRequest`, `RoundActionRequest`, and
+    the generic `PlayRequestBody` and `PlaySuccessBody` by `PlayOperationId`.
   - `createTransport` takes an `https:` base (plain `http:` only on a loopback
     host) and sends one request with `credentials: "omit"`, `cache: "no-store"`,
     `referrerPolicy: "no-referrer"`, and `redirect: "error"`. It times the
@@ -76,8 +93,8 @@ try {
     `notAfterMs`), or `idempotent`. Only a lost response or a problem whose
     `retryable` is `true` is repeated, with the same bytes, a bounded number of
     times with backoff (`DEFAULT_RETRY_CONFIG`, provisional).
-  - `bearerAuthorization` builds the `Authorization` value from a token
-    (provisional form: `Bearer <token>`).
+  - `bearerAuthorization` builds the `Authorization` value from a token:
+    `Bearer <token>`.
   - `NetworkError` (no response: `timeout`, `network`, or `aborted`; a refused
     redirect is a `network` failure), `ProblemError` (a Play API problem, with
     `code`, `retryable`, `status`, and `requestId`), and `ProtocolError` (a
@@ -94,8 +111,10 @@ try {
   - `parseDeadline` reads a full RFC 3339 timestamp with a zone, and refuses one
     without.
   - `newIntent` draws an idempotency key from a random source you pass.
-  - Types: `Authorization`, `CancelSignal`, `Clock`, `FetchLike` and the other
-    platform shapes, `HttpMethod`, `Intent`, `NetworkFailure`,
+  - Types: `Authorization`, `AuthorizedCallOptions`, `CallOptions`,
+    `CancelSignal`, `Clock`, `FetchLike` and the other platform shapes,
+    `HttpMethod`, `Intent`, `NetworkFailure`, `PlayResult`, `PlayRoute`,
+    `RedeemCallOptions`, `RefreshCallOptions`, `Seal`, `Sealed`,
     `PlayClientError`, `PlayRequest`, `PlayResponse`, `ProblemSummary`,
     `RandomUuid`, `RefreshConfig`, `RequestDescription`, `RetryClass`,
     `RetryConfig`, `TokenDeadline`, `Transport`, `TransportOptions`.
@@ -104,8 +123,14 @@ try {
 
 - It uses the platform `fetch` (or one you pass) and has no runtime dependency
   besides the kit's contracts.
-- Its problem types come from `@intraverse/se-client-contracts`.
-- It never interprets the bodies it returns.
+- Its wire and problem types come from `@intraverse/se-client-contracts`; none
+  is written by hand.
+- It never returns, keeps, or logs a plain play token: a token answer holds only
+  what your `seal` made of it.
+- It never interprets a Snapshot it returns. It reads only the fields of a
+  redeem or refresh answer the shell needs, and drops any other.
+- The base (`playApiBaseUrl`) ends with `/play/v1`; the operations' paths are
+  below it.
 - An error carries the method, the path, the status, and the `requestId` of a
   request, never its headers or its body. No query string or fragment is sent,
   and a secret must never be placed in a path: error messages carry the path.
