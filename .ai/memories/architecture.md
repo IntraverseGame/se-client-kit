@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-17 (play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-17 (shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -8,8 +8,10 @@ last-verified: 2026-10-17 (play-client cancel pull request: `cancelRound`, never
 The contract is the kit's [client kit spec](../../specs/client-kit.md) and
 [Wrapper spec](../../specs/wrapper.md); this note is the orientation around
 them. `contracts`, `signing`, `snapshot`, and `play-client` have code; `shell`
-has its first slice (redaction, logger, key custody, the signer lock, the
-transcript state); the apps are skeletons. Flag any divergence from the
+has four slices (redaction, logger, key custody, the signer lock, the
+transcript state; the chain configuration and tip check; the W-26
+`CreateRoundAuth` checks and the round's verdict; the `se.controller/1` game
+bridge); the apps are skeletons. Flag any divergence from the
 structure below.
 
 ## Mental model
@@ -48,7 +50,15 @@ structure below.
 - **Shell internals stay internal.** The shell's public entry is the redacting
   logger, `REDACTED`, `ShellError`, and the chain configuration's validation
   (`validateChainConfig`, for W-26a's boot rule) with the RPC transport types
-  the Wrapper implements. The tip check and its pass-or-fail decision, the
+  the Wrapper implements, and the game bridge (`createControllerBridge`) with
+  the `se.controller/1` message types. The bridge holds no secret: the pick use
+  case is injected, and the game's copy of a Snapshot is built from an
+  allow-list (W-38), never by deleting fields; do not "simplify" it into
+  forwarding the Snapshot. The bridge's pick pre-check is an early filter, not
+  the gate: the pick use case must re-check W-23 against the shell's own latest
+  Snapshot and refuse a step already signed (W-15). The protocol types are on the main entry only for
+  now; `reference-game` still may not import `shell` until the type-only
+  subpath lands with the reference game. The tip check and its pass-or-fail decision, the
   W-26 `CreateRoundAuth` checks, and the round's verdict
   (`round-verification.ts`, which alone settles `T_0` and says when a
   `PlayerCancel` must be signed) are internal until the start flow exists. The environment configuration, never a
