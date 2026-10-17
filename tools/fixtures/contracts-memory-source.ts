@@ -7,6 +7,12 @@ export const COMMIT_A = "a".repeat(40);
 export const COMMIT_B = "b".repeat(40);
 
 export const SOURCES: Readonly<Record<string, GroupSource>> = {
+  "play-api-document": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "p/play.yaml",
+  },
   "snapshot-schema": {
     name: "backend",
     repo: "r",
@@ -24,6 +30,12 @@ export const SOURCES: Readonly<Record<string, GroupSource>> = {
     repo: "r",
     ref: "main",
     path: "s/invalid",
+  },
+  "snapshot-vectors-signature": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "s/signature",
   },
   "signing-vectors": {
     name: "contracts",
@@ -46,6 +58,8 @@ export const memorySource = (): MemorySource => {
     ["s/schema.json", '{"type":"object"}\n'],
     ["s/valid/a.json", '{"a":1}\n'],
     ["s/invalid/b.json", '{"b":2}\n'],
+    ["s/signature/d.json", '{"d":5}\n'],
+    ["p/play.yaml", "openapi: 3.0.3\n"],
     ["v/signing.json", '{"s":3}\n'],
   ]);
   const source: MemorySource = {

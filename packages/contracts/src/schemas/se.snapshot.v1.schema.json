@@ -53,7 +53,7 @@
       }
     },
     {
-      "$comment": "idle: no round in front of the player, so no round-scoped fields.",
+      "$comment": "idle: no round in front of the player, so no round-scoped fields. proofs is also rejected at its own location, so a proof served on idle (a round creation authorization included) is named where it sits.",
       "if": { "properties": { "status": { "const": "idle" } } },
       "then": {
         "not": {
@@ -64,7 +64,8 @@
             { "required": ["bankedAmount"] },
             { "required": ["proofs"] }
           ]
-        }
+        },
+        "properties": { "proofs": { "not": {} } }
       },
       "else": { "required": ["roundId"] }
     },
@@ -131,6 +132,12 @@
       "$comment": "Book rounds carry no fairness proof (no hidden configuration).",
       "if": { "properties": { "model": { "const": "book" } } },
       "then": { "properties": { "proofs": { "not": { "required": ["fairnessProof"] } } } }
+    },
+    {
+      "$comment": "Round creation authorization: a config round's authorization is signed when the round is bound, with its randomness proof, so a config round's proofs always carry it (from the bind on: starting once bound, then every later status). A book round never carries it.",
+      "if": { "properties": { "model": { "const": "config" } } },
+      "then": { "properties": { "proofs": { "required": ["createRoundAuth"] } } },
+      "else": { "properties": { "proofs": { "properties": { "createRoundAuth": { "not": {} } } } } }
     },
     {
       "$comment": "Config rounds derive the seed, and so publish its hash (seedHash), at Release, so the fairness proof is there from active on. A starting round may not have it yet.",
@@ -231,7 +238,7 @@
       }
     },
     "AmountRequest": {
-      "description": "An amount sent by the client. Only the money-bearing fields; normalized and formatted are response-only and rejected. decimals is optional and, when present, must equal the registry scale of unit (checked by the BFF, not by this schema).",
+      "description": "An amount sent by the client. Only the money-bearing fields; normalized and formatted are response-only and rejected. decimals is optional and, when present, must equal the registry scale of unit (checked by the server, not by this schema).",
       "type": "object",
       "additionalProperties": false,
       "required": ["value", "unit"],
@@ -370,6 +377,7 @@
       "properties": {
         "fairnessProof": { "$ref": "#/$defs/FairnessProof" },
         "randomnessProof": { "$ref": "#/$defs/RandomnessProof" },
+        "createRoundAuth": { "$ref": "#/$defs/CreateRoundAuth" },
         "record": { "$ref": "#/$defs/OnChainRecord" }
       }
     },
@@ -380,6 +388,7 @@
       "required": ["seedHash"],
       "properties": {
         "seedHash": { "$ref": "#/$defs/Hash32" },
+        "readyHash": { "description": "T_0, the Ready evidence hash keccak256(abi.encode(created, seedHash)): the previous of the round's first signed action. Additive in /1.", "$ref": "#/$defs/Hash32" },
         "seed": { "description": "Revealed only after the round ends.", "$ref": "#/$defs/Hash32" },
         "zkProof": { "$ref": "#/$defs/ZKProofRef" }
       }
@@ -408,6 +417,91 @@
         "txHash": { "$ref": "#/$defs/Hash32" },
         "explorerUrl": { "$ref": "#/$defs/HttpsUrl" }
       }
+    },
+    "CreateRoundAuth": {
+      "description": "Config rounds only, required from the bind on: the round creation authorization, an EIP-712 signature by the registry admin key over CreateRoundAuth(bytes32 created,uint40 prepareWindow,uint256 expiry), where created = keccak256(abi.encode(newRound)). The same object on every read of the round. domain and signer are the round's own values; a client trusts them only when they equal the values pinned in its own configuration.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["newRound", "entropyChainId", "prepareWindow", "expiry", "domain", "signer", "signature"],
+      "properties": {
+        "newRound": { "$ref": "#/$defs/NewRound" },
+        "entropyChainId": {
+          "description": "Chain of the entropy source. Not signed itself: with randomnessProof.source and blockNumber it recomputes newRound.randomnessTarget.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "prepareWindow": { "description": "The signed prepareWindow (uint40), in seconds.", "type": "integer", "minimum": 0, "maximum": 1099511627775 },
+        "expiry": { "description": "The signed expiry (uint256), Unix seconds. It bounds when the registry accepts the authorization; a past expiry does not void the signature.", "$ref": "#/$defs/Uint256" },
+        "domain": { "$ref": "#/$defs/RegistryDomain" },
+        "signer": { "description": "The registry admin address that signed.", "$ref": "#/$defs/Address" },
+        "signature": { "$ref": "#/$defs/Signature65" }
+      }
+    },
+    "NewRound": {
+      "description": "The signed round, field by field, in abi.encode order: 11 static words (352 bytes) whose keccak256 is created. Every word is needed to recompute created.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roundId",
+        "playerRef",
+        "currency",
+        "betAmount",
+        "gameId",
+        "gameVersion",
+        "circuitVersion",
+        "roundSecretHash",
+        "randomnessTarget",
+        "actionKey",
+        "payoutTermsHash"
+      ],
+      "properties": {
+        "roundId": { "description": "The bytes32 form of the Snapshot's roundId.", "$ref": "#/$defs/RoundIdBytes32" },
+        "playerRef": { "description": "The player's own pseudonym, the same in every round of that player. Not the player ID, and not reversible.", "$ref": "#/$defs/Hash32" },
+        "currency": { "description": "The bet's currency code; as bytes32 it is ASCII, left-aligned, zero-padded.", "$ref": "#/$defs/Unit" },
+        "betAmount": { "description": "The bet in base units (uint128).", "$ref": "#/$defs/Uint128" },
+        "gameId": { "description": "uint32.", "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "gameVersion": { "description": "uint32.", "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "circuitVersion": { "description": "uint32.", "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "roundSecretHash": { "description": "Equals randomnessProof.roundSecretHash.", "$ref": "#/$defs/Hash32" },
+        "randomnessTarget": { "description": "keccak256(abi.encode(bytes32 source, uint256 entropyChainId, uint256 blockNumber)), from randomnessProof; source as bytes32 is ASCII, left-aligned, zero-padded.", "$ref": "#/$defs/Hash32" },
+        "actionKey": { "description": "The address the client signs the round's actions with.", "$ref": "#/$defs/Address" },
+        "payoutTermsHash": { "description": "keccak256(abi.encode(PayoutTerms)) of the game's certified terms.", "$ref": "#/$defs/Hash32" }
+      }
+    },
+    "RegistryDomain": {
+      "description": "The EIP-712 domain of the round's registry, fixed when the round is bound.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "chainId", "verifyingContract"],
+      "properties": {
+        "name": { "const": "SuperEngine" },
+        "version": { "const": "1" },
+        "chainId": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "verifyingContract": { "description": "The registry contract address.", "$ref": "#/$defs/Address" }
+      }
+    },
+    "Address": {
+      "description": "EVM address, 20 bytes, 0x-prefixed lowercase hex (no checksum casing; compare as bytes).",
+      "type": "string",
+      "pattern": "^0x[0-9a-f]{40}$"
+    },
+    "Signature65": {
+      "description": "secp256k1 signature r || s || v, 65 bytes, 0x-prefixed lowercase hex, v is 27 (1b) or 28 (1c). A low s is checked by the verifier, not by this pattern.",
+      "type": "string",
+      "pattern": "^0x[0-9a-f]{128}(1b|1c)$"
+    },
+    "Uint128": {
+      "description": "Non-negative integer, base-10, no sign, no leading zeros, at most 2^128-1 (340282366920938463463374607431768211455). The pattern is the exact range.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,37}|[1-2][0-9]{38}|3[0-3][0-9]{37}|340[0-1][0-9]{35}|3402[0-7][0-9]{34}|34028[0-1][0-9]{33}|340282[0-2][0-9]{32}|3402823[0-5][0-9]{31}|34028236[0-5][0-9]{30}|340282366[0-8][0-9]{29}|3402823669[0-1][0-9]{28}|340282366920[0-8][0-9]{26}|3402823669209[0-2][0-9]{25}|34028236692093[0-7][0-9]{24}|340282366920938[0-3][0-9]{23}|3402823669209384[0-5][0-9]{22}|34028236692093846[0-2][0-9]{21}|340282366920938463[0-3][0-9]{20}|3402823669209384634[0-5][0-9]{19}|34028236692093846346[0-2][0-9]{18}|340282366920938463463[0-2][0-9]{17}|3402823669209384634633[0-6][0-9]{16}|34028236692093846346337[0-3][0-9]{15}|340282366920938463463374[0-5][0-9]{14}|34028236692093846346337460[0-6][0-9]{12}|340282366920938463463374607[0-3][0-9]{11}|3402823669209384634633746074[0-2][0-9]{10}|340282366920938463463374607430[0-9]{9}|340282366920938463463374607431[0-6][0-9]{8}|3402823669209384634633746074317[0-5][0-9]{7}|34028236692093846346337460743176[0-7][0-9]{6}|340282366920938463463374607431768[0-1][0-9]{5}|34028236692093846346337460743176820[0-9]{4}|340282366920938463463374607431768210[0-9]{3}|340282366920938463463374607431768211[0-3][0-9]{2}|3402823669209384634633746074317682114[0-4][0-9]|34028236692093846346337460743176821145[0-4]|340282366920938463463374607431768211455)$",
+      "maxLength": 39
+    },
+    "Uint256": {
+      "description": "Non-negative integer that is not money, base-10, no sign, no leading zeros, at most 2^256-1: the grammar of BaseUnits.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,76}|10[0-9]{76}|11[0-4][0-9]{75}|115[0-6][0-9]{74}|1157[0-8][0-9]{73}|11579[0-1][0-9]{72}|1157920[0-7][0-9]{70}|11579208[0-8][0-9]{69}|115792089[0-1][0-9]{68}|1157920892[0-2][0-9]{67}|11579208923[0-6][0-9]{66}|115792089237[0-2][0-9]{65}|11579208923730[0-9]{64}|11579208923731[0-5][0-9]{63}|1157920892373160[0-9]{62}|1157920892373161[0-8][0-9]{61}|11579208923731619[0-4][0-9]{60}|115792089237316195[0-3][0-9]{59}|1157920892373161954[0-1][0-9]{58}|11579208923731619542[0-2][0-9]{57}|115792089237316195423[0-4][0-9]{56}|1157920892373161954235[0-6][0-9]{55}|115792089237316195423570[0-8][0-9]{53}|1157920892373161954235709[0-7][0-9]{52}|11579208923731619542357098[0-4][0-9]{51}|11579208923731619542357098500[0-7][0-9]{48}|115792089237316195423570985008[0-5][0-9]{47}|1157920892373161954235709850086[0-7][0-9]{46}|11579208923731619542357098500868[0-6][0-9]{45}|115792089237316195423570985008687[0-8][0-9]{44}|11579208923731619542357098500868790[0-6][0-9]{42}|115792089237316195423570985008687907[0-7][0-9]{41}|1157920892373161954235709850086879078[0-4][0-9]{40}|11579208923731619542357098500868790785[0-2][0-9]{39}|115792089237316195423570985008687907853[0-1][0-9]{38}|1157920892373161954235709850086879078532[0-5][0-9]{37}|11579208923731619542357098500868790785326[0-8][0-9]{36}|115792089237316195423570985008687907853269[0-8][0-9]{35}|1157920892373161954235709850086879078532699[0-7][0-9]{34}|11579208923731619542357098500868790785326998[0-3][0-9]{33}|115792089237316195423570985008687907853269984[0-5][0-9]{32}|1157920892373161954235709850086879078532699846[0-5][0-9]{31}|11579208923731619542357098500868790785326998466[0-4][0-9]{30}|115792089237316195423570985008687907853269984665[0-5][0-9]{29}|1157920892373161954235709850086879078532699846656[0-3][0-9]{28}|115792089237316195423570985008687907853269984665640[0-4][0-9]{26}|1157920892373161954235709850086879078532699846656405[0-5][0-9]{25}|11579208923731619542357098500868790785326998466564056[0-3][0-9]{24}|1157920892373161954235709850086879078532699846656405640[0-2][0-9]{22}|11579208923731619542357098500868790785326998466564056403[0-8][0-9]{21}|115792089237316195423570985008687907853269984665640564039[0-3][0-9]{20}|1157920892373161954235709850086879078532699846656405640394[0-4][0-9]{19}|11579208923731619542357098500868790785326998466564056403945[0-6][0-9]{18}|115792089237316195423570985008687907853269984665640564039457[0-4][0-9]{17}|1157920892373161954235709850086879078532699846656405640394575[0-7][0-9]{16}|11579208923731619542357098500868790785326998466564056403945758[0-3][0-9]{15}|11579208923731619542357098500868790785326998466564056403945758400[0-6][0-9]{12}|115792089237316195423570985008687907853269984665640564039457584007[0-8][0-9]{11}|11579208923731619542357098500868790785326998466564056403945758400790[0-9]{10}|11579208923731619542357098500868790785326998466564056403945758400791[0-2][0-9]{9}|1157920892373161954235709850086879078532699846656405640394575840079130[0-9]{8}|1157920892373161954235709850086879078532699846656405640394575840079131[0-1][0-9]{7}|11579208923731619542357098500868790785326998466564056403945758400791312[0-8][0-9]{6}|115792089237316195423570985008687907853269984665640564039457584007913129[0-5][0-9]{5}|1157920892373161954235709850086879078532699846656405640394575840079131296[0-2][0-9]{4}|11579208923731619542357098500868790785326998466564056403945758400791312963[0-8][0-9]{3}|115792089237316195423570985008687907853269984665640564039457584007913129639[0-8][0-9]{2}|1157920892373161954235709850086879078532699846656405640394575840079131296399[0-2][0-9]|11579208923731619542357098500868790785326998466564056403945758400791312963993[0-4]|115792089237316195423570985008687907853269984665640564039457584007913129639935)$",
+      "maxLength": 78
     },
     "ZKProofRef": {
       "type": "object",
@@ -476,7 +570,11 @@
               "code": { "enum": ["FUNDING_UNCONFIRMED", "ENTROPY_UNAVAILABLE", "PREPARATION_TIMEOUT", "LANE_LIMIT", "ROUND_VOIDED", "UNAVAILABLE"] }
             }
           },
-          "then": { "properties": { "retryable": { "const": true } } },
+          "then": {
+            "$comment": "UNAVAILABLE is retryable by default but may be false: a call that is never repeated (sessions:redeem) sends false. Every other code of the list stays pinned to true.",
+            "if": { "properties": { "code": { "const": "UNAVAILABLE" } } },
+            "else": { "properties": { "retryable": { "const": true } } }
+          },
           "else": { "properties": { "retryable": { "const": false } } }
         },
         {

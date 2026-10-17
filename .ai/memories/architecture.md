@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-16 (shell tip-check pull request; every package but the apps has code; `shell` has its first slice)
+last-verified: 2026-10-17 (contracts vendoring pull request: the Play API document and the `signature/` Snapshot vectors vendored)
 ---
 
 # Architecture (agent context)
@@ -86,7 +86,10 @@ structure below.
   tolerant readers only within what the synced schema allows (its objects are
   closed, so a new Snapshot field or status needs a kit sync). A breaking
   change is a new surface or schema version and a new major of the affected
-  packages.
+  packages. One pre-release exception (OQ-7): `se.snapshot/1` made
+  `proofs.createRoundAuth` required on a config Snapshot with `proofs`, and
+  changed or removed existing vectors; the kit vendored it with
+  `--allow-vector-change`. After the first release, additive only.
 
 ## Things not to "fix"
 

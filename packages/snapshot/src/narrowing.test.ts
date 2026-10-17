@@ -106,6 +106,10 @@ const retryableOf = (problem: ValidPlayProblem): boolean => {
       expectTypeOf(problem.retryable).toEqualTypeOf<false>();
       return problem.retryable;
     }
+    case "UNAVAILABLE": {
+      expectTypeOf(problem.retryable).toEqualTypeOf<boolean>();
+      return problem.retryable;
+    }
     default: {
       return problem.retryable;
     }
@@ -156,6 +160,10 @@ describe("narrowing the typed error", () => {
     expect(retryableOf(problemOf("problem-entropy-unavailable"))).toBe(true);
     expect(retryableOf(problemOf("problem-insufficient-funds"))).toBe(false);
     expect(retryableOf(problemOf("problem-round-active"))).toBe(false);
+    expect(retryableOf(problemOf("problem-default-code-unavailable"))).toBe(
+      true,
+    );
+    expect(retryableOf(problemOf("problem-redeem-unavailable"))).toBe(false);
   });
 });
 

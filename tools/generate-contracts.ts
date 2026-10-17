@@ -3,6 +3,7 @@
 // (specs/client-kit/the-contracts-package.md):
 //
 //   src/generated/snapshot.ts   the structural types of the Snapshot schema
+//   src/generated/play.ts       the types of the Play API document (/play/v1)
 //   src/vectors/catalog.ts      every vendored vector, for the test-only entry
 //
 //   pnpm exec tsx tools/generate-contracts.ts          # fail if out of date
@@ -10,7 +11,9 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 
+import { operationRoutes } from "./play-routes.ts";
 import { findFiles } from "./workspace.ts";
 
 // json-schema-to-typescript is loaded through a computed specifier on purpose.
@@ -45,8 +48,46 @@ const loadCompile = async (): Promise<Compile> => {
   throw new Error(`${GENERATOR} has no compile function`);
 };
 
+// openapi-typescript (6.x, ADR-004) is loaded the same way: the tools'
+// typecheck stays independent of its declarations, which type options this
+// script never uses. Its one function is described here and checked at run
+// time. It reads the document from a `file:` URL; `fetch` is replaced by one
+// that refuses, so a reference that is not local fails the generation instead
+// of reaching the network.
+const OPENAPI_GENERATOR = "openapi-typescript";
+
+type OpenApiTs = (
+  source: URL,
+  options: {
+    readonly exportType: boolean;
+    readonly emptyObjectsUnknown: boolean;
+    readonly additionalProperties: boolean;
+    readonly silent: boolean;
+    readonly commentHeader: string;
+    readonly fetch: () => never;
+  },
+) => Promise<string>;
+
+const loadOpenApi = async (): Promise<OpenApiTs> => {
+  const library: unknown = await import(OPENAPI_GENERATOR);
+  if (
+    typeof library === "object" &&
+    library !== null &&
+    "default" in library &&
+    typeof library.default === "function"
+  )
+    return library.default as OpenApiTs;
+  throw new Error(`${OPENAPI_GENERATOR} has no default export`);
+};
+
+const noNetwork = (): never => {
+  throw new Error("the Play API document refers outside itself");
+};
+
 const SCHEMA = "src/schemas/se.snapshot.v1.schema.json";
 const SNAPSHOT_TYPES = "src/generated/snapshot.ts";
+const PLAY_DOCUMENT = "src/schemas/play.v1.openapi.yaml";
+const PLAY_TYPES = "src/generated/play.ts";
 const CATALOG = "src/vectors/catalog.ts";
 
 const BANNER = (source: string): string =>
@@ -107,6 +148,25 @@ const snapshotTypes = async (packageDir: string): Promise<string> => {
   return `${BANNER(SCHEMA)}${withoutReferenceNotes(toTypeAliases(body))}`;
 };
 
+/**
+ * The types of the Play API document. Every object is a `type` alias
+ * (`exportType`); an object schema without properties is a record of `unknown`
+ * values, not of `never`; an object the document does not close stays closed.
+ */
+const playTypes = async (packageDir: string): Promise<string> => {
+  const openapiTs = await loadOpenApi();
+  const body = await openapiTs(pathToFileURL(join(packageDir, PLAY_DOCUMENT)), {
+    exportType: true,
+    emptyObjectsUnknown: true,
+    additionalProperties: false,
+    silent: true,
+    commentHeader: "",
+    fetch: noNetwork,
+  });
+  const types = toTypeAliases(body);
+  return `${BANNER(PLAY_DOCUMENT)}${types}\n${operationRoutes(types)}`;
+};
+
 /** The name a vector is exported under: its file name without `.json`. */
 const vectorName = (file: string): string => {
   const match = /^([a-z0-9][a-z0-9-]*)\.json$/u.exec(file);
@@ -123,7 +183,7 @@ const catalog = (packageDir: string): string => {
   ];
   const groups: string[] = [];
   let counter = 0;
-  for (const kind of ["valid", "invalid"] as const) {
+  for (const kind of ["valid", "invalid", "signature"] as const) {
     const names = findFiles(join(root, "snapshot", kind), () => true);
     const members: string[] = [];
     for (const file of names) {
@@ -145,6 +205,8 @@ const catalog = (packageDir: string): string => {
     "export type SnapshotVectors = {",
     "  readonly valid: VectorSet;",
     "  readonly invalid: VectorSet;",
+    "  /** Schema-valid Snapshots with the verdict of the shell's W-26 checks. */",
+    "  readonly signature: VectorSet;",
     "};",
     "",
     "export const signingVectors: unknown = signing;",
@@ -161,6 +223,7 @@ export const generateContractsFiles = async (
 ): Promise<Map<string, string>> =>
   new Map([
     [SNAPSHOT_TYPES, await snapshotTypes(packageDir)],
+    [PLAY_TYPES, await playTypes(packageDir)],
     [CATALOG, catalog(packageDir)],
   ]);
 

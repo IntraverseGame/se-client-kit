@@ -90,6 +90,32 @@
         "blockExplorerUrl": "https://explorer.example.com/block/21000123",
         "roundSecret": "0x4444444444444444444444444444444444444444444444444444444444444444"
       },
+      "createRoundAuth": {
+        "newRound": {
+          "roundId": "0x01927c5e8b3a7f219c4d5e6f7a8b9c0d00000000000000000000000000000000",
+          "playerRef": "0x224b3963a9d633c8a70f3531142532fa45ac05555b3ec98d7972080d07e7433d",
+          "currency": "EUR",
+          "betAmount": "100",
+          "gameId": 1,
+          "gameVersion": 1,
+          "circuitVersion": 0,
+          "roundSecretHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+          "randomnessTarget": "0xf8438024e074642bb4ed5ddb8c1d6e2884a471ede3e80e1751b3058045412ebd",
+          "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+          "payoutTermsHash": "0x39be22fe6295894ca7aab00df7e4f2e45ef674b6448103795cb17e8414c2ff63"
+        },
+        "entropyChainId": 1,
+        "prepareWindow": 120,
+        "expiry": "1800000600",
+        "domain": {
+          "name": "SuperEngine",
+          "version": "1",
+          "chainId": 31337,
+          "verifyingContract": "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+        },
+        "signer": "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc",
+        "signature": "0x4e65b3634ee29ddc6fbef0c2f03456902be2c138ed379ee487bacdf4fa2977a4450e3e6d6aa304bb47620bb3334767f02100b4ecbf962eaba8a06cf8fe684e121c"
+      },
       "fairnessProof": {
         "seedHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
         "zkProof": {

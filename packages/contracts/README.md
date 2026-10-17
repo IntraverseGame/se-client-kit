@@ -28,8 +28,9 @@ or calling the Play API (use `@intraverse/se-client-play-client`).
 
 ## Entry points
 
-- `@intraverse/se-client-contracts`: the runtime entry, with the schemas and the
-  generated types. This is the public API.
+- `@intraverse/se-client-contracts`: the runtime entry, with the Snapshot schema
+  and the generated types of the Snapshot schema and of the Play API document.
+  This is the public API.
 - `@intraverse/se-client-contracts/testing`: golden test vectors used by this
   kit's own tests. It is not part of the public API, and the published package
   will not contain it: vectors never ship in a bundle or a tarball.
@@ -43,9 +44,11 @@ or calling the Play API (use `@intraverse/se-client-play-client`).
 - The files are copies of the backend's published contracts, referenced by name
   and version, never imported as code.
 
-Today the package holds the Snapshot schema and its types. The Play API document
-and its types are not here yet: they join when the backend publishes the
-document.
+Today the package holds the Snapshot schema and its types, and the Play API
+document's types: `PlayApiPaths` (by path and method), `PlayApiOperations` (by
+`operationId`), `PlayApiComponents` (its schemas and responses), and
+`PlayApiOperationRoutes` (each operation's path and method). The verify API
+document is not here yet.
 
 ## More
 

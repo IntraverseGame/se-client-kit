@@ -1,7 +1,8 @@
 // T-5 (specs/wrapper.md): every `valid/` vector validates and every `invalid/`
-// vector fails at its `failsAt` pointer. The vectors come from the contracts
-// package's test-only entry, as copied from the backend; they are never
-// regenerated from this code.
+// vector fails at its `failsAt` pointer. Every `signature/` vector is a valid
+// Snapshot; its verdict belongs to the shell's W-26 checks, not to this
+// package. The vectors come from the contracts package's test-only entry, as
+// copied from the backend; they are never regenerated from this code.
 
 import { snapshotVectors } from "@intraverse/se-client-contracts/testing";
 import { describe, expect, it } from "vitest";
@@ -63,16 +64,22 @@ const invalid = Object.entries(snapshotVectors.invalid).map(([name, file]) => ({
   vector: readVector(name, file),
 }));
 
+const signature = Object.entries(snapshotVectors.signature).map(
+  ([name, file]) => ({ name, vector: readVector(name, file) }),
+);
+
 describe("Snapshot vectors", () => {
-  it("has vectors in both sets", () => {
+  it("has vectors in every set", () => {
     expect(valid.length).toBeGreaterThan(0);
     expect(invalid.length).toBeGreaterThan(0);
+    expect(signature.length).toBeGreaterThan(0);
   });
 
   it("files every vector under the set its expectation names", () => {
-    expect(valid.map(v => v.vector.expected)).not.toContain("invalid");
-    expect(invalid.map(v => v.vector.expected)).not.toContain("valid");
+    expect(valid.every(v => v.vector.expected === "valid")).toBe(true);
+    expect(invalid.every(v => v.vector.expected === "invalid")).toBe(true);
     expect(invalid.every(v => typeof v.vector.failsAt === "string")).toBe(true);
+    expect(signature.every(v => v.vector.expected === "valid")).toBe(true);
   });
 
   it.each(valid)("accepts valid/$name", ({ vector }) => {
@@ -86,6 +93,13 @@ describe("Snapshot vectors", () => {
     // The first failure, which the Wrapper logs (W-28), is the vector's.
     expect(issues[0]?.instancePath).toBe(vector.failsAt);
     expect(issues.map(issue => issue.keyword)).not.toContain("unsupported");
+  });
+
+  it.each(signature)("accepts signature/$name as a Snapshot", ({ vector }) => {
+    expect(vector.definition).toBe("Snapshot");
+    const result = run(vector);
+    expect(issuesOf(result)).toEqual([]);
+    expect(valueOf(result)).toBe(vector.input);
   });
 
   it("includes the pattern-trailing-newline case", () => {

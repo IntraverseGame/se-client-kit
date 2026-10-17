@@ -19,6 +19,13 @@ export type Group = {
 
 export const GROUPS: readonly Group[] = [
   {
+    id: "play-api-document",
+    kind: "file",
+    destination: "src/schemas/play.v1.openapi.yaml",
+    sourceName: "play/v1 OpenAPI document",
+    vectors: false,
+  },
+  {
     id: "snapshot-schema",
     kind: "file",
     destination: "src/schemas/se.snapshot.v1.schema.json",
@@ -37,6 +44,13 @@ export const GROUPS: readonly Group[] = [
     kind: "directory",
     destination: "src/vectors/snapshot/invalid",
     sourceName: "se.snapshot/1 vectors/invalid",
+    vectors: true,
+  },
+  {
+    id: "snapshot-vectors-signature",
+    kind: "directory",
+    destination: "src/vectors/snapshot/signature",
+    sourceName: "se.snapshot/1 vectors/signature",
     vectors: true,
   },
   {

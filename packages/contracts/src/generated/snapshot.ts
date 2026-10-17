@@ -64,9 +64,25 @@ export type GameConfig = (StepConfig | BookConfig)
  */
 export type Hash32 = string
 /**
+ * secp256k1 signature r || s || v, 65 bytes, 0x-prefixed lowercase hex, v is 27 (1b) or 28 (1c). A low s is checked by the verifier, not by this pattern.
+ */
+export type Signature65 = string
+/**
  * The roundId in its on-chain bytes32 form: the 16 UUIDv7 bytes left-aligned, zero-padded.
  */
 export type RoundIdBytes32 = string
+/**
+ * EVM address, 20 bytes, 0x-prefixed lowercase hex (no checksum casing; compare as bytes).
+ */
+export type Address = string
+/**
+ * Non-negative integer, base-10, no sign, no leading zeros, at most 2^128-1 (340282366920938463463374607431768211455). The pattern is the exact range.
+ */
+export type Uint128 = string
+/**
+ * Non-negative integer that is not money, base-10, no sign, no leading zeros, at most 2^256-1: the grammar of BaseUnits.
+ */
+export type Uint256 = string
 export type ErrorCode = ("INSUFFICIENT_FUNDS" | "LIMIT_EXCEEDED" | "PLAYER_RESTRICTED" | "FUNDING_UNCONFIRMED" | "ENTROPY_UNAVAILABLE" | "PREPARATION_TIMEOUT" | "SIGNED_START_FAILED" | "LANE_LIMIT" | "ROUND_VOIDED" | "ROUND_ACTIVE" | "SESSION_EXPIRED" | "SESSION_REVOKED" | "STALE_ACTION" | "INVALID_ARGUMENT" | "NOT_FOUND" | "CONFLICT" | "FAILED_PRECONDITION" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "UNAVAILABLE" | "UNIMPLEMENTED" | "INTERNAL" | "UNKNOWN")
 /**
  * ROUND_ACTIVE only: the open round, so the client can resume it.
@@ -209,6 +225,7 @@ data?: {
 export type FairnessContext = {
 fairnessProof?: FairnessProof
 randomnessProof: RandomnessProof
+createRoundAuth?: CreateRoundAuth
 record?: OnChainRecord
 }
 /**
@@ -216,6 +233,10 @@ record?: OnChainRecord
  */
 export type FairnessProof = {
 seedHash: Hash32
+/**
+ * 32 bytes, 0x-prefixed lowercase hex.
+ */
+readyHash?: string
 /**
  * 32 bytes, 0x-prefixed lowercase hex.
  */
@@ -244,6 +265,91 @@ roundSecretHash: Hash32
 roundSecret?: string
 zkProof?: ZKProofRef
 }
+/**
+ * Config rounds only, required from the bind on: the round creation authorization, an EIP-712 signature by the registry admin key over CreateRoundAuth(bytes32 created,uint40 prepareWindow,uint256 expiry), where created = keccak256(abi.encode(newRound)). The same object on every read of the round. domain and signer are the round's own values; a client trusts them only when they equal the values pinned in its own configuration.
+ */
+export type CreateRoundAuth = {
+newRound: NewRound
+/**
+ * Chain of the entropy source. Not signed itself: with randomnessProof.source and blockNumber it recomputes newRound.randomnessTarget.
+ */
+entropyChainId: number
+/**
+ * The signed prepareWindow (uint40), in seconds.
+ */
+prepareWindow: number
+/**
+ * The signed expiry (uint256), Unix seconds. It bounds when the registry accepts the authorization; a past expiry does not void the signature.
+ */
+expiry: string
+domain: RegistryDomain
+/**
+ * The registry admin address that signed.
+ */
+signer: string
+signature: Signature65
+}
+/**
+ * The signed round, field by field, in abi.encode order: 11 static words (352 bytes) whose keccak256 is created. Every word is needed to recompute created.
+ */
+export type NewRound = {
+/**
+ * The bytes32 form of the Snapshot's roundId.
+ */
+roundId: string
+/**
+ * 32 bytes, 0x-prefixed lowercase hex.
+ */
+playerRef: string
+/**
+ * Currency code from the engine's currency registry, e.g. EUR, ETH, USDT-TRON.
+ */
+currency: string
+/**
+ * The bet in base units (uint128).
+ */
+betAmount: string
+/**
+ * uint32.
+ */
+gameId: number
+/**
+ * uint32.
+ */
+gameVersion: number
+/**
+ * uint32.
+ */
+circuitVersion: number
+/**
+ * 32 bytes, 0x-prefixed lowercase hex.
+ */
+roundSecretHash: string
+/**
+ * 32 bytes, 0x-prefixed lowercase hex.
+ */
+randomnessTarget: string
+/**
+ * The address the client signs the round's actions with.
+ */
+actionKey: string
+/**
+ * 32 bytes, 0x-prefixed lowercase hex.
+ */
+payoutTermsHash: string
+}
+/**
+ * The EIP-712 domain of the round's registry, fixed when the round is bound.
+ */
+export type RegistryDomain = {
+name: "SuperEngine"
+version: "1"
+chainId: number
+/**
+ * The registry contract address.
+ */
+verifyingContract: string
+}
 export type OnChainRecord = {
 chainId: number
 roundId: RoundIdBytes32
@@ -251,7 +357,7 @@ txHash: Hash32
 explorerUrl?: HttpsUrl
 }
 /**
- * An amount sent by the client. Only the money-bearing fields; normalized and formatted are response-only and rejected. decimals is optional and, when present, must equal the registry scale of unit (checked by the BFF, not by this schema).
+ * An amount sent by the client. Only the money-bearing fields; normalized and formatted are response-only and rejected. decimals is optional and, when present, must equal the registry scale of unit (checked by the server, not by this schema).
  */
 export type AmountRequest = {
 value: BaseUnits

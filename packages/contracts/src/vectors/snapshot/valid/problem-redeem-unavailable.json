@@ -1,0 +1,15 @@
+{
+  "vector": "snapshot/valid/problem-redeem-unavailable",
+  "description": "The 503 of sessions:redeem: UNAVAILABLE with retryable false, because a redeem is never repeated.",
+  "definition": "PlayProblem",
+  "expected": "valid",
+  "input": {
+    "type": "about:blank",
+    "title": "Service Unavailable",
+    "status": 503,
+    "instance": "/play/v1/sessions:redeem",
+    "requestId": "req_01J9ZK",
+    "code": "UNAVAILABLE",
+    "retryable": false
+  }
+}

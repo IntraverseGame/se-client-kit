@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-16 (toolchain pull request; the scripts exist)
+last-verified: 2026-10-17 (contracts vendoring pull request: `openapi-typescript` 6.7.6 without an install hook, vendored YAML exempt from oxfmt)
 ---
 
 # Development workflow
@@ -90,8 +90,8 @@ Several agents and people work in one clone at once. Rules:
   commit and hash), in a pull request that shows the diff; it holds data only, no
   logic. Never copy by hand: `tools/sync-contracts.ts --sources <file>` (the
   sources file lives outside the repository), then
-  `tools/generate-contracts.ts --write`. The vendored JSON is exempt from oxfmt
-  on purpose (the lock pins its bytes); the generated files are exempt from oxfmt
+  `tools/generate-contracts.ts --write`. The vendored JSON and YAML are exempt
+  from oxfmt on purpose (the lock pins their bytes); the generated files are exempt from oxfmt
   and oxlint (the generator's output is what `check:contracts` compares).
 - `json-schema-to-typescript` is imported by a computed specifier in
   `tools/generate-contracts.ts`: its declarations do not compile under the strict
@@ -101,6 +101,16 @@ Several agents and people work in one clone at once. Rules:
   interface was referenced by ..." doc-comment notes. Output either step cannot
   rewrite (an `extends`, a note in another shape) fails the generation on
   purpose.
+- `openapi-typescript` (the Play API document's types) is imported the same
+  way, and is pinned at 6.7.6 on purpose: 7.x needs the TypeScript 5 compiler
+  API, which the kit's TypeScript 7 does not have. Do not "upgrade" it until a
+  major works with TypeScript 7:
+  [ADR-004](../../decisions/ADR-004-openapi-typescript-6.md). Its `undici` is
+  held at 6.29.0 by the scoped `overrides` entry
+  `openapi-typescript>undici` in `pnpm-workspace.yaml` (outside its declared
+  `^5.28`, for the 5.x advisories; never a global `undici` override, which would
+  move `jsdom`'s 8.x too; `tools/openapi-generator.test.ts` checks it); bump it only through the 7-day age rule, and drop it when the
+  generator no longer pulls `undici`.
 - New dependency: ADR first. No lifecycle scripts.
 - Commits: Conventional Commits; one logical change per PR.
 

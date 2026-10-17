@@ -28,14 +28,14 @@ critical advisories only); `dependency-review` (pull requests only); `release`
 (changesets, provenance, on the default branch only).
 
 Today `contracts` runs the test-only-entry import check, the hash check against
-`contracts.lock.json`, and the generated-files diff (the Snapshot types and the
-vector catalog; the OpenAPI types join with the Play API document).
-`contracts-drift` and `release` are not defined yet. `build` builds every
-workspace; the manifest and size budget join it with the first release build,
-and the job also runs `pnpm check:build-output` (the no-vector content check,
-now over the vendored vectors) and `pnpm check:package-files`. `e2e-fake` has no
-suites yet. The workflows hold no secret, run with `permissions: {}` at the top
-and `contents: read` per job, and pin every Action by full commit SHA.
+`contracts.lock.json`, and the generated-files diff (the Snapshot types, the
+Play API document's types, and the vector catalog). `contracts-drift` and
+`release` are not defined yet. `build` builds every workspace; the manifest and
+size budget join it with the first release build, and the job also runs
+`pnpm check:build-output` (the no-vector content check, now over the vendored
+vectors) and `pnpm check:package-files`. `e2e-fake` has no suites yet. The
+workflows hold no secret, run with `permissions: {}` at the top and
+`contents: read` per job, and pin every Action by full commit SHA.
 
 ## Task orchestration and caching
 

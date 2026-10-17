@@ -19,3 +19,9 @@ strictDepBuilds: true
 trustPolicy: no-downgrade
 # Dependencies are saved at an exact version.
 savePrefix: ""
+# openapi-typescript 6.7.6 (the Play API document's generator) declares undici
+# ^5.28.4, and every 5.x has published advisories; it is held at 6.29.0,
+# outside that range, until the generator no longer pulls undici (ADR-004). The
+# selector is scoped: other packages keep their own undici (jsdom its 8.x).
+overrides:
+  openapi-typescript>undici: 6.29.0

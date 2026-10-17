@@ -9,42 +9,57 @@ import { describe, expect, it } from "vitest";
 
 const source = join(import.meta.dirname, "..", "packages", "contracts", "src");
 
-/** Generated names that are deliberately not public. */
-const NOT_PUBLIC: readonly string[] = ["Snapshot1"];
+type GeneratedModule = {
+  readonly file: string;
+  /** Generated names that are deliberately not public. */
+  readonly notPublic: readonly string[];
+};
 
-const generatedNames = (): string[] =>
+const MODULES: readonly GeneratedModule[] = [
+  // `Snapshot1` is the generator's structural copy of `Snapshot`.
+  { file: "snapshot.ts", notPublic: ["Snapshot1"] },
+  // The Play API document has no webhooks, no `$defs`, and no external
+  // documents: all three are empty.
+  { file: "play.ts", notPublic: ["$defs", "external", "webhooks"] },
+];
+
+const generatedNames = (file: string): string[] =>
   [
-    ...readFileSync(join(source, "generated", "snapshot.ts"), "utf8").matchAll(
-      /^export (?:interface|type) ([A-Za-z0-9]+)/gmu,
+    ...readFileSync(join(source, "generated", file), "utf8").matchAll(
+      /^export (?:interface|type) ([A-Za-z0-9$]+)/gmu,
     ),
   ]
     .map(match => match[1] ?? "")
     .toSorted();
 
-const exportedNames = (): string[] => {
+/** The generated names the entry re-exports, before any `as` rename. */
+const exportedNames = (file: string): string[] => {
   const text = readFileSync(join(source, "index.ts"), "utf8");
-  // The type re-export of the generated module.
-  const list =
-    /^export type \{([^}]*)\} from "\.\/generated\/snapshot\.ts";$/mu.exec(
-      text,
-    )?.[1];
+  const list = new RegExp(
+    `^export type \\{([^}]*)\\} from "\\./generated/${file.replace(".", "\\.")}";$`,
+    "mu",
+  ).exec(text)?.[1];
   return (list ?? "")
     .split(",")
-    .map(name => name.trim())
+    .map(entry => entry.trim().split(/\s+as\s+/u)[0] ?? "")
     .filter(name => name !== "")
     .toSorted();
 };
 
-describe("the public types of contracts", () => {
+describe.each(MODULES)("the public types of generated/$file", module => {
   it("exports every generated type except the ones left out on purpose", () => {
-    expect(exportedNames()).toEqual(
-      generatedNames().filter(name => !NOT_PUBLIC.includes(name)),
+    expect(exportedNames(module.file)).toEqual(
+      generatedNames(module.file).filter(
+        name => !module.notPublic.includes(name),
+      ),
     );
   });
 
   it("leaves out only names the generator still emits", () => {
-    expect(NOT_PUBLIC.filter(name => !generatedNames().includes(name))).toEqual(
-      [],
-    );
+    expect(
+      module.notPublic.filter(
+        name => !generatedNames(module.file).includes(name),
+      ),
+    ).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
 ---
 description: What se-client-kit is, why it is public, the package map, and its boundary to the backend. Read first on any task.
-last-verified: 2026-10-16 (toolchain pull request; empty package skeletons, no product code yet)
+last-verified: 2026-10-17 (contracts vendoring pull request: current state and the decisions to ADR-004)
 ---
 
 # Overview
@@ -49,12 +49,15 @@ name only; never paste private text or link to private repositories.
 
 ## Current state
 
-Bootstrapping: the repository holds the license, the agent-agnostic knowledge
-layer (this directory), the first specs (`specs/client-kit.md`,
-`specs/wrapper.md`) and decisions (`ADR-001` to `ADR-003`, accepted 2026-10-16),
-and the toolchain (pnpm workspace, TypeScript, Vite, Vitest, Playwright, oxlint,
-oxfmt, changesets, wireit, CI). The packages and apps are empty
-skeletons; their code follows.
+Pre-release, nothing published yet. The repository holds the license, the
+agent-agnostic knowledge layer (this directory), the specs (`specs/`), the
+decisions (`ADR-001` to `ADR-004`), and the toolchain (pnpm workspace,
+TypeScript, Vite, Vitest, Playwright, oxlint, oxfmt, changesets, wireit, CI).
+Built so far: `contracts` (the vendored Play API document, the Snapshot schema
+and vectors, the signing vectors, generated types), `signing`, `snapshot`,
+`play-client` (the request layer), and `shell` (key custody, the transcript,
+the tip check). Not built yet: the W-26
+`CreateRoundAuth` checks, the Wrapper UI, and the reference game.
 
 ## Where things are
 

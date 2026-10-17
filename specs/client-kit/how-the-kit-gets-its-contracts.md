@@ -14,12 +14,12 @@ contracts (the Snapshot bundle, the OpenAPI documents, the vectors), the
 `contracts` package is replaced by that dependency (option B) without touching a
 logic package.
 
-| Contract (by name and version)                                                         | Used by       | Form in the kit                                                                                                                                                                                                                                                                                                                                                   |
-| -------------------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The Play API `/play/v1` and the verify API read (OpenAPI documents)                    | `play-client` | in `contracts`: the Play and verify documents only, never any other surface's document. Types are generated with a pinned `openapi-typescript` (a development dependency) into committed files in `contracts`; `play-client`'s hand-written thin `fetch` layer sits on them. CI regenerates and fails on a diff.                                                  |
-| The Snapshot schema `se.snapshot/1`, its golden vectors, and the published bundle      | `snapshot`    | in `contracts`: the schema, types (runtime entry), and the `valid/` and `invalid/` vectors (test-only entry). <!-- TODO(Snapshot bundle): the backend specifies a content-hashed bundle (schema plus vectors) for TypeScript consumers; until it is published the kit copies the schema file and the vectors by the same procedure, with the same lock entry. --> |
-| The signing vectors (`test/vectors/signing.json`) and the signed-action spec's vectors | `signing`     | in `contracts`: the files, unchanged, on the test-only entry                                                                                                                                                                                                                                                                                                      |
-| The environment configuration schema                                                   | the Wrapper   | owned by the kit (in `shell`), not copied and not in `contracts`                                                                                                                                                                                                                                                                                                  |
+| Contract (by name and version)                                                         | Used by       | Form in the kit                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The Play API `/play/v1` and the verify API read (OpenAPI documents)                    | `play-client` | in `contracts`: the Play and verify documents only, never any other surface's document (today the Play document; the verify document is not published yet). Types are generated with a pinned `openapi-typescript` (a development dependency) into committed files in `contracts`; `play-client`'s hand-written thin `fetch` layer sits on them. CI regenerates and fails on a diff.                                                                                    |
+| The Snapshot schema `se.snapshot/1`, its golden vectors, and the published bundle      | `snapshot`    | in `contracts`: the schema, types (runtime entry), and the `valid/`, `invalid/`, and `signature/` vectors (test-only entry; a `signature/` vector is a valid Snapshot with the verdict of the shell's W-26 checks). <!-- TODO(Snapshot bundle): the backend specifies a content-hashed bundle (schema plus vectors) for TypeScript consumers; until it is published the kit copies the schema file and the vectors by the same procedure, with the same lock entry. --> |
+| The signing vectors (`test/vectors/signing.json`) and the signed-action spec's vectors | `signing`     | in `contracts`: the files, unchanged, on the test-only entry                                                                                                                                                                                                                                                                                                                                                                                                            |
+| The environment configuration schema                                                   | the Wrapper   | owned by the kit (in `shell`), not copied and not in `contracts`                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 Rules:
 
@@ -32,15 +32,17 @@ Rules:
    lock in the same run. A lock entry (`lockVersion` 1) is `path` (in the
    package), `source` (the repository, by name), `sourceName`, `sourceCommit`
    (the last commit that touched the file, in full), and `sha256`. `sourceName`
-   is the artifact's public name, fixed in the script (`se.snapshot/1 schema`,
+   is the artifact's public name, fixed in the script
+   (`play/v1 OpenAPI document`, `se.snapshot/1 schema`,
    `se.snapshot/1 vectors/valid/<file>`, `se.snapshot/1 vectors/invalid/<file>`,
-   `test/vectors/signing.json`): a path inside a private repository is
-   unpublished backend layout and is never recorded, and a test fails on a name
-   that is not one of these. The local checkouts and the paths in them are given
-   in a file named by `--sources`, kept outside this repository. Vectors are
-   append-only: the script refuses to change or remove a locked vector unless it
-   is given `--allow-vector-change`, which is legitimate only before the first
-   release. Generated files are rewritten by
+   `se.snapshot/1 vectors/signature/<file>`, `test/vectors/signing.json`): a
+   path inside a private repository is unpublished backend layout and is never
+   recorded, and a test fails on a name that is not one of these. The local
+   checkouts and the paths in them are given in a file named by `--sources`,
+   kept outside this repository. Vectors are append-only: the script refuses to
+   change or remove a locked vector unless it is given `--allow-vector-change`,
+   which is legitimate only before the first release. It was used once, for the
+   pre-release exception of rule 4. Generated files are rewritten by
    `tools/generate-contracts.ts --write`.
 2. **Verify offline.** The `contracts` job recomputes each copied file's SHA-256
    and fails when it differs from the lock, and fails when the generated types
@@ -59,19 +61,32 @@ Rules:
    Snapshot field, `status`, or error `code` is rejected by a kit that has not
    synced it (`snapshot` package, W-28, W-29). Such a change reaches players
    with a kit release that syncs the new schema.
+
+   **One pre-release exception** (decided with
+   [OQ-7](../wrapper.md#decided-questions); nothing had shipped against the old
+   shape): `se.snapshot/1` made `proofs.createRoundAuth` required on a config
+   Snapshot that carries `proofs` (from a bound `starting` on), a change that is
+   not additive. With it the backend changed existing vectors: the config
+   `valid/` and `invalid/` vectors that carry `proofs` gained a
+   `createRoundAuth`, and `invalid/problem-default-code-retryable-mismatch` was
+   removed when `UNAVAILABLE` became retryable by default instead of always
+   (`sessions:redeem` sends it with `retryable: false`, now the
+   `valid/problem-default-code-unavailable-not-retryable` and
+   `valid/problem-redeem-unavailable` vectors). The kit vendored the schema and
+   the vectors as they are, with `--allow-vector-change` (rule 1). After the
+   first release no such exception exists: `/1` takes additive changes only, and
+   a released vector file is never edited or removed.
+
 5. **Review before publish.** Every file copied into this public repository is
    reviewed as
    [Never in the public repository](../client-kit.md#never-in-the-public-repository)
    says. The signing vectors use a well-known local test key and are public by
    design; the review still happens. Accepted (human review, 2026-10-16): the
    signing vectors' `_comment` fields name the contracts repository's test
-   tooling, and three Snapshot vectors' descriptions
-   (`valid/cashorcrash-won-expired.json`,
-   `valid/coinflip-canceled-expired-no-action.json`,
-   `invalid/status-unknown.json`) cite backend decisions, a backend document and
-   a backend module operation by name. These are names, not contents; vectors
-   are append-only and copies stay byte for byte, so any rewording comes as a
-   new vector at the source.
+   tooling. These are names, not contents; copies stay byte for byte, so any
+   rewording comes from the source. The Snapshot vectors' descriptions that
+   named backend decisions, documents, or components were reworded at the source
+   and copied again under the one-time pre-release exception (rule 4).
 
    Issue #4's drift requirement is met, until the published locations exist, by
    the `contracts` job verifying the lock against the committed copies; the

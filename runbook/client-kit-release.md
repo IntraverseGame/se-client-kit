@@ -88,8 +88,9 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
 1. Fetch the source repositories (`git fetch`) so the refs you name are current.
    The working trees do not matter: the sync reads committed files.
 2. Write a sources file **outside this repository** (it holds paths on your
-   machine). One entry per group: `snapshot-schema`, `snapshot-vectors-valid`,
-   `snapshot-vectors-invalid`, `signing-vectors`. Each has `name` (the
+   machine). One entry per group: `play-api-document`, `snapshot-schema`,
+   `snapshot-vectors-valid`, `snapshot-vectors-invalid`,
+   `snapshot-vectors-signature`, `signing-vectors`. Each has `name` (the
    repository, recorded in the lock), `repo` (your local checkout), `ref` (for
    example the default branch on `origin`) and `path` (the file or directory in
    that repository). The lock records only public names, so the paths are not in
@@ -101,7 +102,8 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
    files and rewrites `packages/contracts/contracts.lock.json` together. It
    refuses to change or remove a vector that is already locked; pass
    `--allow-vector-change` only before the first release, and say so in the pull
-   request.
+   request. A group you do not mean to move (the signing vectors, for example)
+   keeps the ref it was last synced at: name that commit as its `ref`.
 4. Run `pnpm exec tsx tools/generate-contracts.ts --write` to regenerate the
    types and the vector catalog, then `pnpm check`. Vectors stay on the
    test-only entry; the lint rule, `check:contracts`, and `check:build-output`
