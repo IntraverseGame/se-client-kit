@@ -43,7 +43,6 @@ const READABLE: ReadonlySet<string> = new Set([
   "context",
   "bet",
   "currentMultiplier",
-  "bankedAmount",
 ]);
 
 /**
@@ -130,11 +129,11 @@ describe("status details (W-31 to W-33)", () => {
     expect(ui.host.querySelector(".se-icon--progress")).toBeNull();
   });
 
-  it("shows the payout from bankedAmount's formatted, when present", () => {
-    const won = snapshotVector("coinflip-won");
-    const payout = { ...won.bet.balance, value: "194", formatted: "€1.94" };
-    const ui = rendered(withFields(won, { bankedAmount: payout }));
-    expect(allText(ui.host)).toContain(`${m["label.payout"]} €1.94`);
+  it("shows no payout amount on won: the Snapshot carries none yet", () => {
+    // Until the Snapshot contract adds a server-computed payout `Amount`, none
+    // is shown, and none is ever computed from a multiplier (W-34).
+    const ui = rendered(snapshotVector("coinflip-won"));
+    expect(allText(ui.host)).not.toMatch(/payout/iu);
   });
 
   it("shows the multiplier of an active round, for display", () => {

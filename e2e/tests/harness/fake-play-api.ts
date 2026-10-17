@@ -64,7 +64,8 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
   const sessionId = `ses_${hex32(seed, "session")}`;
   const issued: string[] = [];
   const valid = new Set<string>();
-  let redeemed = false;
+  // The real API redeems a code once; `redeemAgain` adds one for T-17.
+  let redeemsLeft = 1;
   let isCut = false;
   const served: Served[] = [];
   const unexpected: string[] = [];
@@ -127,7 +128,7 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
 
   const redeem = async (route: Route, body: unknown): Promise<void> => {
     const code = (body as { readonly launchCode: unknown }).launchCode;
-    if (redeemed || code !== launchCode) {
+    if (redeemsLeft === 0 || code !== launchCode) {
       await own(
         route,
         "redeemLaunchCode",
@@ -136,7 +137,7 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
       );
       return;
     }
-    redeemed = true;
+    redeemsLeft -= 1;
     const response: PlaySuccessBody<"redeemLaunchCode"> = {
       sessionId,
       playToken: issueToken(),
@@ -250,6 +251,9 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
     },
     cut: () => {
       isCut = true;
+    },
+    redeemAgain: () => {
+      redeemsLeft += 1;
     },
     restore: () => {
       isCut = false;

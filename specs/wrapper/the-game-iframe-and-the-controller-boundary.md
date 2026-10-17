@@ -8,10 +8,11 @@ Part of the [Wrapper spec](../wrapper.md), section
   D, which MUST differ from the SE origin and MUST be on a different registrable
   domain, so a script in the game can never reach the Wrapper's storage or code.
   The Wrapper MUST refuse to mount a game whose origin equals its own, MUST take
-  D only from the launched game's catalog entry, served by the Play API, and
-  MUST mount it only when D is on the environment configuration's `gameOrigins`
-  allow-list. It never takes D from a message, a URL parameter, the launch
-  response, or the Snapshot.
+  D only from the `sessions:redeem` response's `gameOrigin` (the launched game's
+  catalog value, per game version, set by the server), and MUST mount it only
+  when D is on the environment configuration's `gameOrigins` allow-list. It
+  never takes D from the operator's launch URL or anything else the operator
+  supplies, a message, a URL parameter, or the Snapshot.
   - **At mount** the `shell`'s bridge refuses (and does not listen) when D or
     the Wrapper's origin is not a serialized origin as `event.origin` gives it
     (`https://host[:port]`, or `http:` on a loopback host only; lowercase, no
@@ -20,15 +21,32 @@ Part of the [Wrapper spec](../wrapper.md), section
     with no trailing dot; a port from 1 to 65535 with no leading zero, and never
     the scheme's default `:443` or `:80`, which a serialized origin omits;
     `null` and `*` are not origins), when D equals the Wrapper's origin, or when
-    D is not on `gameOrigins` (exact match).
+    D is not on `gameOrigins` (exact match). The allow-list and the Wrapper's
+    origin are the session's, given when it opens from the accepted
+    configuration and the page's own origin: the UI's mount passes only the
+    frame, its message listener, and the incompatible-game notice, so it cannot
+    point the check at another list.
   - The "different registrable domain" rule is not checked in code yet: it needs
     a public suffix list, which is a new dependency and needs an ADR. Until then
     only an equal origin is refused (decided in human review, 2026-10-17).
     <!-- TODO(W-37, registrable domain): check D against the SE origin's registrable domain; needs a public suffix list and an ADR for the dependency. -->
-  - **Where D comes from** was decided by the product owner on 2026-10-17 (the
-    catalog, above): the operator cannot set D, and the launch URL never carries
-    it.
-    <!-- TODO(Play API, catalog): the field is not served yet. See rfcs/active/RFC-001-operator-launch-contract.md (draft): no operator message carries D. -->
+  - **Where D comes from** was decided in human review, 2026-10-17: the
+    `sessions:redeem` response's `gameOrigin`, a serialized origin with no path
+    (`https:`, or a loopback `http:` origin in a local environment), which the
+    backend takes from the game catalog. The operator cannot set D, and the
+    launch URL never carries it. Until the vendored Play API document has the
+    field, the shell takes D from an injected source (`gameOrigin` in the
+    session's options) and the Wrapper wires none, so no game is mounted.
+    <!-- TODO(Play API, catalog): `gameOrigin` on the redeem answer is not in the vendored document yet; the shell reads it once it is vendored. See rfcs/active/RFC-001-operator-launch-contract.md (draft): no operator message carries D. -->
+  - **The frame's URL** is D's root with the Wrapper's own serialized origin as
+    the query parameter `parentOrigin`, built with the `URL` API (decided in
+    human review, 2026-10-17): for example
+    `https://games.example/?parentOrigin=https%3A%2F%2Fplay.example`. It is not
+    a secret. The game checks it against `location.ancestorOrigins[0]` where
+    that exists and talks to nobody when they disagree. The Wrapper sets the
+    frame's `src` only after the bridge accepted D, so a refused D is never
+    loaded, and the frame is kept for the session's life and hidden unless the
+    round is shown ready (`active` after W-26 passed, or `resolving`, W-31).
 - **W-38.** A message from the game is accepted only if `event.source` is the
   game frame's `contentWindow` **and** `event.origin` is D. The Wrapper posts to
   the game only with `targetOrigin = D`. Every accepted message MUST be parsed
@@ -125,7 +143,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   to copy it, and a **link to the verify page** for that round. The verify base
   URL comes from the environment configuration, and the link opens in a new
   browsing context with `rel="noopener noreferrer"`.
-  <!-- TODO(verify API): the verify page URL shape and whether it takes the round id in the path or a fragment. -->
+  <!-- TODO(verify API): the verify page URL shape and whether it takes the round id in the path or a fragment; the backend has reserved only an API prefix so far. -->
   Until the shape is decided, the link opens `verifyBaseUrl` itself and the
   round id is shown beside it with its copy control (one function,
   `verifyUrlFor` in `apps/wrapper`, changes when it is decided).

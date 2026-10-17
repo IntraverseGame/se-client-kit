@@ -1,4 +1,5 @@
-// W-35: while the status is `starting` or `resolving`, the Snapshot is read
+// W-35: while the round is polled (`isPolled`: `starting` or `resolving`
+// today, never a round that is over by the shell's `isRoundOver`), the Snapshot is read
 // again with bounded backoff until the status changes; after a longer wait the
 // reads go on at the slow rate with a "taking longer than expected" notice.
 // W-43: a read that gets no response is repeated at the slow rate. Polling
@@ -7,7 +8,8 @@
 // the injected timers only.
 
 import {
-  POLLING_STATUSES,
+  isPolled,
+  type RoundProgress,
   type RoundStatus,
   type SnapshotRead,
 } from "./round-input.ts";
@@ -35,11 +37,11 @@ export const DEFAULT_POLL_CONFIG: PollConfig = Object.freeze({
 
 export type SnapshotPoller = {
   /**
-   * Follows the status of the last accepted Snapshot: starts polling in a
-   * polled status, restarts the backoff when the status changes, and stops in
+   * Follows the last accepted Snapshot: starts polling while it is polled
+   * (`isPolled`), restarts the backoff when the status changes, and stops in
    * any other (or when `undefined`: the session ended or a state blocks).
    */
-  readonly follow: (status: RoundStatus | undefined) => void;
+  readonly follow: (round: RoundProgress | undefined) => void;
   /** Reads now instead of at the next tick (the connection came back). */
   readonly pollNow: () => void;
   readonly stop: () => void;
@@ -138,11 +140,12 @@ export const createSnapshotPoller = (
   };
 
   return Object.freeze({
-    follow: (status: RoundStatus | undefined): void => {
-      if (status === undefined || !POLLING_STATUSES.has(status)) {
+    follow: (round: RoundProgress | undefined): void => {
+      if (round === undefined || !isPolled(round)) {
         stop();
         return;
       }
+      const { status } = round;
       if (phase?.status === status) {
         return;
       }

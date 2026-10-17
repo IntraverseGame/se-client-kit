@@ -22,7 +22,7 @@ import {
   signedBody,
 } from "./round-request.ts";
 import type { RoundSigner } from "./round-signer.ts";
-import { encoderOf } from "./typed-data.ts";
+import { encoderOf, type FlowTestHooks } from "./typed-data.ts";
 
 /** The required cancel's progress (W-25, W-26). */
 export type CancelState =
@@ -60,19 +60,22 @@ export type CancelHost = {
 /** What one send of the cancel leads to. */
 type Attempt = "done" | "resend";
 
+/** `hooks` is test-only (typed-data.ts): production passes none. */
 export const createRoundCancel = (
   options: DeliveryOptions,
   host: CancelHost,
   delivery: RoundDelivery,
+  hooks: FlowTestHooks = {},
 ): RoundCancel => {
   const { roundId } = host;
+  const encode = encoderOf(hooks);
   let state: CancelState = "none";
   let resends = 0;
 
   const sign = (signer: RoundSigner, initial: SettledInitial): Sent =>
     delivery.record(
       signedBody(
-        encoderOf(options),
+        encode,
         roundId,
         "cancel",
         {

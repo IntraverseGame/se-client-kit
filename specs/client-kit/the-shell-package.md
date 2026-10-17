@@ -11,9 +11,10 @@ and the decision it leads to (W-26a, W-26b, and W-26's pass or fail); then the
 the round's verdict that combines them with the tip check; then the
 `se.controller/1` game bridge (W-37, W-38, and W-23's pre-check); then the round
 flows (start, move, cash-out, the required cancel, the W-16 resend, and the W-19
-resynchronization), the pick use case, and the UI's Snapshot reader. The session
-flows (redeem and refresh) follow. The Wrapper requirements each rule serves are
-in brackets.
+resynchronization), the pick use case, and the UI's Snapshot reader; then the
+session (the launch code, the redeem, the play token and its refresh, and the
+UI's use cases over the round flows). The Wrapper requirements each rule serves
+are in brackets.
 
 - **Public API.** The redacting logger (`createLogger` and its types),
   `REDACTED`, `ShellError` with its `ShellErrorCode`, the chain configuration's
@@ -27,22 +28,103 @@ in brackets.
   `GameSnapshot`, `GameStep`, `Pick`, `RejectReason`, and the unions), and the
   UI's Snapshot reader (`createSnapshotReader` with `SnapshotReader`,
   `SnapshotReaderOptions`, and `SnapshotRead`, and the re-exported
-  `ValidSnapshot` and `ValidPlayProblem` of the `snapshot` package). The
-  validation is public because the Wrapper applies W-26a's boot rule before it
-  starts; the transport types because the Wrapper supplies the transport (it
-  owns `fetch` and the Content Security Policy); the bridge because the Wrapper
-  mounts the game iframe and owns the window it talks through; the reader
-  because the Wrapper UI renders only what the shell validated (decided in human
-  review, 2026-10-17). The protocol types are also exported, as types only, at
-  the subpath `@intraverse/se-client-shell/controller` (`src/controller.ts`, a
-  `types` condition only, no value): the message types, `GameSnapshot`,
-  `GameStep`, `Pick`, `Presentation`, `RoundStatus`, and `RejectReason`, for the
+  `ValidSnapshot` and `ValidPlayProblem` of the `snapshot` package), and the
+  session: `takeLaunchCode` and `discardLaunchCode` with
+  `MAX_LAUNCH_CODE_LENGTH` and the types `LaunchCode`, `LaunchLocation`, and
+  `LaunchHistory`; `openPlaySession` with `PlaySessionOptions`, `SessionParts`,
+  `SessionOpening`, `PlaySession`, `SessionRead`, `RoundState`, `GameMount`,
+  `GameMountOptions`, `Bet`, `BindMode`, and `FailReason`; `isRoundOver` with
+  `RoundEnd`; and the re-exported platform types of `play-client` the session
+  takes (`Clock`, `FetchLike`, `RefreshConfig`, `TimerHandle`), since the
+  Wrapper imports only `shell`. The validation is public because the Wrapper
+  applies W-26a's boot rule before it starts; the transport types because the
+  Wrapper supplies the transport (it owns `fetch` and the Content Security
+  Policy); the bridge because the Wrapper mounts the game iframe and owns the
+  window it talks through; the reader because the Wrapper UI renders only what
+  the shell validated (decided in human review, 2026-10-17). The protocol types
+  are also exported, as types only, at the subpath
+  `@intraverse/se-client-shell/controller` (`src/controller.ts`, a `types`
+  condition only, no value): the message types, `GameSnapshot`, `GameStep`,
+  `Pick`, `Presentation`, `RoundStatus`, and `RejectReason`, for the
   `reference-game` app ([The reference game](./the-reference-game.md)). Key
   custody, the signer lock, the transcript state, the tip check, its decision,
-  the `CreateRoundAuth` checks, the round's verdict, the round flows, and the
-  pick use case are internal: the UI gets use cases and read-only state, never a
-  signing capability ([Packages](./packages.md)), and the round flows become
-  public with the change that wires them into the Wrapper.
+  the `CreateRoundAuth` checks, the round's verdict, the round flows, the pick
+  use case, and the token keeper are internal: the UI gets use cases and
+  read-only state, never a signing capability ([Packages](./packages.md)). The
+  round flows are reached only through the session's use cases (decided with the
+  session, 2026-10-17).
+- **The launch code (W-1, W-1a).** `takeLaunchCode(location, history)` reads
+  `location.hash` and `location.href` once, removes the fragment with
+  `history.replaceState(null, "", <href without the fragment>)` whenever the URL
+  has one, and returns the code sealed as a `LaunchCode`, or `undefined` when
+  there is none: no fragment, an empty one, or more than 128 characters of the
+  raw hash without its `#`, not decoded. The prefix is not checked, and the
+  query string is never read. A `replaceState` that throws returns `undefined`,
+  so a code still in the URL is never redeemed. The Wrapper calls it first,
+  before any request. `discardLaunchCode(code)` forgets a code that will not be
+  redeemed (the Wrapper refused its configuration or its framing, so no session
+  opens): its text can no longer be read, and `undefined` is a no-op.
+- **The session (W-1 to W-14, W-22 to W-26, W-37).** `openPlaySession(options)`
+  builds the Play API transport from `playApiBaseUrl` and the Wrapper's `fetch`
+  (play-client's `createTransport`, W-3, W-43) and resolves with a
+  `SessionOpening`. Its options also carry the configuration's `gameOrigins` and
+  the Wrapper's own origin (`ownOrigin`), copied at open: the session's
+  `mountGame` checks D against these, never against a list the UI gives (W-37):
+  - `no-launch-code` when the code is `undefined` (nothing is sent);
+    `redeem-failed` after a refused, lost, or unreadable redeem, which is sent
+    once and never repeated (W-2); the code is forgotten after the redeem;
+  - `other-tab` or `unsupported` when the page does not get the signer lock
+    (W-14): the token is forgotten and nothing is read, refreshed, or signed;
+  - `open` with the `PlaySession`. The signing session's domain is the
+    configuration's `registryDomain` with the published name and version. The
+    token keeper holds the play token sealed and gives the transport its
+    `Authorization` per attempt; it refreshes it at play-client's `refreshAtMs`
+    over `tokenExpiresAt` and the redeem's `Date` offset, one refresh at a time,
+    replacing the token only once the answer arrived; after a retryable failure
+    (no answer, or a problem with `retryable: true`) it tries again after
+    play-client's backoff while the old token is valid; a refusal that does not
+    end the session leaves the old token in use until its deadline. The session
+    ends (the key is destroyed, the token forgotten, and the end listeners are
+    called once) on the deadline, on `SESSION_EXPIRED`, `SESSION_REVOKED`, or
+    `UNAUTHENTICATED` to the refresh or to any other call, or on `end()`. No
+    call is made only to keep the session alive (W-8). The `PlaySession`
+    (frozen, `[redacted]`) gives:
+  - `read()`: the Snapshot read (`SnapshotRead`), whose validated Snapshot, or
+    the one a `ROUND_ACTIVE` problem embeds, is first observed by the current
+    round's flow (its checks) and sent to the game's bridge;
+  - `start(bet)`: the round flow's start; the answer is the round's Snapshot, a
+    typed error (a `ROUND_ACTIVE` round is shown but not held: nothing is signed
+    in it), `rejected`, `network`, or `refused` with a `ShellErrorCode`. One
+    start or cash-out runs at a time: a `start` while another start or a
+    cash-out is in flight is `refused` with `busy`, and a `start` while the
+    round the session holds is not over (`isRoundOver` of its latest Snapshot,
+    while the latest Snapshot the session saw is of that round) is `refused`
+    with `round-exists`; neither signs or sends anything, so a late answer never
+    replaces the held round. A read that shows the round over, `idle`, or
+    another round lets the next `start` through;
+  - `cashOut()`: the flow's cash-out, on the player's request only; its answer
+    is the round's latest Snapshot, or the call's new failure. A `cashOut` while
+    a start or a cash-out is in flight is `refused` with `busy`, and nothing
+    more is signed or sent;
+  - `round()`: `RoundState`, the read-only state of the current round: the
+    verdict (`checking`, `ready`, `failed` with what is shown), whether it is
+    out of sync, and whether a cash-out is offered (`cashOutOffered`: the flow's
+    gate and legality, with nothing signed);
+  - `gameOrigin()` and `mountGame(options)`: the controller bridge for D with
+    the session's pick use case, which answers the game and reports the answer's
+    Snapshot through `onChange`, and the session's own `gameOrigins` and
+    `ownOrigin` (the options, `GameMountOptions`, are only the frame, its
+    message listener, and the incompatible-game notice; a list or an origin a
+    caller adds is overridden); `no-game-origin` without a D;
+  - `onChange`, `onEnd`, `ended()`, and `end()`. Every answer is a validated
+    Snapshot, a validated typed error, or a closed code: no key, token, launch
+    code, signature, or transcript. The session logs nothing.
+- **Whether a round is over (W-35, W-39).**
+  `isRoundOver({ status, closeReason })` is the kit's one check: `won`, `lost`,
+  and `canceled` today. The transcript state's `closed` reading and the
+  Wrapper's polling and rendering read it, so #41's rule (a `canceled` that
+  answers the shell's own cancel, with no `closeReason`, is not final yet)
+  changes only this function.
 - **The Snapshot reader (W-28, W-42, W-43).** `createSnapshotReader` takes the
   Play API transport and the play token's `Authorization` and returns `read()`
   and `latest()`. `read()` calls `getSnapshot` and resolves with one of:
@@ -160,15 +242,15 @@ in brackets.
   `chain-id-unavailable`, `hash-unavailable`, or `unknown-source`) or
   `verification-failed` ("this round failed verification": `chain-id-mismatch`,
   `lagging`, `hash-mismatch`, or a bind that does not hold, `failure: "bind"`).
-  A failure signs nothing by itself: per W-25 and W-26 the shell signs
-  `PlayerCancel` (through the round's `signCancel`) as soon as the round is
-  `active` only if `T_0` is settled and the round's `CreateRoundAuth` was not
-  re-issued, and the player then sees the reason's text, with "and was canceled"
-  added to "this round failed verification"; if `T_0` is not settled it signs
-  nothing for the round, not even `PlayerCancel`, keeps the evidence, and the
-  round ends by its game's expiry rule. The round's verdict (below) combines the
-  decision with checks 1 to 5. The shell does not act on it yet: the start flow
-  is not built.
+  The session runs it through the Wrapper's JSON-RPC transport
+  (`session-tip.ts`). A failure signs nothing by itself: per W-25 and W-26 the
+  shell signs `PlayerCancel` (through the round's `signCancel`) as soon as the
+  round is `active` only if `T_0` is settled and the round's `CreateRoundAuth`
+  was not re-issued, and the player then sees the reason's text, with "and was
+  canceled" added to "this round failed verification"; if `T_0` is not settled
+  it signs nothing for the round, not even `PlayerCancel`, keeps the evidence,
+  and the round ends by its game's expiry rule. The round's verdict (below)
+  combines the decision with checks 1 to 5.
 - **The `CreateRoundAuth` checks (W-26 items 1 to 5).** They read a validated
   Snapshot, the validated chain configuration (the only trust anchor, OQ-7), and
   what the shell sent in `start` (the action key's address and the
@@ -369,15 +451,19 @@ in brackets.
     `signing`'s `encodeTypedData` of the message's kind, text, path, sequence,
     and `previous` (the canonical encoding of `ActionTypedData`, pinned by the
     vendored `typed-data/` vectors), in base64, 1 to 4096 characters (else
-    `invalid-input`, nothing signed). The encoding is the flow's own: its
-    options take another encoder only for a test (the fail-closed tests pass one
-    that changes the message), and the Wrapper passes none. The typed data is
-    encoded before the signature (an encoding that fails leaves nothing signed),
-    the action is recorded with its body (key, round id, typed data, signature),
-    then sent on its own route (`continue` or `cashOut`). The transport repeats
-    a lost response or a retryable problem with the same bytes; `resend` sends
-    the recorded body again later, in the phases `resendable` allows. Any other
-    failure leaves the action pending.
+    `invalid-input`, nothing signed). The encoding is the flow's own: no options
+    type carries an encoder. A test passes another one only as the separate
+    test-hooks argument of the internal constructors (`FlowTestHooks`:
+    `startRoundFlow`, `createRoundFlow`, `createRoundDelivery`,
+    `createRoundCancel`; the fail-closed tests pass one that changes the
+    message), and the session passes none (decided in review of the round flows,
+    2026-10-17). The typed data is encoded before the signature (an encoding
+    that fails leaves nothing signed), the action is recorded with its body
+    (key, round id, typed data, signature), then sent on its own route
+    (`continue` or `cashOut`). The transport repeats a lost response or a
+    retryable problem with the same bytes; `resend` sends the recorded body
+    again later, in the phases `resendable` allows. Any other failure leaves the
+    action pending.
   - **Resynchronization (W-19).** A 400 `INVALID_ARGUMENT` or a 409
     `STALE_ACTION` calls `stale` and reads the Snapshot; when the read fails,
     the round stays held until a later read decides.
@@ -456,9 +542,17 @@ in brackets.
   - The tip check reaches the round flow as an injected function that runs it
     and applies the bind rule, because the bind's mode is not in a contract yet
     (below).
-  - The EIP-712 domain (published) is an input of the session. The environment
-    configuration pins its `chainId` and `verifyingContract`; the session is not
-    wired to the validated configuration yet.
+  - The EIP-712 domain (published) is built by the session from the validated
+    configuration's `registryDomain` and the published name and version.
+  - The bind's mode is an input of the session (`bindMode`); the Wrapper wires
+    `tip`, the weaker of the two rules, which an honest `future` bind also
+    satisfies (its `N` is above the tip), so no honest round is refused; the
+    stricter `future` rule waits for the contract that carries the mode. Kept
+    provisional (decided in human review, 2026-10-17).
+    <!-- TODO(bind mode): take `bindMode` from the contract that carries it (the Snapshot or the signed-action spec) and drop the session input. -->
+  - The game origin D is an injected source of the session (`gameOrigin`) until
+    the vendored Play API document has the redeem answer's `gameOrigin` (W-37);
+    the Wrapper wires none, so no game is mounted yet.
   - `tipLagMargin` has no default and is required per source: the margin in
     blocks per chain is not decided (W-26b).
   - The bind's mode (`future` or `tip`) and `N` are inputs of the decision: the
@@ -585,4 +679,19 @@ in brackets.
   the round; `toBase64` matches RFC 4648's values and `typedData` keeps to 1 to
   4096 characters; the `failed` phase holds from `open`, `stale`, and `adopted`,
   even after a Snapshot shows an action applied; and a second refused move after
-  an adopted resync holds the round again.
+  an adopted resync holds the round again. The session's tests (T-4a, T-7,
+  T-17's shell half) run against the scripted Play API and a manual wall clock
+  (`fixtures/wall-clock.ts`): the fragment is removed before the first request;
+  no fragment, an empty one, 129 characters, or a code only in the query string
+  sends nothing, and 128 raw characters pass; a lost, refused, or 503 redeem is
+  not repeated; a second tab on one lock manager opens nothing (no read, no
+  timer); the refresh point comes from the fixture's `tokenExpiresAt` and the
+  offset, nothing is sent before it, the old token is presented and stays in use
+  until the answer, one refresh is in flight, a lost answer is retried with the
+  same token after backoff, the session-ending codes and the deadline end the
+  session, and a refusal that does not end it waits for the deadline; the open
+  session reads with the token, starts a round with the key's address (issued
+  for the session's own key, so W-26 passes) and reports it `ready`, shows a
+  `ROUND_ACTIVE` round it does not hold, mounts the game and signs a pick
+  through it, ends on each session-ending code and then sends nothing, prints
+  `[redacted]`; and the public options type carries no `encodeTypedData`.

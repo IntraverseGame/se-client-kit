@@ -1,19 +1,21 @@
-// The public API, listed by name: nothing else in `src/` is public. Key custody,
-// the signer lock, and the transcript state are internal until the use cases
-// that drive them (start, pick, cash-out) exist: the UI gets use cases, never
-// a signing capability. The chain configuration's validation is public because
-// the Wrapper applies W-26a's boot rule before it starts; the RPC call and
-// transport types are public because the Wrapper supplies the transport (it
-// owns `fetch` and the Content Security Policy). The tip check and its decision
-// stay internal until the start flow that acts on them exists. The game bridge
-// and the `se.controller/1` message types are public because the Wrapper mounts
-// the game iframe and owns the window it talks through; the bridge holds no
-// secret and no signing capability, and gets the pick use case injected. The
-// Snapshot reader is public because the Wrapper UI renders only Snapshots and
-// typed errors the shell validated (W-28, W-42); it returns data, never a key,
-// a token, or a signing capability. The round flows (start, move, cash-out,
-// the required cancel) and the pick use case stay internal until the Wrapper
-// wires them.
+// The public API, listed by name: nothing else in `src/` is public. The chain
+// configuration's validation is public because the Wrapper applies W-26a's
+// boot rule before it starts; the RPC call and transport types are public
+// because the Wrapper supplies the transport (it owns `fetch` and the Content
+// Security Policy). The game bridge and the `se.controller/1` message types are
+// public because the Wrapper mounts the game iframe and owns the window it
+// talks through; the bridge holds no secret and no signing capability, and gets
+// the pick use case injected. The Snapshot reader is public because the
+// Wrapper UI renders only Snapshots and typed errors the shell validated (W-28,
+// W-42); it returns data, never a key, a token, or a signing capability.
+//
+// The session (`openPlaySession`) is the UI's way to play: it opens the
+// session from the launch code, holds the play token and the key, and gives
+// use cases (read, start, cash-out, mounting the game with the session's pick
+// use case) and read-only state. Key custody, the signer lock, the transcript
+// state, the tip check, the round flows, and the pick use case stay internal:
+// the UI gets use cases, never a signing capability, and no public type
+// carries the round flows' test-only typedData encoder.
 
 export {
   DEFAULT_MIN_RPC_QUORUM,
@@ -56,6 +58,32 @@ export {
   type WrapperMessage,
 } from "./controller-protocol.ts";
 export { ShellError, type ShellErrorCode } from "./errors.ts";
+export type { BindMode, FailReason } from "./chain-decision.ts";
+export {
+  discardLaunchCode,
+  MAX_LAUNCH_CODE_LENGTH,
+  takeLaunchCode,
+  type LaunchHistory,
+  type LaunchLocation,
+} from "./launch-code.ts";
+export { openPlaySession } from "./play-session.ts";
+export type { PlaySessionOptions, SessionParts } from "./session-options.ts";
+export type {
+  GameMount,
+  GameMountOptions,
+  PlaySession,
+  RoundState,
+  SessionOpening,
+  SessionRead,
+} from "./session-types.ts";
+export type { Bet } from "./round-start.ts";
+export type {
+  Clock,
+  FetchLike,
+  RefreshConfig,
+  TimerHandle,
+} from "@intraverse/se-client-play-client";
+export { isRoundOver, type RoundEnd } from "./snapshot-reading.ts";
 export {
   createLogger,
   type LogFields,
@@ -64,7 +92,7 @@ export {
   type LogSink,
   type Logger,
 } from "./logger.ts";
-export { REDACTED } from "./redaction.ts";
+export { REDACTED, type LaunchCode } from "./redaction.ts";
 export type { BlockTag, RpcCall, RpcTransport } from "./rpc-transport.ts";
 export {
   createSnapshotReader,

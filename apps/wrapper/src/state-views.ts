@@ -14,7 +14,7 @@ import {
   heading,
   STATUS_HEADING_ID,
 } from "./dom.ts";
-import { type Messages, problemMessage } from "./messages.ts";
+import { type MessageKey, type Messages, problemMessage } from "./messages.ts";
 import { verifyUrlFor } from "./verify-link.ts";
 import type { ViewOptions } from "./view-options.ts";
 import type { WrapperState } from "./wrapper-state.ts";
@@ -69,6 +69,20 @@ export const blockingView = (
           m["icon.info"],
         ),
         el("p", { class: "se-detail" }, [m["state.otherTabDetail"]]),
+      ];
+    }
+    case "unsupported-browser": {
+      return [
+        heading(
+          el,
+          doc,
+          "h1",
+          STATUS_HEADING_ID,
+          m["state.unsupported"],
+          "info",
+          m["icon.info"],
+        ),
+        el("p", { class: "se-detail" }, [m["state.unsupportedDetail"]]),
       ];
     }
     default: {
@@ -127,6 +141,27 @@ export type AlertContent = {
   readonly retry: boolean;
 };
 
+/** The texts of the states of one round (W-44). */
+const ROUND_STATE_TEXTS: Readonly<
+  Record<
+    "verification-failed" | "chain-unverified" | "out-of-sync",
+    { readonly heading: MessageKey; readonly detail: MessageKey }
+  >
+> = {
+  "verification-failed": {
+    heading: "state.verificationFailed",
+    detail: "state.verificationFailedDetail",
+  },
+  "chain-unverified": {
+    heading: "state.chainUnverified",
+    detail: "state.chainUnverifiedDetail",
+  },
+  "out-of-sync": {
+    heading: "state.outOfSync",
+    detail: "state.outOfSyncDetail",
+  },
+};
+
 /** The error to show in the alert panel, if any, by priority. */
 export const alertContent = (
   m: Messages,
@@ -151,16 +186,13 @@ export const alertContent = (
       };
     }
     case "verification-failed":
+    case "chain-unverified":
     case "out-of-sync": {
-      const failed = state.blocking === "verification-failed";
+      const texts = ROUND_STATE_TEXTS[state.blocking];
       return {
         key: state.blocking,
-        heading: failed ? m["state.verificationFailed"] : m["state.outOfSync"],
-        lines: [
-          failed
-            ? m["state.verificationFailedDetail"]
-            : m["state.outOfSyncDetail"],
-        ],
+        heading: m[texts.heading],
+        lines: [m[texts.detail]],
         ...(roundId === undefined ? {} : { roundId }),
         retry: false,
       };
@@ -186,6 +218,22 @@ export const alertContent = (
         ? { deposit }
         : {}),
       retry: problem.retryable,
+    };
+  }
+  if (state.gameIncompatible === true) {
+    return {
+      key: "game-incompatible",
+      heading: m["error.heading"],
+      lines: [m["error.gameIncompatible"]],
+      retry: false,
+    };
+  }
+  if (state.refused === true) {
+    return {
+      key: "refused",
+      heading: m["error.heading"],
+      lines: [m["error.generic"]],
+      retry: false,
     };
   }
   if (state.connectionProblem) {

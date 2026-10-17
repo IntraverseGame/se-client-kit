@@ -284,8 +284,12 @@ After publishing:
 5. **Promotion** to an environment is done on the SuperEngine side, by its
    deploy job, which pulls the released digest
    <!-- TODO(infrastructure owner): the repository, protected environment, and procedure of the deploy job; the hosting. -->
-   After it, play one round in that environment from a test launch, and check
-   there is no console error.
+   After it, play one round in that environment from a test launch (the launch
+   page URL, then `#`, then the bare launch code), and check there is no console
+   error, the address bar no longer shows the code once the page has loaded, and
+   a reload shows "Your session has ended" (the code is single use). Until the
+   Play API's redeem answer carries `gameOrigin` and the kit vendors it, the
+   Wrapper mounts no game, so a round cannot be played to its end there.
 
 ### Roll back or deprecate
 

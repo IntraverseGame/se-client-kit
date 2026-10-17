@@ -1,13 +1,14 @@
 // A smoke run of the harness against the Wrapper's release bundle as it is
 // today (`apps/wrapper/dist`, unmodified, served by the hermetic origin, with
-// the environment configuration document the harness serves). The Wrapper
-// does not open a session yet (#9), so these tests prove only that the
+// the environment configuration document the harness serves), opened with no
+// launch code, so it shows the session-ended state and sends nothing to the
+// Play API (session-open.spec.ts covers a launch). These tests prove that the
 // fixtures work on the real bundle: it loads and accepts the configuration
 // with no request outside the fake origins and no error or warning, its
 // document passes the audit, the scan finds nothing, and going offline and
 // back raises no error. A control shows the same check sees a refused
-// configuration. They are not T-13, T-14, or T-15; those are pending
-// (pending.spec.ts).
+// configuration. They are not T-13, T-14, or T-15 (their own spec files, and
+// pending.spec.ts).
 
 import type { Page } from "@playwright/test";
 

@@ -250,10 +250,29 @@ describe("labels in the session's language (W-48)", () => {
   });
 });
 
+/** The classes the stylesheet animates (`animation: se-...`). */
+const animatedClasses = (): readonly string[] =>
+  [...stylesheet.matchAll(/\.([\w-]+)\s*\{[^}]*animation: se-/gu)].map(
+    match => match[1] ?? "",
+  );
+
+/** Whether the reduced-motion block names `name` with `animation: none`. */
+const stoppedWhenReduced = (name: string): boolean =>
+  new RegExp(String.raw`\.${name}\s*\{\s*animation: none;`, "u").test(
+    stylesheet.split("@media (prefers-reduced-motion: reduce)")[1] ?? "",
+  );
+
 describe("the stylesheet (W-45, W-47)", () => {
   it("stops motion under prefers-reduced-motion", () => {
     expect(stylesheet).toMatch(
       /@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\{[^}]*animation: none;/u,
+    );
+  });
+
+  it("names every animated class under prefers-reduced-motion, which the universal rule cannot override", () => {
+    expect(animatedClasses().length).toBeGreaterThan(0);
+    expect(animatedClasses().filter(name => !stoppedWhenReduced(name))).toEqual(
+      [],
     );
   });
 

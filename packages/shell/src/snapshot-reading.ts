@@ -52,6 +52,23 @@ export type SnapshotReading =
 
 const TERMINAL: ReadonlySet<string> = new Set(["won", "lost", "canceled"]);
 
+/** The fields of a Snapshot that say whether its round is over. */
+export type RoundEnd = {
+  readonly status: string;
+  readonly closeReason?: string;
+};
+
+/**
+ * Whether the Snapshot's round is over (`won`, `lost`, or `canceled`): the one
+ * place the kit decides it, read by the shell's transcript state and by the
+ * Wrapper's polling (W-35) and rendering (W-39, W-40). `closeReason` is in the
+ * input for the rule #41 adds here (a `canceled` that answers the shell's own
+ * cancel, with no `closeReason`, is not final yet); today the status alone
+ * decides.
+ */
+export const isRoundOver = (snapshot: RoundEnd): boolean =>
+  TERMINAL.has(snapshot.status);
+
 export const readSnapshot = (
   position: RoundPosition,
   snapshot: ValidSnapshot,
@@ -59,7 +76,7 @@ export const readSnapshot = (
   if (snapshot.status === "idle" || snapshot.roundId !== position.roundId) {
     return "other-round";
   }
-  if (TERMINAL.has(snapshot.status)) {
+  if (isRoundOver(snapshot)) {
     return "closed";
   }
   const { step } = snapshot;
@@ -85,6 +102,6 @@ export const closingAppliesPending = (
   position: RoundPosition,
   snapshot: ValidSnapshot,
 ): boolean =>
-  TERMINAL.has(snapshot.status) &&
+  isRoundOver(snapshot) &&
   position.pending?.kind === "action" &&
   snapshot.step === position.pending.sequence;

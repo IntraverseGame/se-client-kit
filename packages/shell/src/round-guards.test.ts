@@ -43,6 +43,7 @@ const flowWith = (
       request: { actionKey: setup.actionKey, bet: setup.options.bet },
     },
     setup.issued.snapshot,
+    setup.hooks,
   );
 
 describe("a failed round signs no move (W-26)", () => {
@@ -141,8 +142,7 @@ describe("a signed message that differs from the encoded one (W-16, W-20)", () =
     // bytes then no longer describe what is signed next.
     const flow = await startFlow({
       ...setup,
-      options: {
-        ...setup.options,
+      hooks: {
         encodeTypedData: action => {
           const bytes = setup.encoder(action);
           (action.message as { previous: string }).previous =
@@ -163,7 +163,7 @@ describe("a signed message that differs from the encoded one (W-16, W-20)", () =
 
 /** An encoder that changes `previous` in the message after encoding it. */
 const changingPrevious =
-  (setup: FlowSetup): NonNullable<FlowSetup["options"]["encodeTypedData"]> =>
+  (setup: FlowSetup): NonNullable<FlowSetup["hooks"]["encodeTypedData"]> =>
   action => {
     const bytes = setup.encoder(action);
     (action.message as { previous: string }).previous = `0x${"11".repeat(32)}`;
@@ -191,7 +191,7 @@ describe("a signed cancel that differs from its typed data (W-25, W-26)", () => 
     const setup = await setUpFlow({ tip: TIP_FAILED });
     const flow = await startFlow({
       ...setup,
-      options: { ...setup.options, encodeTypedData: changingPrevious(setup) },
+      hooks: { encodeTypedData: changingPrevious(setup) },
     });
     expect(setup.play.sent("cancelRound")).toEqual([]);
     expect(flow.cancel()).toBe("unavailable");
@@ -216,19 +216,21 @@ describe("a signed cancel that differs from its typed data (W-25, W-26)", () => 
     );
     await tracking.observe(setup.at(0));
     const { signer, initial } = openedFor(tracking);
-    const options = {
-      ...setup.options,
-      encodeTypedData: changingPrevious(setup),
-    };
-    const delivery = createRoundDelivery(options, {
-      roundId: ROUND_ID,
-      observe: tracking.observe,
-      signer: tracking.signer,
-    });
+    const hooks = { encodeTypedData: changingPrevious(setup) };
+    const delivery = createRoundDelivery(
+      setup.options,
+      {
+        roundId: ROUND_ID,
+        observe: tracking.observe,
+        signer: tracking.signer,
+      },
+      hooks,
+    );
     const cancel = createRoundCancel(
-      options,
+      setup.options,
       { roundId: ROUND_ID, reissued: () => false },
       delivery,
+      hooks,
     );
     await cancel.run(signer, initial);
     expect(cancel.state()).toBe("unavailable");

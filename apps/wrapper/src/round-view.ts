@@ -1,7 +1,11 @@
 // The round as its status gives it (W-31 to W-34): the bet selector when
-// `idle`, the preparing and resolving notes, the multiplier, the result and
-// payout, and `closeReason` beside the status. Money is the Snapshot's
-// `formatted`; a choice compares `value` as a `bigint` (bet-options.ts).
+// `idle`, the preparing and resolving notes, the multiplier, the cash-out
+// control when the shell offers it, the result, and `closeReason` beside the
+// status. An `active` round is shown as ready only once the shell's checks
+// passed (W-26); until then it reads as being checked. Money is the
+// Snapshot's `formatted`; a choice compares `value` as a `bigint`
+// (bet-options.ts). No payout is shown on `won`: the Snapshot carries none yet
+// (TODO(Snapshot contract) in the rendering spec), and none is ever computed.
 
 import { betChoice } from "./bet-options.ts";
 import {
@@ -14,7 +18,11 @@ import {
 } from "./dom.ts";
 import type { IconName } from "./icons.ts";
 import type { Localized, MessageKey, Messages } from "./messages.ts";
-import { type SnapshotInput, TERMINAL_STATUSES } from "./round-input.ts";
+import {
+  type RoundCheck,
+  roundIsOver,
+  type SnapshotInput,
+} from "./round-input.ts";
 import type { Intents } from "./view-options.ts";
 
 const STATUS_ICON: Partial<Record<SnapshotInput["status"], IconName>> = {
@@ -94,20 +102,34 @@ export const roundView = (
   localized: Localized,
   snapshot: SnapshotInput,
   intents: Intents,
+  check?: RoundCheck,
 ): Child[] => {
   const m = localized.messages;
-  const iconName = STATUS_ICON[snapshot.status];
+  // An `active` round the shell has not passed is not shown as ready (W-26).
+  // A round the shell does not hold (no check) is shown as it is, never with
+  // the game or a control (W-42).
+  const verifying =
+    snapshot.status === "active" && check?.verdict === "checking";
+  const shownStatus = verifying ? "starting" : snapshot.status;
+  const iconName = STATUS_ICON[shownStatus];
   const children: Child[] = [
     heading(
       el,
       doc,
       "h1",
       STATUS_HEADING_ID,
-      m[`status.${snapshot.status}` as const],
+      m[`status.${shownStatus}` as const],
       iconName,
       iconName === undefined ? "" : m[ICON_LABEL[iconName]],
     ),
   ];
+  if (verifying) {
+    children.push(
+      el("p", { class: "se-detail" }, [m["detail.verifying"]]),
+      field(el, m["label.balance"], snapshot.bet.balance.formatted),
+    );
+    return children;
+  }
   switch (snapshot.status) {
     case "idle": {
       children.push(
@@ -139,6 +161,10 @@ export const roundView = (
       children.push(
         field(el, m["label.balance"], snapshot.bet.balance.formatted),
       );
+      const { cashOut } = intents;
+      if (check?.cashOutOffered === true && cashOut !== undefined) {
+        children.push(button(el, m["action.cashOut"], "cash-out", cashOut));
+      }
       break;
     }
     case "won":
@@ -146,11 +172,6 @@ export const roundView = (
     case "canceled": {
       if (snapshot.status === "canceled") {
         children.push(el("p", { class: "se-detail" }, [m["detail.canceled"]]));
-      }
-      if (snapshot.status === "won" && snapshot.bankedAmount !== undefined) {
-        children.push(
-          field(el, m["label.payout"], snapshot.bankedAmount.formatted),
-        );
       }
       children.push(
         field(el, m["label.balance"], snapshot.bet.balance.formatted),
@@ -166,12 +187,8 @@ export const roundView = (
       el("p", { class: "se-detail se-detail--close" }, [m["detail.expired"]]),
     );
   }
-  // Where the game iframe mounts, once the controller boundary lands (W-37).
-  if (snapshot.status === "active" || snapshot.status === "resolving") {
-    children.push(el("div", { class: "se-game", "data-slot": "game" }));
-  }
   const newRound = intents.newRound;
-  if (TERMINAL_STATUSES.has(snapshot.status) && newRound !== undefined) {
+  if (roundIsOver(snapshot) && newRound !== undefined) {
     children.push(button(el, m["action.newRound"], "new-round", newRound));
   }
   return children;

@@ -52,8 +52,10 @@ const harness = (onRead?: (read: SnapshotRead) => void): Harness => {
   return { timers, poller, reads, slow, answers, step };
 };
 
-const statusOf = (read: SnapshotRead): RoundStatus | undefined =>
-  read.kind === "snapshot" ? read.snapshot.status : undefined;
+const statusOf = (
+  read: SnapshotRead,
+): { readonly status: RoundStatus } | undefined =>
+  read.kind === "snapshot" ? { status: read.snapshot.status } : undefined;
 
 /** The reads after the first notice. */
 const after = (
@@ -73,7 +75,7 @@ describe("the Snapshot poller (W-35)", () => {
 
   it("backs off from 500 ms to 2 s while starting", async () => {
     const h = harness();
-    h.poller.follow("starting");
+    h.poller.follow({ status: "starting" });
     await h.step(10_000);
     expect(h.reads[0]).toBe(500);
     expect(intervals(h.reads).slice(0, 5)).toEqual([
@@ -85,7 +87,7 @@ describe("the Snapshot poller (W-35)", () => {
     "does not poll in %s",
     async status => {
       const h = harness();
-      h.poller.follow(status);
+      h.poller.follow({ status });
       await h.step(10_000);
       expect(h.reads).toEqual([]);
       expect(h.poller.running()).toBe(false);
@@ -100,7 +102,7 @@ describe("the Snapshot poller (W-35)", () => {
       kind: "snapshot",
       snapshot: snapshotVector("coinflip-won"),
     });
-    h.poller.follow("resolving");
+    h.poller.follow({ status: "resolving" });
     await h.step(10_000);
     expect(h.reads).toEqual([500]);
     expect(h.poller.running()).toBe(false);
@@ -109,9 +111,9 @@ describe("the Snapshot poller (W-35)", () => {
 
   it("restarts the backoff when the status changes", async () => {
     const h = harness();
-    h.poller.follow("starting");
+    h.poller.follow({ status: "starting" });
     await h.step(4_000);
-    h.poller.follow("resolving");
+    h.poller.follow({ status: "resolving" });
     const before = h.reads.length;
     await h.step(600);
     expect(h.reads.length).toBe(before + 1);
@@ -119,7 +121,7 @@ describe("the Snapshot poller (W-35)", () => {
 
   it("shows the notice after a longer wait and keeps the slow rate", async () => {
     const h = harness();
-    h.poller.follow("starting");
+    h.poller.follow({ status: "starting" });
     await h.step(30_000);
     expect(h.slow).toHaveLength(1);
     expect(h.slow[0]).toBeGreaterThanOrEqual(
@@ -133,7 +135,7 @@ describe("the Snapshot poller (W-35)", () => {
   it("reads at the slow rate after a read with no response (W-43)", async () => {
     const h = harness();
     h.answers.splice(0, 1, { kind: "network" });
-    h.poller.follow("starting");
+    h.poller.follow({ status: "starting" });
     await h.step(5_000);
     expect(intervals(h.reads)).toEqual([2_000, 2_000]);
   });
@@ -149,7 +151,7 @@ describe("the Snapshot poller (W-35)", () => {
       onRead: read => results.push(read),
       onSlow: () => {},
     });
-    poller.follow("starting");
+    poller.follow({ status: "starting" });
     timers.advance(500);
     await settle();
     expect(results).toEqual([{ kind: "network" }]);
@@ -170,7 +172,7 @@ describe("the Snapshot poller (W-35)", () => {
       onRead: () => {},
       onSlow: () => {},
     });
-    poller.follow("starting");
+    poller.follow({ status: "starting" });
     poller.pollNow();
     timers.advance(0);
     expect(calls).toBe(1);
@@ -196,7 +198,7 @@ describe("the Snapshot poller (W-35)", () => {
       onRead: read => results.push(read),
       onSlow: () => {},
     });
-    poller.follow("resolving");
+    poller.follow({ status: "resolving" });
     timers.advance(500);
     poller.stop();
     release?.({ kind: "network" });

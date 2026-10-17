@@ -179,7 +179,9 @@ describe("degraded states, each distinct (W-44)", () => {
       "configuration-error": m["state.configuration"],
       "session-ended": m["state.sessionEnded"],
       "other-tab": m["state.otherTab"],
+      "unsupported-browser": m["state.unsupported"],
       "verification-failed": m["state.verificationFailed"],
+      "chain-unverified": m["state.chainUnverified"],
       "out-of-sync": m["state.outOfSync"],
       "snapshot-rejected": m["state.rejected"],
     };

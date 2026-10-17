@@ -6,6 +6,8 @@
 // the golden vectors to that). The UI never reads a field it does not list
 // here, so an absent field is never read as hidden state (W-29).
 
+import { isRoundOver } from "@intraverse/se-client-shell";
+
 /** `Amount`: the fields used for a decision (`value`) and for display. */
 export type ShownAmount = {
   /** Base units, base 10; compared only as `bigint` (W-34). */
@@ -25,18 +27,28 @@ export type RoundStatus =
   | "lost"
   | "canceled";
 
-/** The statuses that end a round (W-39). */
-export const TERMINAL_STATUSES: ReadonlySet<RoundStatus> = new Set([
-  "won",
-  "lost",
-  "canceled",
-]);
+/** The fields that say whether a round is over, and whether it is polled. */
+export type RoundProgress = {
+  readonly status: RoundStatus;
+  readonly closeReason?: "expired";
+};
 
-/** The statuses the Wrapper polls in (W-35). */
-export const POLLING_STATUSES: ReadonlySet<RoundStatus> = new Set([
-  "starting",
-  "resolving",
-]);
+/**
+ * Whether the round is over (W-39, W-40): the shell's `isRoundOver`, the one
+ * place the kit decides it. The Wrapper keeps no status list of its own.
+ */
+export const roundIsOver = (snapshot: RoundProgress): boolean =>
+  isRoundOver(snapshot);
+
+/**
+ * Whether the Wrapper polls while it shows `snapshot` (W-35): a round that is
+ * not over and waits on the server, not on the player (`starting` and
+ * `resolving` today).
+ */
+export const isPolled = (snapshot: RoundProgress): boolean =>
+  snapshot.status !== "idle" &&
+  snapshot.status !== "active" &&
+  !roundIsOver(snapshot);
 
 export type SnapshotInput = {
   /** Per session, increasing; a lower one is a stale response (W-29). */
@@ -63,7 +75,6 @@ export type SnapshotInput = {
   };
   /** For display only, never for money (W-34). */
   readonly currentMultiplier?: number;
-  readonly bankedAmount?: ShownAmount;
 };
 
 /** A typed Play API error, validated (`PlayProblem`). */
@@ -77,10 +88,36 @@ export type ProblemInput = {
   readonly snapshot?: SnapshotInput;
 };
 
+/**
+ * What the shell's checks say of the Snapshot's round (W-19, W-24, W-26), when
+ * the shell holds it. A round it does not hold (one resumed from
+ * `ROUND_ACTIVE`, W-42) has none: it is shown, and the player cannot move in
+ * it.
+ */
+export type RoundCheck = {
+  /**
+   * `checking` until W-26 decided: the game is not shown as ready. `failed`
+   * says what the player is shown.
+   */
+  readonly verdict:
+    | "checking"
+    | "ready"
+    | "verification-failed"
+    | "chain-unverified";
+  /** W-19's out-of-sync state (W-44). */
+  readonly outOfSync: boolean;
+  /** The cash-out control is offered (W-24). */
+  readonly cashOutOffered: boolean;
+};
+
 /** The outcome of one Snapshot read, as the session hands it to the UI. */
 export type SnapshotRead =
-  /** A Snapshot that passed validation (W-28). */
-  | { readonly kind: "snapshot"; readonly snapshot: SnapshotInput }
+  /** A Snapshot that passed validation (W-28), with the shell's checks. */
+  | {
+      readonly kind: "snapshot";
+      readonly snapshot: SnapshotInput;
+      readonly check?: RoundCheck;
+    }
   /** A typed error that passed validation (W-42). */
   | { readonly kind: "problem"; readonly problem: ProblemInput }
   /**
@@ -89,4 +126,8 @@ export type SnapshotRead =
    */
   | { readonly kind: "rejected" }
   /** No response: offline, DNS, TLS, reset, or the timeout (W-43). */
-  | { readonly kind: "network" };
+  | { readonly kind: "network" }
+  /** The session ended (W-7): the key and the token are gone. */
+  | { readonly kind: "session-ended" }
+  /** The shell did not act on the player's request: nothing was sent. */
+  | { readonly kind: "refused" };

@@ -40,6 +40,8 @@ export type FlowSetup = {
   readonly play: FakePlay;
   readonly encoder: ReturnType<typeof recordingEncoder>;
   readonly options: StartRoundFlowOptions;
+  /** The flow's test hooks: the recording encoder. */
+  readonly hooks: NonNullable<Parameters<typeof startRoundFlow>[1]>;
   /** A later read of the round: same proofs, with `edit` applied. */
   readonly read: (edit: (parts: RoundParts) => void) => ValidSnapshot;
   /** The round `active` at `step`. */
@@ -87,7 +89,6 @@ export const setUpFlow = async (
     transport: play.transport,
     authorization: () => "Bearer placeholder",
     config: issued.config,
-    encodeTypedData: encoder,
     tipCheck: () => Promise.resolve(tip),
     randomUuid: seededUuids(7),
     bet: ROUND_REQUEST.bet,
@@ -101,6 +102,7 @@ export const setUpFlow = async (
     play,
     encoder,
     options,
+    hooks: { encodeTypedData: encoder },
     read,
     at: step => read(p => (p.input["step"] = step)),
     closed: (status, step) =>
@@ -119,7 +121,7 @@ export const setUpFlow = async (
 /** Starts the set-up round: `start` answers its `active` Snapshot. */
 export const startFlow = (setup: FlowSetup): Promise<RoundFlow> => {
   setup.play.answer("startRound", ok(setup.issued.snapshot));
-  return startRoundFlow(setup.options);
+  return startRoundFlow(setup.options, setup.hooks);
 };
 
 /** A request's JSON body, for a test to read. */

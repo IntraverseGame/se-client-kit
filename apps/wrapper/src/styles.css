@@ -253,4 +253,9 @@ h2.se-heading {
     transition: none;
     scroll-behavior: auto;
   }
+
+  /* The universal rule loses to a class: each animated class is named too. */
+  .se-icon--progress {
+    animation: none;
+  }
 }

@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-17 (reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-17 (Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -76,7 +76,17 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   unexpected call. `auditAccessibility` is a
   plain function. `harness/vectors.ts` is the suite's only importer of the
   test-only entry. Test pages live in `e2e/tests/pages/` (the leaking page for
-  the scan's negative tests). Rows that cannot run yet stay `test.fixme` in
+  the scan's negative tests). The Wrapper's browser rows drive the release
+  bundle through `harness/wrapper-page.ts` (`launch`, `launchAndStart`,
+  `scriptStartingRound`, the English texts); a launch must be a new navigation
+  (a fragment-only change does not reload the page). The vectors are not issued
+  for the session's key, so a round never passes W-26 in e2e: use
+  `coinflip-starting-created` (no `CreateRoundAuth`, W-26 waits) to keep a
+  round `starting`, and a vector with one to show the failed verification.
+  `fakePlayApi.redeemAgain()` allows one more redeem for the cloned tab of
+  T-17. `t9a-embedding.spec.ts` frames the bundle from a test page on
+  `PAGES_ORIGIN` (Chromium has `ancestorOrigins`); the Firefox path is a
+  component test (`boot-session.test.ts`). Rows that cannot run yet stay `test.fixme` in
   `pending.spec.ts`, never a body that passes. The reference game's build is
   served at `https://game.e2e-games.test` by the specs that use it
   (`harness/reference-game.ts`); `reference-game-smoke.spec.ts` runs it in a
@@ -147,6 +157,21 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `round-actions.test.ts` pins each one alone with stand-ins for the tracking
   and the transcript state; a mutation run (one mutant per guard) checks that
   each guard is tested on its own.
+- **The session's tests** (`packages/shell/src/play-session-*.test.ts`,
+  `token-keeper.test.ts`, `launch-code.test.ts`) open a session over the
+  scripted Play API with `openSessionOver` (`fixtures/play-session.ts`) and a
+  manual wall clock (`fixtures/wall-clock.ts`, timers fire in due order only on
+  `advance`); the round is issued for the key `recordingRandom(1)` draws, with
+  agreeing RPC endpoints (`fixtures/session-round.ts`), so W-26 passes. Token
+  times come from fixture timestamps, never from numbers in the test. A
+  responder that records `request.authorization?.()` when called sees the token
+  each attempt presented (reading it later sees the current one). The play
+  token's disposal is observed in `play-session-token.test.ts`, which wraps
+  the real `redaction.ts` with `vi.mock` only to keep the sealed tokens and
+  asks `revealSecret` whether each is still live; a cashable session round is
+  `issuedSteps`/`stepsAt` (`fixtures/session-round.ts`). The Wrapper's W-37
+  test records every frame `src` (a `MutationObserver`, and the frame's `src`
+  inside the fake session's mount) so a refused D is never given one.
 - **Play client operations** run against a fake Play API server built from the
   vendored document (`packages/play-client/src/fixtures/fake-play-server.ts`):
   its routes are `PLAY_ROUTES`, its scripted answers are typed by each
@@ -207,7 +232,10 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   subset of the contract. The Wrapper's tests cannot import `snapshot` (lint),
   so the vectors stand for validated input (T-5 validates them). A deep
   recording proxy checks the UI reads no field outside its input type and never
-  `normalized`. `src/release.test.ts` covers the recommended
+  `normalized`. The session's wiring runs against a scripted stand-in of the
+  shell's `PlaySession` (`fixtures/fake-session.ts`, mounted with
+  `fixtures/wired.ts`): its reads, start and cash-out answers, `RoundState`,
+  game origin, and mount answer are set by the test. `src/release.test.ts` covers the recommended
   headers and the filled CSP; `src/release-integrity.test.ts` (Node
   environment) drives the release integrity plugin's `generateBundle` over a
   fake bundle (`src/fixtures/release-bundle.ts`) and runs the on-disk output

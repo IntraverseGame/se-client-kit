@@ -39,6 +39,7 @@ const flowWithout = (
       request: { actionKey: setup.actionKey, bet: setup.options.bet },
     },
     setup.issued.snapshot,
+    setup.hooks,
   );
 
 describe("start (W-22, W-26)", () => {
