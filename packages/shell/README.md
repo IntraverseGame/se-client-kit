@@ -76,20 +76,21 @@ if (!result.ok) {
   - `validateChainConfig(document)` reads the chain part of the parsed
     environment configuration: `environment`, `runtimeSigner`, `registryDomain`
     (`chainId`, `verifyingContract`), `rpcEndpoints` (per entropy source,
-    `{ provider, url }` entries), `minRpcQuorum` (default 2,
+    `{ provider, url }` entries), `entropyChainId` (per source, required: the
+    chain the source's blocks are on), `minRpcQuorum` (default 2,
     `DEFAULT_MIN_RPC_QUORUM`), and `tipLagMargin` (per source, required). It
     returns the configuration typed and frozen, or every issue found. It refuses
     `production` with `minRpcQuorum` below 2, two endpoints of one source that
     share a provider or a URL, and a source with fewer endpoints than
     `minRpcQuorum`. `local` and `preview` may set `minRpcQuorum` to 1; the
-    configuration is then `degraded`. The pinned signer and registry domain are
-    the only trust anchor of the chain checks.
+    configuration is then `degraded`. The pinned signer, registry domain, and
+    entropy chain ids are the only trust anchor of the chain checks.
   - `RpcTransport`, `RpcCall`, and `BlockTag` type the RPC transport the Wrapper
-    supplies: one JSON-RPC 2.0 call (`eth_getBlockByNumber`) to one endpoint,
-    resolving with the response's `result`. The optional third argument is an
-    abort signal (`play-client`'s `CancelSignal`, which the platform
-    `AbortSignal` satisfies) that the shell aborts when the call times out; a
-    transport may ignore it, and a late answer is ignored.
+    supplies: one JSON-RPC 2.0 call (`eth_chainId` or `eth_getBlockByNumber`) to
+    one endpoint, resolving with the response's `result`. The optional third
+    argument is an abort signal (`play-client`'s `CancelSignal`, which the
+    platform `AbortSignal` satisfies) that the shell aborts when the call times
+    out; a transport may ignore it, and a late answer is ignored.
   - `ShellError` is the error the package throws, with a stable `code`
     (`ShellErrorCode`) and a fixed message per code that never carries an input
     value.
@@ -113,7 +114,8 @@ if (!result.ok) {
   `@intraverse/se-client-snapshot`, and `@intraverse/se-client-play-client`.
 - Amounts and block numbers are strings or `bigint`, never `number`.
 - The chain check asks every configured endpoint, needs `minRpcQuorum` of them
-  to answer and all of them to agree, and never drops an outlier.
+  to answer, all of them to report the source's pinned chain id, and all of them
+  to agree, and never drops an outlier.
 
 ## More
 

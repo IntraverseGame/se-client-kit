@@ -71,7 +71,9 @@ export type ChainDecision =
 const REASONS: Readonly<Record<TipCheckFailure, FailReason>> = {
   "unknown-source": "chain-unverified",
   "too-few-answered": "chain-unverified",
+  "chain-id-unavailable": "chain-unverified",
   "hash-unavailable": "chain-unverified",
+  "chain-id-mismatch": "verification-failed",
   lagging: "verification-failed",
   "hash-mismatch": "verification-failed",
 };

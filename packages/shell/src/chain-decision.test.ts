@@ -14,9 +14,20 @@ const passed: TipCheckRecord = Object.freeze({
   tip: 100n,
   low: 99n,
   tipLagMargin: 2n,
+  chainId: 8453n,
   answers: Object.freeze([
-    { provider: "p1", finalBlock: 100n, hashAtLow: `0x${"1".repeat(64)}` },
-    { provider: "p2", finalBlock: 99n, hashAtLow: `0x${"1".repeat(64)}` },
+    {
+      provider: "p1",
+      chainId: 8453n,
+      finalBlock: 100n,
+      hashAtLow: `0x${"1".repeat(64)}`,
+    },
+    {
+      provider: "p2",
+      chainId: 8453n,
+      finalBlock: 99n,
+      hashAtLow: `0x${"1".repeat(64)}`,
+    },
   ] as const),
 });
 
@@ -64,7 +75,9 @@ describe("decideChain", () => {
   it.each([
     ["unknown-source", "chain-unverified"],
     ["too-few-answered", "chain-unverified"],
+    ["chain-id-unavailable", "chain-unverified"],
     ["hash-unavailable", "chain-unverified"],
+    ["chain-id-mismatch", "verification-failed"],
     ["lagging", "verification-failed"],
     ["hash-mismatch", "verification-failed"],
   ] as const)("fails a %s check as %s", (failure, reason) => {

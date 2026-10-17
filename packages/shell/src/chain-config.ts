@@ -1,10 +1,10 @@
 // The chain part of the environment configuration (W-26, W-26a, W-26b, and the
 // Wrapper's Configuration section): the environment, the backend signer
-// address, the registry domain, the RPC endpoints of each entropy source, the
-// quorum, and the lag margins. It is the only trust anchor of the chain checks:
-// a value a response carries is compared with it, never used in its place.
-// The rest of the document (the API bases, the origin allow-lists) is read by
-// the Wrapper; this module ignores it.
+// address, the registry domain, the RPC endpoints and the pinned chain of each
+// entropy source, the quorum, and the lag margins. It is the only trust anchor
+// of the chain checks: a value a response carries is compared with it, never
+// used in its place. The rest of the document (the API bases, the origin
+// allow-lists) is read by the Wrapper; this module ignores it.
 
 import type { Address } from "@intraverse/se-client-signing";
 
@@ -15,6 +15,7 @@ import {
   own,
   readAddress,
   readEndpoint,
+  readPerSource,
   type RpcEndpoint,
   shareProvider,
 } from "./config-fields.ts";
@@ -22,8 +23,14 @@ import {
 /** Which environment the document configures (W-26a's boot rule reads it). */
 export type Environment = "production" | "preview" | "local";
 
-/** The endpoints and lag margin of one entropy source (W-26b). */
+/** The pinned chain, endpoints, and lag margin of one entropy source (W-26b). */
 export type SourceConfig = {
+  /**
+   * The chain the source's blocks are on: every endpoint must report it
+   * (`eth_chainId`, W-26b), and a round's `entropyChainId` must equal it (W-26,
+   * check 3).
+   */
+  readonly chainId: bigint;
   readonly endpoints: readonly RpcEndpoint[];
   /**
    * How many blocks an endpoint may be behind the highest final block.
@@ -77,6 +84,11 @@ export type ChainConfigIssueCode =
   | "shared-provider"
   /** A source has fewer configured endpoints than `minRpcQuorum` (W-26b). */
   | "quorum-unreachable"
+  /**
+   * `entropyChainId` is missing for a source, names a source with no endpoints,
+   * or is not an integer of at least 1.
+   */
+  | "invalid-entropy-chain-id"
   /**
    * `tipLagMargin` is missing for a source, names a source with no endpoints,
    * or is not a non-negative integer.
@@ -135,38 +147,6 @@ const readEndpoints = (
   return sources;
 };
 
-const readLagMargins = (
-  value: unknown,
-  sources: ReadonlyMap<string, unknown>,
-  issues: Issues,
-): Map<string, bigint> => {
-  const margins = new Map<string, bigint>();
-  if (!isRecord(value)) {
-    issues.push({ code: "invalid-lag-margin", field: "tipLagMargin" });
-    return margins;
-  }
-  for (const source of sources.keys()) {
-    const margin = own(value, source);
-    if (!isCount(margin, 0)) {
-      issues.push({
-        code: "invalid-lag-margin",
-        field: `tipLagMargin.${source}`,
-      });
-      continue;
-    }
-    margins.set(source, BigInt(margin));
-  }
-  for (const source of Object.keys(value)) {
-    if (!sources.has(source)) {
-      issues.push({
-        code: "invalid-lag-margin",
-        field: `tipLagMargin.${source}`,
-      });
-    }
-  }
-  return margins;
-};
-
 const readDomain = (
   value: unknown,
 ): ChainConfig["registryDomain"] | undefined => {
@@ -205,8 +185,9 @@ const readQuorum = (
  *
  * Read fields: `environment`, `runtimeSigner`, `registryDomain` (`chainId`,
  * `verifyingContract`), `rpcEndpoints` (per source, a list of `{ provider, url
- * }`), `minRpcQuorum` (default 2), and `tipLagMargin` (per source, required).
- * Other fields are ignored.
+ * }`), `entropyChainId` (per source, required: the source's chain id),
+ * `minRpcQuorum` (default 2), and `tipLagMargin` (per source, required). Other
+ * fields are ignored.
  */
 export const validateChainConfig = (document: unknown): ChainConfigResult => {
   // A document that is not an object is read as an empty one: every required
@@ -227,10 +208,18 @@ export const validateChainConfig = (document: unknown): ChainConfigResult => {
   }
   const quorum = readQuorum(own(fields, "minRpcQuorum"), environment, issues);
   const endpoints = readEndpoints(own(fields, "rpcEndpoints"), issues);
-  const margins = readLagMargins(
-    own(fields, "tipLagMargin"),
-    endpoints ?? new Map<string, unknown>(),
-    issues,
+  const sourceNames = [...(endpoints?.keys() ?? [])];
+  const margins = readPerSource(fields, "tipLagMargin", 0, sourceNames);
+  const chainIds = readPerSource(fields, "entropyChainId", 1, sourceNames);
+  issues.push(
+    ...margins.refused.map(field => ({
+      code: "invalid-lag-margin" as const,
+      field,
+    })),
+    ...chainIds.refused.map(field => ({
+      code: "invalid-entropy-chain-id" as const,
+      field,
+    })),
   );
   if (quorum !== undefined && endpoints !== undefined) {
     for (const [source, list] of endpoints) {
@@ -256,9 +245,14 @@ export const validateChainConfig = (document: unknown): ChainConfigResult => {
   }
   const sources: Record<string, SourceConfig> = {};
   for (const [source, list] of endpoints) {
-    const tipLagMargin = margins.get(source);
-    if (tipLagMargin !== undefined) {
-      sources[source] = Object.freeze({ endpoints: list, tipLagMargin });
+    const tipLagMargin = margins.values.get(source);
+    const chainId = chainIds.values.get(source);
+    if (tipLagMargin !== undefined && chainId !== undefined) {
+      sources[source] = Object.freeze({
+        chainId,
+        endpoints: list,
+        tipLagMargin,
+      });
     }
   }
   const config = {

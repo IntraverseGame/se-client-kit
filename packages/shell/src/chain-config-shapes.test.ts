@@ -48,6 +48,15 @@ describe("validateChainConfig shapes", () => {
     expect(issueCodes(configDocument(overrides))).toEqual([code]);
   });
 
+  it.each([0, -1, 1.5, "1", null, 1n, 2 ** 53])(
+    "refuses an entropy chain id of %s",
+    chainId => {
+      expect(
+        issueCodes(configDocument({ entropyChainId: { [SOURCE]: chainId } })),
+      ).toEqual(["invalid-entropy-chain-id"]);
+    },
+  );
+
   it.each([-1, 1.5, "2", null, 2n])("refuses a lag margin of %s", margin => {
     expect(
       issueCodes(configDocument({ tipLagMargin: { [SOURCE]: margin } })),
@@ -118,6 +127,7 @@ describe("validateChainConfig shapes", () => {
       "invalid-domain",
       "invalid-endpoints",
       "invalid-lag-margin",
+      "invalid-entropy-chain-id",
     ]);
   });
 

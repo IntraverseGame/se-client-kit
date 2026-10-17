@@ -62,3 +62,40 @@ export const shareProvider = (endpoints: readonly RpcEndpoint[]): boolean => {
   const urls = new Set(endpoints.map(e => e.url.toLowerCase()));
   return providers.size < endpoints.length || urls.size < endpoints.length;
 };
+
+/**
+ * Reads the per-source map `name` of a document (`tipLagMargin`,
+ * `entropyChainId`): one entry for each of `sources` and for no other, each an
+ * integer of at least `minimum`, kept as a `bigint`. `refused` names each field
+ * that is missing or malformed (the map itself when it is not an object).
+ */
+export const readPerSource = (
+  document: Readonly<Record<string, unknown>>,
+  name: string,
+  minimum: number,
+  sources: readonly string[],
+): {
+  readonly values: ReadonlyMap<string, bigint>;
+  readonly refused: readonly string[];
+} => {
+  const value = own(document, name);
+  if (!isRecord(value)) {
+    return { values: new Map(), refused: [name] };
+  }
+  const values = new Map<string, bigint>();
+  const refused: string[] = [];
+  for (const source of sources) {
+    const entry = own(value, source);
+    if (isCount(entry, minimum)) {
+      values.set(source, BigInt(entry));
+    } else {
+      refused.push(`${name}.${source}`);
+    }
+  }
+  for (const source of Object.keys(value)) {
+    if (!sources.includes(source)) {
+      refused.push(`${name}.${source}`);
+    }
+  }
+  return { values, refused };
+};

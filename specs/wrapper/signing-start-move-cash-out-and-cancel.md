@@ -85,7 +85,12 @@ Part of the [Wrapper spec](../wrapper.md), section
      base units, never as a `number`; `newRound.currency` equals the
      `AmountRequest`'s `unit` encoded as ASCII, left-aligned and zero-padded to
      32 bytes, compared byte for byte (a `unit` that is not ASCII or is longer
-     than 32 bytes fails); `newRound.randomnessTarget` equals
+     than 32 bytes fails); `entropyChainId` MUST equal the `entropyChainId` the
+     environment configuration pins for the round's entropy source
+     (`proofs.randomnessProof.source`; a source the configuration does not list
+     fails; decided by human review, 2026-10-16, so the chain the target is
+     recomputed with is pinned like the domain and the signer);
+     `newRound.randomnessTarget` equals
      `keccak256(abi.encode(bytes32 source, uint256 entropyChainId, uint256 blockNumber))`
      recomputed from `proofs.randomnessProof` (`source`, `blockNumber`) and
      `entropyChainId`. The other `newRound` fields (`playerRef`, `gameId`,
@@ -156,34 +161,42 @@ Part of the [Wrapper spec](../wrapper.md), section
   additional guard, not a replacement. **This is the single-RPC gap of the first
   release.**
 - **W-26b. Tip check.** The shell asks **at least `minRpcQuorum` independent**
-  RPC endpoints for their final block, and fails closed on any disagreement. In
-  production these are public RPC endpoints from independent providers. The
-  local or preview exception of W-26a (one endpoint, the local node, with
-  `minRpcQuorum` = 1, the degraded indicator, and `tipCheck: "degraded"`)
-  applies to everything below: "public" and the independence rule describe the
-  production requirement.
+  RPC endpoints for their chain id and their final block, and fails closed on
+  any disagreement. In production these are public RPC endpoints from
+  independent providers. The local or preview exception of W-26a (one endpoint,
+  the local node, with `minRpcQuorum` = 1, the degraded indicator, and
+  `tipCheck: "degraded"`) applies to everything below: "public" and the
+  independence rule describe the production requirement.
   - **Definitions.** `h_top` is the maximum final block over all the endpoints
     that answered within the request timeout (W-43). `h_low` is the minimum
     final block over the same endpoints.
-  - **The rule.** The check passes only if (1) at least `minRpcQuorum` endpoints
-    answered **and** (2) **every** answering endpoint agrees: each is within the
-    source's lag margin of `h_top`, and all return the same block hash at height
-    `h_low` (the shell queries that height on each). The observed tip is
-    `h_top`. The calls are JSON-RPC `eth_getBlockByNumber` with the block tag
-    `finalized`, then with `h_low` as a quantity, each with `false` (no
-    transaction bodies); each call times out per W-43, and an answer that is not
-    a block is no answer
-    ([the `shell` package](../client-kit/the-shell-package.md)).
-  - **Failure.** Any answering endpoint that is further than the lag margin
-    behind `h_top`, or that returns a different hash at `h_low`, fails the
-    check, as does too few answering, and so does an endpoint that gave its
-    final block but no block at `h_low` within the timeout (it cannot be shown
-    to agree; the player sees "could not verify the chain", as for too few
-    answering). The shell does not drop an outlier and does not pick a side: the
-    round fails per W-26, which signs `PlayerCancel` only if `T_0` is settled
-    and otherwise signs nothing (W-25). The round's evidence (W-27) records
-    every endpoint's answer (its provider, final block, and the hash at
-    `h_low`).
+  - **The rule.** The check passes only if (1) no endpoint reports another chain
+    id than the one the environment configuration pins for the source
+    (`entropyChainId`), whether or not it answered, (2) at least `minRpcQuorum`
+    endpoints answered, **and** (3) **every** answering endpoint agrees: each
+    reported the pinned chain id, each is within the source's lag margin of
+    `h_top`, and all return the same block hash at height `h_low` (the shell
+    queries that height on each). The observed tip is `h_top`. The calls are
+    JSON-RPC `eth_chainId` and `eth_getBlockByNumber` with the block tag
+    `finalized`, both at once, then `eth_getBlockByNumber` with `h_low` as a
+    quantity, each block call with `false` (no transaction bodies); each call
+    times out per W-43, and an answer that is not a chain id or a block is no
+    answer ([the `shell` package](../client-kit/the-shell-package.md)).
+  - **Failure.** Any endpoint that reports another chain id fails the check,
+    even one that gave no final block (it is not an endpoint of the source;
+    decided by human review, 2026-10-17). Any answering endpoint that is further
+    than the lag margin behind `h_top`, or that returns a different hash at
+    `h_low`, fails the check, as does too few answering, and so does an endpoint
+    that gave its final block but no chain id, or no block at `h_low`, within
+    the timeout (it cannot be shown to agree; the player sees "could not verify
+    the chain", as for too few answering). The first failure in this order is
+    the one reported: another chain, too few answering, no chain id, lag, hash;
+    a mismatch proves a foreign endpoint, the quorum is a precondition, and
+    identity comes before content. The shell does not drop an outlier and does
+    not pick a side: the round fails per W-26, which signs `PlayerCancel` only
+    if `T_0` is settled and otherwise signs nothing (W-25). The round's evidence
+    (W-27) records every endpoint's answer (its provider, chain id, final block,
+    and the hash at `h_low`).
   - **The bind.** The shell records the observed tip with the round's evidence
     and checks `N` against it: for a `future` bind `N` MUST be above that tip;
     for a `tip` bind `N` MUST NOT be older than it, within the source's lag
@@ -193,7 +206,8 @@ Part of the [Wrapper spec](../wrapper.md), section
     shell refuses a configuration in which two endpoints of one entropy source
     share a provider (names compared without case) or a URL. The configuration
     schema also refuses an entropy source whose configured endpoint count is
-    below `minRpcQuorum`, so a quorum can never be unreachable by configuration.
+    below `minRpcQuorum`, so a quorum can never be unreachable by configuration,
+    and an entropy source without its pinned `entropyChainId`.
   <!-- TODO(backend entropy spec): the lag margin in blocks per chain, from the measured RPC lag; it is the `tipLagMargin` configuration value. -->
 - **W-27.** The shell SHOULD keep each round's evidence (its `CreateRoundAuth`,
   the tip-check answers, and every signed action) in memory for the page's life

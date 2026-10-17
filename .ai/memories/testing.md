@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-17 (play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-17 (shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -57,8 +57,9 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   state. `no-secret.test.ts` replaces storage, cookie, URL, network, and
   messaging globals with recording getters for a whole session. The tip check
   runs against a scripted JSON-RPC transport and a manual clock
-  (`fixtures/fake-rpc.ts`): each provider's answer, a silence, a rejection, or
-  a late answer is scripted, and timeouts fire only when the test fires them.
+  (`fixtures/fake-rpc.ts`): each provider's chain id and answer, a silence, a
+  rejection, or a late answer is scripted, and timeouts fire only when the test
+  fires them.
   The `signature/` vectors are read (`fixtures/vectors.ts`) and their shape
   checked; their verdicts are replayed when the W-26 checks exist.
 - **Play client operations** run against a fake Play API server built from the

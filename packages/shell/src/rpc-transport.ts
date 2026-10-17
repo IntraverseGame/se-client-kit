@@ -11,13 +11,19 @@ import type { RpcEndpoint } from "./config-fields.ts";
 export type BlockTag = "finalized" | `0x${string}`;
 
 /**
- * The one call the tip check makes: Ethereum JSON-RPC `eth_getBlockByNumber`
- * with the block tag and `false` (no transaction bodies).
+ * The calls the tip check makes: Ethereum JSON-RPC `eth_chainId` (no
+ * parameters), and `eth_getBlockByNumber` with the block tag and `false` (no
+ * transaction bodies).
  */
-export type RpcCall = {
-  readonly method: "eth_getBlockByNumber";
-  readonly params: readonly [BlockTag, false];
-};
+export type RpcCall =
+  | {
+      readonly method: "eth_chainId";
+      readonly params: readonly [];
+    }
+  | {
+      readonly method: "eth_getBlockByNumber";
+      readonly params: readonly [BlockTag, false];
+    };
 
 /**
  * Sends `call` to `endpoint` as a JSON-RPC 2.0 request and resolves with the
