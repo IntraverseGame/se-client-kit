@@ -1,6 +1,6 @@
 ---
 description: What se-client-kit is, why it is public, the package map, and its boundary to the backend. Read first on any task.
-last-verified: 2026-10-17 (contracts vendoring pull request: current state and the decisions to ADR-004)
+last-verified: 2026-10-17 (play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
 ---
 
 # Overview
@@ -55,7 +55,7 @@ decisions (`ADR-001` to `ADR-004`), and the toolchain (pnpm workspace,
 TypeScript, Vite, Vitest, Playwright, oxlint, oxfmt, changesets, wireit, CI).
 Built so far: `contracts` (the vendored Play API document, the Snapshot schema
 and vectors, the signing vectors, generated types), `signing`, `snapshot`,
-`play-client` (the request layer), and `shell` (key custody, the transcript,
+`play-client` (the request layer and the Play API operations), and `shell` (key custody, the transcript,
 the tip check). Not built yet: the W-26
 `CreateRoundAuth` checks, the Wrapper UI, and the reference game.
 

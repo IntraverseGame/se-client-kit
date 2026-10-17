@@ -216,9 +216,6 @@ serves are in brackets.
     The exclusion against the first move does not depend on it. `signCancel`
     does not check that `T_0` is settled: whether a cancel may be signed at all
     (W-25, W-26) is decided by the W-26 check flow that calls it.
-  - Idempotency keys are `play-client`'s `newIntent` UUIDs (36 characters),
-    inside a limit of 1 to 128 characters. That limit comes from a Play API
-    document the kit has not vendored yet, so it is provisional.
   - Reading a Snapshot (`snapshot-reading.ts`): the move at sequence `s` is
     applied exactly when the Snapshot's `step` is `s` and its status is not
     `resolving`, since `step` counts the applied moves and the moves are a

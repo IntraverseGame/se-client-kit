@@ -295,7 +295,7 @@ only public values; the Wrapper refuses to start on an invalid document.
 | Field             | Meaning                                                          |
 | ----------------- | ---------------------------------------------------------------- |
 | `environment`     | `production`, `preview`, or `local`; W-26a's boot rule reads it  |
-| `playApiBaseUrl`  | the Play API base (`/play/v1`)                                   |
+| `playApiBaseUrl`  | the Play API base, ending with `/play/v1`                        |
 | `verifyBaseUrl`   | the verify page base (W-39)                                      |
 | `runtimeSigner`   | the pinned address that signs `CreateRoundAuth` (W-26, OQ-7)     |
 | `registryDomain`  | the pinned `chainId` and `verifyingContract` (W-26, OQ-7)        |
