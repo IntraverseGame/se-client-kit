@@ -12,6 +12,8 @@ import {
 export const SIGNER = "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e";
 export const REGISTRY = "0xd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5";
 export const SOURCE = "base";
+/** The chain id the fixture document pins for `SOURCE`. */
+export const ENTROPY_CHAIN_ID = 8453;
 
 /** `count` endpoints of `SOURCE`, providers `p1` to `p<count>`. */
 export const endpoints = (
@@ -22,7 +24,10 @@ export const endpoints = (
     url: `https://rpc${i + 1}.example/base`,
   }));
 
-/** A production document with three endpoints and a margin of 2 blocks. */
+/**
+ * A production document with three endpoints, the source's chain pinned, and a
+ * margin of 2 blocks.
+ */
 export const configDocument = (
   overrides: Readonly<Record<string, unknown>> = {},
 ): Record<string, unknown> => ({
@@ -31,6 +36,7 @@ export const configDocument = (
   runtimeSigner: SIGNER,
   registryDomain: { chainId: 31337, verifyingContract: REGISTRY },
   rpcEndpoints: { [SOURCE]: endpoints(3) },
+  entropyChainId: { [SOURCE]: ENTROPY_CHAIN_ID },
   minRpcQuorum: 2,
   tipLagMargin: { [SOURCE]: 2 },
   ...overrides,

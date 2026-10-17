@@ -8,6 +8,7 @@ import { DEFAULT_MIN_RPC_QUORUM } from "./chain-config.ts";
 import {
   accepted,
   configDocument,
+  ENTROPY_CHAIN_ID,
   endpoints,
   issueCodes,
   issuesOf,
@@ -37,6 +38,7 @@ describe("validateChainConfig", () => {
     expect(config.minRpcQuorum).toBe(2);
     expect(config.degraded).toBe(false);
     expect(config.sources[SOURCE]?.tipLagMargin).toBe(2n);
+    expect(config.sources[SOURCE]?.chainId).toBe(BigInt(ENTROPY_CHAIN_ID));
     expect(config.sources[SOURCE]?.endpoints).toEqual(endpoints(3));
     expect(Object.isFrozen(config)).toBe(true);
     expect(Object.isFrozen(config.sources)).toBe(true);
@@ -132,6 +134,7 @@ describe("validateChainConfig", () => {
     it("allows one provider on two different sources", () => {
       const document = configDocument({
         rpcEndpoints: { [SOURCE]: endpoints(2), other: endpoints(2) },
+        entropyChainId: { [SOURCE]: ENTROPY_CHAIN_ID, other: 1 },
         tipLagMargin: { [SOURCE]: 2, other: 5 },
       });
       expect(accepted(document).sources["other"]?.tipLagMargin).toBe(5n);
@@ -141,6 +144,7 @@ describe("validateChainConfig", () => {
       const document = configDocument({
         minRpcQuorum: 3,
         rpcEndpoints: { [SOURCE]: endpoints(3), other: endpoints(2) },
+        entropyChainId: { [SOURCE]: ENTROPY_CHAIN_ID, other: 1 },
         tipLagMargin: { [SOURCE]: 2, other: 2 },
       });
       expect(issuesOf(document)).toEqual([
@@ -174,6 +178,40 @@ describe("validateChainConfig", () => {
       });
       expect(issuesOf(document)).toEqual([
         { code: "invalid-lag-margin", field: "tipLagMargin.other" },
+      ]);
+    });
+  });
+
+  describe("the chain of each entropy source (W-26, W-26b)", () => {
+    it("is required for every source", () => {
+      expect(issuesOf(configDocument({ entropyChainId: {} }))).toEqual([
+        { code: "invalid-entropy-chain-id", field: "entropyChainId.base" },
+      ]);
+      const document = configDocument();
+      delete document["entropyChainId"];
+      expect(issuesOf(document)).toEqual([
+        { code: "invalid-entropy-chain-id", field: "entropyChainId" },
+      ]);
+    });
+
+    it("pins each source's own chain", () => {
+      const config = accepted(
+        configDocument({
+          rpcEndpoints: { [SOURCE]: endpoints(2), other: endpoints(2) },
+          entropyChainId: { [SOURCE]: ENTROPY_CHAIN_ID, other: 1 },
+          tipLagMargin: { [SOURCE]: 2, other: 2 },
+        }),
+      );
+      expect(config.sources[SOURCE]?.chainId).toBe(BigInt(ENTROPY_CHAIN_ID));
+      expect(config.sources["other"]?.chainId).toBe(1n);
+    });
+
+    it("refuses a chain id for a source with no endpoints", () => {
+      const document = configDocument({
+        entropyChainId: { [SOURCE]: ENTROPY_CHAIN_ID, other: 1 },
+      });
+      expect(issuesOf(document)).toEqual([
+        { code: "invalid-entropy-chain-id", field: "entropyChainId.other" },
       ]);
     });
   });

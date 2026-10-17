@@ -4,7 +4,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { endpoints, SOURCE } from "./fixtures/chain-config.ts";
+import {
+  ENTROPY_CHAIN_ID,
+  endpoints,
+  SOURCE,
+} from "./fixtures/chain-config.ts";
 import {
   hashOf,
   type ProviderScript,
@@ -12,6 +16,7 @@ import {
 } from "./fixtures/fake-rpc.ts";
 
 const final = (height: bigint): ProviderScript => ({ final: height });
+const CHAIN = BigInt(ENTROPY_CHAIN_ID);
 const twoEndpoints = { rpcEndpoints: { [SOURCE]: endpoints(2) } };
 
 describe("runTipCheck", () => {
@@ -66,9 +71,14 @@ describe("runTipCheck", () => {
     expect(result.passed).toBe(false);
     expect(result.failure).toBe("too-few-answered");
     expect(result.answers).toEqual([
-      { provider: "p1", finalBlock: 100n, hashAtLow: hashOf(100n) },
-      { provider: "p2", finalBlock: null, hashAtLow: null },
-      { provider: "p3", finalBlock: null, hashAtLow: null },
+      {
+        provider: "p1",
+        chainId: CHAIN,
+        finalBlock: 100n,
+        hashAtLow: hashOf(100n),
+      },
+      { provider: "p2", chainId: CHAIN, finalBlock: null, hashAtLow: null },
+      { provider: "p3", chainId: CHAIN, finalBlock: null, hashAtLow: null },
     ]);
   });
 
@@ -145,9 +155,24 @@ describe("runTipCheck", () => {
       scripts: { p1: final(101n), p2: final(100n), p3: final(102n) },
     });
     expect(result.answers).toEqual([
-      { provider: "p1", finalBlock: 101n, hashAtLow: hashOf(100n) },
-      { provider: "p2", finalBlock: 100n, hashAtLow: hashOf(100n) },
-      { provider: "p3", finalBlock: 102n, hashAtLow: hashOf(100n) },
+      {
+        provider: "p1",
+        chainId: CHAIN,
+        finalBlock: 101n,
+        hashAtLow: hashOf(100n),
+      },
+      {
+        provider: "p2",
+        chainId: CHAIN,
+        finalBlock: 100n,
+        hashAtLow: hashOf(100n),
+      },
+      {
+        provider: "p3",
+        chainId: CHAIN,
+        finalBlock: 102n,
+        hashAtLow: hashOf(100n),
+      },
     ]);
     expect(result.source).toBe(SOURCE);
     expect(result.tipLagMargin).toBe(2n);
@@ -162,9 +187,24 @@ describe("runTipCheck", () => {
     });
     expect(result.failure).toBe("lagging");
     expect(result.answers).toEqual([
-      { provider: "p1", finalBlock: 100n, hashAtLow: hashOf(90n) },
-      { provider: "p2", finalBlock: 90n, hashAtLow: hashOf(90n) },
-      { provider: "p3", finalBlock: 100n, hashAtLow: hashOf(90n) },
+      {
+        provider: "p1",
+        chainId: CHAIN,
+        finalBlock: 100n,
+        hashAtLow: hashOf(90n),
+      },
+      {
+        provider: "p2",
+        chainId: CHAIN,
+        finalBlock: 90n,
+        hashAtLow: hashOf(90n),
+      },
+      {
+        provider: "p3",
+        chainId: CHAIN,
+        finalBlock: 100n,
+        hashAtLow: hashOf(90n),
+      },
     ]);
   });
 

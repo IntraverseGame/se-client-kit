@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-17 (play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-17 (shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -47,7 +47,9 @@ structure below.
   (`validateChainConfig`, for W-26a's boot rule) with the RPC transport types
   the Wrapper implements. The tip check and its pass-or-fail decision are
   internal until the start flow exists. The environment configuration, never a
-  Snapshot or a response, pins the backend signer and the registry domain. The
+  Snapshot or a response, pins the backend signer, the registry domain, and
+  each entropy source's chain id (every tip-check endpoint must report it with
+  `eth_chainId`; one that reports another chain fails the check). The
   signing session (lock + key) and the per-round transcript state are not
   exported, so the UI cannot sign an arbitrary action text; they are reached
   through use cases once those exist. Every use of the key checks the signer

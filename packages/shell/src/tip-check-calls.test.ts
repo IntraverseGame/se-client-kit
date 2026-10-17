@@ -5,10 +5,16 @@ import { DEFAULT_REQUEST_TIMEOUT_MS } from "@intraverse/se-client-play-client";
 import { describe, expect, it } from "vitest";
 
 import { ShellError } from "./errors.ts";
-import { chainConfig, endpoints, SOURCE } from "./fixtures/chain-config.ts";
+import {
+  chainConfig,
+  ENTROPY_CHAIN_ID,
+  endpoints,
+  SOURCE,
+} from "./fixtures/chain-config.ts";
 import {
   createFakeRpc,
   createManualClock,
+  type FakeRpc,
   hashOf,
   type ProviderScript,
   runScripted,
@@ -17,6 +23,17 @@ import { runTipCheck } from "./tip-check.ts";
 
 const final = (height: bigint): ProviderScript => ({ final: height });
 
+/** Calls per check with three endpoints: chain id, final block, `h_low`. */
+const CALLS = 9;
+
+type Call = ReturnType<FakeRpc["calls"]>[number];
+
+const isFinalized = (c: Call): boolean =>
+  c.call.method === "eth_getBlockByNumber" && c.call.params[0] === "finalized";
+
+const isAtLow = (c: Call): boolean =>
+  c.call.method === "eth_getBlockByNumber" && c.call.params[0] !== "finalized";
+
 const hostile = {
   get number(): string {
     throw new Error("boom");
@@ -24,16 +41,20 @@ const hostile = {
 };
 
 describe("runTipCheck calls", () => {
-  it("sends eth_getBlockByNumber with finalized, then h_low, without bodies", async () => {
+  it("sends eth_chainId and eth_getBlockByNumber with finalized, then h_low, without bodies", async () => {
     const { rpc } = await runScripted({
       scripts: { p1: final(255n), p2: final(256n), p3: final(255n) },
     });
+    const chainId = { method: "eth_chainId", params: [] };
     const finalized = {
       method: "eth_getBlockByNumber",
       params: ["finalized", false],
     };
     const atLow = { method: "eth_getBlockByNumber", params: ["0xff", false] };
     expect(rpc.calls().map(c => c.call)).toEqual([
+      chainId,
+      chainId,
+      chainId,
       finalized,
       finalized,
       finalized,
@@ -42,6 +63,7 @@ describe("runTipCheck calls", () => {
       atLow,
     ]);
     expect(rpc.calls().map(c => c.endpoint)).toEqual([
+      ...endpoints(3),
       ...endpoints(3),
       ...endpoints(3),
     ]);
@@ -53,7 +75,7 @@ describe("runTipCheck calls", () => {
     });
     const asked = rpc
       .calls()
-      .filter(c => c.call.params[0] !== "finalized")
+      .filter(c => isAtLow(c))
       .map(c => c.endpoint.provider);
     expect(asked).toEqual(["p1", "p2"]);
   });
@@ -77,6 +99,7 @@ describe("runTipCheck calls", () => {
     expect(result.passed).toBe(true);
     expect(result.answers[2]).toEqual({
       provider: "p3",
+      chainId: BigInt(ENTROPY_CHAIN_ID),
       finalBlock: null,
       hashAtLow: null,
     });
@@ -107,7 +130,7 @@ describe("runTipCheck calls", () => {
       scripts: { p1: final(100n), p2: final(100n), p3: final(100n) },
     });
     expect(clock.delays()).toEqual(
-      Array.from({ length: 6 }, () => DEFAULT_REQUEST_TIMEOUT_MS),
+      Array.from({ length: CALLS }, () => DEFAULT_REQUEST_TIMEOUT_MS),
     );
     expect(clock.pending()).toBe(0);
   });
@@ -127,10 +150,10 @@ describe("runTipCheck calls", () => {
     });
     expect(result.passed).toBe(true);
     // No timer was fired: only clearTimeout can have removed them.
-    expect(clock.delays()).toHaveLength(6);
+    expect(clock.delays()).toHaveLength(CALLS);
     expect(clock.pending()).toBe(0);
     expect(rpc.calls().map(c => c.signal?.aborted)).toEqual(
-      Array.from({ length: 6 }, () => false),
+      Array.from({ length: CALLS }, () => false),
     );
   });
 
@@ -139,7 +162,7 @@ describe("runTipCheck calls", () => {
       scripts: { p1: final(100n), p2: final(100n), p3: { final: "silent" } },
     });
     expect(result.passed).toBe(true);
-    const finalized = rpc.calls().filter(c => c.call.params[0] === "finalized");
+    const finalized = rpc.calls().filter(c => isFinalized(c));
     expect(finalized.map(c => c.signal?.aborted)).toEqual([false, false, true]);
   });
 
@@ -153,7 +176,9 @@ describe("runTipCheck calls", () => {
     });
     expect(clock.delays()[0]).toBe(2000);
     // The fake transport ignores the aborted signal and answers late anyway.
-    expect(rpc.calls()[2]?.signal?.aborted).toBe(true);
+    expect(rpc.calls().filter(c => isFinalized(c))[2]?.signal?.aborted).toBe(
+      true,
+    );
     expect(result.answers[2]?.finalBlock).toBeNull();
     expect(result.low).toBe(100n);
     expect(result.passed).toBe(true);

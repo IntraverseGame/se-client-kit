@@ -54,7 +54,8 @@ the specs' headings.
     — request options, errors, retry classes, the token schedule, and
     [the operations](./client-kit/the-play-client-request-layer.md#operations)
   - [The `shell` package](./client-kit/the-shell-package.md) — redaction, the
-    logger, key custody, the signer lock, the transcript state
+    logger, key custody, the signer lock, the transcript state, the chain
+    configuration, the tip check
   - [The cryptography](./client-kit/the-cryptography.md) — EIP-712 types, keys,
     `SigningError`, the transcript helper, the vectors
   - [How the kit gets its contracts](./client-kit/how-the-kit-gets-its-contracts.md)

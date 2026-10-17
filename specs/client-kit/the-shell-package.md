@@ -61,69 +61,81 @@ serves are in brackets.
   entropy source, named as the Snapshot's `proofs.randomnessProof.source`, a
   non-empty list of `{ provider, url }`: the provider a short token, the URL
   `https:`, or `http:` on a loopback host only, with no credentials, query
-  string, or fragment), `minRpcQuorum` (an integer of at least 1, default 2),
-  and `tipLagMargin` (per source, a non-negative integer of blocks, required for
-  each source and only for those). Other fields are the Wrapper's and are
-  ignored. Addresses are kept lowercase (their case is not checked against
-  EIP-55); block counts become `bigint`. It refuses (`code`):
-  `production-quorum`, the boot rule, `production` with `minRpcQuorum` below 2;
-  `shared-provider`, two endpoints of one source with one provider (names
-  compared without case) or one URL (one provider may serve two sources);
+  string, or fragment), `entropyChainId` (per source, the chain id the source's
+  blocks are on, an integer of at least 1 and at most 2^53 - 1, required for
+  each source and only for those), `minRpcQuorum` (an integer of at least 1,
+  default 2), and `tipLagMargin` (per source, a non-negative integer of blocks,
+  required for each source and only for those). Other fields are the Wrapper's
+  and are ignored. Addresses are kept lowercase (their case is not checked
+  against EIP-55); block counts and chain ids become `bigint`. It refuses
+  (`code`): `production-quorum`, the boot rule, `production` with `minRpcQuorum`
+  below 2; `shared-provider`, two endpoints of one source with one provider
+  (names compared without case) or one URL (one provider may serve two sources);
   `quorum-unreachable`, a source with fewer endpoints than `minRpcQuorum`; and
   `invalid-environment`, `invalid-signer`, `invalid-domain`, `invalid-quorum`,
-  `invalid-endpoints`, and `invalid-lag-margin` for a missing or malformed
-  field. `local` and `preview` may set `minRpcQuorum` to 1: the config is then
-  `degraded`, the Wrapper shows the "chain check not independent (development)"
-  indicator, and every tip check records `tipCheck: "degraded"`. The Wrapper
-  refuses to start on any issue. This configuration is the only trust anchor of
-  the chain checks: the signer address and the registry domain are pinned per
-  environment, and a Snapshot's or a response's copy of them is compared with
-  it, never used in its place.
+  `invalid-endpoints`, `invalid-entropy-chain-id`, and `invalid-lag-margin` for
+  a missing or malformed field. `local` and `preview` may set `minRpcQuorum` to
+  1: the config is then `degraded`, the Wrapper shows the "chain check not
+  independent (development)" indicator, and every tip check records
+  `tipCheck: "degraded"`. The Wrapper refuses to start on any issue. This
+  configuration is the only trust anchor of the chain checks: the signer
+  address, the registry domain, and each entropy source's chain id are pinned
+  per environment, and a Snapshot's or a response's copy of them is compared
+  with it, never used in its place.
 - **The tip check (W-26b, W-26a).** It runs over the endpoints the configuration
   lists for the round's source, through an injected `RpcTransport`
   (`(endpoint, call, signal?) => Promise<result>`: it sends one JSON-RPC 2.0
   request and resolves with its `result`, or rejects). There are no provider
   names or URLs in the code. It makes two rounds of calls, each in parallel:
-  `eth_getBlockByNumber` with `["finalized", false]` to every endpoint, then
-  with `[h_low, false]` (`h_low` as a JSON-RPC quantity) to each endpoint that
-  answered. Each call times out on the injected clock (default 15 s, W-43) and
-  has its own abort signal (from the platform `AbortController`; typed as
-  `play-client`'s `CancelSignal`, since the kit compiles without the DOM
-  library), aborted when that call times out and never otherwise; where the
-  platform has no `AbortController` the signal is absent. A transport may ignore
-  it, and a late answer is ignored. A rejection, a timeout, a transport that
-  throws, and a `result` that is not a block (an object whose `number` is a
-  canonical lowercase quantity of at most 64 bits and whose `hash` is 32 bytes
-  of hex) are no answer; a hash is kept lowercase. `h_top` and `h_low` are the
-  maximum and minimum final block of the endpoints that answered. The check
-  passes only if at least `minRpcQuorum` answered, each is at most
-  `tipLagMargin` blocks behind `h_top`, each gave the block at `h_low`, and
-  every hash at `h_low` is the same. The failures, in this order, are
-  `too-few-answered`, `lagging`, `hash-unavailable`, and `hash-mismatch`; a
-  source the configuration does not list is `unknown-source` and no endpoint is
-  asked. It never drops an outlier or picks a side. The record (frozen) holds
-  the source, `passed`, the `failure`, `tipCheck` (`independent` or `degraded`),
-  the observed tip `h_top` and `h_low` (`null` when no endpoint answered), the
-  lag margin, and every configured endpoint's answer in order: its provider, its
-  final block, and its hash at `h_low` (`null` for no answer). Block numbers are
-  `bigint`.
+  `eth_chainId` with `[]` and `eth_getBlockByNumber` with `["finalized", false]`
+  to every endpoint, then `eth_getBlockByNumber` with `[h_low, false]` (`h_low`
+  as a JSON-RPC quantity) to each endpoint that gave a final block. Each call
+  times out on the injected clock (default 15 s, W-43) and has its own abort
+  signal (from the platform `AbortController`; typed as `play-client`'s
+  `CancelSignal`, since the kit compiles without the DOM library), aborted when
+  that call times out and never otherwise; where the platform has no
+  `AbortController` the signal is absent. A transport may ignore it, and a late
+  answer is ignored. A rejection, a timeout, a transport that throws, and a
+  `result` that is not a chain id (a canonical lowercase quantity of at most 64
+  bits) or a block (an object whose `number` is such a quantity and whose `hash`
+  is 32 bytes of hex) are no answer; a hash is kept lowercase. `h_top` and
+  `h_low` are the maximum and minimum final block of the endpoints that answered
+  (gave a final block). The check passes only if no endpoint reported another
+  chain id than the source's configured one (answering or not), at least
+  `minRpcQuorum` answered, each of them reported the configured chain id, each
+  is at most `tipLagMargin` blocks behind `h_top`, each gave the block at
+  `h_low`, and every hash at `h_low` is the same. The failures, in this order,
+  are `chain-id-mismatch` (an endpoint reported another chain),
+  `too-few-answered`, `chain-id-unavailable` (an answering endpoint gave no
+  chain id), `lagging`, `hash-unavailable`, and `hash-mismatch`; a source the
+  configuration does not list is `unknown-source` and no endpoint is asked. The
+  order is by what each failure proves: a chain id mismatch is proof of an
+  endpoint foreign to the source, so it comes first, whatever the rest; the
+  quorum is a precondition of judging the rest; and the endpoints' identity
+  (their chain id) comes before their content (lag and hashes). It never drops
+  an outlier or picks a side. The record (frozen) holds the source, `passed`,
+  the `failure`, `tipCheck` (`independent` or `degraded`), the observed tip
+  `h_top` and `h_low` (`null` when no endpoint answered), the lag margin, the
+  source's configured chain id, and every configured endpoint's answer in order:
+  its provider, its chain id, its final block, and its hash at `h_low` (`null`
+  for no answer). Block numbers and chain ids are `bigint`.
 - **The decision (W-26, W-26b).** `decideChain(record, bind)` returns `pass`
   only if the check passed and the bind holds: for a `future` bind `N` is above
   `h_top`; for a `tip` bind `N` is at least `h_top` minus the lag margin.
   Otherwise it returns `fail`, with the record kept and a reason:
   `chain-unverified` ("could not verify the chain": `too-few-answered`,
-  `hash-unavailable`, or `unknown-source`) or `verification-failed` ("this round
-  failed verification": `lagging`, `hash-mismatch`, or a bind that does not
-  hold, `failure: "bind"`). A failure signs nothing by itself: per W-25 and W-26
-  the shell signs `PlayerCancel` (through the round's `signCancel`) as soon as
-  the round is `active` only if `T_0` is settled and the round's
-  `CreateRoundAuth` was not re-issued, and the player then sees the reason's
-  text, with "and was canceled" added to "this round failed verification"; if
-  `T_0` is not settled it signs nothing for the round, not even `PlayerCancel`,
-  keeps the evidence, and the round ends by its game's expiry rule. W-26 items 1
-  to 5 are not built, so `T_0` is never settled today and every failure takes
-  that path. The shell does not act on the decision yet: the start flow is not
-  built.
+  `chain-id-unavailable`, `hash-unavailable`, or `unknown-source`) or
+  `verification-failed` ("this round failed verification": `chain-id-mismatch`,
+  `lagging`, `hash-mismatch`, or a bind that does not hold, `failure: "bind"`).
+  A failure signs nothing by itself: per W-25 and W-26 the shell signs
+  `PlayerCancel` (through the round's `signCancel`) as soon as the round is
+  `active` only if `T_0` is settled and the round's `CreateRoundAuth` was not
+  re-issued, and the player then sees the reason's text, with "and was canceled"
+  added to "this round failed verification"; if `T_0` is not settled it signs
+  nothing for the round, not even `PlayerCancel`, keeps the evidence, and the
+  round ends by its game's expiry rule. W-26 items 1 to 5 are not built, so
+  `T_0` is never settled today and every failure takes that path. The shell does
+  not act on the decision yet: the start flow is not built.
 - **Key custody (W-9 to W-13).** A session generates its action key with
   `signing`'s `createSigner` on the first need (the first `address()` or
   signature), from the injected random source (the platform's
@@ -203,11 +215,13 @@ serves are in brackets.
     `create-round-auth-vectors.test.ts`; replaying the verdicts is part of the
     change that builds the checks), and the caller passes `T_0` instead of the
     shell recomputing it and comparing it with `readyHash`. Its trust rule is
-    decided ([OQ-7](../wrapper.md#decided-questions)): the environment
-    configuration pins the signer and the domain, the Snapshot's per-round copy
-    must equal them or the shell refuses, and the Snapshot is never the trust
-    anchor.
+    decided ([OQ-7](../wrapper.md#decided-questions); the entropy chain id by
+    human review, 2026-10-16): the environment configuration pins the signer,
+    the domain, and each entropy source's chain id, the Snapshot's per-round
+    copy must equal them or the shell refuses, and the Snapshot is never the
+    trust anchor.
     <!-- TODO(W-26 checks): build checks 1 to 5 against the vendored schema, and replay every `signature/` vector's verdict through them. -->
+    <!-- TODO(W-26 checks, entropy chain): the `signature/` vectors pin the domain and the signer but not the entropy source's chain id. Replaying their verdicts with each vector's own `entropyChainId` as the configured one would compare a value with itself, so check 3's wrong-chain case needs its own unit tests (T-8). -->
     <!-- TODO(shell transcript): a re-issue (W-26) needs a transcript state that neither `stale` nor `closed` gives: no new signature, while a W-16 resend of an action already signed continues. -->
   - The `PlayerCancel` encoding is an injected function from the message to its
     struct hash; `signing` does not encode `PlayerCancel` until a published
@@ -249,6 +263,9 @@ serves are in brackets.
   a disagreement just beyond the lag margin fails (and at it passes), `h_top` is
   reported, every answer is recorded, and the degraded mode records
   `tipCheck: "degraded"`; plus the calls' shape, untrusted answers, and the
-  request timeout (T-8a). The `signature/` Snapshot vectors are read and
-  validated, and each one's verdict and reason are checked to be ones W-26
-  defines; the verdicts themselves are replayed when checks 1 to 5 are built.
+  request timeout (T-8a), and the pinned chain: an endpoint that reports another
+  chain id fails, whether or not it gave a final block (in degraded mode too),
+  and an answering one that gives no chain id or a malformed one fails closed.
+  The `signature/` Snapshot vectors are read and validated, and each one's
+  verdict and reason are checked to be ones W-26 defines; the verdicts
+  themselves are replayed when checks 1 to 5 are built.

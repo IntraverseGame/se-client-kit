@@ -8,7 +8,7 @@ import type { Bytes32 } from "@intraverse/se-client-signing";
 import type { RpcEndpoint } from "../config-fields.ts";
 import type { RpcCall, RpcTransport } from "../rpc-transport.ts";
 import { runTipCheck, type TipCheckRecord } from "../tip-check.ts";
-import { chainConfig, SOURCE } from "./chain-config.ts";
+import { chainConfig, ENTROPY_CHAIN_ID, SOURCE } from "./chain-config.ts";
 import { flush } from "./fake-locks.ts";
 
 /** A distinct, valid block hash per (fork letter, height). */
@@ -31,6 +31,11 @@ export type Behavior =
 
 /** What one provider does. */
 export type ProviderScript = {
+  /**
+   * Its chain id, or a behavior for the `eth_chainId` call; by default the
+   * fixture's `ENTROPY_CHAIN_ID`.
+   */
+  readonly chainId?: bigint | Behavior;
   /** Its final block, or a behavior for the `finalized` call. */
   readonly final: bigint | Behavior;
   /**
@@ -48,7 +53,7 @@ export type FakeRpc = {
     readonly call: RpcCall;
     readonly signal: CancelSignal | undefined;
   }[];
-  /** Answers the `"deferred"` call of `provider` with `result`. */
+  /** Answers the latest `"deferred"` call of `provider` with `result`. */
   readonly answer: (provider: string, result: unknown) => void;
 };
 
@@ -71,12 +76,13 @@ export const createFakeRpc = (
     provider: string,
     answer: bigint | string | Behavior,
     height: bigint,
+    asResult: (value: bigint) => unknown = value => block(value, "a"),
   ): Promise<unknown> => {
     if (typeof answer === "object") {
       return Promise.resolve(answer.raw);
     }
     if (typeof answer === "bigint") {
-      return Promise.resolve(block(answer, "a"));
+      return Promise.resolve(asResult(answer));
     }
     switch (answer) {
       case "throw": {
@@ -101,10 +107,18 @@ export const createFakeRpc = (
   const transport: RpcTransport = (endpoint, call, signal) => {
     calls.push({ endpoint, call, signal });
     const script = scripts[endpoint.provider];
-    const [tag] = call.params;
     if (script === undefined) {
       return Promise.reject(new Error("no such provider"));
     }
+    if (call.method === "eth_chainId") {
+      return respond(
+        endpoint.provider,
+        script.chainId ?? BigInt(ENTROPY_CHAIN_ID),
+        0n,
+        value => `0x${value.toString(16)}`,
+      );
+    }
+    const [tag] = call.params;
     return tag === "finalized"
       ? respond(endpoint.provider, script.final, 0n)
       : respond(endpoint.provider, script.atHeight ?? "a", BigInt(tag));
