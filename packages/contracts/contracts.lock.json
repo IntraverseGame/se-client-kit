@@ -5,8 +5,8 @@
       "path": "src/schemas/play.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "play/v1 OpenAPI document",
-      "sourceCommit": "9fd9d8b384cb1eb8f1c7ab38acadf7e13c63f979",
-      "sha256": "ef858220666e52d00da58272c835f593a8a02bff1eb7bf031986a19ad52e83a8"
+      "sourceCommit": "b27afc588a84dc40518a681d112e8c23db3f3fbf",
+      "sha256": "6cac6f5ea279c779c4faf28af471226bd748f1904a00e4bfc53d3b4250167e52"
     },
     {
       "path": "src/schemas/se.snapshot.v1.schema.json",
@@ -707,6 +707,13 @@
       "sourceName": "se.snapshot/1 vectors/valid/coinflip-lost.json",
       "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
       "sha256": "6feefdc664f6fd8ebb4c1dd45feb087ea4153d75e63af986c6fa868ebf3c34df"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-resolving-cancel.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-resolving-cancel.json",
+      "sourceCommit": "b27afc588a84dc40518a681d112e8c23db3f3fbf",
+      "sha256": "648e34173f6ff16433532fba3a53d3474e4b374498f3f854034f6cce4add6dd5"
     },
     {
       "path": "src/vectors/snapshot/valid/coinflip-resolving.json",

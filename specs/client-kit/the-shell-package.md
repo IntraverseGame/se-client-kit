@@ -130,6 +130,7 @@ are in brackets.
   Wrapper's polling and rendering read it, so #41's rule (a `canceled` that
   answers the shell's own cancel, with no `closeReason`, is not final yet)
   changes only this function.
+  <!-- TODO(#41): since se-backend b27afc5 the contract makes `canceled` final and shows a cancel not yet answered as `resolving` (how-the-kit-gets-its-contracts.md, rule 4); #41 reconciles this rule with it. -->
 - **The Snapshot reader (W-28, W-42, W-43).** `createSnapshotReader` takes the
   Play API transport and the play token's `Authorization` and returns `read()`
   and `latest()`. `read()` calls `getSnapshot` and resolves with one of:

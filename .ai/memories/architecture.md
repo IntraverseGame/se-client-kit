@@ -94,7 +94,9 @@ structure below.
   session-ending answer to any call ends the session through the transport
   wrapper in `play-session.ts`. Whether a round is over is decided only by
   `isRoundOver` (`snapshot-reading.ts`); the Wrapper reads it and keeps no
-  status list, so #41's non-final `canceled` changes that one function. The
+  status list, so #41's cancel rule changes that one function (since
+  se-backend b27afc5 the contract makes `canceled` final and shows a cancel
+  not yet answered as `resolving`; #41 reconciles its rule with that). The
   launch code is taken by `takeLaunchCode`, which the Wrapper's entry calls
   before any request. The environment configuration, never a
   Snapshot or a response, pins the backend signer, the registry domain, and

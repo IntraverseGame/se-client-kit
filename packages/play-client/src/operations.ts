@@ -247,8 +247,10 @@ export const cashOutRound = (
  * is not answered from a log as a repeated move is (once the engine took it,
  * the same cancel again is `FAILED_PRECONDITION`), so after a lost response or
  * a retryable problem the caller reads `getSnapshot` before it sends a cancel
- * again. Answers the round's Snapshot as `unknown`: `canceled`, or `active`
- * with a move played when that move won the race.
+ * again. Answers the round's Snapshot as `unknown`: `canceled` (final),
+ * `resolving` while the engine has not answered the cancel yet, or `active`
+ * with a move played when that move won the race. A cancel of a round that is
+ * not `active` (one still `resolving` included) is `FAILED_PRECONDITION`.
  */
 export const cancelRound = (
   transport: Transport,
