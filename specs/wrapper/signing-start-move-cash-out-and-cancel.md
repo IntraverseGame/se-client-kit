@@ -38,58 +38,99 @@ Part of the [Wrapper spec](../wrapper.md), section
   move the round is `won` and nothing is signed
   ([OQ-8](../wrapper.md#decided-questions)).
 - **W-25.** **Cancel.** The shell signs `PlayerCancel` (`action = "cancel"`,
-  empty path, sequence 1, `previous = T_0`) only when a check of W-26 fails and
-  `T_0` is settled (W-26), or when the player cancels a round that is `active`
-  with no move made, if the game offers it (config rounds only; W-31 offers the
-  control in the `active` row).
+  empty path, sequence 1, `previous = T_0`) only when `T_0` is settled (W-26)
+  and either the tip check (W-26b) failed, or the player cancels a round that is
+  `active` with no move made, if the game offers it (config rounds only; W-31
+  offers the control in the `active` row, which is shown only after W-26
+  passes). Without a settled `T_0` it signs no cancel. Neither case applies
+  after a re-issue (W-26), and the cancel control is withdrawn then.
 - **W-26.** **Checks before the first signature and before the game is shown as
   ready.** The Snapshot is `starting` while the round prepares. The shell MUST
   NOT show the game as ready, and MUST NOT sign anything except the
-  `PlayerCancel` this item requires, until the Snapshot is `active` **and** all
-  of these hold:
-  1. **Domain and signer.** The Snapshot's signing domain for the round
-     (`chainId`, `verifyingContract`) and its signer address MUST equal the
-     environment configuration's `registryDomain` and `runtimeSigner`, which are
-     the trust anchor ([OQ-7](../wrapper.md#decided-questions)). Any mismatch
-     fails the check. The shell builds every digest with the configured domain,
-     never with a value taken from the response.
-  2. **`CreateRoundAuth` signature.** The round's `CreateRoundAuth` carries a
-     canonical signature (W-21) that recovers to `runtimeSigner`.
-  3. **`CreateRoundAuth` contents.** The shell recomputes `created`, the hash of
-     the round's on-chain creation arguments, from the Snapshot's fields and its
-     own values, and it MUST equal the `CreateRoundAuth`'s `created`. The round
-     id is the Snapshot's `roundId`. The action key is the shell's own key
-     address. The bet and currency are what the player chose (`bet` against the
-     `AmountRequest` the shell sent, `unit` against the currency). The source,
-     `N`, and `roundSecretHash` are the Snapshot's `proofs.randomnessProof`
-     (`source`, `blockNumber`, `roundSecretHash`). The terms hash comes from the
-     backend's Snapshot fields (TODO below).
-  4. **Ready evidence.** The shell recomputes
-     `T_0 = keccak256(abi.encode(created, seedHash))`, with `seedHash` from the
-     Snapshot's `proofs.fairnessProof.seedHash`, as the vendored signing vectors
-     reproduce (`created`, `seedHash`, `ready` in `signing.json`). It MUST equal
-     the Snapshot's `proofs.fairnessProof.readyHash`. In the first release the
-     shell takes `readyHash` from the Snapshot as given. Checking it against the
-     registry's record waits on anchoring, in a later increment.
-  5. **Tip check** (W-26b).
+  `PlayerCancel` this item requires, until the Snapshot is `active` **and**
+  every check below passes.
 
-  A field this check needs that has not been received for the round by the time
-  the Snapshot is `active` fails the check; it is never skipped. **`T_0` is
-  settled** only when checks 1 to 4 pass. If a check fails:
+  The round's `CreateRoundAuth` is the Snapshot's `proofs.createRoundAuth`: the
+  round's `newRound` (the arguments of its on-chain creation, in `abi.encode`
+  order), `entropyChainId`, `prepareWindow`, `expiry`, the signing `domain`, the
+  `signer`, and the `signature`. It is on every config Snapshot that carries
+  `proofs`, from a bound `starting` on, and every read of one round carries the
+  same object. The Snapshot validator (W-28) enforces its shape: lowercase
+  addresses, a 65-byte signature with `v` 27 or 28, and the domain's `name`
+  `"SuperEngine"` and `version` `"1"`. The checks run in this order, and the
+  first that fails refuses the round with its reason. Checks 1 to 4 run on the
+  first Snapshot that carries the object; check 5 runs when `readyHash` arrives;
+  the tip check may finish before it.
+  1. **Present** (`missing`). A config round whose Snapshot carries
+     `proofs.randomnessProof` carries `proofs.createRoundAuth`. `missing` is
+     also the reason when any field a check needs (`readyHash` most likely) is
+     still absent once the Snapshot is `active`.
+  2. **Pinned values** (`pinned-mismatch`). `domain.chainId`,
+     `domain.verifyingContract`, and `signer` MUST equal the environment
+     configuration's `registryDomain` and `runtimeSigner`, which are the trust
+     anchor ([OQ-7](../wrapper.md#decided-questions)). The shell builds every
+     digest with the configured domain, never with a value taken from the
+     response.
+  3. **Cross-field** (`cross-field`). `newRound.roundId` is the Snapshot's
+     `roundId` in its `bytes32` form: the 16 bytes of the UUIDv7, left-aligned
+     and zero-padded to 32 bytes (the Snapshot schema's `RoundIdBytes32`);
+     `newRound.roundSecretHash` is `proofs.randomnessProof.roundSecretHash`;
+     `newRound.actionKey` is the shell's own key address; `newRound.betAmount`
+     equals the `AmountRequest`'s value the shell sent, both read as `bigint` in
+     base units, never as a `number`; `newRound.currency` equals the
+     `AmountRequest`'s `unit` encoded as ASCII, left-aligned and zero-padded to
+     32 bytes, compared byte for byte (a `unit` that is not ASCII or is longer
+     than 32 bytes fails); `newRound.randomnessTarget` equals
+     `keccak256(abi.encode(bytes32 source, uint256 entropyChainId, uint256 blockNumber))`
+     recomputed from `proofs.randomnessProof` (`source`, `blockNumber`) and
+     `entropyChainId`. The other `newRound` fields (`playerRef`, `gameId`,
+     `gameVersion`, `circuitVersion`, `payoutTermsHash`) are taken as signed.
+  4. **Signature** (`recover-mismatch`). The shell computes
+     `created = keccak256(abi.encode(newRound))` and the EIP-712 digest of
+     `CreateRoundAuth(bytes32 created,uint40 prepareWindow,uint256 expiry)`
+     under the configured domain. The signature MUST be canonical (W-21) and
+     recover to `runtimeSigner`.
+  5. **Ready evidence** (`ready-mismatch`). Once the Snapshot carries
+     `proofs.fairnessProof.readyHash`, the shell recomputes
+     `T_0 = keccak256(abi.encode(created, seedHash))`, with `seedHash` from
+     `proofs.fairnessProof.seedHash`, as the vendored signing vectors reproduce
+     (`created`, `seedHash`, `ready` in `signing.json`), and it MUST equal
+     `readyHash`. In the first release the shell takes `readyHash` from the
+     Snapshot as given. Checking it against the registry's record waits on
+     anchoring, in a later increment.
+  6. **Tip check** (W-26b).
+
+  A past `expiry` is not a failure; the shell checks neither `expiry` nor
+  `prepareWindow`. A check this item needs whose field has not been received for
+  the round by the time the Snapshot is `active` fails (`missing`); it is never
+  skipped. **`T_0` is settled** only when checks 1 to 5 pass. If a check fails:
 
   - **`T_0` settled** (only the tip check failed): the shell signs
-    `PlayerCancel` (W-25) as soon as the round is `active`, keeps the round's
-    evidence (W-27), shows "this round failed verification and was canceled",
-    and the player's bet is returned by the cancel.
-  - **`T_0` not settled** (a field is missing, or check 1, 2, 3, or 4 failed):
-    the shell MUST sign nothing for the round, not even `PlayerCancel`, because
-    a cancel linked to an unconfirmed `previous` may be refused and can never be
-    rebuilt at that sequence (W-15). It keeps the round's evidence, shows "this
-    round failed verification", and the round ends by its game's expiry rule.
+    `PlayerCancel` (W-25) once the round is `active` and `T_0` is settled; a tip
+    check that fails before check 5 has run waits for it, and if check 5 then
+    fails the next branch applies. It keeps the round's evidence (W-27), shows
+    "this round failed verification and was canceled", and the player's bet is
+    returned by the cancel.
+  - **`T_0` not settled** (check 1, 2, 3, 4, or 5 failed): the shell MUST sign
+    nothing for the round, not even `PlayerCancel`, because a cancel linked to
+    an unconfirmed `previous` may be refused and can never be rebuilt at that
+    sequence (W-15). It keeps the round's evidence, shows "this round failed
+    verification", and the round ends by its game's expiry rule.
 
-  For a book round (not in the first release) the check can only flag.
-  <!-- TODO(backend Snapshot fields): W-26 is blocked on the backend. The Snapshot (`se.snapshot/1`) will carry the round's `CreateRoundAuth`, the fields to recompute `created` (the terms hash among them), the signing domain, and the signer address as optional, additive fields; their names, their envelope, and the statuses that carry them are not decided yet. `proofs.fairnessProof.readyHash` is also not in the vendored schema yet (its `FairnessProof` is closed), so today's validator refuses a Snapshot that carries it. Until a newer schema and its vectors are vendored into `contracts`, the shell cannot complete checks 1 to 4, and every round ends by the "`T_0` not settled" path. -->
-  <!-- TODO(open question): whether the shell also checks the `CreateRoundAuth`'s `expiry` and `prepareWindow` against the injected clock; to settle when the backend's field names are known. -->
+  **Re-issue** (`reissued`). A later read of the same round whose
+  `proofs.createRoundAuth` differs, field by field after validation, from the
+  first one the shell received for the round (whether or not that one passed) is
+  a re-issue, at any status. The shell keeps the first, adds the second to the
+  round's evidence, MUST sign nothing more for the round (no cancel: a move may
+  already be signed), and shows "this round failed verification"; the game's
+  picks get `reject` (W-23), no cash-out is offered or signed (W-24), and the
+  round ends by its game's expiry rule. A W-16 resend of bytes already signed is
+  not a new signature and continues, so an action the backend may have applied
+  is never stranded.
+
+  For a book round (not in the first release) the check can only flag; a book
+  Snapshot that carries `proofs.createRoundAuth` is invalid (W-28).
+  <!-- TODO(backend Snapshot fields): W-26 is blocked on the backend. The field names above are fixed by the backend's Snapshot specification, but the schema and its vectors (including a new `signature/` class with accept and refuse verdicts) are not published yet. Making `proofs.createRoundAuth` required within `se.snapshot/1` is a pre-release exception to the additive-only rule of `se.snapshot/1` (OQ-7): nothing has shipped against the old shape. The vendoring change reconciles that rule in `client-kit.md`, `client-kit/how-the-kit-gets-its-contracts.md`, and `.ai/memories/architecture.md`, and the `starting` narrowing in `client-kit/the-snapshot-package.md` (a bound `starting` now carries `proofs`). `proofs.fairnessProof.readyHash` and `proofs.createRoundAuth` are not in the vendored schema yet, so today's validator refuses a Snapshot that carries them. Until a newer schema and its vectors are vendored into `contracts`, every round ends by the "`T_0` not settled" path. -->
   <!-- TODO(later increment): the shell also checks the domain, the signer, and the `CreateRoundAuth` against the registry on-chain. -->
 
 - **W-26a. Fewer than `minRpcQuorum` endpoints answer.** Decided (OQ-2,

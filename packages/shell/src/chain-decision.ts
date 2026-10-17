@@ -1,9 +1,10 @@
 // What a tip check means for the round (W-26, W-26a, W-26b): it passes, or it
 // fails and the record is kept. The bind rule checks the round's block `N`
 // against the observed tip. A failure does not by itself sign anything: the
-// shell signs `PlayerCancel` only when `T_0` is settled (W-25, W-26), and
-// otherwise signs nothing for the round. The start flow that acts on the
-// decision is not built yet; this module only decides.
+// shell signs `PlayerCancel` only when `T_0` is settled and the round's
+// `CreateRoundAuth` was not re-issued (W-25, W-26), and otherwise signs nothing
+// for the round. The start flow that acts on the decision is not built yet;
+// this module only decides.
 
 import type { TipCheckFailure, TipCheckRecord } from "./tip-check.ts";
 
@@ -54,9 +55,9 @@ export type ChainDecision =
   | {
       /**
        * The check failed: the shell keeps the record and shows `reason`. It
-       * signs `PlayerCancel` as soon as the round is `active` only if `T_0` is
-       * settled; otherwise it signs nothing for the round, not even
-       * `PlayerCancel` (W-25, W-26).
+       * signs `PlayerCancel` once the round is `active` only if `T_0` is
+       * settled and there was no re-issue; otherwise it signs nothing for the
+       * round, not even `PlayerCancel` (W-25, W-26).
        */
       readonly verdict: "fail";
       readonly reason: FailReason;
