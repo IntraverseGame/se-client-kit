@@ -310,7 +310,7 @@ level AA**.
 
   Together these keep another page from framing the Wrapper and leading the
   player to click cash-out (clickjacking).
-  <!-- TODO(operator launch contract): the handshake and the three message schemas (`resize`, `lobby`, `deposit`); W-49 and T-9a need them closed. Proposed in rfcs/active/RFC-001-operator-launch-contract.md (draft). -->
+  <!-- TODO(operator launch contract): the operator handshake and its messages, and how lobby and deposit are offered; W-49 and T-9a need them closed. Proposed in rfcs/active/RFC-001-operator-launch-contract.md (draft): the `hello`, `welcome`, and `resize` messages, with lobby and deposit as navigations, not messages. -->
 
 ### Configuration
 
