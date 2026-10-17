@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-17 (play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-17 (Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -113,6 +113,26 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   re-exports) and runs it over the repository.
 - The jsdom smoke test is `apps/wrapper/src/environment.test.ts`; component
   tests set `environment: "jsdom"` through `apps/wrapper/vite.config.ts`.
+- **Wrapper component tests** (`apps/wrapper/src/*.test.ts`) mount the UI with
+  `src/fixtures/app.ts`: a manual clock (`fixtures/manual-timers.ts`, timers
+  fire only on `advance`), a scripted Snapshot read port, a recording
+  clipboard, and a switchable online state; `fixtures/flush.ts` settles
+  promises without a timer. Snapshots and typed errors are the golden `valid/`
+  vectors (`fixtures/vectors.ts`), typed by the contract's `Snapshot` and
+  `PlayProblem` and assigned to the UI's input types, which proves those are a
+  subset of the contract. The Wrapper's tests cannot import `snapshot` (lint),
+  so the vectors stand for validated input (T-5 validates them). A deep
+  recording proxy checks the UI reads no field outside its input type and never
+  `normalized`. `src/release.test.ts` covers the recommended
+  headers and the filled CSP; `src/release-integrity.test.ts` (Node
+  environment) drives the release integrity plugin's `generateBundle` over a
+  fake bundle (`src/fixtures/release-bundle.ts`) and runs the on-disk output
+  check (`verifyOutput`: manifest, hashes, the type allow-list, SRI-loaded
+  scripts) on the files it would write; `src/read-tree.test.ts` runs
+  `readTree` on a real temporary directory with symbolic links to a file and to
+  a directory (the one Wrapper test that writes to disk, under `tmpdir()`,
+  removed after each test). axe is not a component-test
+  dependency: the axe scan of every state is the e2e suite's (T-14).
 - **Cache.** Tests are wireit scripts; a passing run is cached by its declared
   `files`. A test that reads a file outside the package's `files` (a vector, a
   schema, an ADR) must list it, or depend on the task that produces it. `e2e`

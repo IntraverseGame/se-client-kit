@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 
+import { releaseIntegrity } from "./release-integrity.ts";
 import { testOnlyEntryGuard } from "./test-only-entry-guard.ts";
 
 // The component tests (Vitest) may use the contracts vectors, so the guard is
@@ -16,10 +17,15 @@ export default defineConfig(({ command, mode }) => {
     throw new Error("The Wrapper is never built with VITEST set.");
   }
   return {
-    plugins: underVitest ? [] : [testOnlyEntryGuard()],
+    // The release integrity step (SRI, the headers file, the manifest) runs
+    // in a build only.
+    plugins: underVitest ? [] : [testOnlyEntryGuard(), releaseIntegrity()],
     // Vite bundles a worker with its own plugin pipeline, which does not inherit
     // `plugins`: the guard is added there too.
     worker: { plugins: () => (underVitest ? [] : [testOnlyEntryGuard()]) },
+    // No public directory: every file of the bundle goes through the build,
+    // so the integrity step sees it (release-integrity.ts).
+    publicDir: false,
     build: { target: "es2023", sourcemap: false },
     test: { environment: "jsdom" },
   };

@@ -56,7 +56,8 @@
         "pnpm-lock.yaml"
       ],
       "dependencies": [
-        "../../packages/shell:build"
+        "../../packages/shell:build",
+        "../../packages/contracts:build"
       ]
     },
     "test": {
@@ -84,7 +85,11 @@
       ]
     }
   },
+  "dependencies": {
+    "@intraverse/se-client-shell": "workspace:*"
+  },
   "devDependencies": {
+    "@intraverse/se-client-contracts": "workspace:*",
     "vite": "8.3.4"
   }
 }

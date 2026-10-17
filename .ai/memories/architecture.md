@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-17 (shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-17 (Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -11,7 +11,9 @@ them. `contracts`, `signing`, `snapshot`, and `play-client` have code; `shell`
 has four slices (redaction, logger, key custody, the signer lock, the
 transcript state; the chain configuration and tip check; the W-26
 `CreateRoundAuth` checks and the round's verdict; the `se.controller/1` game
-bridge); the apps are skeletons. Flag any divergence from the
+bridge); the Wrapper app has its first slice (configuration, rendering,
+accessibility, the release check) and `reference-game` is a skeleton. Flag any
+divergence from the
 structure below.
 
 ## Mental model
@@ -138,6 +140,19 @@ structure below.
   ADR.
 - No git submodules; no importing backend code; no fetching private contracts
   in CI.
+- The Wrapper (`apps/wrapper/src`): `boot.ts` reads and validates the
+  environment configuration document (`environment-config.ts`, which reuses
+  the shell's `validateChainConfig` for the chain part and both boot rules);
+  `wrapper-app.ts` holds the UI state (`wrapper-state.ts`, pure transitions),
+  renders it (`render.ts` with `round-view.ts`, `state-views.ts`, `dom.ts`),
+  and polls (`snapshot-poller.ts`). The UI reads only its input types
+  (`round-input.ts`), handed over already validated by a read port the session
+  will supply; it imports only `shell` (lint), which does not yet export the
+  Snapshot validator or its types. The build adds SRI, a `<meta>` CSP, the
+  headers file, and the integrity manifest, then verifies the output directory
+  on disk against the manifest (`release-integrity.ts`, `release-headers.ts`).
+  There is no `publicDir`, and no dynamic `import()` (its chunk would get no
+  SRI, so the build refuses it).
 - The Wrapper bundle is built identically for every environment; values come
   from one configuration document. Do not add per-environment builds or a test
   build: the e2e tests the unmodified release bundle and stubs

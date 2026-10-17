@@ -309,7 +309,37 @@ only public values; the Wrapper refuses to start on an invalid document.
 | `gameOrigins`     | the allow-list of game origins D                                                                                   |
 | `operatorOrigins` | the allow-list of operator page origins A                                                                          |
 
-<!-- TODO(hosting): who serves the document, its path, and the exact schema; this repository owns the schema, the SuperEngine side serves the values. -->
+The schema, as the Wrapper validates it at boot (`apps/wrapper`,
+`validateEnvironmentConfig`; the chain fields through the shell's
+`validateChainConfig`). Proposed with the Wrapper's first implementation, for
+review:
+
+| Field             | Shape                                                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `environment`     | one of the three strings                                                                                                                                |
+| `playApiBaseUrl`  | an absolute URL, `https:` (or `http:` on a loopback host), with no credentials, query, or fragment, whose path ends with `/play/v1` (no trailing slash) |
+| `verifyBaseUrl`   | an absolute URL under the same rule, any path                                                                                                           |
+| `runtimeSigner`   | a non-zero address (the shell's rule)                                                                                                                   |
+| `registryDomain`  | `{ chainId, verifyingContract }` (the shell's rule)                                                                                                     |
+| `rpcEndpoints`    | per source, a non-empty list of `{ provider, url }` (the shell's rule)                                                                                  |
+| `entropyChainId`  | per source, an integer of at least 1 (the shell's rule)                                                                                                 |
+| `minRpcQuorum`    | an integer of at least 1, default 2 (the shell's rule)                                                                                                  |
+| `tipLagMargin`    | per source, a non-negative integer (the shell's rule)                                                                                                   |
+| `gameOrigins`     | a non-empty list of distinct origins, each written as `URL.origin` serializes it, `https:` or loopback `http:`                                          |
+| `operatorOrigins` | a list of distinct origins under the same rule; it may be empty (no page may embed the Wrapper)                                                         |
+
+Any other top-level field is refused. On any issue the Wrapper shows the
+configuration-error state and opens nothing; this includes both boot rules:
+`environment: production` with `minRpcQuorum` below 2 (W-26a), and a source with
+fewer configured endpoints than `minRpcQuorum` (W-26b). A document that cannot
+be reached (no response) shows the connection-problem state and is read again at
+the slow rate (W-35) and when the browser comes back online; an error status or
+a body that is not JSON is the configuration-error state. The document is
+fetched with no credentials, no cache, and no redirect, and times out after 15 s
+(W-43). It is read from `./environment-config.json`, relative to the Wrapper's
+page, until hosting decides the path (provisional).
+
+<!-- TODO(hosting): who serves the document and its path; this repository owns the schema, the SuperEngine side serves the values. -->
 
 The list of RPC providers is owned by the infrastructure owner: which providers
 are used, their CORS behavior, and the matching `connect-src` entries of the
@@ -354,6 +384,11 @@ and none is invented here. The player and support work from the problem's
 `requestId` shown in the error states (W-41), which the backend already logs.
 The Wrapper's console output is `warn` and above, redacted (W-4), and holds no
 document. A client-side error channel is a later decision with its own spec.
+
+What the Wrapper logs today, through the shell's redacting logger, all at
+`warn`: `config.refused` once per issue of a refused configuration document,
+with the issue's `code` only (never a field's value); `config.unreadable`, with
+the HTTP `status` when there is one; and `config.unreachable`, with no field.
 
 ## Test plan
 

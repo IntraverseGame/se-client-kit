@@ -17,7 +17,9 @@ Part of the [Wrapper spec](../wrapper.md), section
   `data`) may hold members the Wrapper does not read, which it ignores. A field,
   `status`, or value the schema does not allow fails validation (W-28): every
   object of `se.snapshot/1` is closed (the allow-list), so a new field or status
-  reaches the Wrapper only with a kit that has synced the new schema.
+  reaches the Wrapper only with a kit that has synced the new schema. The
+  Wrapper also ignores a Snapshot whose `version` equals the last accepted one
+  (it carries nothing new).
 - **W-30.** The Wrapper MUST declare its capabilities when the session starts:
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
   six of R3 and `canceled`, which the cancel path needs).
@@ -35,6 +37,8 @@ Part of the [Wrapper spec](../wrapper.md), section
   | `canceled`  | "round canceled, your bet was returned", the round id and verify link, and with `closeReason: "expired"` the words "the time limit ended this round"                                                       | a new round                                                |
   | typed error | per [error and degraded states](../wrapper.md#error-and-degraded-states)                                                                                                                                   | per code                                                   |
 
+  <!-- TODO(Snapshot contract): `won` shows "the payout as `formatted`", but `se.snapshot/1` has no payout `Amount` on `won` (no golden vector carries `bankedAmount`). The Wrapper shows `bankedAmount.formatted` when present and no payout line otherwise; it never computes one from a multiplier (W-34). -->
+
 - **W-32.** `won` is final. The Wrapper MUST NOT show or wait for the operator
   credit. The balance it shows is the Snapshot's `bet.balance.formatted`.
 - **W-33.** `closeReason: "expired"` is shown next to the status and is not a
@@ -48,7 +52,12 @@ Part of the [Wrapper spec](../wrapper.md), section
   (SHOULD: 500 ms rising to 2 s, Wrapper configuration) until the status
   changes, and MUST keep polling at the slow rate after a longer wait, with a
   "taking longer than expected" notice. It MUST stop polling when the status is
-  terminal or the session ended.
+  terminal or the session ended. The Wrapper doubles the wait after each read
+  (500 ms, 1 s, 2 s, then 2 s); the slow rate is that 2 s maximum, also used
+  after a read with no response (W-43). PROVISIONAL: the "longer wait" before
+  the notice is 15 s (W-43's request timeout) until this spec gives a number. A
+  poll stops in every status but `starting` and `resolving`, on a typed error
+  (until the player asks to try again), and in any blocking state (W-44).
 - **W-36.** Idempotency. Each player intent (start, a move, cash-out, cancel)
   gets one `idempotencyKey` (`crypto.randomUUID()`), reused for every retry of
   that intent and never for another.
