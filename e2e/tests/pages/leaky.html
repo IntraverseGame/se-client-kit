@@ -1,0 +1,129 @@
+<!doctype html>
+<!--
+  A deliberately leaking page for the secret scan's negative tests. It opens a
+  session the way the Wrapper must (the launch code from the fragment, the
+  fragment removed before the first request, the code redeemed with the fake
+  Play API, a 32-byte key drawn from crypto.getRandomValues), then leaks one
+  secret through one channel, both named in the fragment:
+  #code=<launch code>&leak=<channel>&what=<code|token|key|key-decimal>.
+  That fragment is this test page's own convention, to carry the leak's
+  parameters; it is not the launch URL form, where the whole fragment is the
+  launch code (fake.launchUrl builds that one).
+  With leak=none it leaks nothing, so the scan must stay clean.
+  Test-only: served by the e2e suite, never part of a build.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Leaking test page</title>
+  </head>
+  <body>
+    <main>
+      <h1>Leaking test page</h1>
+      <p id="status">starting</p>
+    </main>
+    <script type="module">
+      const params = new URLSearchParams(location.hash.slice(1));
+      history.replaceState(null, "", location.pathname);
+      const code = params.get("code") ?? "";
+      const leak = params.get("leak") ?? "none";
+      const what = params.get("what") ?? "token";
+
+      const redeemed = await fetch("/play/v1/sessions:redeem", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ launchCode: code }),
+      });
+      const { playToken } = await redeemed.json();
+      const key = crypto.getRandomValues(new Uint8Array(32));
+      const hex = Array.from(key, b => b.toString(16).padStart(2, "0")).join(
+        "",
+      );
+      const secret = {
+        code,
+        token: playToken,
+        key: hex,
+        // The key's bytes read as one big-endian number, as a bigint prints.
+        "key-decimal": BigInt(`0x${hex}`).toString(10),
+      }[what];
+      // A binary leak of the key keeps its bytes; any other leak is text.
+      const value = what === "key" ? key : secret;
+
+      const toPromise = request =>
+        new Promise((resolve, reject) => {
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+
+      const leaks = {
+        none: async () => {},
+        console: async () => console.log("debug", value),
+        "page-error": async () => {
+          setTimeout(() => {
+            throw new Error(`failed for ${secret}`);
+          });
+        },
+        "request-url": async () => {
+          await fetch(`/leak?t=${encodeURIComponent(secret)}`);
+        },
+        navigation: async () => {
+          history.pushState(null, "", `?t=${secret}`);
+          history.replaceState(null, "", location.pathname);
+        },
+        "document-url": async () => {
+          history.replaceState(null, "", `#t=${secret}`);
+        },
+        "local-storage": async () => localStorage.setItem("t", secret),
+        "session-storage": async () => sessionStorage.setItem("t", secret),
+        indexeddb: async () => {
+          const open = indexedDB.open("leak", 1);
+          open.onupgradeneeded = () => open.result.createObjectStore("s");
+          const db = await toPromise(open);
+          const tx = db.transaction("s", "readwrite");
+          tx.objectStore("s").put(value, "k");
+          await new Promise(resolve => (tx.oncomplete = resolve));
+          db.close();
+        },
+        "cache-storage": async () => {
+          const cache = await caches.open("leak");
+          await cache.put("/cached", new Response(secret));
+        },
+        cookie: async () => {
+          document.cookie = `t=${secret}; path=/; secure`;
+        },
+        "history-state": async () => {
+          history.replaceState({ t: secret }, "", location.pathname);
+        },
+        "origin-private-file-system": async () => {
+          const root = await navigator.storage.getDirectory();
+          const folder = await root.getDirectoryHandle("leak", {
+            create: true,
+          });
+          const file = await folder.getFileHandle("t.txt", { create: true });
+          const writable = await file.createWritable();
+          await writable.write(secret);
+          await writable.close();
+        },
+        "websocket-url": async () => {
+          // The hermetic guard closes it; its URL is the leak.
+          const socket = new WebSocket(
+            `wss://socket.e2e.test/live?t=${encodeURIComponent(secret)}`,
+          );
+          await new Promise(resolve => {
+            socket.onclose = resolve;
+            socket.onerror = resolve;
+          });
+        },
+        "service-worker": async () => {
+          await navigator.serviceWorker.register(
+            `/leaky-sw.js?t=${encodeURIComponent(secret)}`,
+          );
+        },
+      };
+      await leaks[leak]();
+      // Lets an uncaught error from a leak fire before the test scans.
+      await new Promise(resolve => setTimeout(resolve, 0));
+      document.getElementById("status").textContent = "done";
+    </script>
+  </body>
+</html>

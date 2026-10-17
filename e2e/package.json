@@ -10,7 +10,7 @@
   },
   "wireit": {
     "test": {
-      "command": "playwright test --pass-with-no-tests",
+      "command": "playwright test",
       "dependencies": [
         "../apps/wrapper:build",
         "../packages/contracts:build"
@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
+    "@intraverse/se-client-contracts": "workspace:*",
     "@playwright/test": "1.64.0"
   }
 }

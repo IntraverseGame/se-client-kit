@@ -88,12 +88,14 @@ the root `package.json` fans them out. Exactly: the five `packages/*` and
 `apps/reference-game` have `build` and `typecheck`; `apps/wrapper` has `build`,
 `typecheck`, and `test` (Vitest with jsdom; today only an environment smoke
 test); `e2e` (`@intraverse/se-client-e2e`, private) has `typecheck` and `test`
-(Playwright, with no suites yet) and no `build`. **A package gets a `test`
-script with its first real test**, not before: a `test` script that passes with
-no tests would be a green check that checks nothing, so the empty skeletons have
-none, and the root `test` runs the Wrapper's tests and the `tools/` tests
-(`test:tools`). The pull request that adds a package's first test adds its
-`test` script and its entry in the root `test` dependencies.
+(Playwright: the e2e harness's own tests and a smoke run on the Wrapper's
+bundle, [The e2e harness](./client-kit/testing-and-ci.md#the-e2e-harness)) and
+no `build`. **A package gets a `test` script with its first real test**, not
+before: a `test` script that passes with no tests would be a green check that
+checks nothing, so the empty skeletons have none, and the root `test` runs the
+Wrapper's tests and the `tools/` tests (`test:tools`). The pull request that
+adds a package's first test adds its `test` script and its entry in the root
+`test` dependencies.
 
 Directories are `packages/<name>` and `apps/<name>`. The intended npm names are
 `@intraverse/se-client-<name>` (scope `@intraverse`, decided in

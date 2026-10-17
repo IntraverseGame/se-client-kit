@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-17 (Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-17 (e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -37,6 +37,36 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   or storage. They run against an in-repo **fake Play API** that answers from
   the contract's vectors, so a public CI job needs no private service.
   Preview-stack e2e runs elsewhere, against a pinned commit of this repository.
+  The harness is `e2e/tests/harness/` (spec: testing-and-ci.md, "The e2e
+  harness"); import `test` and `expect` from `harness/fixtures.ts`, never from
+  `@playwright/test`. Every test is hermetic automatically (all origins are
+  context routes under `.test`; any other request fails the test) and has the
+  seeded `crypto.getRandomValues` (`randomDraws`). On request: `fakePlayApi`
+  (script answers with `answer`/`answerEvery`: `valid/` vectors by name,
+  `network-failure`, `hang`; an unscripted call fails the test, clear expected
+  ones with `takeUnexpected`), `secretScan` (call `allowLaunchNavigation` for
+  the launch URL, then `expectClean`; a channel it cannot read is an
+  `unreadable` finding, only a `SecurityError` in an opaque frame is excused;
+  WebSocket URLs come from the hermetic guard, which closes every socket), and
+  `network`. A test that makes a refused request or socket on purpose clears
+  it with `hermetic.takeRefused()`. Behind the routes, the Chromium project
+  runs with `--host-resolver-rules=MAP * ~NOTFOUND` (`harness/browser-flags.ts`):
+  worker sockets and other unrouted traffic reach no host by name, unrecorded
+  (`hermetic-workers.spec.ts` proves it with a loopback listener and a control
+  launch). The opaque-frame excuse reads the origin an init script recorded
+  (`harness/origin-capture.ts`), never `self.origin`. The hermetic fixture
+  also serves the Wrapper's environment configuration document
+  (`harness/environment-config.ts`, a valid `preview` document pointing at the
+  fakes); a test can override that route to serve another document. `secret-needles.spec.ts` is Node-only
+  (imports `@playwright/test` directly, no page). The fake answers only listed
+  statuses: a self-written problem the operation does not list becomes an
+  unexpected call. `auditAccessibility` is a
+  plain function. `harness/vectors.ts` is the suite's only importer of the
+  test-only entry. Test pages live in `e2e/tests/pages/` (the leaking page for
+  the scan's negative tests). Rows that cannot run yet stay `test.fixme` in
+  `pending.spec.ts`, never a body that passes. Locally,
+  `SE_E2E_BROWSER_CHANNEL=chrome` runs on an installed Chrome when Playwright's
+  download is unavailable.
 - **Contracts check:** CI recomputes the hash of every file in the `contracts` package
   against its lock file, and regenerates the types to fail on a diff.
 - **Build output:** `pnpm check:build-output` (after `pnpm build`) inspects every
@@ -76,8 +106,9 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   operation's error statuses, and a test holds them equal to the document's;
   its `attempts` is 1 for the operations of class `never` (the redeem and the
   cancel), so the shared failure tests assert they are not repeated.
-  The e2e suite has no fake Play API yet; when it gets one, it can answer from
-  the same document.
+  The e2e suite's fake Play API (`e2e/tests/harness/`) is separate (e2e may
+  not import `play-client`) but follows the same design: tables held to the
+  document's generated types, strict bodies, and the token rule.
 - **Property tests** use a seeded generator, never `Math.random`: the
   `snapshot` package's `src/test/arbitrary.ts` (mulberry32, arbitrary JSON and
   one-change mutations of a document). A package's tests that need types from
@@ -97,8 +128,9 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 ## Commands and CI jobs
 
 - `pnpm test` runs the `vitest run` of every workspace that has tests (today `apps/wrapper`, `packages/signing`, `packages/snapshot`, `packages/play-client`, and `packages/shell`; each must be listed in the root `test` dependencies; a package gets a `test` script with its first real test) plus the tooling tests in
-  `tools/` (`test:tools`); `pnpm test:e2e` runs the Playwright suite (none yet,
-  so it passes with no tests). `pnpm check` is everything below.
+  `tools/` (`test:tools`); `pnpm test:e2e` runs the Playwright suite (the
+  harness's tests, a smoke run on the Wrapper's bundle, and the pending T-rows
+  as skipped). `pnpm check` is everything below.
 - `tools/import-direction.test.ts` is the proof that the dependency-direction
   and other lint rules fail on a violation: it runs the real oxlint binary and
   `.oxlintrc.json` over scratch files, with the cases in
