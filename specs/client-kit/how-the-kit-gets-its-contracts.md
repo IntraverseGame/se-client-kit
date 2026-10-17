@@ -64,6 +64,22 @@ Rules:
    synced it (`snapshot` package, W-28, W-29). Such a change reaches players
    with a kit release that syncs the new schema.
 
+   A change of meaning with no change to the schema is still a contract change:
+   the kit restates it in its own specs when it syncs the document or vector
+   that carries it. **The cancel's answer** (the Play API document and the
+   `valid/coinflip-resolving-cancel` vector, synced from se-backend `b27afc5`):
+   `canceled` is final, and once a round shows it its status never changes
+   again. A cancel the engine has not answered yet is answered, and read back,
+   as `resolving`, with no pick, no reveal, and no `closeReason`, on the
+   `readyHash` the cancel was signed on. A later read shows the cancel's
+   outcome: `canceled`, `active` again (a move was applied first, or the engine
+   refused the cancel), or `idle` once the round has ended. A cancel of a round
+   that is not `active`, one still `resolving` included, is a 422
+   `FAILED_PRECONDITION`. The schema already allowed all of these, so no field
+   or status was added. The document also describes, as planned and not yet
+   served, a Snapshot read that keeps showing the session's most recent round
+   after it ended; the kit relies on nothing planned.
+
    **One pre-release exception** (decided with
    [OQ-7](../wrapper.md#decided-questions); nothing had shipped against the old
    shape): `se.snapshot/1` made `proofs.createRoundAuth` required on a config

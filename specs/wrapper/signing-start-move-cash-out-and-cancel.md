@@ -85,6 +85,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   injects none until the type's vector from an independent signer is vendored
   (the signed-action TODO under W-20, #41), so until then the cancel path of
   W-26 ends with nothing signed.
+  <!-- TODO(#41): since se-backend b27afc5 the cancel can also be answered `resolving` (not answered yet; read the Snapshot again), `canceled` is final, and a cancel of a round still `resolving` is the 422 `FAILED_PRECONDITION` above (how-the-kit-gets-its-contracts.md, rule 4); #41 adds the shell's rule for it. -->
 - **W-26.** **Checks before the first signature and before the game is shown as
   ready.** The Snapshot is `starting` while the round prepares. The shell MUST
   NOT show the game as ready, and MUST NOT sign anything except the

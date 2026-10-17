@@ -66,12 +66,19 @@ export type paths = {
      * @description Passes the player's signed cancel (`PlayerCancel`, `sequence` 1, its
      * `previous` the Snapshot's `readyHash`) and answers the round's
      * Snapshot: `canceled` once the engine accepted it, the bet refunded or
-     * its refund on the way. Only an `active` round with no move played can
-     * be canceled. The API passes the cancel through unread: only the engine
-     * verifies it.
+     * its refund on the way. `canceled` is final: the status never changes
+     * again. When the engine has not answered the cancel yet, the answer is
+     * `resolving` (no pick, no reveal): read `GET /play/v1/snapshot` again.
+     * It shows `resolving` until the engine answers, `active` when a move
+     * was applied first or the cancel was refused, and `idle` once the round
+     * has ended (planned: the round's final status, see
+     * `GET /play/v1/snapshot`). Only an `active` round with no move played
+     * can be canceled. The API passes the cancel through unread: only the
+     * engine verifies it.
      *
      * A cancel after a move was applied, or of a round that is not
-     * `active`, is `FAILED_PRECONDITION`. A cancel the engine refuses (a
+     * `active` (a cancel still `resolving` included), is
+     * `FAILED_PRECONDITION`. A cancel the engine refuses (a
      * wrong signer, `sequence` or `previous`) is `INVALID_ARGUMENT` and
      * leaves the round `active`, so a corrected cancel may follow. When a
      * move was accepted while the cancel was on its way, the answer is the
@@ -89,8 +96,11 @@ export type paths = {
      * Read the Snapshot
      * @description Answers the session's Snapshot: its open round, or `idle` when none is
      * open. A round that has ended is not shown again: its Snapshot was the
-     * answer of the call that ended it. Reading does not reset the session's
-     * idle timeout.
+     * answer of the call that ended it. Planned: the session's most recent
+     * round, ended rounds included, until the next `rounds:start`; `idle`
+     * with no error then means the session has no round yet, and with a
+     * typed error a voided or rejected round. Reading does not reset the
+     * session's idle timeout.
      */
     get: operations["getSnapshot"];
   };
@@ -599,12 +609,19 @@ export type operations = {
    * @description Passes the player's signed cancel (`PlayerCancel`, `sequence` 1, its
    * `previous` the Snapshot's `readyHash`) and answers the round's
    * Snapshot: `canceled` once the engine accepted it, the bet refunded or
-   * its refund on the way. Only an `active` round with no move played can
-   * be canceled. The API passes the cancel through unread: only the engine
-   * verifies it.
+   * its refund on the way. `canceled` is final: the status never changes
+   * again. When the engine has not answered the cancel yet, the answer is
+   * `resolving` (no pick, no reveal): read `GET /play/v1/snapshot` again.
+   * It shows `resolving` until the engine answers, `active` when a move
+   * was applied first or the cancel was refused, and `idle` once the round
+   * has ended (planned: the round's final status, see
+   * `GET /play/v1/snapshot`). Only an `active` round with no move played
+   * can be canceled. The API passes the cancel through unread: only the
+   * engine verifies it.
    *
    * A cancel after a move was applied, or of a round that is not
-   * `active`, is `FAILED_PRECONDITION`. A cancel the engine refuses (a
+   * `active` (a cancel still `resolving` included), is
+   * `FAILED_PRECONDITION`. A cancel the engine refuses (a
    * wrong signer, `sequence` or `previous`) is `INVALID_ARGUMENT` and
    * leaves the round `active`, so a corrected cancel may follow. When a
    * move was accepted while the cancel was on its way, the answer is the
@@ -640,8 +657,11 @@ export type operations = {
    * Read the Snapshot
    * @description Answers the session's Snapshot: its open round, or `idle` when none is
    * open. A round that has ended is not shown again: its Snapshot was the
-   * answer of the call that ended it. Reading does not reset the session's
-   * idle timeout.
+   * answer of the call that ended it. Planned: the session's most recent
+   * round, ended rounds included, until the next `rounds:start`; `idle`
+   * with no error then means the session has no round yet, and with a
+   * typed error a voided or rejected round. Reading does not reset the
+   * session's idle timeout.
    */
   getSnapshot: {
     responses: {

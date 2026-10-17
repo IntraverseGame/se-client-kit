@@ -74,6 +74,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   list of its own. The rule that a `canceled` answering the shell's own cancel,
   with no `closeReason`, is not final yet belongs to #41 and changes only that
   check.
+  <!-- TODO(#41): since se-backend b27afc5 the contract makes `canceled` final and shows a cancel not yet answered as `resolving` (how-the-kit-gets-its-contracts.md, rule 4); #41 reconciles this rule with it. -->
 - **W-36.** Idempotency. Each player intent (start, a move, cash-out, cancel)
   gets one `idempotencyKey` (`crypto.randomUUID()`), reused for every retry of
   that intent and never for another.

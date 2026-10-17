@@ -159,8 +159,11 @@ one shape (a move at the cash-out route), and a type test keeps it so.
   or a `503 UNAVAILABLE` (even `retryable: true`) is surfaced to the caller as a
   `NetworkError` or a `ProblemError`, and the caller reads `getSnapshot` before
   it sends the cancel again. Its answer is the round's Snapshot, `unknown`:
-  `canceled`, or `active` with a move played when a move won the race;
-  `play-client` does not tell them apart. The document lists no `409` for it.
+  `canceled` (final), `resolving` while the engine has not answered the cancel
+  yet, or `active` with a move played when a move won the race; `play-client`
+  does not tell them apart. A cancel of a round that is not `active`, one still
+  `resolving` included, is a `422 FAILED_PRECONDITION`, surfaced as a
+  `ProblemError` like any other. The document lists no `409` for it.
 - **No secret leaves the body or the header.** The launch code travels only in
   the redeem body, the play token only in the `Authorization` header; neither is
   in a URL, and an error never holds a header or a body (W-4).
