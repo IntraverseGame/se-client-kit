@@ -1,5 +1,6 @@
-// T-4 (W-17, W-19, W-25): the cancel against the first move, and
-// `STALE_ACTION`.
+// T-4 (W-17, W-19, W-25, W-26): the cancel against the first move, the hold
+// after a refused move or cash-out (`STALE_ACTION` or `INVALID_ARGUMENT`), and
+// the re-issue state.
 
 import { recoverAddress } from "@intraverse/se-client-signing";
 import { describe, expect, it } from "vitest";
@@ -73,17 +74,18 @@ describe("cancel against the first move (W-17, W-25)", () => {
   });
 });
 
-describe("STALE_ACTION (W-19)", () => {
-  it("stops signing, the resend included", async () => {
+describe("a refused move or cash-out (W-19)", () => {
+  it("holds signing, the resend included", async () => {
     const round = openWorkedRound(await openTestSession());
     round.sign(firstMove);
     round.stale();
     expect(round.phase()).toBe("stale");
+    expect(round.resendable()).toBeUndefined();
     expect(shellCodeOf(() => round.sign(firstMove))).toBe("round-stopped");
     expect(shellCodeOf(() => round.signCancel())).toBe("round-stopped");
   });
 
-  it("adopts the outcome when the Snapshot shows its action applied, and still signs nothing", async () => {
+  it("adopts the outcome when the Snapshot shows its own action applied, and signs again from the next sequence", async () => {
     const round = openWorkedRound(await openTestSession());
     const action = round.sign(firstMove);
     round.stale();
@@ -91,11 +93,23 @@ describe("STALE_ACTION (W-19)", () => {
     expect(round.phase()).toBe("adopted");
     expect(round.last()).toBe(action.structHash);
     expect(round.pending()).toBeUndefined();
-    expect(shellCodeOf(() => round.sign(secondMove))).toBe("round-stopped");
-    expect(shellCodeOf(() => round.signCancel())).toBe("round-stopped");
-    expect(round.observe(snapshot("active", { step: 1 }))).toBe("not-applied");
-    expect(round.phase()).toBe("adopted");
+    expect(shellCodeOf(() => round.signCancel())).toBe("equivocation");
+    const next = round.sign(secondMove);
+    expect(next.message.sequence).toBe(2);
+    expect(next.message.previous).toBe(action.structHash);
     expect(round.observe(snapshot("won"))).toBe("closed");
+  });
+
+  it("decides nothing on a resolving Snapshot", async () => {
+    const round = openWorkedRound(await openTestSession());
+    round.sign(firstMove);
+    round.stale();
+    expect(round.observe(snapshot("resolving", { step: 1 }))).toBe(
+      "not-applied",
+    );
+    expect(round.phase()).toBe("stale");
+    expect(round.observe(snapshot("active", { step: 1 }))).toBe("applied");
+    expect(round.phase()).toBe("adopted");
   });
 
   it("is out of sync when the Snapshot does not show it", async () => {
@@ -123,5 +137,70 @@ describe("STALE_ACTION (W-19)", () => {
     playMoves(round, 1);
     round.stale();
     expect(round.observe(snapshot("active", { step: 1 }))).toBe("out-of-sync");
+  });
+});
+
+describe("a re-issue (W-26)", () => {
+  it("signs nothing new, not even a cancel, but keeps the resend", async () => {
+    const round = openWorkedRound(await openTestSession());
+    const action = round.sign(firstMove);
+    round.reissue();
+    expect(round.phase()).toBe("reissued");
+    expect(round.resendable()).toBe(action);
+    expect(shellCodeOf(() => round.sign(firstMove))).toBe("round-stopped");
+    expect(shellCodeOf(() => round.signCancel())).toBe("round-stopped");
+    expect(round.observe(snapshot("active", { step: 1 }))).toBe("applied");
+    expect(round.phase()).toBe("reissued");
+    expect(round.resendable()).toBeUndefined();
+    expect(shellCodeOf(() => round.sign(secondMove))).toBe("round-stopped");
+    expect(round.observe(snapshot("lost"))).toBe("closed");
+  });
+
+  it("never resends a cancel blindly", async () => {
+    const round = openWorkedRound(await openTestSession());
+    round.signCancel();
+    expect(round.resendable()).toBeUndefined();
+    round.reissue();
+    expect(round.resendable()).toBeUndefined();
+  });
+});
+
+describe("a failed round (W-26)", () => {
+  it("signs and resends nothing more, from open", async () => {
+    const round = openWorkedRound(await openTestSession());
+    round.sign(firstMove);
+    round.fail();
+    expect(round.phase()).toBe("failed");
+    expect(round.resendable()).toBeUndefined();
+    expect(shellCodeOf(() => round.sign(firstMove))).toBe("round-stopped");
+  });
+
+  it("stays failed from stale, even when the Snapshot then shows the action applied", async () => {
+    const round = openWorkedRound(await openTestSession());
+    round.sign(firstMove);
+    round.stale();
+    round.fail();
+    expect(round.phase()).toBe("failed");
+    expect(round.observe(snapshot("active", { step: 1 }))).toBe("applied");
+    expect(round.phase()).toBe("failed");
+    expect(shellCodeOf(() => round.sign(secondMove))).toBe("round-stopped");
+  });
+
+  it("stays failed from adopted", async () => {
+    const round = openWorkedRound(await openTestSession());
+    round.sign(firstMove);
+    round.stale();
+    round.observe(snapshot("active", { step: 1 }));
+    expect(round.phase()).toBe("adopted");
+    round.fail();
+    expect(round.phase()).toBe("failed");
+    expect(shellCodeOf(() => round.sign(secondMove))).toBe("round-stopped");
+  });
+
+  it("is a no-op once the round is closed", async () => {
+    const round = openWorkedRound(await openTestSession());
+    round.observe(snapshot("lost"));
+    round.fail();
+    expect(round.phase()).toBe("closed");
   });
 });

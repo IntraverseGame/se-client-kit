@@ -113,17 +113,19 @@ Part of the [Client kit spec](../client-kit.md), section
   `typedData` limit (4096 base64 characters); that wiring belongs to the shell's
   round flows (#8), not to this package.
 
-- **Action grammar.** The canonical action text is built by a small, separate
-  module, `provisionalGrammar`, which holds only the spellings the vendored
-  vectors pin (`pick row <row> tile <tile>`, `cash out`); nothing else in the
-  package depends on it. The signed-action specification has published the
-  grammar
+- **Action grammar.** The canonical action text and path are built by a small,
+  separate module, `actionGrammar`, to the grammar the signed-action
+  specification publishes
   ([What the Wrapper spec does not own](../wrapper.md#what-this-spec-does-not-own)):
-  those two spellings and `cancel`, canonical base-10 numbers, rows and tiles
-  from 0, and a move's `path` of the steps survived then the step played, with
-  `row = len(path) − 1`, where a path entry is the step's `config.steps[].index`
-  in the Snapshot (the tile is only in the text). The module is still named
-  provisional until the code is reconciled with it.
+  `pick row <r> tile <o>`, `cash out`, and `cancel`, canonical base-10 numbers,
+  rows and tiles from 0, and a move's `path` of the steps survived then the step
+  played, where a path entry is the step's `config.steps[].index` in the
+  Snapshot (the tile is only in the text). `pick(path, tile)` derives
+  `r = len(path) − 1` from the path (at least one entry), so a text whose row
+  disagrees with its path cannot be built. `cashOut(path)` takes the steps
+  survived, and `cancel()` has an empty path. A path entry is a `uint8`;
+  anything else is `invalid-input`. It reproduces the worked round's texts and
+  paths; nothing else in the package depends on it.
 - No general EIP-712 library (`viem`, `ethers`) is a dependency. They are used
   only as the independent generator of the vectors in the contracts repository.
 - **Vectors.** The package's tests replay `test/vectors/signing.json` from the

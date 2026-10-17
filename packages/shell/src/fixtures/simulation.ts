@@ -1,9 +1,10 @@
 // Test-only: a seeded simulation of a round against a network that fails,
-// loses responses, and answers `STALE_ACTION`, with retries, cancels against
+// loses responses, and answers `STALE_ACTION` or `INVALID_ARGUMENT` (W-19:
+// hold, then resynchronize from the Snapshot), with retries, cancels against
 // moves, and a second tab of the same session. It records every signature the
 // shell hands out, so the test can check that no sequence ever has two.
 
-import { provisionalGrammar } from "@intraverse/se-client-signing";
+import { actionGrammar } from "@intraverse/se-client-signing";
 
 import { ShellError } from "../errors.ts";
 import type { PendingAction } from "../pending-action.ts";
@@ -107,14 +108,14 @@ const nextRequest = (
   round: RoundSigner,
 ): Parameters<RoundSigner["sign"]>[0] => {
   const done = round.nextSequence() - 1;
+  const survived = Array.from({ length: Math.min(done, STEPS) }, (_, n) => n);
   if (done >= 1 && run.next(4) === 0) {
-    return { kind: "cash-out", action: provisionalGrammar.cashOut(), path: [] };
+    return { kind: "cash-out", ...actionGrammar.cashOut(survived) };
   }
   const row = Math.min(done, STEPS - 1);
   return {
     kind: "action",
-    action: provisionalGrammar.pick(row, run.next(3)),
-    path: [row],
+    ...actionGrammar.pick([...survived.slice(0, row), row], run.next(3)),
   };
 };
 
@@ -124,7 +125,8 @@ const send = (run: Run, round: RoundSigner, action: PendingAction): void => {
   // No response, nothing applied.
   if (outcome === 0) return;
   if (outcome === 4) {
-    // `STALE_ACTION`: stop, then read the Snapshot (W-19).
+    // `STALE_ACTION` or `INVALID_ARGUMENT`: hold, then read the Snapshot; the
+    // round signs again only when it shows this action applied (W-19).
     round.stale();
     round.observe(current(run.backend));
     return;

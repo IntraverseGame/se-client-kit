@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-17 (e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-17 (shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -96,8 +96,20 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   (`create-round-auth-vectors.test.ts`). They do not pin the entropy chain
   id, so the wrong-chain cases are unit tests. A case that needs a signed
   change issues the round with a registry key drawn at run time from a seeded
-  source (`fixtures/round-auth.ts`), which the configuration then pins: never
-  write a key down to sign a test round.
+  source (`fixtures/round-auth.ts`; one seed per call, never a module-level
+  counter), which the configuration then pins: never write a key down to sign
+  a test round. The round flows run against a scripted Play API transport
+  (`fixtures/fake-play.ts`: queued answers per operation, a lost response, a
+  problem, or a deferred answer to hold a call in flight) and a round issued
+  for the session's own key (`fixtures/round-flow.ts`). The typedData encoder
+  there is the canonical one, wrapped to record what it got;
+  `typed-data-vectors.test.ts` checks that the shell's move, cash-out, and
+  cancel carry the vendored `typed-data/` vectors' base64, through the flow
+  with no encoder passed (the production default) and through the request
+  builder. The flow layers its guards, so
+  `round-actions.test.ts` pins each one alone with stand-ins for the tracking
+  and the transcript state; a mutation run (one mutant per guard) checks that
+  each guard is tested on its own.
 - **Play client operations** run against a fake Play API server built from the
   vendored document (`packages/play-client/src/fixtures/fake-play-server.ts`):
   its routes are `PLAY_ROUTES`, its scripted answers are typed by each

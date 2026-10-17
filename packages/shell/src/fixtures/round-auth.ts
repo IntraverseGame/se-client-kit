@@ -7,6 +7,7 @@
 // signer.
 
 import {
+  type Address,
   type Bytes32,
   createSigner,
   domainSeparator,
@@ -21,7 +22,11 @@ import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
 import { asciiBytes32 } from "../bytes32-text.ts";
 import type { ChainConfig } from "../chain-config.ts";
-import type { StartRequest } from "../create-round-auth.ts";
+import {
+  REGISTRY_DOMAIN_NAME,
+  REGISTRY_DOMAIN_VERSION,
+  type StartRequest,
+} from "../create-round-auth.ts";
 import { accepted, endpoints } from "./chain-config.ts";
 import { recordingRandom } from "./seeded.ts";
 import { validated, vectorInput } from "./vectors.ts";
@@ -134,13 +139,13 @@ export const asStarting = (parts: RoundParts): void => {
   delete parts.input["currentMultiplier"];
 };
 
-let seed = 1;
-
-/** A fresh registry key, from a seeded source (one seed per call). */
-export const registryKey = (): Signer => {
-  seed += 1;
-  return createSigner({ random: recordingRandom(seed) });
-};
+/**
+ * A registry key from a seeded source. Each call gets its own seed, given or
+ * the default, so a test's key does not depend on how many keys other tests
+ * drew before it.
+ */
+export const registryKey = (seed = 2): Signer =>
+  createSigner({ random: recordingRandom(seed) });
 
 export type IssuedRound = {
   readonly snapshot: ValidSnapshot;
@@ -206,16 +211,16 @@ export const issueRound = (options: IssueOptions = {}): IssuedRound => {
     circuitVersion: int(newRound, "circuitVersion"),
     roundSecretHash: text(newRound, "roundSecretHash") as Bytes32,
     randomnessTarget: text(newRound, "randomnessTarget") as Bytes32,
-    actionKey: text(newRound, "actionKey") as Bytes32,
+    actionKey: text(newRound, "actionKey") as Address,
     payoutTermsHash: text(newRound, "payoutTermsHash") as Bytes32,
   });
   const domain = at(auth, "domain");
   const digest = typedDataDigest(
     domainSeparator({
-      name: "SuperEngine",
-      version: "1",
+      name: REGISTRY_DOMAIN_NAME,
+      version: REGISTRY_DOMAIN_VERSION,
       chainId: BigInt(int(domain, "chainId")),
-      verifyingContract: text(domain, "verifyingContract") as Bytes32,
+      verifyingContract: text(domain, "verifyingContract") as Address,
     }),
     hashCreateRoundAuth({
       created,

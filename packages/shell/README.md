@@ -87,6 +87,31 @@ if (!result.ok) {
 }
 ```
 
+Reading the session's Snapshot for the UI. The composition root that owns the
+session builds the reader and hands the UI only the reader object, never the
+transport or the `Authorization`:
+
+```ts
+// The Wrapper's composition root: it owns the session and its play token.
+import {
+  createSnapshotReader,
+  type SnapshotReader,
+} from "@intraverse/se-client-shell";
+
+const reader: SnapshotReader = createSnapshotReader({
+  transport, // the Play API transport the root created
+  authorization, // reads the sealed play token, per attempt
+});
+mountUi({ snapshots: reader }); // the UI gets `read` and `latest`, nothing else
+
+// In the UI:
+const read = await snapshots.read();
+if (read.kind === "snapshot") render(read.snapshot); // validated
+else if (read.kind === "problem") showProblem(read.problem); // validated
+else if (read.kind === "network") showConnectionProblem();
+else showGenericError(); // rejected: not rendered
+```
+
 ## Entry points
 
 - `@intraverse/se-client-shell`: the only entry.
@@ -134,6 +159,17 @@ if (!result.ok) {
     `ROUND_STATUSES`, and the message types (`HelloMessage`, `ActionMessage`,
     `SnapshotMessage`, `RejectMessage`, `GameSnapshot`, `GameStep`, `Pick`,
     `RejectReason`, and the unions) describe the protocol.
+  - `createSnapshotReader({ transport, authorization })` gives the UI read-only
+    Snapshot reads: `read()` calls the Play API's `getSnapshot` and resolves
+    with `snapshot` (it passed the Snapshot validator), `problem` (a typed Play
+    API error that passed validation), `rejected` (anything that did not), or
+    `network` (no response); `latest()` is the last validated Snapshot.
+    `SnapshotRead`, `SnapshotReader`, and `SnapshotReaderOptions` type it, and
+    `ValidSnapshot` and `ValidPlayProblem` are re-exported from
+    `@intraverse/se-client-snapshot`. It returns data only: no key, no token, no
+    signing capability. Only the shell or the Wrapper's composition root, which
+    owns the session, builds one; the UI receives the reader object, never its
+    options.
   - `ShellError` is the error the package throws, with a stable `code`
     (`ShellErrorCode`) and a fixed message per code that never carries an input
     value.
@@ -150,7 +186,10 @@ if (!result.ok) {
 - The key is used only while the page holds the session's Web Lock; without the
   Web Locks API it signs nothing. A round never gets two different signed
   actions at one sequence, a signed action is kept with its idempotency key
-  before it is sent, and a resend sends the same bytes.
+  before it is sent, and a resend sends the same bytes. A move is checked
+  against the shell's own latest validated Snapshot and a step is signed at most
+  once; after a refused move the shell reads the Snapshot and continues only
+  when it shows its own move applied. A round signs at most one cancel.
 - Nothing is written to `localStorage`, `sessionStorage`, IndexedDB, cookies, or
   a URL.
 - The game is untrusted: it gets only the allow-listed fields of a validated

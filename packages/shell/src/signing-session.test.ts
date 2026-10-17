@@ -11,6 +11,7 @@ import {
   openTestSession,
   openWorkedRound,
   SESSION_ID,
+  settledForTest,
   shellCodeOf,
 } from "./fixtures/session.ts";
 import { domain, ROUND_ID, workedActions } from "./fixtures/vectors.ts";
@@ -108,7 +109,7 @@ describe("the lock gates every use of the key (W-13, W-14)", () => {
         second.openRound({
           roundId: ROUND_ID,
           round: `0x${"11".repeat(32)}`,
-          initial: `0x${"22".repeat(32)}`,
+          initial: settledForTest(`0x${"22".repeat(32)}`),
         }),
       ),
     ).toBe("lock-not-held");
@@ -181,7 +182,7 @@ describe("its inputs", () => {
         session.openRound({
           roundId: "not-a-round",
           round: `0x${"11".repeat(32)}`,
-          initial: `0x${"22".repeat(32)}`,
+          initial: settledForTest(`0x${"22".repeat(32)}`),
         }),
       ),
     ).toBe("invalid-input");
@@ -194,7 +195,7 @@ describe("its inputs", () => {
         session.openRound({
           roundId: ROUND_ID,
           round: "0x11",
-          initial: `0x${"22".repeat(32)}`,
+          initial: settledForTest(`0x${"22".repeat(32)}`),
         }),
       ),
     ).toBe("invalid-input");
@@ -203,7 +204,7 @@ describe("its inputs", () => {
         session.openRound({
           roundId: ROUND_ID,
           round: `0x${"11".repeat(32)}`,
-          initial: "0x22",
+          initial: settledForTest("0x22"),
         }),
       ),
     ).toBe("invalid-input");

@@ -198,3 +198,20 @@ export const validated = (input: unknown): ValidSnapshot => {
   }
   return result.value;
 };
+
+/** A `typed-data/` vector's expected `typedData`: its bytes in hex, and base64. */
+export type TypedDataVector = {
+  readonly hex: Hex;
+  readonly base64: string;
+};
+
+/** The `typed-data/` vector `name`, read and checked. */
+export const typedDataVector = (name: string): TypedDataVector => {
+  const vectors: Readonly<Record<string, unknown>> = snapshotVectors.typedData;
+  const vector = record(vectors[name], name);
+  const typedData = record(vector["typedData"], `${name}.typedData`);
+  return {
+    hex: hex(typedData, "hex", `${name}.typedData`),
+    base64: text(typedData, "base64", `${name}.typedData`),
+  };
+};

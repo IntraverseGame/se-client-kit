@@ -1,8 +1,9 @@
 // One round's W-26 verification: checks 1 to 5 over the round's Snapshots, the
 // tip check's decision (W-26b), and the re-issue rule, combined into what the
-// shell may do. It decides; it signs nothing. The flow that acts on it (shows
-// the game, signs a move, or signs `PlayerCancel` through the round's
-// `signCancel`) is the start flow, not built yet.
+// shell may do. It decides; it signs nothing. The round flow (round-flow.ts)
+// acts on it: it opens the transcript state with the settled `T_0`, takes
+// moves only while the verdict is `ready`, signs the required `PlayerCancel`,
+// and applies a re-issue to the transcript state.
 //
 // - `T_0` is settled only when checks 1 to 5 pass (W-26).
 // - Nothing is signed for the round, and the game is not shown, until the
@@ -12,7 +13,6 @@
 //   fails before check 5 has run waits for it; if check 5 then fails, nothing
 //   is signed. After a re-issue nothing more is signed, not even a cancel.
 
-import type { Bytes32 } from "@intraverse/se-client-signing";
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
 import type { ChainConfig } from "./chain-config.ts";
@@ -24,6 +24,7 @@ import {
   checkReady,
   type CreateRoundAuthProof,
   type ReadyCheck,
+  type SettledInitial,
   type StartRequest,
 } from "./create-round-auth.ts";
 import { isReissue } from "./reissue.ts";
@@ -54,7 +55,7 @@ export type RoundVerdict =
        */
       readonly state: "ready";
       /** `T_0`, settled. */
-      readonly initial: Bytes32;
+      readonly initial: SettledInitial;
     }
   | {
       /** The round failed verification: it is never shown as ready. */
@@ -70,7 +71,7 @@ export type RoundVerdict =
        */
       readonly shown: FailReason;
       /** `T_0`, when it was settled before the failure. */
-      readonly initial?: Bytes32;
+      readonly initial?: SettledInitial;
       /**
        * `true` exactly when the shell must sign `PlayerCancel` now: `T_0` is
        * settled, only the tip check failed, the round is `active`, and there
@@ -109,7 +110,7 @@ const CHECKING: RoundVerdict = Object.freeze({ state: "checking" });
 
 const failed = (
   failure: VerificationFailure,
-  extra: { readonly initial?: Bytes32 } = {},
+  extra: { readonly initial?: SettledInitial } = {},
 ): RoundVerdict =>
   Object.freeze({
     state: "failed",

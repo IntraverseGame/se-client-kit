@@ -8,7 +8,12 @@
 // stay internal until the start flow that acts on them exists. The game bridge
 // and the `se.controller/1` message types are public because the Wrapper mounts
 // the game iframe and owns the window it talks through; the bridge holds no
-// secret and no signing capability, and gets the pick use case injected.
+// secret and no signing capability, and gets the pick use case injected. The
+// Snapshot reader is public because the Wrapper UI renders only Snapshots and
+// typed errors the shell validated (W-28, W-42); it returns data, never a key,
+// a token, or a signing capability. The round flows (start, move, cash-out,
+// the required cancel) and the pick use case stay internal until the Wrapper
+// wires them.
 
 export {
   DEFAULT_MIN_RPC_QUORUM,
@@ -61,3 +66,11 @@ export {
 } from "./logger.ts";
 export { REDACTED } from "./redaction.ts";
 export type { BlockTag, RpcCall, RpcTransport } from "./rpc-transport.ts";
+export {
+  createSnapshotReader,
+  type SnapshotRead,
+  type SnapshotReader,
+  type SnapshotReaderOptions,
+  type ValidPlayProblem,
+  type ValidSnapshot,
+} from "./snapshot-read.ts";

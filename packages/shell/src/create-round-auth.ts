@@ -73,6 +73,15 @@ export type AuthCheck =
       readonly auth: CreateRoundAuthProof;
     };
 
+declare const SETTLED: unique symbol;
+
+/**
+ * `T_0` once checks 1 to 5 passed (W-26): only `checkReady` makes one, so a
+ * round's transcript state can be opened only with a settled value (W-22). A
+ * plain `Bytes32` does not type-check where it is required.
+ */
+export type SettledInitial = Bytes32 & { readonly [SETTLED]: true };
+
 /** The outcome of check 5. */
 export type ReadyCheck =
   /** `starting` with no `readyHash` yet. */
@@ -84,12 +93,16 @@ export type ReadyCheck =
   | {
       /** `T_0` is settled: the round's first signed action links to it. */
       readonly status: "settled";
-      readonly initial: Bytes32;
+      readonly initial: SettledInitial;
     };
 
-/** The registry domain's fixed `name` and `version` (the Snapshot schema's). */
-const DOMAIN_NAME = "SuperEngine";
-const DOMAIN_VERSION = "1";
+/**
+ * The registry domain's fixed `name` and `version` (the Snapshot schema's
+ * constants; the environment configuration pins only `chainId` and
+ * `verifyingContract`, OQ-7). The one place the shell spells them.
+ */
+export const REGISTRY_DOMAIN_NAME = "SuperEngine";
+export const REGISTRY_DOMAIN_VERSION = "1";
 
 const safeBigInt = (value: number): bigint | undefined =>
   Number.isSafeInteger(value) && value >= 0 ? BigInt(value) : undefined;
@@ -182,8 +195,8 @@ const recovered = (
     });
     const digest = typedDataDigest(
       domainSeparator({
-        name: DOMAIN_NAME,
-        version: DOMAIN_VERSION,
+        name: REGISTRY_DOMAIN_NAME,
+        version: REGISTRY_DOMAIN_VERSION,
         chainId: config.registryDomain.chainId,
         verifyingContract: config.registryDomain.verifyingContract,
       }),
@@ -263,7 +276,8 @@ export const checkReady = (
   } catch {
     return Object.freeze({ status: "refused", reason: "ready-mismatch" });
   }
+  // The one place a `SettledInitial` is made: check 5 has just passed.
   return initial === readyHash
-    ? Object.freeze({ status: "settled", initial })
+    ? Object.freeze({ status: "settled", initial: initial as SettledInitial })
     : Object.freeze({ status: "refused", reason: "ready-mismatch" });
 };
