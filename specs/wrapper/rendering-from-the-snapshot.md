@@ -23,7 +23,7 @@ Part of the [Wrapper spec](../wrapper.md), section
 - **W-30.** The Wrapper MUST declare its capabilities when the session starts:
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
   six of R3 and `canceled`, which the cancel path needs).
-  <!-- TODO(Play API): the carrier of the capability declaration. -->
+  <!-- TODO(Play API): the carrier of the capability declaration. See rfcs/active/RFC-001-operator-launch-contract.md (draft), Q9: the Snapshot's variant negotiation, backend-owned and pending. -->
 - **W-31.** Statuses. The Wrapper MUST handle each as follows:
 
   | `status`    | The Wrapper shows                                                                                                                                                                                          | Input                                                      |

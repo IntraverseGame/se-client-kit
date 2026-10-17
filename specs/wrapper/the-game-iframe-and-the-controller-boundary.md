@@ -28,7 +28,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   - **Where D comes from** was decided by the product owner on 2026-10-17 (the
     catalog, above): the operator cannot set D, and the launch URL never carries
     it.
-    <!-- TODO(Play API, catalog): the field is not served yet. -->
+    <!-- TODO(Play API, catalog): the field is not served yet. See rfcs/active/RFC-001-operator-launch-contract.md (draft): no operator message carries D. -->
 - **W-38.** A message from the game is accepted only if `event.source` is the
   game frame's `contentWindow` **and** `event.origin` is D. The Wrapper posts to
   the game only with `targetOrigin = D`. Every accepted message MUST be parsed
