@@ -165,10 +165,15 @@ land with #42's implementation, not before.
   launch code lives 60 s from the operator's Launch call (not from the page's
   load). The kit's worst case before the redeem, with a reachable configuration
   document, is about 25 s (the 15 s configuration timeout, W-43, plus the 10 s
-  handshake timer), which leaves a margin of about 35 s. No contract change. A
-  configuration document that stays unreachable can still outlast the code; the
-  redeem is then refused and the Wrapper shows the session-ended state with the
-  relaunch instruction (W-2).
+  handshake timer), which leaves a margin of about 35 s. No contract change.
+  Both are the Wrapper's default, configurable timeouts (the 10 s is
+  provisional), and the 60 s holds only while they stay at or below those
+  defaults: if they are raised, the launch code's lifetime must be raised too
+  (b6e1e48). So the backend MUST be told first whenever either is raised,
+  whether by a change of the Wrapper's default or by an environment's
+  configuration (the backend's TPO, 2026-10-18). A configuration document that
+  stays unreachable can still outlast the code; the redeem is then refused and
+  the Wrapper shows the session-ended state with the relaunch instruction (W-2).
 
   **A missing or invalid handshake.** Every message that fails a check (source,
   origin, schema) is ignored and the timer keeps running; nothing is ever posted
@@ -316,9 +321,11 @@ W-49c that page waits for the handshake instead.
   control is added later is RFC-001's open question Q10.
 - **Any listed origin may frame any launch.** The Wrapper does not bind a
   session to the operator origin that launched it. Decided "not now" on
-  2026-10-18 (RFC-001 Q11, confirmed by the backend's TPO): a later contract
-  change may serve the session's operator origin on `sessions:redeem`; it is not
-  in the first release.
+  2026-10-18 (RFC-001 Q11, confirmed by the backend's TPO, and recorded in the
+  backend's documentation at b6e1e48): there is no operator-origin binding in
+  the first release; a later contract change may serve the session's operator
+  origin on `sessions:redeem`. The single-use launch code, which only the
+  launching operator receives, is the guard.
 - **Spoofing from the game.** A game message has the game frame as its source
   and D as its origin: dispatch routes it to the controller bridge only, and D
   is never on `operatorOrigins`. The game can post to the operator page

@@ -24,16 +24,24 @@ Part of the [Wrapper spec](../wrapper.md), section
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
   six of R3 and `canceled`, which the cancel path needs).
   - **The carrier** (decided 2026-10-18, RFC-001 Q9, agreed by the backend's
-    TPO). The declaration is the backend's Snapshot negotiation, never the
-    operator handshake (`se.operator/1` carries no capability). How the Wrapper
-    sends it is a change to the Play API document, to come; the backend builds
-    it only when the first variant ships (a new `RoundStatus`, or
-    `se.snapshot/2`), with no date. The kit sends the declaration once the
-    vendored Play API document defines it; until then it sends none.
+    TPO; specified in the backend's documentation at commit b6e1e48). The
+    declaration is the backend's Snapshot negotiation, never the operator
+    handshake (`se.operator/1` carries no capability): an optional
+    `capabilities` object on the `sessions:redeem` request body, beside
+    `launchCode`, declared once per session. It is specified, not built. The
+    redeem request body is a closed object today, and the vendored Play API
+    document (`play/v1`, b27afc5, the same as at b6e1e48) does not list the
+    field, so a client that sent it would be refused. The kit sends nothing
+    until the vendored Play API document defines the field. The backend adds it
+    with the first Snapshot variant (a new `RoundStatus`, or `se.snapshot/2`),
+    with no date.
+  - **The statuses `se.snapshot/1` defines need no declaration**: a session that
+    declares nothing gets `/1` with all of them. Only a status added later waits
+    for a declaration (b6e1e48).
   - **Until then the Wrapper fails closed.** A status outside the schema fails
     validation (W-28), and a presentation the Wrapper does not render
     (`playback`) is valid but never forwarded to the game.
-  <!-- TODO(Play API): the capability declaration's carrier, a change to the Play API document, to come; name the backend's published commit (<commit to come>) and vendor the document that carries it before the kit sends it. -->
+  <!-- TODO(Play API): vendor the Play API document once it carries the optional `capabilities` object of the `sessions:redeem` request (specified at b6e1e48, not built), then send W-30's declaration in it. -->
 - **W-31.** Statuses. The Wrapper MUST handle each as follows:
 
   | `status`    | The Wrapper shows                                                                                                                                                                                                                                                                                                           | Input                                                      |

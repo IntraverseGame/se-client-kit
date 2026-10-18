@@ -100,7 +100,11 @@ are in
 - Gating the redeem adds a `postMessage` round trip to the launch; a missing
   operator script costs up to the 10 s timeout before the error is shown. The
   launch code lives 60 s from the operator's Launch call (the backend's TPO,
-  2026-10-18), which covers the kit's worst case of about 25 s.
+  2026-10-18), which covers the kit's worst case of about 25 s. The 60 s holds
+  only while W-43's 15 s and the 10 s handshake timeout, both default and
+  configurable, stay at or below those defaults (b6e1e48). If either is raised,
+  by a change of the default or by an environment's configuration, the backend
+  must be told first (the backend's TPO, 2026-10-18).
 - An aggregator that nests the Wrapper two levels deep is not supported until
   this decision is revisited.
 - The lobby's top-level navigation depends on the browsers' user-activation rule
