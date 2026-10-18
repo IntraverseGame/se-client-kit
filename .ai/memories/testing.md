@@ -82,7 +82,54 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   runs with `--host-resolver-rules=MAP * ~NOTFOUND` (`harness/browser-flags.ts`):
   worker sockets and other unrouted traffic reach no host by name, unrecorded
   (`hermetic-workers.spec.ts` proves it with a loopback listener and a control
-  launch). The opaque-frame excuse reads the origin an init script recorded
+  launch). **Projects:** `chromium`, `firefox`, `webkit`
+  (`e2e/playwright.config.ts`). `pnpm test:e2e` runs one,
+  `SE_E2E_PROJECT` (default `chromium`, so local runs need Chromium only); CI's
+  `e2e-fake` is a matrix with one job per project, each installing only its
+  browser. Firefox and WebKit block traffic outside the routes with a dead-port
+  proxy (`http://127.0.0.1:9`, no bypass), Firefox also with
+  `media.peerconnection.enabled: false` and
+  `network.proxy.allow_hijacking_localhost: true` (`harness/browser-flags.ts`),
+  and WebKit with an init script that deletes every `RTC…`/`webkitRTC…` global
+  in every frame and clears new windows handed out by `contentWindow`,
+  `contentDocument`, and `window.open` (`harness/context-blocks.ts`,
+  `applyContextBlocks`: wraps the browser's `newContext`, applied to the
+  worker's browser in `worker-browser.ts` and to the proofs' own launches;
+  Playwright's context reuse bypasses `newContext`, so the worker fixture
+  throws in WebKit when `_reuseContext` is on).
+  Proofs, Firefox and WebKit only: `hermetic-proxy.spec.ts` (TCP cases; the
+  service worker's socket in WebKit; in Firefox the registration itself fails,
+  since Playwright does not route a service worker's script fetch there, and a
+  probe shows the route sees the page's fetch of the script but never the
+  registration's; a control points the proxy at `listenAsProxy`, which records
+  request lines, and counts the `CONNECT` to the pages' host just before and
+  after the registration, since the browser sends some of its own) and
+  `hermetic-webrtc.spec.ts` (no `RTCPeerConnection` in the worker's browser or
+  in a new window, the eight ways `freshWindowsWebRtc` lists, its `<object>`
+  document per browser from `OBJECT_ROUTING`, the table `objectRouting`'s test
+  asserts: a page-made `blob:` URL in Firefox, which does not route the
+  object's request (it fails), the routed `/blank.html` in WebKit, which routes
+  it, so the guard would refuse a `blob:` URL; no event in 5 s is "not
+  loaded"; STUN probe `no RTCPeerConnection` with 0 datagrams; a control
+  without the removal and
+  without the proxy gathers and its datagrams arrive, Firefox's with
+  `media.peerconnection.ice.loopback: true`, since Firefox otherwise sends no
+  STUN to loopback). WebRTC probes in `harness/webrtc-probes.ts`. Shared launch helpers in `harness/blocked-launch.ts`
+  (every launch through `startBrowser`; `proxy: undefined` drops the proxy,
+  `contextBlocks: false` drops the init script), page helpers in
+  `harness/outside-routes.ts`, a UDP counter on both loopbacks in
+  `harness/loopback-datagrams.ts`. `hermetic-workers.spec.ts` is Chromium only;
+  each proof skips in-file with a reason. Counts are read after the browser
+  closes; probe outcomes are `stun-probe` annotations and one stdout line each
+  (`stun-probe …`, `object-routing …`; data only), so the CI log shows them. A `beforeAll` fails each
+  proof file if anything accepts on `127.0.0.1:9` (`expectNothingAccepts`).
+  Leak-channel tests skipped per browser, with reasons: `service-worker` in
+  Firefox, `origin-private-file-system` in WebKit. The scan's second excuse:
+  WebKit only, an OPFS read failing with `UnknownError` whose same-frame write
+  probe fails too (every call through a frozen start-time capture of
+  `Reflect.apply`, the root access, and the handle methods,
+  `harness/origin-capture.ts`) (`isExcusedOpfs` in `harness/secret-scan.ts`; `secret-scan-opfs.spec.ts`).
+  The opaque-frame excuse reads the origin an init script recorded
   (`harness/origin-capture.ts`), never `self.origin`. The hermetic fixture
   also serves the Wrapper's environment configuration document
   (`harness/environment-config.ts`, a valid `preview` document pointing at the
@@ -101,8 +148,10 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   round `starting`, and a vector with one to show the failed verification.
   `fakePlayApi.redeemAgain()` allows one more redeem for the cloned tab of
   T-17. `t9a-embedding.spec.ts` frames the bundle from a test page on
-  `PAGES_ORIGIN` (Chromium has `ancestorOrigins`); the Firefox path is a
-  component test (`boot-session.test.ts`). Rows that cannot run yet stay `test.fixme` in
+  `PAGES_ORIGIN`: a listed page opens the session in every project; every
+  project's browser has `ancestorOrigins` (Firefox's too, first CI run
+  2026-10-18), which a test asserts, and the path without it is a component
+  test (`boot-session.test.ts`). Rows that cannot run yet stay `test.fixme` in
   `pending.spec.ts`, never a body that passes. The reference game's build is
   served at D, `https://game.e2e-games.test` (`GAME_ORIGIN`, origins.ts), for
   every test (`serve-origins.ts`): the fake's redeem answers it as `gameOrigin`
@@ -348,5 +397,6 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   has no `files`, so it always runs. `pnpm clean:cache` forgets every
   cached result.
 - CI jobs (`.github/workflows/ci.yml`): `lint`, `format`, `typecheck`, `unit`,
-  `allow-list`, `contracts`, `build`, `e2e-fake`, `audit` (fails only on high and critical advisories; the weekly `audit.yml` reports every severity), `dependency-review` (pull requests only),
+  `allow-list`, `contracts`, `build`, `e2e-fake` (a matrix, so its checks are
+  `e2e-fake (chromium)`, `e2e-fake (firefox)`, `e2e-fake (webkit)`), `audit` (fails only on high and critical advisories; the weekly `audit.yml` reports every severity), `dependency-review` (pull requests only),
   and the aggregate `ci-ok`. `contracts-drift` and `release` are not defined yet.

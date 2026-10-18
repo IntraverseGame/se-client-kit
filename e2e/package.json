@@ -10,7 +10,7 @@
   },
   "wireit": {
     "test": {
-      "command": "tsx ../tools/check-kit-dist.ts test ../apps/wrapper/dist/index.html ../apps/reference-game/dist/index.html && playwright test",
+      "command": "tsx ../tools/check-kit-dist.ts test ../apps/wrapper/dist/index.html ../apps/reference-game/dist/index.html && playwright test --project=\"${SE_E2E_PROJECT:-chromium}\"",
       "dependencies": [
         "../apps/wrapper:build",
         "../apps/reference-game:build",

@@ -80,7 +80,10 @@ off). Run
 before `pnpm test:e2e`. Where Playwright's browser download is not available,
 `SE_E2E_BROWSER_CHANNEL=chrome pnpm test:e2e` runs the suite on an installed
 Chrome instead. That variable is for local development only: CI does not use it
-and always runs Playwright's own Chromium.
+and always runs Playwright's own browsers. `pnpm test:e2e` runs the Chromium
+project; `SE_E2E_PROJECT=firefox` or `SE_E2E_PROJECT=webkit` runs another
+(install that browser first, `playwright install firefox` or `webkit`). CI runs
+all three, one job each.
 
 To repeat the suite (to catch a flaky test), pass Playwright's flag through the
 e2e workspace's own script:

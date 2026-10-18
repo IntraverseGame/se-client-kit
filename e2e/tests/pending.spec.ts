@@ -4,7 +4,7 @@
 // game at the redeem answer's D (game-mount.spec.ts), but the fake's vectors
 // cannot issue a round W-26 passes for the session's own key, no multi-step
 // game exists, and the operator handshake (RFC-001) is not built. T-13, T-14a,
-// T-17, T-18, W-49's minimum (T-9a's browser half on Chromium), and the
+// T-17, T-18, W-49's minimum (T-9a's browser half, in every project), and the
 // runnable parts of T-15 and T-16 have their own spec files.
 // When a row becomes runnable, it moves to its own spec file with a real body
 // on the harness (fixtures.ts) and leaves this list.
@@ -35,7 +35,7 @@ const PENDING: readonly (readonly [string, string])[] = [
   ],
   [
     "T-9a (handshake)",
-    "the operator handshake that lets a page without location.ancestorOrigins unlock signing, its message rules, and the Firefox and WebKit projects (needs RFC-001, the operator launch contract, accepted and built; the W-49 minimum runs in t9a-embedding.spec.ts)",
+    "the operator handshake that lets a page without location.ancestorOrigins unlock signing, and its message rules (needs RFC-001, the operator launch contract, accepted and built; the W-49 minimum runs in t9a-embedding.spec.ts in every project)",
   ],
 ];
 

@@ -6,9 +6,24 @@
 //
 // A channel that cannot be read is an `unreadable` record naming the channel
 // and the error's name, never a value, and the scan fails on it (decided
-// 2026-10-17). The one exception is a `SecurityError` in a frame whose origin,
-// as recorded before any page code ran (origin-capture.ts), is "null" (a
-// sandboxed or opaque frame), which has no such storage to read.
+// 2026-10-17). The one exception made here is a `SecurityError` in a frame
+// whose origin, as recorded before any page code ran (origin-capture.ts), is
+// "null" (a sandboxed or opaque frame), which has no such storage to read.
+//
+// An origin private file system read that fails with `UnknownError` (WebKit's
+// answer where it has none, decided by the human, 2026-10-18) carries the
+// result of a write probe in the same frame, `opfsWrite`: "failed" when the
+// root cannot be had (no write can then happen), "succeeded" when a probe file
+// was written and removed under a name a lookup found free (`NotFoundError`;
+// a file it did not create is never touched), and "unknown" otherwise. Every
+// call goes through the frozen capture an init script made before any page code
+// ran (origin-capture.ts: `Reflect.apply`, the root access, and the handle
+// methods), read as an own non-writable property, so a page that replaces one
+// of them cannot make the probe fail; only `await`, `typeof`, and the lookup
+// error's `name` come from the page's realm. A page can still override
+// `Promise.prototype.then` to force "failed"; that matters only in WebKit,
+// where OPFS writes fail anyway. The scan decides the excuse (secret-scan.ts,
+// `isExcusedOpfs`): WebKit only, `UnknownError` only, and "failed" only.
 
 /* oxlint-disable unicorn/consistent-function-scoping -- the helpers must live inside the one function Playwright sends to the page */
 
@@ -24,10 +39,14 @@ export type PageChannel =
   | "origin-private-file-system"
   | "unreadable";
 
+export type OpfsWrite = "failed" | "succeeded" | "unknown";
+
 export type PageRecord = {
   readonly channel: PageChannel;
   readonly where: string;
   readonly text: string;
+  /** For an unreadable origin private file system: the write probe. */
+  readonly opfsWrite?: OpfsWrite;
 };
 
 // Playwright serializes this one function into the page, so everything it uses
@@ -75,6 +94,55 @@ export const inPage = async (
   }
 
   const out: PageRecord[] = [];
+  // The write probe, through the OPFS access recorded before any page code ran
+  // (origin-capture.ts), never the page's `navigator.storage`.
+  const probeOpfsWrite = async (): Promise<OpfsWrite> => {
+    const start = (globalThis as Record<string, unknown>)["__seE2eOpfsAtStart"];
+    if (typeof start !== "object" || start === null) return "unknown";
+    const at = start as Readonly<Record<string, unknown>>;
+    const apply = at["apply"];
+    if (
+      typeof apply !== "function" ||
+      typeof at["getDirectory"] !== "function"
+    ) {
+      return "unknown";
+    }
+    const call = apply as (
+      target: unknown,
+      self: unknown,
+      args: readonly unknown[],
+    ) => unknown;
+    let root: unknown;
+    try {
+      root = await call(at["getDirectory"], at["storage"], []);
+    } catch {
+      return "failed";
+    }
+    const name = "se-e2e-write-probe";
+    // Only a free name: a file there that the probe did not make is left alone.
+    try {
+      await call(at["getFileHandle"], root, [name]);
+      return "unknown";
+    } catch (error: unknown) {
+      const named = typeof error === "object" && error !== null;
+      if (!named || (error as { name?: unknown }).name !== "NotFoundError") {
+        return "unknown";
+      }
+    }
+    try {
+      const file = await call(at["getFileHandle"], root, [
+        name,
+        { create: true },
+      ]);
+      const writable = await call(at["createWritable"], file, []);
+      await call(at["write"], writable, ["probe"]);
+      await call(at["close"], writable, []);
+      await call(at["removeEntry"], root, [name]);
+      return "succeeded";
+    } catch {
+      return "unknown";
+    }
+  };
   const attempt = async (
     channel: PageChannel,
     step: () => Promise<void> | void,
@@ -88,7 +156,16 @@ export const inPage = async (
       // never `self.origin`, which a page can overwrite.
       const origin: unknown = Reflect.get(globalThis, "__seE2eOriginAtStart");
       if (name === "SecurityError" && origin === "null") return;
-      out.push({ channel: "unreadable", where: channel, text: name });
+      out.push(
+        channel === "origin-private-file-system" && name === "UnknownError"
+          ? {
+              channel: "unreadable",
+              where: channel,
+              text: name,
+              opfsWrite: await probeOpfsWrite(),
+            }
+          : { channel: "unreadable", where: channel, text: name },
+      );
     }
   };
   const settle = <T>(request: IDBRequest<T>): Promise<T> =>

@@ -1,12 +1,14 @@
-// T-9a's browser half, the W-49 minimum only (on Chromium, which has
-// `location.ancestorOrigins`): the release bundle framed by a page off
-// `operatorOrigins` refuses to start and sends nothing to the Play API; framed
-// by a listed page it opens the session. The path without
-// `location.ancestorOrigins` (Firefox: no session while framed) and the
-// operator handshake of RFC-001 are not in this run; the first is a component
-// test, the second is not built.
+// T-9a's browser half, the W-49 minimum only, in every project: the release
+// bundle framed by a page off `operatorOrigins` refuses to start and sends
+// nothing to the Play API, and framed by a listed page it opens the session.
+// Every project's browser has `location.ancestorOrigins` (Firefox's too, as
+// the first Firefox run showed, 2026-10-18), and that is asserted, so a
+// browser without it cannot pass this file silently; the Wrapper's path
+// without the list (no session while framed) is a component test
+// (apps/wrapper, boot-session.test.ts). The operator handshake of RFC-001 is
+// not built.
 
-import type { Frame, Page } from "@playwright/test";
+import type { BrowserContext, Frame, Page } from "@playwright/test";
 
 import {
   environmentConfig,
@@ -17,6 +19,16 @@ import { expect, test } from "./harness/fixtures.ts";
 import { frameNamed } from "./harness/frames.ts";
 import { PAGES_ORIGIN } from "./harness/origins.ts";
 import { servedFor, TEXT, WRAPPER_PAGE } from "./harness/wrapper-page.ts";
+
+/** Serves a configuration whose `operatorOrigins` lists the test pages. */
+const listOperator = (
+  context: BrowserContext,
+  playApiBaseUrl: string,
+): Promise<void> =>
+  serveEnvironmentConfig(context, {
+    ...environmentConfig(playApiBaseUrl),
+    operatorOrigins: [PAGES_ORIGIN],
+  });
 
 /** Opens a test page on PAGES_ORIGIN that frames the Wrapper's launch URL. */
 const framedLaunch = async (page: Page, fake: FakePlayApi): Promise<Frame> => {
@@ -43,16 +55,18 @@ test.describe("T-9a: operator embedding, the W-49 minimum", () => {
     expect(fakePlayApi.served).toEqual([]);
   });
 
+  test("location.ancestorOrigins exists in every project", async ({ page }) => {
+    await page.goto(`${PAGES_ORIGIN}/blank.html`);
+    expect(await page.evaluate(() => "ancestorOrigins" in location)).toBe(true);
+  });
+
   test("framed by a listed page, it opens the session", async ({
     page,
     context,
     fakePlayApi,
     playApiBaseUrl,
   }) => {
-    await serveEnvironmentConfig(context, {
-      ...environmentConfig(playApiBaseUrl),
-      operatorOrigins: [PAGES_ORIGIN],
-    });
+    await listOperator(context, playApiBaseUrl);
     fakePlayApi.answerEvery("getSnapshot", {
       kind: "snapshot",
       vector: "coinflip-idle",

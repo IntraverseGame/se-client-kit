@@ -4,6 +4,9 @@
 // block (browser-flags.ts: no host name resolves). These tests prove that such
 // a socket, aimed by name at a loopback listener the test owns, never reaches
 // it, and a control run without the block proves the same socket would.
+// Chromium only: the block is Chrome's flag, and these tests launch Chromium
+// with Chrome's flags. The Firefox and WebKit block has its own proof
+// (hermetic-proxy.spec.ts).
 
 import type { Browser, BrowserType, Page, TestInfo } from "@playwright/test";
 
@@ -186,6 +189,11 @@ const keptListener = (): {
 };
 
 test.describe("sockets outside the routes", () => {
+  test.skip(
+    ({ browserName }) => browserName !== "chromium",
+    "Chromium's host-resolution block and its proof; Firefox's and WebKit's block is proven in hermetic-proxy.spec.ts",
+  );
+
   test("the suite's browser runs with the host-resolution block", ({
     browser,
   }, testInfo) => {

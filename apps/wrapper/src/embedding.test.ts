@@ -1,7 +1,7 @@
 // W-49's fail-closed minimum: a page that is not framed is unchanged; a framed
 // one is allowed only when `location.ancestorOrigins` exists and every entry
 // is on `operatorOrigins`; a masked entry, an unlisted one, an empty list, or
-// no list at all (Firefox) refuses.
+// no list at all (a browser without `location.ancestorOrigins`) refuses.
 
 import { describe, expect, it } from "vitest";
 
@@ -37,7 +37,7 @@ describe("checkEmbedding (W-49's minimum)", () => {
     ).toEqual({ ok: false, reason });
   });
 
-  it("refuses a frame with no ancestorOrigins (Firefox): no handshake yet", () => {
+  it("refuses a frame in a browser without `location.ancestorOrigins`: no handshake yet", () => {
     expect(
       checkEmbedding({ framed: true, ancestorOrigins: undefined }, [OPERATOR]),
     ).toEqual({ ok: false, reason: "ancestors-unknown" });
