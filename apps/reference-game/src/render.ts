@@ -150,7 +150,8 @@ export const textOf = (view: GameView): Text => {
 export type GamePage = {
   /**
    * Shows `view`. When the calls hide, focus moves to the heading if the
-   * player's pick was answered or a call held focus.
+   * player's pick was answered or a call held focus, and only while the game's
+   * document has focus: otherwise the Wrapper owns focus (W-46).
    */
   readonly show: (view: GameView, cause: ViewCause) => void;
   /** Called with the side the player clicks. */
@@ -215,7 +216,10 @@ export const createPage = (doc: Document, host: HTMLElement): GamePage => {
   const root = doc.documentElement;
   const show = (view: GameView, cause: ViewCause): void => {
     // Hiding a focused control would drop focus to the page: it goes to the
-    // heading instead.
+    // heading instead. The game yields when its document does not have focus
+    // (decided in human review, 2026-10-18): at a round's end the Wrapper moves
+    // focus to its own result heading (W-46), and the game never pulls it back
+    // into the frame, whichever of the two updates comes first.
     const active = doc.activeElement;
     const callFocused = active !== null && calls.contains(active);
     const text = textOf(view);
@@ -243,7 +247,11 @@ export const createPage = (doc: Document, host: HTMLElement): GamePage => {
         String(round?.pending === button.dataset["side"]),
       );
     }
-    if (calls.hidden && (cause === "answered" || callFocused)) {
+    if (
+      calls.hidden &&
+      (cause === "answered" || callFocused) &&
+      doc.hasFocus()
+    ) {
       heading.focus({ preventScroll: true });
     }
   };
