@@ -27,10 +27,23 @@ Part of the [Wrapper spec](../wrapper.md), section
     configuration and the page's own origin: the UI's mount passes only the
     frame, its message listener, and the incompatible-game notice, so it cannot
     point the check at another list.
-  - The "different registrable domain" rule is not checked in code yet: it needs
-    a public suffix list, which is a new dependency and needs an ADR. Until then
-    only an equal origin is refused (decided in human review, 2026-10-17).
-    <!-- TODO(W-37, registrable domain): check D against the SE origin's registrable domain; needs a public suffix list and an ADR for the dependency. -->
+  - **The "different registrable domain" rule, without a public suffix list**
+    (decided in human review, 2026-10-18;
+    [ADR-007](../../decisions/ADR-007-no-public-suffix-list.md), proposed). A
+    host's comparison key is its last two dot-separated labels; an IP literal,
+    or a host of fewer than two labels (`localhost`), is its own key. The bridge
+    MUST refuse D at mount, in the same check as the rules above and with its
+    own refusal code, when D's key equals the key of the Wrapper's origin. When
+    the configuration's `environment` is `local` and both hosts are loopback
+    hosts (`localhost`, `127.0.0.1`, `[::1]`), only an equal origin is refused,
+    for local development; in `preview` and `production` loopback hosts follow
+    the rule like any other. The bridge is given the environment with the
+    allow-list and the Wrapper's origin, as the session's, when it opens from
+    the accepted configuration (above). Two hosts on one registrable domain
+    always share their last two labels, so the rule never accepts such a pair;
+    it can refuse a legitimate pair on a shared multi-label public suffix
+    (`a.co.uk` and `b.co.uk`), which fails closed. It is built with #42; until
+    then only an equal origin is refused (decided 2026-10-17).
   - **Where D comes from** was decided in human review, 2026-10-17: the
     `sessions:redeem` response's `gameOrigin`, a serialized origin with no path
     (`https:`, or a loopback `http:` origin in a local environment), which the
@@ -38,8 +51,9 @@ Part of the [Wrapper spec](../wrapper.md), section
     launch URL never carries it. `play-client` refuses a redeem answer whose
     `gameOrigin` is missing, empty, or longer than 267 characters (the
     document's bounds), so no session opens without D; the shell takes D from
-    that answer only, and the bridge checks it at mount (above).
-    <!-- See rfcs/active/RFC-001-operator-launch-contract.md (draft): no operator message carries D. -->
+    that answer only, and the bridge checks it at mount (above). No
+    `se.operator/1` message carries D, a game id, or any input to the game's
+    mount ([Operator embedding](./operator-embedding.md)).
   - **The frame's URL** is D's root with the Wrapper's own serialized origin as
     the query parameter `parentOrigin`, built with the `URL` API (decided in
     human review, 2026-10-17): for example
@@ -68,8 +82,10 @@ Part of the [Wrapper spec](../wrapper.md), section
   | Wrapper to game | `reject`   | `id`, `reason`                                   | An `action` request that was not accepted. `reason` is a closed list (`not_legal`, `not_active`, `busy`, `invalid`), never a server message. |
 
   The message set is closed: a `type` outside it is ignored. The operator page
-  gets only `resize`, `lobby`, and `deposit` messages, under
-  [W-49](../wrapper.md#operator-embedding).
+  has its own protocol, `se.operator/1`, with `hello`, `welcome`, and `resize`
+  only; the lobby and the deposit are navigations, not messages
+  ([Operator embedding](./operator-embedding.md), W-49b to W-49e). No operator
+  message reaches the game, and no game message reaches the operator page.
   <!-- TODO(later increment): the full controller API and its schema, with the variations. -->
 
 - **The message rules (decided in human review, 2026-10-17).**

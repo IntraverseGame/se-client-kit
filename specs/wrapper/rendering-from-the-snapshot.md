@@ -23,7 +23,17 @@ Part of the [Wrapper spec](../wrapper.md), section
 - **W-30.** The Wrapper MUST declare its capabilities when the session starts:
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
   six of R3 and `canceled`, which the cancel path needs).
-  <!-- TODO(Play API): the carrier of the capability declaration. See rfcs/active/RFC-001-operator-launch-contract.md (draft), Q9: the Snapshot's variant negotiation, backend-owned and pending. -->
+  - **The carrier** (decided 2026-10-18, RFC-001 Q9, agreed by the backend's
+    TPO). The declaration is the backend's Snapshot negotiation, never the
+    operator handshake (`se.operator/1` carries no capability). How the Wrapper
+    sends it is a change to the Play API document, to come; the backend builds
+    it only when the first variant ships (a new `RoundStatus`, or
+    `se.snapshot/2`), with no date. The kit sends the declaration once the
+    vendored Play API document defines it; until then it sends none.
+  - **Until then the Wrapper fails closed.** A status outside the schema fails
+    validation (W-28), and a presentation the Wrapper does not render
+    (`playback`) is valid but never forwarded to the game.
+  <!-- TODO(Play API): the capability declaration's carrier, a change to the Play API document, to come; name the backend's published commit (<commit to come>) and vendor the document that carries it before the kit sends it. -->
 - **W-31.** Statuses. The Wrapper MUST handle each as follows:
 
   | `status`    | The Wrapper shows                                                                                                                                                                                                                                                                                                           | Input                                                      |

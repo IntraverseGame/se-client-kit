@@ -1,15 +1,67 @@
 # RFC-001 — The operator launch contract: the handshake, resize, lobby, and deposit
 
-- Status: draft
+- Status: active (partly accepted 2026-10-18, decided by human review; see
+  [Decisions](#decisions-2026-10-18))
 - Author: the documenter agent, for human and PO review
 - Created: 2026-10-17
 - Unblocks: issue #42 (W-49, T-9a); the "Operator launch contract" item of #13
 
-This RFC proposes; it changes no normative text. Until it is accepted,
-[W-49](../../specs/wrapper.md#operator-embedding) and the specs under
-[`specs/wrapper/`](../../specs/wrapper/) stay as they are. Once accepted, a
-follow-up turns the [proposed solution](#proposed-solution) into spec text,
-closes the markers listed in [Impact](#impact), and archives this file.
+Most of this RFC was accepted on 2026-10-18 by human review, and the backend's
+TPO answered the questions addressed to the backend the same day. The accepted
+points are now normative in
+[`specs/wrapper/operator-embedding.md`](../../specs/wrapper/operator-embedding.md)
+(W-49 to W-49f) and the specs it links, and recorded in
+[ADR-006](../../decisions/ADR-006-the-operator-protocol-se-operator-1.md) and
+[ADR-007](../../decisions/ADR-007-no-public-suffix-list.md) (both proposed). The
+spec, not this file, is canonical for them. Q4, Q10, and Q16 stay open; the RFC
+stays in `rfcs/active/` until they are decided, then it is archived. The
+sections below keep the reasoning as it was proposed.
+
+## Decisions (2026-10-18)
+
+Decided by human review on 2026-10-18 unless the row says otherwise. Each row
+names where the decision now lives.
+
+| ID  | Decision                                                                                                                                                                                                                                                                   | Now in                                                      |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Q1  | **Accepted, A:** a separate `se.operator/1`                                                                                                                                                                                                                                | W-49b; ADR-006                                              |
+| Q2  | **Accepted, A:** the handshake on every framed browser                                                                                                                                                                                                                     | W-49a, W-49c; ADR-006                                       |
+| Q3  | **Accepted, A:** the redeem, the start, and every signature wait for the handshake                                                                                                                                                                                         | W-49c; ADR-006                                              |
+| Q4  | **Open.** Today's behaviour stays: a standalone launch needs no handshake                                                                                                                                                                                                  | W-49a (today's behaviour)                                   |
+| Q5  | **Accepted, A:** direct embedding only (`window.parent === window.top`). It tightens the minimum shipped in #58; the change lands with #42                                                                                                                                 | W-49a; ADR-006                                              |
+| Q6  | **Accepted, A:** 10 s, final; a provisional Wrapper configuration value                                                                                                                                                                                                    | W-49c                                                       |
+| Q7  | **Accepted, A:** lobby and deposit are navigations to the Snapshot's `context.links`                                                                                                                                                                                       | W-49e; ADR-006                                              |
+| Q8  | **Accepted, A:** neither control while `starting`, `active`, or `resolving`, or while an action is pending                                                                                                                                                                 | W-49f                                                       |
+| Q9  | **Agreed with the backend's TPO, A:** capabilities come from the backend's Snapshot negotiation, never the operator handshake. The carrier is a change to the Play API document, to come, built only when the first variant ships (a new `RoundStatus` or `se.snapshot/2`) | W-30 (its `TODO(Play API)` names the commit when published) |
+| Q10 | **Open.** Recorded as a residual risk with no technical control in the first release (a contractual control on listed operators); whether a technical control comes later is undecided                                                                                     | the Security section of the operator-embedding spec         |
+| Q11 | **Decided "not now", confirmed by the backend's TPO:** any listed operator origin may frame any launch. A later contract change may serve the session's operator origin on `sessions:redeem`; not in the first release                                                     | the Security section of the operator-embedding spec         |
+| Q12 | **Accepted, A:** the lobby's origin on `operatorOrigins`, the deposit any `https:`                                                                                                                                                                                         | W-49e                                                       |
+| Q13 | **Accepted, A:** record the first early `hello` from `window.parent`, check it after validation                                                                                                                                                                            | W-49c; ADR-006                                              |
+| Q14 | **Accepted, A:** answer a later valid `hello` with `welcome` again                                                                                                                                                                                                         | W-49c; ADR-006                                              |
+| Q15 | **Accepted, A:** `resize` bound 16384 CSS pixels, provisional                                                                                                                                                                                                              | W-49d                                                       |
+| Q16 | **Open,** a follow-up: the balance after a deposit in another tab                                                                                                                                                                                                          | a `TODO(RFC-001 Q16)` in W-49f                              |
+
+Decided at the same review, outside the numbered questions:
+
+- **The refusal log:** one event, `embedding.refused`, with the reasons
+  `nested`, `operator-not-allowed`, and `handshake-timeout` added to the built
+  ones; the RFC's `operator.refused` is not used. In the operator-embedding
+  spec, What is logged, and the Wrapper spec's Observability section.
+- **Disjoint origins:** `operatorOrigins`, `gameOrigins`, and the SE origin
+  share no entry; a configuration that breaks this is refused. In the Wrapper
+  spec's Configuration section.
+- **The `se.operator/1` ADR:** written as
+  [ADR-006](../../decisions/ADR-006-the-operator-protocol-se-operator-1.md)
+  (proposed).
+- **W-37's registrable-domain rule without a public suffix list:** refuse D when
+  its host shares its last two labels with the SE host, recorded in
+  [ADR-007](../../decisions/ADR-007-no-public-suffix-list.md) (proposed). In
+  W-37.
+- **The launch code's lifetime** (answered by the backend's TPO): 60 s from the
+  operator's Launch call, not from the page's load; the kit's worst case before
+  the redeem is about 25 s. No contract change. In W-49c.
+- **The Firefox and WebKit e2e projects** that T-9a's cases on those engines
+  need are added separately; T-9a declares those cases pending until they exist.
 
 ## Problem
 
@@ -733,8 +785,8 @@ change is `/2`.
 
 ## Unresolved questions
 
-For the human reviewer and the PO. Each has options and a recommendation; none
-is decided by this RFC.
+As proposed on 2026-10-17, kept for the reasoning. Their outcome is in
+[Decisions](#decisions-2026-10-18): all are decided except Q4, Q10, and Q16.
 
 | ID  | Question                                                                                            | Options                                                                                                                                                                                                                                   | Recommendation                                                                                                                                                                                                                                 |
 | --- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

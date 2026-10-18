@@ -16,10 +16,12 @@ structure, a protocol, supply-chain tooling, the agent workflow.
 
 ## Index
 
-| ADR                                                             | Status   | Decision                                                                       |
-| --------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------ |
-| [ADR-001](./ADR-001-toolchain-and-signing.md)                   | accepted | toolchain; hand-written EIP-712 over `@noble`                                  |
-| [ADR-002](./ADR-002-spec-driven-development.md)                 | accepted | Spec-Driven Development; agent-agnostic knowledge layer                        |
-| [ADR-003](./ADR-003-agent-workflow-and-approvals.md)            | accepted | agent workflow, approvals, adapters, and the pr-shepherd                       |
-| [ADR-004](./ADR-004-openapi-typescript-6.md)                    | accepted | `openapi-typescript` 6.7.6, without a TypeScript compiler-API dependency       |
-| [ADR-005](./ADR-005-release-attestation-and-artifact-upload.md) | proposed | `actions/attest-build-provenance` and `actions/upload-artifact` in the release |
+| ADR                                                             | Status   | Decision                                                                                          |
+| --------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| [ADR-001](./ADR-001-toolchain-and-signing.md)                   | accepted | toolchain; hand-written EIP-712 over `@noble`                                                     |
+| [ADR-002](./ADR-002-spec-driven-development.md)                 | accepted | Spec-Driven Development; agent-agnostic knowledge layer                                           |
+| [ADR-003](./ADR-003-agent-workflow-and-approvals.md)            | accepted | agent workflow, approvals, adapters, and the pr-shepherd                                          |
+| [ADR-004](./ADR-004-openapi-typescript-6.md)                    | accepted | `openapi-typescript` 6.7.6, without a TypeScript compiler-API dependency                          |
+| [ADR-005](./ADR-005-release-attestation-and-artifact-upload.md) | proposed | `actions/attest-build-provenance` and `actions/upload-artifact` in the release                    |
+| [ADR-006](./ADR-006-the-operator-protocol-se-operator-1.md)     | proposed | the operator protocol `se.operator/1`: separate, operator first, lobby and deposit as navigations |
+| [ADR-007](./ADR-007-no-public-suffix-list.md)                   | proposed | W-37's registrable-domain rule by the last two labels, without a public suffix list               |

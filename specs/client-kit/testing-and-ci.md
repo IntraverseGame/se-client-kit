@@ -322,7 +322,12 @@ development-only, so it may import the test-only entry of `contracts`.
   that need a round W-26 passes (the vectors are not issued for the session's
   own key), a multi-step game, or W-49's handshake are declared with
   `test.fixme` in `e2e/tests/pending.spec.ts`, reported as skipped, never as
-  passed. The Firefox and WebKit projects join with the W-49 paths (T-9a).
+  passed. The handshake's cases (T-9a,
+  [the test plan](../wrapper/operator-embedding.md#the-test-plan-for-t-9a)) come
+  with #42, which adds a fake operator page on a third test origin (with a lobby
+  and a deposit page), an unlisted fourth origin, and a way to serve the bundle
+  with and without the `frame-ancestors` header; its Firefox and WebKit cases
+  also need those Playwright projects, which are added separately.
 - **Locally**, `pnpm exec playwright install chromium` (in `e2e/`) installs the
   browser once. Where Playwright's download is unavailable,
   `SE_E2E_BROWSER_CHANNEL=chrome` runs the Chromium project on an installed

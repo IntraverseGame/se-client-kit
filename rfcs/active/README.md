@@ -10,8 +10,12 @@ a spec.
 - When accepted, its durable content moves into `specs/` (and an ADR if the
   choice is hard to reverse), its status becomes `archived`, and the file moves
   to [`../archived/`](../archived/).
+- When only part of an RFC is accepted, it stays here with status `active` and a
+  dated Decisions section that names, for each accepted point, the spec or ADR
+  that now holds it; the open points stay open. It is archived once the last one
+  is decided.
 - Public: no secrets, internal hostnames, or personal data.
 
-| RFC                                              | Status | Proposal                                                                  |
-| ------------------------------------------------ | ------ | ------------------------------------------------------------------------- |
-| [RFC-001](./RFC-001-operator-launch-contract.md) | draft  | the operator launch handshake (`se.operator/1`), `resize`, lobby, deposit |
+| RFC                                              | Status | Proposal                                                                                                                                                      |
+| ------------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [RFC-001](./RFC-001-operator-launch-contract.md) | active | the operator launch handshake (`se.operator/1`), `resize`, lobby, deposit; mostly accepted 2026-10-18 (in the specs, ADR-006, ADR-007); Q4, Q10, and Q16 open |

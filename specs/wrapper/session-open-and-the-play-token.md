@@ -101,19 +101,22 @@ defaults.
 
 **How it is built (2026-10-17).** Before the session opens, a framed Wrapper
 applies W-49's fail-closed minimum
-([Operator embedding](../wrapper.md#operator-embedding)): framed by a page it
-cannot show is on `operatorOrigins`, it redeems nothing (the code is never sent)
-and shows the configuration-error state. This is the minimum until RFC-001, the
-operator launch contract, is accepted and built. The Wrapper's entry calls the
-shell's `takeLaunchCode` first, before it fetches the environment configuration
-document, so the fragment is gone before any request or log line (W-1). The code
-stays sealed (it prints `[redacted]`) and only the shell's `openPlaySession`
-reveals it, for the one redeem, then forgets it. When the Wrapper opens no
-session with it (its configuration or its framing was refused), it discards the
-code (the shell's `discardLaunchCode`), so the code is forgotten then too. A
-`replaceState` that throws leaves the code unread (no redeem). The session holds
-the play token in the shell (`token-keeper.ts`): the refresh point is
-play-client's `refreshAtMs` over `tokenExpiresAt` and the redeem's `Date`
+([Operator embedding](./operator-embedding.md#the-built-minimum-until-42)):
+framed by a page it cannot show is on `operatorOrigins`, it redeems nothing (the
+code is never sent) and shows the configuration-error state. This is the minimum
+until #42 builds the accepted contract (W-49a to W-49f, decided 2026-10-18),
+under which a framed Wrapper also waits for the operator handshake before the
+redeem (W-49c); the launch code lives 60 s from the operator's Launch call (the
+backend's TPO, 2026-10-18), which covers that wait. The Wrapper's entry calls
+the shell's `takeLaunchCode` first, before it fetches the environment
+configuration document, so the fragment is gone before any request or log line
+(W-1). The code stays sealed (it prints `[redacted]`) and only the shell's
+`openPlaySession` reveals it, for the one redeem, then forgets it. When the
+Wrapper opens no session with it (its configuration or its framing was refused),
+it discards the code (the shell's `discardLaunchCode`), so the code is forgotten
+then too. A `replaceState` that throws leaves the code unread (no redeem). The
+session holds the play token in the shell (`token-keeper.ts`): the refresh point
+is play-client's `refreshAtMs` over `tokenExpiresAt` and the redeem's `Date`
 offset, at most one refresh is in flight, the new token replaces the old one
 only once its answer arrived, a retryable failure is tried again after
 play-client's backoff while the old token is valid, a refusal that does not end
