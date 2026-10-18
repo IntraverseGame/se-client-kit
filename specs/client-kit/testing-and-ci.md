@@ -247,9 +247,11 @@ development-only, so it may import the test-only entry of `contracts`.
   none back in eight ways: a new iframe read at once through `contentWindow`,
   `frames[n]`, or `contentDocument`; a `srcdoc` iframe once loaded, through
   `frames[n]` and through `contentWindow`; an `<object>`'s window, its document
-  a `blob:` URL the page makes (same origin, no request: Playwright's Firefox
-  does not route an object's document request, and the request fails; a test
-  shows that and that WebKit's route serves it); `window.open`; and a new
+  chosen per browser by where a test shows Playwright routes an object's
+  document request: in Firefox the request is not routed and fails, so a `blob:`
+  URL the page makes (same origin, no request); in WebKit it is routed, and the
+  hermetic guard would refuse a `blob:` URL, so the routed test page; an object
+  that fires no event within 5 s counts as not loaded; `window.open`; and a new
   iframe's own `open` (a way not on this list is not proven closed); and a STUN
   probe aimed at `localhost`, `127.0.0.1`, and `[::1]` on one port, where UDP
   sockets on both loopback addresses count datagrams, finds no

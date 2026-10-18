@@ -17,9 +17,9 @@
 // proof (hermetic-webrtc.spec.ts, with `freshWindowsWebRtc` of
 // webrtc-probes.ts) checks eight ways: a new iframe through `contentWindow`,
 // `frames[n]`, and `contentDocument`; a loaded `srcdoc` iframe through
-// `frames[n]` and through `contentWindow`; an `<object>`'s window (a `blob:`
-// document); `window.open`; and a new iframe's own `open`. A way it does not
-// list is not proven closed.
+// `frames[n]` and through `contentWindow`; an `<object>`'s window (its
+// document the routed test page); `window.open`; and a new iframe's own
+// `open`. A way it does not list is not proven closed.
 //
 // `applyContextBlocks` is the one place it is applied: to the worker's
 // browser (worker-browser.ts) and to every browser a proof launches of its own

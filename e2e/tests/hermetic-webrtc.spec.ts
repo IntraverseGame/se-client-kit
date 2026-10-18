@@ -34,6 +34,7 @@ import {
   freshWindowsWebRtc,
   objectRouting,
   probeStun,
+  type ObjectDocument,
   type StunProbe,
 } from "./harness/webrtc-probes.ts";
 
@@ -81,6 +82,16 @@ const OBJECT_ROUTING: Readonly<
   webkit: { loaded: "load", routed: 1 },
 };
 
+/**
+ * The fresh-window probe's `<object>` document, from the table the routing test
+ * asserts: the routed test page where the route sees the object's request
+ * (WebKit, where the hermetic guard would refuse a routed `blob:` request as
+ * outside the fake origins), a page-made `blob:` URL where it does not
+ * (Firefox, where the request fails).
+ */
+const objectDocument = (name: BlockedBrowser): ObjectDocument =>
+  OBJECT_ROUTING[name].routed > 0 ? "routed" : "blob";
+
 /** Every window the fresh-window probe looks at, with no WebRTC in it. */
 const NO_WEBRTC = {
   contentWindow: "undefined,undefined",
@@ -116,12 +127,18 @@ test.describe("Firefox and WebKit: WebRTC is off", () => {
 
   test("a script gets no RTCPeerConnection back from a new window", async ({
     page,
+    browserName,
   }) => {
     await page.goto(`${PAGES_ORIGIN}/blank.html`);
-    expect(await freshWindowsWebRtc(page)).toEqual(NO_WEBRTC);
+    expect(
+      await freshWindowsWebRtc(
+        page,
+        objectDocument(blockedBrowser(browserName)),
+      ),
+    ).toEqual(NO_WEBRTC);
   });
 
-  // Why the fresh-window probe's `<object>` holds a `blob:` document: in
+  // Where the fresh-window probe's `<object>` takes its document from: in
   // Firefox, Playwright does not route an object's document request, and the
   // request fails; in WebKit the route serves it.
   test("an <object>'s document request is routed in WebKit, not in Firefox", async ({

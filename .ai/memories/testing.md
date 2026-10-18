@@ -106,9 +106,12 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   after the registration, since the browser sends some of its own) and
   `hermetic-webrtc.spec.ts` (no `RTCPeerConnection` in the worker's browser or
   in a new window, the eight ways `freshWindowsWebRtc` lists, its `<object>`
-  holding a `blob:` document because Playwright's Firefox does not route an
-  object's document request (`objectRouting` shows it); STUN probe `no
-  RTCPeerConnection` with 0 datagrams; a control without the removal and
+  document per browser from `OBJECT_ROUTING`, the table `objectRouting`'s test
+  asserts: a page-made `blob:` URL in Firefox, which does not route the
+  object's request (it fails), the routed `/blank.html` in WebKit, which routes
+  it, so the guard would refuse a `blob:` URL; no event in 5 s is "not
+  loaded"; STUN probe `no RTCPeerConnection` with 0 datagrams; a control
+  without the removal and
   without the proxy gathers and its datagrams arrive, Firefox's with
   `media.peerconnection.ice.loopback: true`, since Firefox otherwise sends no
   STUN to loopback). WebRTC probes in `harness/webrtc-probes.ts`. Shared launch helpers in `harness/blocked-launch.ts`

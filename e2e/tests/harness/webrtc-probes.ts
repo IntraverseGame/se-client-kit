@@ -59,23 +59,30 @@ export const probeStun = (page: Page, port: number): Promise<StunProbe> =>
   );
 
 /**
+ * Where the fresh-window probe's `<object>` takes its document from: `"routed"`
+ * is the test pages' `/blank.html`, for a browser where Playwright routes an
+ * object's document request (WebKit); `"blob"` is a `blob:` URL the page makes,
+ * with the page's origin and no request, for one where it does not (Firefox,
+ * where the request fails). `objectRouting` below shows which.
+ */
+export type ObjectDocument = "routed" | "blob";
+
+/**
  * Whether a script can get WebRTC back from a new same-origin window, by the
  * `typeof` of `RTCPeerConnection` and of `webkitRTCPeerConnection` in each: a
  * new iframe read at once through `contentWindow`, through `frames[n]`, and
  * through `contentDocument`; a `srcdoc` iframe once it has loaded, read through
  * `frames[n]` and then through `contentWindow`; an `<object>`'s window once it
- * has loaded an HTML document; a window from `window.open`; and a window from a
- * new iframe's own `open` (`frames[n].open`). The object's document is a
- * `blob:` URL the page makes, which has the page's origin and needs no request:
- * Playwright's Firefox does not route an object's document request
- * (`objectRouting` below shows it, and that the request fails), so a document
- * from the test pages would not load there. A popup that did not open is "not
- * opened", and an object that did not load "not loaded".
+ * has loaded the HTML document `objectDocument` names; a window from
+ * `window.open`; and a window from a new iframe's own `open`
+ * (`frames[n].open`). A popup that did not open is "not opened", and an object
+ * that fired an error, or no event within 5 s, "not loaded".
  */
 export const freshWindowsWebRtc = (
   page: Page,
+  objectDocument: ObjectDocument,
 ): Promise<Readonly<Record<string, string>>> =>
-  page.evaluate(async () => {
+  page.evaluate(async documentFrom => {
     // oxlint-disable-next-line unicorn/consistent-function-scoping -- it runs in the page, inside the one function Playwright sends there
     const kinds = (target: unknown): string =>
       typeof target === "object" && target !== null
@@ -108,9 +115,14 @@ export const freshWindowsWebRtc = (
     const loaded = kinds(srcdoc.contentWindow);
     const object = document.createElement("object");
     object.type = "text/html";
-    object.data = URL.createObjectURL(
-      new Blob(["<!doctype html><title>object</title>"], { type: "text/html" }),
-    );
+    object.data =
+      documentFrom === "routed"
+        ? "/blank.html"
+        : URL.createObjectURL(
+            new Blob(["<!doctype html><title>object</title>"], {
+              type: "text/html",
+            }),
+          );
     const objectLoaded = await new Promise<boolean>(resolve => {
       object.addEventListener("load", () => {
         resolve(true);
@@ -118,6 +130,10 @@ export const freshWindowsWebRtc = (
       object.addEventListener("error", () => {
         resolve(false);
       });
+      // No event at all: "not loaded", rather than a hung test.
+      setTimeout(() => {
+        resolve(false);
+      }, 5000);
       document.body.append(object);
     });
     const objectWindow = objectLoaded
@@ -151,7 +167,7 @@ export const freshWindowsWebRtc = (
       "window.open": opened,
       "frames[n].open": childOpened,
     };
-  });
+  }, objectDocument);
 
 /**
  * Where Playwright routes an `<object>`'s document request: a route on the
