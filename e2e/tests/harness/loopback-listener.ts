@@ -21,6 +21,8 @@ export const listenOnLoopback = async (): Promise<LoopbackListener> => {
   let connections = 0;
   const server: Server = createServer(socket => {
     connections += 1;
+    // Destroyed before any read can complete, so no reset can surface as an
+    // `error` here (unlike `listenAsProxy`, which waits for data).
     socket.destroy();
   });
   await new Promise<void>(resolve => {
@@ -90,6 +92,12 @@ export type ProxyListener = {
 export const listenAsProxy = async (): Promise<ProxyListener> => {
   const requests: string[] = [];
   const server: Server = createServer(socket => {
+    // A browser may reset a connection before it sends anything (at
+    // `browser.close()`, say); unheard, that `error` would crash the worker.
+    // The reset is ignored: the socket is closed, and nothing is recorded.
+    socket.on("error", () => {
+      socket.destroy();
+    });
     socket.once("data", (chunk: Buffer) => {
       requests.push(chunk.toString("latin1").split("\r\n")[0] ?? "");
       socket.destroy();

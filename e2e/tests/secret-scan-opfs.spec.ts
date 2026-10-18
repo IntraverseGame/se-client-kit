@@ -4,7 +4,8 @@
 // through the API as it was before page code ran, fails too. Any other error,
 // any other browser, or a probe that wrote is a finding. The rule is a pure
 // function (`isExcusedOpfs`); a page that fakes the read's failure where OPFS
-// works is still a finding, in a real browser.
+// works is still a finding, in a real browser, and a file of the probe's name
+// the page made first is left in place (the probe then cannot tell).
 
 import type { Page } from "@playwright/test";
 
@@ -100,6 +101,43 @@ test.describe("a faked OPFS failure where OPFS works", () => {
         detail: "origin-private-file-system: UnknownError",
       },
     ]);
+  });
+
+  test("a file of the probe's name that the page made is left in place, the probe cannot tell, and the scan reports it", async ({
+    page,
+    secretScan,
+  }) => {
+    await page.goto(`${PAGES_ORIGIN}/blank.html`);
+    // The probe's file name (secret-scan-page.ts), taken first by the page.
+    await page.evaluate(async () => {
+      const root = await navigator.storage.getDirectory();
+      const file = await root.getFileHandle("se-e2e-write-probe", {
+        create: true,
+      });
+      const writable = await file.createWritable();
+      await writable.write("the page's own");
+      await writable.close();
+    });
+    await fakeUnknownError(page);
+    expect(await storageRecords(page)).toContainEqual({
+      ...OPFS,
+      opfsWrite: "unknown",
+    });
+    expect(await secretScan.findings()).toEqual([
+      {
+        channel: "unreadable",
+        secret: "UnknownError",
+        detail: "origin-private-file-system: UnknownError",
+      },
+    ]);
+    await page.reload();
+    expect(
+      await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory();
+        const file = await root.getFileHandle("se-e2e-write-probe");
+        return (await file.getFile()).text();
+      }),
+    ).toBe("the page's own");
   });
 });
 

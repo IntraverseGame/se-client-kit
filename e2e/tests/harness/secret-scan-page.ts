@@ -14,12 +14,13 @@
 // answer where it has none, decided by the human, 2026-10-18) carries the
 // result of a write probe in the same frame, `opfsWrite`: "failed" when the
 // root cannot be had (no write can then happen), "succeeded" when a probe file
-// was written and removed, and "unknown" otherwise. Every call it makes goes
-// through the frozen capture an init script made before any page code ran
-// (origin-capture.ts: `Reflect.apply`, the root access, and the handle
+// was written and removed under a name a lookup found free (`NotFoundError`;
+// a file it did not create is never touched), and "unknown" otherwise. Every
+// call goes through the frozen capture an init script made before any page code
+// ran (origin-capture.ts: `Reflect.apply`, the root access, and the handle
 // methods), read as an own non-writable property, so a page that replaces one
-// of them cannot make the probe fail; only the language's own `await` and
-// `typeof` are used from the page's realm. A page can still override
+// of them cannot make the probe fail; only `await`, `typeof`, and the lookup
+// error's `name` come from the page's realm. A page can still override
 // `Promise.prototype.then` to force "failed"; that matters only in WebKit,
 // where OPFS writes fail anyway. The scan decides the excuse (secret-scan.ts,
 // `isExcusedOpfs`): WebKit only, `UnknownError` only, and "failed" only.
@@ -117,8 +118,18 @@ export const inPage = async (
     } catch {
       return "failed";
     }
+    const name = "se-e2e-write-probe";
+    // Only a free name: a file there that the probe did not make is left alone.
     try {
-      const name = "se-e2e-write-probe";
+      await call(at["getFileHandle"], root, [name]);
+      return "unknown";
+    } catch (error: unknown) {
+      const named = typeof error === "object" && error !== null;
+      if (!named || (error as { name?: unknown }).name !== "NotFoundError") {
+        return "unknown";
+      }
+    }
+    try {
       const file = await call(at["getFileHandle"], root, [
         name,
         { create: true },

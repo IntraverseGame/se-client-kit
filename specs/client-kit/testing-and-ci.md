@@ -356,26 +356,30 @@ development-only, so it may import the test-only entry of `contracts`.
   `createWritable`, the writable stream's `write`, and
   `WritableStream.prototype.close`), read as an own non-writable property, so a
   page that replaces any of them cannot make the probe fail; only the language's
-  own `await` and `typeof` come from the page's realm. The probe fails when the
-  root cannot be had (no root, no write). Any other error, any other browser, or
-  a frame where the probe wrote (or could not tell) is reported
+  own `await` and `typeof`, and the `name` of the lookup's error, come from the
+  page's realm. The probe writes only under a name that a lookup without
+  `create` found free (`NotFoundError`): a file there that it did not make is
+  left in place, and the probe cannot tell. The probe fails when the root cannot
+  be had (no root, no write). Any other error, any other browser, or a frame
+  where the probe wrote (or could not tell) is reported
   (`e2e/tests/secret-scan-opfs.spec.ts`: the rule itself, a faked read failure
-  where OPFS works, and WebKit's real one). Not covered: request and response
-  bodies, a base64 form not aligned with the start of a larger base64 string,
-  and workers. The scan runs in the page's own world and trusts the page's
-  built-in APIs: a page that replaces a built-in (a storage getter, `console`,
-  `history`) can hide what it holds from the scan; the Wrapper is tested as
-  built, not as an adversary of the suite. Its negative tests run a deliberately
-  leaking test page that opens a session against the fake and leaks one secret
-  through one channel; the scan must fail for each channel (WebSocket,
-  `history.state`, the origin private file system, and the key as a decimal
-  number included), pass the same page leaking nothing, fail on an unreadable
-  channel and an unserializable console argument, excuse an opaque frame, and
-  see a draw made just before it. Two channels cannot be written in one browser
-  each, so their leak test is skipped there, with the reason: the service worker
-  in Firefox (it cannot register, below) and the origin private file system in
-  WebKit (it has none here). The forms and the redaction are tested in Node
-  alone (`e2e/tests/secret-needles.spec.ts`).
+  where OPFS works, the same with a file of the probe's name the page made
+  first, and WebKit's real one). Not covered: request and response bodies, a
+  base64 form not aligned with the start of a larger base64 string, and workers.
+  The scan runs in the page's own world and trusts the page's built-in APIs: a
+  page that replaces a built-in (a storage getter, `console`, `history`) can
+  hide what it holds from the scan; the Wrapper is tested as built, not as an
+  adversary of the suite. Its negative tests run a deliberately leaking test
+  page that opens a session against the fake and leaks one secret through one
+  channel; the scan must fail for each channel (WebSocket, `history.state`, the
+  origin private file system, and the key as a decimal number included), pass
+  the same page leaking nothing, fail on an unreadable channel and an
+  unserializable console argument, excuse an opaque frame, and see a draw made
+  just before it. Two channels cannot be written in one browser each, so their
+  leak test is skipped there, with the reason: the service worker in Firefox (it
+  cannot register, below) and the origin private file system in WebKit (it has
+  none here). The forms and the redaction are tested in Node alone
+  (`e2e/tests/secret-needles.spec.ts`).
 - **The accessibility audit** (T-14) is an axe scan (`@axe-core/playwright`)
   with the WCAG 2.2 A and AA tags (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`,
   `wcag22aa`), optionally limited to a selector; axe's best-practice rules are
