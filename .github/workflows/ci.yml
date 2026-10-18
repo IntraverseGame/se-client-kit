@@ -17,6 +17,11 @@ env:
   # wireit caches in the GitHub Actions cache; there is no remote cache and no
   # secret. A cache entry is keyed by every declared input of a script.
   WIREIT_CACHE: github
+  # One line per script (run, restored from the cache, or already fresh) and
+  # every cache-info message, which the default CI logger drops. A cache
+  # download that failed shows here: wireit then reports the script as restored
+  # with no output (#53; runbook/development/ci-failures.md).
+  WIREIT_LOGGER: simple
 
 jobs:
   lint:

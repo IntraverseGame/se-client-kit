@@ -16,6 +16,8 @@ steps, verification, troubleshooting, escalation, references.
 
 - [`development/parallel-work.md`](./development/parallel-work.md) — worktrees:
   one task, one branch, one worktree.
+- [`development/ci-failures.md`](./development/ci-failures.md) — a CI job cannot
+  find a kit package's `dist/` (a wireit cache restore that failed, #53).
 - [`client-kit-release.md`](./client-kit-release.md) — releasing the packages
   and the Wrapper bundle.
 - Planned: the response to a compromised dependency or publishing credential.

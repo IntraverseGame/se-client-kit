@@ -10,7 +10,7 @@
   },
   "wireit": {
     "test": {
-      "command": "playwright test",
+      "command": "tsx ../tools/check-kit-dist.ts test ../apps/wrapper/dist/index.html ../apps/reference-game/dist/index.html && playwright test",
       "dependencies": [
         "../apps/wrapper:build",
         "../apps/reference-game:build",
@@ -18,13 +18,16 @@
       ]
     },
     "typecheck": {
-      "command": "tsc -p tsconfig.json",
+      "command": "tsx ../tools/check-kit-dist.ts typecheck && tsc -p tsconfig.json",
       "files": [
         "*.ts",
         "tests/**",
         "package.json",
         "tsconfig.json",
-        "../tsconfig.base.json"
+        "../tsconfig.base.json",
+        "../tools/check-kit-dist.ts",
+        "../tools/kit-dist.ts",
+        "../tools/kit-dist-fs.ts"
       ],
       "output": [],
       "packageLocks": [

@@ -38,14 +38,17 @@
       ]
     },
     "typecheck": {
-      "command": "tsc -p tsconfig.json",
+      "command": "tsx ../../tools/check-kit-dist.ts typecheck && tsc -p tsconfig.json",
       "files": [
         "index.html",
         "src/**",
         "*.ts",
         "package.json",
         "tsconfig.json",
-        "../../tsconfig.base.json"
+        "../../tsconfig.base.json",
+        "../../tools/check-kit-dist.ts",
+        "../../tools/kit-dist.ts",
+        "../../tools/kit-dist-fs.ts"
       ],
       "output": [],
       "packageLocks": [
