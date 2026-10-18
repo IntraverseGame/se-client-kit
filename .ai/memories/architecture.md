@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-18 (shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-18 (RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -146,7 +146,9 @@ structure below.
   and the session passes none. Do not move it back into an options type.
   Provisional session input: `bindMode` (the Wrapper wires `tip`). D is the
   redeem answer's `gameOrigin`, fixed at open; no session option gives it, so
-  do not add one back (W-37).
+  do not add one back (W-37). W-37's registrable-domain rule is the
+  last-two-labels comparison of ADR-007 (proposed; built with #42): do not add
+  a public suffix list.
 - **A Snapshot is untrusted until validated.** `play-client` returns it as
   `unknown`; only `snapshot`'s validator produces a typed value, so an
   unvalidated Snapshot cannot reach the renderer by construction.
@@ -237,8 +239,14 @@ structure below.
   tip check's transport. `embedding.ts` is W-49's fail-closed minimum, checked
   in `boot.ts` before the session opens: a framed page needs
   `location.ancestorOrigins` with every entry on `operatorOrigins` (`"null"`
-  refuses; no list, as in Firefox, refuses) until RFC-001's handshake is built.
-  Do not relax it to "allow when unknown". The UI reads only its input types (`round-input.ts`),
+  refuses; no list, as in Firefox, refuses) until #42 builds the accepted
+  contract (`specs/wrapper/operator-embedding.md`, W-49a to W-49f; ADR-006,
+  proposed): direct embedding only, the `se.operator/1` handshake (operator
+  first, record-then-check) gating the redeem, the start, and every signature,
+  in the shell beside the controller bridge, and lobby and deposit as anchors to
+  `context.links`, never messages. Do not relax the minimum to "allow when
+  unknown" meanwhile, and do not add operator messages beyond `hello`,
+  `welcome`, and `resize` (a change is `se.operator/2`). The UI reads only its input types (`round-input.ts`),
   handed over already validated by the session; it imports only `shell`
   (lint). The build adds SRI, a `<meta>` CSP, the
   headers file, and the integrity manifest, then verifies the output directory

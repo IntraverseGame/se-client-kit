@@ -101,7 +101,9 @@ the specs' headings.
   - [Error and degraded states](./wrapper.md#error-and-degraded-states) — W-41
     to W-44
   - [Accessibility](./wrapper.md#accessibility) — W-45 to W-48
-  - [Operator embedding](./wrapper.md#operator-embedding) — W-49
+  - [Operator embedding](./wrapper/operator-embedding.md) — W-49 to W-49f: the
+    framing check, the `se.operator/1` handshake, `resize`, the lobby and
+    deposit navigations, and T-9a's test plan
   - [Configuration](./wrapper.md#configuration)
 - [Errors and edge cases](./wrapper.md#errors-and-edge-cases) ·
   [Security](./wrapper.md#security) ·

@@ -376,13 +376,16 @@ are in brackets.
   gives it (a malformed host, a port above 65535, or an explicit default port
   included; `invalid-origin`), D is the Wrapper's origin (`same-origin`), or D
   is not on the allow-list (`origin-not-allowed`); the registrable-domain rule
-  is not checked yet (W-37). Otherwise it returns `{ ok: true, bridge }`:
-  `sendSnapshot` takes a validated Snapshot (ignored when its `version` is below
-  the latest given), `state()` is `awaiting-hello`, `ready`, `incompatible`, or
-  `closed`, and `close()` unsubscribes. A message counts only when its `source`
-  is the frame and its `origin` is D; the parser reads only own data properties
-  of a plain object, so no game code runs. The rules of the message set, the
-  allow-list, and the order of the pick checks are in
+  (W-37's comparison key, ADR-007) is not checked yet: it joins this check, with
+  a refusal code of its own, in #42, and the options then also take the
+  configuration's `environment`, for its loopback exemption in `local` only.
+  Otherwise it returns `{ ok: true, bridge }`: `sendSnapshot` takes a validated
+  Snapshot (ignored when its `version` is below the latest given), `state()` is
+  `awaiting-hello`, `ready`, `incompatible`, or `closed`, and `close()`
+  unsubscribes. A message counts only when its `source` is the frame and its
+  `origin` is D; the parser reads only own data properties of a plain object, so
+  no game code runs. The rules of the message set, the allow-list, and the order
+  of the pick checks are in
   [W-38](../wrapper/the-game-iframe-and-the-controller-boundary.md). The game's
   copy of a Snapshot is built field by field from the allow-list, never by
   removing fields. It posts only with `targetOrigin = D` (a frame that throws on
