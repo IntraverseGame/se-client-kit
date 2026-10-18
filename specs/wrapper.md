@@ -290,7 +290,12 @@ level AA**.
 - **W-46.** A status change MUST be announced to assistive technology through a
   polite live region (`aria-live="polite"`), and an error through
   `role="alert"`. Focus moves to the result or error heading only when the
-  player's own action caused the change, never when a poll did.
+  player's own action caused the change, never when a poll did. When the game's
+  iframe element has the focus, the Wrapper takes it back for the result or
+  error heading by blurring the frame element before focusing the heading, since
+  some engines (Firefox with its frames in the parent's process, as in
+  Playwright's Firefox build) do not move the focus out of a focused iframe on
+  `focus()` alone.
 - **W-47.** Color MUST NOT carry meaning alone (win, loss, and error have text
   and an icon with a text alternative). Text contrast SHOULD be at least 4.5:1
   and the UI SHOULD honor `prefers-reduced-motion` and 200 % zoom without loss
@@ -520,35 +525,44 @@ the backend job's), T-14 (`t14-every-state.spec.ts`: keyboard-only play with a
 visible focus and no trap; after a move in the game, by keyboard or pointer, the
 focus on the Wrapper's result heading (W-46), where it stays once the game has
 shown the result, since the reference game moves focus only while its own
-document has focus; and the audit of the round's states, the configuration
-error, and a browser without Web Locks; another tab is audited in
-`t17-two-tabs.spec.ts`, and every other state in its own row's spec, as the file
-lists), T-15 during a signed action (`t15-signed-action.spec.ts`: a lost
-response repeated with the same bytes and key; and the browser offline, where
-every attempt of the move is the same signed bytes and key and fails, and the
-Snapshot is read first when the connection returns), T-16's round errors
-(`t16-round-errors.spec.ts`: out of sync, the session-ending codes, and a
-rejected Snapshot, the fake's one deliberate `invalid/` answer), and T-19
-(`t19-cancel-paths.spec.ts`). Still **pending**, declared as skipped tests
-(`e2e/tests/pending.spec.ts`), never as passing ones: T-12 (a multi-step game;
-the reference game is Coin Flip), T-15's resend of a move lost offline (when the
-read after the connection returns shows the move not applied, the shell sends
-the same signed bytes and `idempotencyKey` again, once: the resend change, W-16,
-decided in human review 2026-10-18), and T-9a's handshake path (W-49a to W-49f,
-built with #42; its Firefox and WebKit cases run in those Playwright projects).
-The round rows install Playwright's `page.clock` before the page loads and move
-the Wrapper's own timers (its polls and the transport's retries) forward with
-it, so a poll or a retry comes at once; the clock is not paused, so those timers
-also run in real time (pausing it stops the Wrapper's boot, whose own timers
-must run), and no assertion depends on a timer not firing. They run with tracing
-off (the key's bytes are an init-script argument, which a trace would write to a
-file). The vendored round is one round with one bet and one move, so a session
-plays it once; a multi-step game or a re-issue needs another issued round.
-W-49's built minimum runs in the Chromium, Firefox, and WebKit projects
-(`t9a-embedding.spec.ts`: framed by an unlisted page it refuses to start and
-redeems nothing; framed by a listed one it opens the session; every project's
-browser has `location.ancestorOrigins`, Firefox's included, which is asserted),
-and the path without `location.ancestorOrigins` is a component test.
+document has focus, and the game's heading never takes it and the game's
+document has no focus, in every project; `focus-from-frame.spec.ts` shows why
+the Wrapper blurs the focused frame element first: plain `focus()` leaves the
+focus in the frame in Playwright's Firefox build (a release Firefox moves it),
+and with the frame blurred first the heading takes it in every project; and the
+audit of the round's states, the configuration error, and a browser without Web
+Locks; another tab is audited in `t17-two-tabs.spec.ts`, and every other state
+in its own row's spec, as the file lists), T-15 during a signed action
+(`t15-signed-action.spec.ts`: a lost response repeated with the same bytes and
+key; and the browser offline, where every attempt of the move is the same signed
+bytes and key and fails, and the Snapshot is read first when the connection
+returns; the attempts are read from the requests the page sent, which every
+project reports, since offline Playwright's Firefox fails a request before any
+route sees it, and the fake's own records of them, in Chromium and WebKit, are
+each the same move too; `network.spec.ts` proves where an offline request is
+routed), T-16's round errors (`t16-round-errors.spec.ts`: out of sync, the
+session-ending codes, and a rejected Snapshot, the fake's one deliberate
+`invalid/` answer), and T-19 (`t19-cancel-paths.spec.ts`). Still **pending**,
+declared as skipped tests (`e2e/tests/pending.spec.ts`), never as passing ones:
+T-12 (a multi-step game; the reference game is Coin Flip), T-15's resend of a
+move lost offline (when the read after the connection returns shows the move not
+applied, the shell sends the same signed bytes and `idempotencyKey` again, once:
+the resend change, W-16, decided in human review 2026-10-18), and T-9a's
+handshake path (W-49a to W-49f, built with #42; its Firefox and WebKit cases run
+in those Playwright projects). The round rows install Playwright's `page.clock`
+before the page loads and move the Wrapper's own timers (its polls and the
+transport's retries) forward with it, so a poll or a retry comes at once; the
+clock is not paused, so those timers also run in real time (pausing it stops the
+Wrapper's boot, whose own timers must run), and no assertion depends on a timer
+not firing. They run with tracing off (the key's bytes are an init-script
+argument, which a trace would write to a file). The vendored round is one round
+with one bet and one move, so a session plays it once; a multi-step game or a
+re-issue needs another issued round. W-49's built minimum runs in the Chromium,
+Firefox, and WebKit projects (`t9a-embedding.spec.ts`: framed by an unlisted
+page it refuses to start and redeems nothing; framed by a listed one it opens
+the session; every project's browser has `location.ancestorOrigins`, Firefox's
+included, which is asserted), and the path without `location.ancestorOrigins` is
+a component test.
 
 The e2e suite runs in two places: against an in-repo fake Play API on every
 change here, and against the SuperEngine preview stack from a job owned by the

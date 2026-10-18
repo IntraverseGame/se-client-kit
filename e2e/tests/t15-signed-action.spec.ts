@@ -7,12 +7,16 @@
 // that read (the one resend of a move it shows not applied, W-16) is a pending
 // row (pending.spec.ts). The connection-problem state passes the
 // accessibility audit. The Wrapper's timers (the transport's retries, the
-// polls) run on the page's clock.
+// polls) run on the page's clock. The offline attempts are read from what the
+// page sent (the harness's `sent`), which sees them in every project; the fake
+// records them too where its route sees an offline request (Chromium and
+// WebKit, not Playwright's Firefox: `OFFLINE_ROUTED`, network.spec.ts).
 
 import { isDeepStrictEqual } from "node:util";
 
 import { auditAccessibility } from "./harness/accessibility.ts";
 import type { BodyCheck } from "./harness/fake-play-wire.ts";
+import { OFFLINE_ROUTED } from "./harness/network.ts";
 import {
   advanceUntil,
   callTails,
@@ -67,6 +71,7 @@ test.describe("T-15: offline during a signed action", () => {
     page,
     fakePlayApi,
     network,
+    browserName,
   }) => {
     await toReady(page, fakePlayApi);
     await network.goOffline();
@@ -76,12 +81,20 @@ test.describe("T-15: offline during a signed action", () => {
     await expect(alertPanel(page)).toContainText(TEXT.offline);
     await expect(statusHeading(page)).toHaveText(TEXT.active);
     // Every attempt failed offline, and each is the one signed move (W-16).
-    const attempts = servedFor(fakePlayApi, "continueRound").map(
-      call => call.body,
-    );
+    await expect
+      .poll(() => network.sent("continueRound").length)
+      .toBeGreaterThan(0);
+    const attempts = network.sent("continueRound");
     expect(attempts.length).toBeGreaterThan(0);
     expect(pickCheck(attempts[0])).toBeUndefined();
     for (const attempt of attempts) expect(attempt).toEqual(attempts[0]);
+    // What the fake's route saw of them: each the same move, where it sees an
+    // offline request at all.
+    const routed = servedFor(fakePlayApi, "continueRound").map(
+      call => call.body,
+    );
+    expect(routed.length > 0).toBe(OFFLINE_ROUTED[browserName]);
+    for (const attempt of routed) expect(attempt).toEqual(attempts[0]);
     expect(await auditAccessibility(page)).toEqual([]);
     // Any move sent after the read (the one resend, W-16, once the resend
     // change lands) is answered with the round as the read shows it, and must

@@ -56,6 +56,18 @@ import { invalidVector, validVector } from "./vectors.ts";
 
 const API_SUFFIX = "/play/v1";
 
+/**
+ * The path below which the Play API's document paths sit at `playApiBaseUrl`:
+ * the document's paths start with `/play/v1`, and the base may sit below a
+ * prefix. A base that does not end with `/play/v1` is refused.
+ */
+export const playApiPrefix = (playApiBaseUrl: string): string => {
+  if (!playApiBaseUrl.endsWith(API_SUFFIX)) {
+    throw new Error("playApiBaseUrl must end with /play/v1");
+  }
+  return new URL(playApiBaseUrl).pathname.slice(0, -API_SUFFIX.length);
+};
+
 const TOKEN_LIFETIME_MS = 15 * 60 * 1000;
 const SESSION_LIFETIME_MS = 2 * 60 * 60 * 1000;
 
@@ -63,11 +75,7 @@ const never = (): void => {};
 
 export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
   const { playApiBaseUrl, seed, now, secretSources = [] } = options;
-  if (!playApiBaseUrl.endsWith(API_SUFFIX)) {
-    throw new Error("playApiBaseUrl must end with /play/v1");
-  }
-  // The document's paths start with `/play/v1`; the base may sit below a prefix.
-  const prefix = new URL(playApiBaseUrl).pathname.slice(0, -API_SUFFIX.length);
+  const prefix = playApiPrefix(playApiBaseUrl);
   const launchCode = opaque("lc_", seed, "launch-code");
   const sessionId = `ses_${hex32(seed, "session")}`;
   const issued: string[] = [];

@@ -2,10 +2,13 @@
 // focus indicator on every control reached, and no keyboard trap: Tab leaves
 // the game frame for the Wrapper's controls); after a move in the game, by
 // keyboard or pointer, the focus is on the Wrapper's result heading, and stays
-// there once the game has shown the result too; and the accessibility audit of every
-// status and error state. Audited here: the states a round passes through on
-// its way (idle, starting, the round ready with the game frame, and resolving),
-// the configuration error, and the browser without Web Locks (W-14, W-44).
+// there once the game has shown the result too, with nothing in the game
+// focused (the Wrapper blurs the focused frame element first, which
+// Playwright's Firefox needs: focus-from-frame.spec.ts); and the accessibility
+// audit of every status and error state. Audited here: the states a round
+// passes through on its way (idle, starting, the round ready with the game
+// frame, and resolving), the configuration error, and the browser without Web
+// Locks (W-14, W-44).
 // Each other state is audited where its own row produces it:
 // - won: t10-win; lost: t11-loss;
 // - the typed errors, `ROUND_ACTIVE`, the session ended at open, a failed
@@ -60,13 +63,19 @@ const tabTo = async (page: Page, target: Locator): Promise<void> => {
 /**
  * After the player's own move, the focus is the Wrapper's result heading
  * (W-46), and still is once the game has shown the same result: the game
- * yields, moving focus only while its own document has focus.
+ * yields, moving focus only while its own document has focus, so its own
+ * heading never takes it and its document has none.
  */
 const focusStaysOnResult = async (page: Page): Promise<void> => {
-  await expect(statusHeading(page)).toHaveText(TEXT.won);
-  await expect(statusHeading(page)).toBeFocused();
-  await expect(gameFrame(page).locator("#rg-heading")).toHaveText("You won");
-  await expect(statusHeading(page)).toBeFocused();
+  const heading = statusHeading(page);
+  await expect(heading).toHaveText(TEXT.won);
+  await expect(heading).toBeFocused();
+  const gameHeading = gameFrame(page).locator("#rg-heading");
+  await expect(gameHeading).toHaveText("You won");
+  await expect(gameHeading).not.toBeFocused();
+  // Nothing in the game has the focus: it did not keep it, or pull it back.
+  expect(await gameHeading.evaluate(() => document.hasFocus())).toBe(false);
+  await expect(heading).toBeFocused();
 };
 
 /** The focused control shows a focus indicator: an outline of some width. */

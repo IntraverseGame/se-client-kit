@@ -167,8 +167,11 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   assertion that needs a timer not to fire (T-19 counts reads up to
   `check-later`, which no extra real-time poll changes). Tracing stays off (the key's bytes
   are an init-script argument; the round fixture fails a traced test). In
-  T-15 offline, the browser's offline requests still reach the fake's route
-  (recorded, then aborted); assert only that the first call after `goOnline`
+  T-15 offline, read the attempts from `network.sent(id)` (the context's
+  `request` event), not from `fakePlayApi.served`: Chromium and WebKit route
+  an offline request (recorded, then aborted), Playwright's Firefox fails it
+  with `NS_ERROR_OFFLINE` before any route (`OFFLINE_ROUTED`, proven in
+  `network.spec.ts`); assert only that the first call after `goOnline`
   is a `getSnapshot`, not what is sent after it: the one resend of a move the
   read shows not applied is a pending row until the resend change lands (W-16,
   decided in human review 2026-10-18); the test already answers any later
@@ -177,7 +180,16 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   After a move in the game, the focus is on the Wrapper's result heading: the
   reference game moves focus only while its own document has focus (#73);
   `t14-every-state.spec.ts` waits for the game's own result heading before
-  asserting it stays.
+  asserting it stays. Playwright's Firefox does not move the focus out of a
+  focused frame on a parent's `focus()` (its frames run in-process; a release
+  Firefox 159 does move it, checked by hand; running the project with
+  `fission.webContentIsolationStrategy: 1` fixes that but breaks clicks into
+  the game frame), so the Wrapper blurs the focused game iframe element before
+  focusing the result or error heading (W-46, `render.ts`, component tests in
+  `game-frame-focus.test.ts`); `focus-from-frame.spec.ts` (`FOCUS_FROM_FRAME`)
+  proves the quirk and that the blur fixes it in every project. T-14 asserts
+  the full rule everywhere: the heading focused, the game's heading not
+  focused, the game's document without focus.
   `fakePlayApi.redeemAgain()` allows one more redeem for the cloned tab of
   T-17. `t9a-embedding.spec.ts` frames the bundle from a test page on
   `PAGES_ORIGIN`: a listed page opens the session in every project; every
