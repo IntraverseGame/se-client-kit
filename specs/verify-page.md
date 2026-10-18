@@ -50,8 +50,8 @@ Out of scope:
   unauthenticated read, and its response body (the verify API document). It
   serves no HTML.
 - **The infrastructure owner owns:** the Wrapper's hosting origin, so the page's
-  production URL, the rewrite rule the page's path needs (V-2), and the RPC
-  providers the configuration lists.
+  production URL; carrying out the edge rules of V-2, which are decided; and the
+  RPC providers the configuration lists.
 - **Consumes:** the verify API document (vendored into `contracts` when
   published, with its generated types, as
   [the contracts package](./client-kit/the-contracts-package.md) already plans);
@@ -76,7 +76,9 @@ Out of scope:
 - **V-1.** The page is a set of static files served next to the built Wrapper,
   under the path `/verify/` of the Wrapper's origin. `verifyBaseUrl` (the
   environment configuration's field) is that origin plus `/verify`, with no
-  trailing slash; in preview it is the Wrapper's origin plus `/verify`.
+  trailing slash; in preview it is the Wrapper's origin plus `/verify` (decided
+  by the backend's TPO, 2026-10-18, and recorded in the backend's documentation
+  at b6e1e48, which names `verifyBaseUrl` as this configuration field).
   <!-- TODO(infrastructure owner): the Wrapper's hosting origin in each environment, so the production and preview values of `verifyBaseUrl`. -->
   A round's page is `<verifyBaseUrl>/rounds/{roundId}`, the round id in the
   path, in its canonical form. The Wrapper's verify link builds exactly this URL
@@ -86,7 +88,18 @@ Out of scope:
   `<base>`, and a relative path would resolve under `/verify/rounds/`). The host
   serves `verify/index.html` for every path under `/verify/rounds/`, so a
   round's URL needs a rewrite rule, not a file per round.
-  <!-- TODO(infrastructure owner): the rewrite of `/verify/rounds/*` to `/verify/index.html` on the CDN, and the same headers for it as for the page. -->
+  - **The edge rules are decided** (the backend's TPO, 2026-10-18; b6e1e48). On
+    the Wrapper's origin, `/verify/v1/` stays the backend's: the edge routes it
+    to the verify API. The edge rewrites `/verify/rounds/*` to
+    `/verify/index.html`. The page's files use only other paths under `/verify/`
+    and never `/verify/v1/`.
+  - The rewritten path is served with the same headers as the page (this spec's
+    rule, V-16 and Security).
+  - The verify API is on the page's own origin, a read that needs no CORS, when
+    the Wrapper is served from the backend's origin, as in preview (b6e1e48);
+    otherwise the verify API is on another origin and needs the backend's CORS
+    decision first, before a configuration document may name it.
+  <!-- TODO(infrastructure owner): carry out the two edge rules on the CDN (the route of `/verify/v1/` and the rewrite of `/verify/rounds/*`, with the page's headers) once the Wrapper's hosting origin is known. -->
 
 ### Configuration (V-3)
 
@@ -100,7 +113,12 @@ Out of scope:
   absolute URL under `playApiBaseUrl`'s rule (`https:`, or `http:` on a loopback
   host, no credentials, query, or fragment) whose path ends with `/verify/v1`,
   with no trailing slash. The page will read
-  `<verifyApiBaseUrl>/rounds/{roundId}`. The field will be part of the one
+  `<verifyApiBaseUrl>/rounds/{roundId}`. The field is required (D-4), never
+  derived or defaulted: once the Wrapper accepts the field, the preview
+  configuration is to set it to the Wrapper's origin plus `/verify/v1`, a
+  same-origin read when the Wrapper is served from the backend's origin, as in
+  preview (b6e1e48); otherwise the verify API is on another origin and needs the
+  backend's CORS decision first (V-2). The field will be part of the one
   configuration schema from the verify page's build on: the Wrapper's validator
   will accept it then and not use it ([wrapper.md](./wrapper.md#configuration)).
   Today the Wrapper's validator refuses it as an unknown field, so **the

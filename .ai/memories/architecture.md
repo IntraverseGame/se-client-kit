@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-18 (RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-18 (backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -270,7 +270,14 @@ structure below.
   N's hash through its own read-only JSON-RPC module (W-26a and W-26b's rules);
   its own size budget; a future `verifyApiBaseUrl` configuration field (the
   Wrapper's validator refuses it today; its acceptance ships before, or with,
-  any document that carries it). Served on the Wrapper's origin, the page is
+  any document that carries it). The field stays required (D-4): once the
+  Wrapper accepts it, the preview configuration is to set it to the Wrapper's
+  origin plus `/verify/v1`, a
+  same-origin read when the Wrapper is served from the backend's origin, as in
+  preview (the edge keeps `/verify/v1/` on the backend and rewrites
+  `/verify/rounds/*` to the page, b6e1e48); otherwise the verify API is on
+  another origin and needs the backend's CORS decision first. Served on the
+  Wrapper's origin, the page is
   that origin's trusted code and MUST NOT use `navigator.locks`,
   `BroadcastChannel`, storage, or workers. Its derivations are keyed on the kernel version the
   verify API's response carries (the Snapshot has none); until that document
