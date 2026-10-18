@@ -3,9 +3,10 @@
 // verdicts; nothing here holds or sees a key or a token.
 
 import {
+  type CancelState,
   type ProblemInput,
   type RoundCheck,
-  roundIsOver,
+  roundEnded,
   type RoundStatus,
   type SnapshotInput,
   type SnapshotRead,
@@ -31,7 +32,11 @@ export type BlockingState =
 /** A round that ended, kept until the player starts another one (W-39, W-40). */
 export type EndedRound = {
   readonly roundId: string;
-  readonly status: Extract<RoundStatus, "won" | "lost" | "canceled">;
+  /**
+   * The round's result, or `ended`: the shell's cancel ended it with no result
+   * claim (W-25, W-33).
+   */
+  readonly status: Extract<RoundStatus, "won" | "lost" | "canceled"> | "ended";
 };
 
 export type WrapperState = {
@@ -87,14 +92,19 @@ const ROUND_STATES: ReadonlySet<BlockingState> = new Set([
   "out-of-sync",
 ]);
 
-const isFinal = (state: WrapperState): boolean =>
+/** Whether the state is final: nothing later replaces it. */
+export const isFinal = (state: WrapperState): boolean =>
   state.blocking !== undefined && FINAL_STATES.has(state.blocking);
 
 /** Whether an accepted Snapshot lifts the current blocking state. */
-const lifts = (state: WrapperState, snapshot: SnapshotInput): boolean =>
+const lifts = (
+  state: WrapperState,
+  snapshot: SnapshotInput,
+  cancel: CancelState | undefined,
+): boolean =>
   state.blocking === undefined ||
   !ROUND_STATES.has(state.blocking) ||
-  roundIsOver(snapshot);
+  roundEnded(snapshot, cancel);
 
 const without = <K extends keyof WrapperState>(
   state: WrapperState,
@@ -113,9 +123,35 @@ const checkBlocking = (check: RoundCheck): BlockingState | undefined => {
 };
 
 /**
+ * The shown round is over: it is kept as the ended round until the player
+ * starts another one (W-40), with its result, or `ended` when the shell's
+ * cancel ended it (W-33). The slow notice goes with the poll.
+ */
+const endRound = (
+  state: WrapperState,
+  snapshot: SnapshotInput,
+  cancel: CancelState | undefined,
+): WrapperState =>
+  snapshot.roundId === undefined
+    ? state
+    : {
+        ...state,
+        slow: false,
+        endedRound: {
+          roundId: snapshot.roundId,
+          status:
+            cancel === "ended"
+              ? "ended"
+              : (snapshot.status as EndedRound["status"]),
+        },
+      };
+
+/**
  * Records the shell's checks of the shown round. A failed check blocks the
  * round until it is over (W-26: the round ends by its expiry rule); a round
- * that is over shows its result.
+ * that is over shows its result. A cancel that is `ended` ends the round,
+ * whatever its last Snapshot shows: the blocking state of the round lifts
+ * (W-25, W-33).
  */
 const withCheck = (
   state: WrapperState,
@@ -124,8 +160,17 @@ const withCheck = (
   const shown = state.snapshot;
   if (check === undefined) return without(state, "check");
   const next = { ...state, check };
+  if (shown !== undefined && check.cancel === "ended") {
+    const lifted =
+      next.blocking !== undefined && ROUND_STATES.has(next.blocking)
+        ? without(next, "blocking")
+        : next;
+    return endRound(lifted, shown, check.cancel);
+  }
   const blocking = checkBlocking(check);
-  return blocking === undefined || shown === undefined || roundIsOver(shown)
+  return blocking === undefined ||
+    shown === undefined ||
+    roundEnded(shown, check.cancel)
     ? next
     : block(next, blocking);
 };
@@ -159,21 +204,17 @@ export const acceptSnapshot = (
   }
   const base = without(without(state, "problem"), "refused");
   let next: WrapperState = {
-    ...(lifts(state, snapshot) ? without(base, "blocking") : base),
+    ...(lifts(state, snapshot, check?.cancel)
+      ? without(base, "blocking")
+      : base),
     snapshot,
     connectionProblem: false,
   };
   if (state.snapshot?.status !== snapshot.status) {
     next = { ...next, slow: false };
   }
-  if (roundIsOver(snapshot) && snapshot.roundId !== undefined) {
-    next = {
-      ...next,
-      endedRound: {
-        roundId: snapshot.roundId,
-        status: snapshot.status as EndedRound["status"],
-      },
-    };
+  if (roundEnded(snapshot, check?.cancel)) {
+    next = endRound(next, snapshot, check?.cancel);
   }
   return withCheck(next, check);
 };

@@ -14,7 +14,7 @@
 
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
-import type { CancelState } from "./cancel-state.ts";
+import { type CancelState, holdsRound } from "./cancel-state.ts";
 import { redacting } from "./redaction.ts";
 import { createRoundActions, type RoundActions } from "./round-actions.ts";
 import { createRoundCancel, type RoundCancel } from "./round-cancel.ts";
@@ -52,7 +52,12 @@ export type RoundFlow = RoundActions & {
   readonly phase: () => ReturnType<Signer["phase"]> | "unopened";
   /** The shell's latest validated Snapshot of the round. */
   readonly latest: () => ValidSnapshot;
-  /** Whether the latest Snapshot shows the round over (`isRoundOver`). */
+  /**
+   * Whether the round is over: `true` once the cancel is `ended` (the round
+   * ended with no result claim), `false` while it is `in-flight`, `settling`,
+   * or `check-later` (W-25), and otherwise whether the latest Snapshot shows it
+   * over (`isRoundOver`).
+   */
   readonly over: () => boolean;
   /**
    * The required cancel's progress. While it is `settling` or `check-later`,
@@ -157,7 +162,15 @@ export const createRoundFlow = (
     phase: (): ReturnType<Signer["phase"]> | "unopened" =>
       tracking.signer()?.phase() ?? "unopened",
     latest: tracking.latest,
-    over: (): boolean => isRoundOver(tracking.latest()),
+    over: (): boolean => {
+      const state = cancel.state();
+      if (state === "ended") return true;
+      // Defensive: while the cancel holds the round, no Snapshot of it from
+      // elsewhere is read in, and a result read in settles it at once, so the
+      // latest Snapshot is not over anyway (W-25).
+      if (holdsRound(state)) return false;
+      return isRoundOver(tracking.latest());
+    },
     cancel: cancel.state,
     lastError: (): Error | undefined =>
       delivery.lastError() ?? tracking.tipError(),

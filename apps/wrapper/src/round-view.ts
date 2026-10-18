@@ -2,12 +2,16 @@
 // `idle`, the preparing and resolving notes, the multiplier, the cash-out
 // control when the shell offers it, the result, and `closeReason` beside the
 // status. An `active` round is shown as ready only once the shell's checks
-// passed (W-26); until then it reads as being checked. Money is the
+// passed (W-26); until then it reads as being checked. After the shell's own
+// cancel (W-25, W-33), `ended` is a neutral "round ended" with no result
+// claim, and a `canceled` result is the round failed verification and canceled
+// (W-26). Money is the
 // Snapshot's `formatted`; a choice compares `value` as a `bigint`
 // (bet-options.ts). No payout is shown on `won`: the Snapshot carries none yet
 // (TODO(Snapshot contract) in the rendering spec), and none is ever computed.
 
 import { betChoice } from "./bet-options.ts";
+import { endedView } from "./cancel-views.ts";
 import {
   button,
   type Builder,
@@ -20,7 +24,7 @@ import type { IconName } from "./icons.ts";
 import type { Localized, MessageKey, Messages } from "./messages.ts";
 import {
   type RoundCheck,
-  roundIsOver,
+  roundEnded,
   type SnapshotInput,
 } from "./round-input.ts";
 import type { Intents } from "./view-options.ts";
@@ -103,8 +107,12 @@ export const roundView = (
   snapshot: SnapshotInput,
   intents: Intents,
   check?: RoundCheck,
+  cancelEnded: boolean = check?.cancel === "ended",
 ): Child[] => {
   const m = localized.messages;
+  if (cancelEnded) {
+    return endedView(el, doc, m, snapshot, intents);
+  }
   // An `active` round the shell has not passed is not shown as ready (W-26).
   // A round the shell does not hold (no check) is shown as it is, never with
   // the game or a control (W-42).
@@ -171,7 +179,13 @@ export const roundView = (
     case "lost":
     case "canceled": {
       if (snapshot.status === "canceled") {
-        children.push(el("p", { class: "se-detail" }, [m["detail.canceled"]]));
+        // The shell's required cancel took (W-26): the round failed
+        // verification and was canceled.
+        const detail =
+          check?.cancel === "sent"
+            ? m["detail.canceledUnverified"]
+            : m["detail.canceled"];
+        children.push(el("p", { class: "se-detail" }, [detail]));
       }
       children.push(
         field(el, m["label.balance"], snapshot.bet.balance.formatted),
@@ -188,7 +202,7 @@ export const roundView = (
     );
   }
   const newRound = intents.newRound;
-  if (roundIsOver(snapshot) && newRound !== undefined) {
+  if (roundEnded(snapshot, check?.cancel) && newRound !== undefined) {
     children.push(button(el, m["action.newRound"], "new-round", newRound));
   }
   return children;

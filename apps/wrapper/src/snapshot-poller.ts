@@ -1,14 +1,19 @@
-// W-35: while the round is polled (`isPolled`: `starting` or `resolving`
-// today, never a round that is over by the shell's `isRoundOver`), the Snapshot is read
+// W-35: while the round is polled (`pollModeOf`: `starting` or `resolving`
+// today, never a round that is over by the shell's `isRoundOver`, and while the
+// shell's cancel is `settling`, whatever the status), the Snapshot is read
 // again with bounded backoff until the status changes; after a longer wait the
 // reads go on at the slow rate with a "taking longer than expected" notice.
-// W-43: a read that gets no response is repeated at the slow rate. Polling
-// stops when the status is not one that is polled (a terminal status included)
-// or when the session ended. One read is in flight at a time; time comes from
-// the injected timers only.
+// While the cancel is `check-later` the fast poll stops and one background read
+// runs every 30 s, with no notice. W-43: a read that gets no response is
+// repeated at the slow rate (in the background, at its own rate). Polling
+// stops when the round is not polled (a terminal status, or the cancel
+// `ended`, `not-taken`, or `sent`) or when the session ended. One read is in
+// flight at a time; time comes from the injected timers only.
 
 import {
-  isPolled,
+  type CancelState,
+  type PollMode,
+  pollModeOf,
   type RoundProgress,
   type RoundStatus,
   type SnapshotRead,
@@ -22,26 +27,34 @@ export type PollConfig = {
   readonly slowDelayMs: number;
   /** After this long in one status, the "taking longer" notice shows. */
   readonly slowNoticeAfterMs: number;
+  /** The wait between two background reads while the cancel is `check-later`. */
+  readonly checkLaterDelayMs: number;
 };
 
 /**
- * W-35's defaults: 500 ms rising to 2 s (Wrapper configuration). PROVISIONAL:
- * `slowNoticeAfterMs`; W-35 says "after a longer wait" without a number, so 15
- * s (W-43's request timeout) holds until the spec gives one.
+ * W-35's defaults: 500 ms rising to 2 s, and a background read every 30 s in
+ * `check-later` (Wrapper configuration). PROVISIONAL: `slowNoticeAfterMs`; W-35
+ * says "after a longer wait" without a number, so 15 s (W-43's request timeout)
+ * holds until the spec gives one.
  */
 export const DEFAULT_POLL_CONFIG: PollConfig = Object.freeze({
   initialDelayMs: 500,
   slowDelayMs: 2_000,
   slowNoticeAfterMs: 15_000,
+  checkLaterDelayMs: 30_000,
 });
 
 export type SnapshotPoller = {
   /**
-   * Follows the last accepted Snapshot: starts polling while it is polled
-   * (`isPolled`), restarts the backoff when the status changes, and stops in
-   * any other (or when `undefined`: the session ended or a state blocks).
+   * Follows the last accepted Snapshot and the shell's cancel state of its
+   * round: polls while it is polled (`pollModeOf`), restarts the backoff when
+   * the status or the mode changes, and stops in any other (or when
+   * `undefined`: the session ended or a state blocks).
    */
-  readonly follow: (round: RoundProgress | undefined) => void;
+  readonly follow: (
+    round: RoundProgress | undefined,
+    cancel?: CancelState,
+  ) => void;
   /** Reads now instead of at the next tick (the connection came back). */
   readonly pollNow: () => void;
   readonly stop: () => void;
@@ -59,6 +72,7 @@ export type SnapshotPollerOptions = {
 
 type Phase = {
   readonly status: RoundStatus;
+  readonly mode: PollMode;
   readonly startedAt: number;
   reads: number;
   slowNotified: boolean;
@@ -111,6 +125,11 @@ export const createSnapshotPoller = (
     if (phase === undefined || timer !== undefined || current !== generation) {
       return;
     }
+    if (phase.mode === "background") {
+      // `check-later`: no backoff and no notice, one read per interval.
+      schedule(config.checkLaterDelayMs);
+      return;
+    }
     phase.reads += 1;
     if (
       !phase.slowNotified &&
@@ -140,23 +159,25 @@ export const createSnapshotPoller = (
   };
 
   return Object.freeze({
-    follow: (round: RoundProgress | undefined): void => {
-      if (round === undefined || !isPolled(round)) {
+    follow: (round: RoundProgress | undefined, cancel?: CancelState): void => {
+      const mode = round === undefined ? undefined : pollModeOf(round, cancel);
+      if (round === undefined || mode === undefined) {
         stop();
         return;
       }
       const { status } = round;
-      if (phase?.status === status) {
+      if (phase?.status === status && phase.mode === mode) {
         return;
       }
       phase = {
         status,
+        mode,
         startedAt: timers.now(),
         reads: 0,
         slowNotified: false,
       };
       if (!inFlight) {
-        schedule(backoff(0));
+        schedule(mode === "background" ? config.checkLaterDelayMs : backoff(0));
       }
     },
     pollNow: (): void => {

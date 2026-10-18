@@ -55,6 +55,7 @@ export const round = (overrides: Partial<RoundState> = {}): RoundState => ({
   verdict: "ready",
   outOfSync: false,
   cashOutOffered: false,
+  cancel: "none",
   ...overrides,
 });
 

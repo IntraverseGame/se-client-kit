@@ -58,6 +58,7 @@ describe("the open session", () => {
       outOfSync: false,
       // Coin Flip has one step: it never cashes out (W-24).
       cashOutOffered: false,
+      cancel: "none",
     });
     expect(await session.cashOut()).toEqual({
       kind: "refused",

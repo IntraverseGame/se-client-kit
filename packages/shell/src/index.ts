@@ -27,6 +27,7 @@ export {
   type Environment,
   type SourceConfig,
 } from "./chain-config.ts";
+export type { CancelState } from "./cancel-state.ts";
 export type { RpcEndpoint } from "./config-fields.ts";
 export {
   createControllerBridge,

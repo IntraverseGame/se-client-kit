@@ -2,6 +2,7 @@
 // type here holds a key, a token, the launch code, a signature, a transcript,
 // or a signing capability.
 
+import type { CancelState } from "./cancel-state.ts";
 import type { FailReason } from "./chain-decision.ts";
 import type {
   ControllerBridgeOptions,
@@ -52,6 +53,15 @@ export type RoundState = {
   readonly outOfSync: boolean;
   /** The cash-out control may be offered (W-24). */
   readonly cashOutOffered: boolean;
+  /**
+   * The required cancel's progress (W-25, W-33, W-35): `none` until it is
+   * reached. While it is `in-flight`, `settling`, or `check-later` the round is
+   * not over, whatever a Snapshot from elsewhere shows, and the Wrapper keeps
+   * reading it (`settling`: the poll; `check-later`: "check again" and the
+   * background read); `ended` is over, with no result claim ("round ended");
+   * `not-taken` leaves the round open until its expiry rule closes it.
+   */
+  readonly cancel: CancelState;
 };
 
 /**
@@ -75,9 +85,17 @@ export type GameMount =
 export type PlaySession = {
   /**
    * Reads the session's Snapshot, validated, and lets the round's checks see
-   * it.
+   * it. While the round's cancel is `settling` it is one of the cancel's
+   * counted reads, and from `check-later` its "check again" read (W-35); while
+   * the cancel is `in-flight`, `settling`, or `check-later` the answer is the
+   * round's own latest Snapshot, never one from elsewhere (W-25).
    */
   readonly read: () => Promise<SessionRead>;
+  /**
+   * "Check again" (W-35): from `check-later`, one read under the cancel's
+   * settling rules, which may settle it; otherwise the same as `read`.
+   */
+  readonly checkAgain: () => Promise<SessionRead>;
   /** Starts a round with a bet copied from the Snapshot's `Amount` (W-22). */
   readonly start: (bet: Bet) => Promise<SessionRead>;
   /** Cashes out the current round, on the player's request only (W-24). */

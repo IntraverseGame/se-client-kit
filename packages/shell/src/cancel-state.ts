@@ -63,6 +63,14 @@ export type CancelState =
    */
   | "refused";
 
+/**
+ * Whether the cancel holds the round (W-25): `in-flight`, `settling`, or
+ * `check-later`. The round is not over, every Snapshot of it from elsewhere is
+ * held back, and no new round starts for the session.
+ */
+export const holdsRound = (state: CancelState): boolean =>
+  state === "in-flight" || state === "settling" || state === "check-later";
+
 /** The reads after the cancel's answer before `check-later` (W-35). */
 export const SETTLING_READS = 30;
 

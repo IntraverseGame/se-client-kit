@@ -102,8 +102,6 @@ export const openSessionOver = async (
       chainId: registryDomain.chainId,
       verifyingContract: registryDomain.verifyingContract,
     },
-    // No `PlayerCancel` encoding until its independent vector (#41): the
-    // required cancel is `unavailable` and nothing is signed for it (W-25).
   });
   const lock = signing.state();
   if (lock !== "signing") {

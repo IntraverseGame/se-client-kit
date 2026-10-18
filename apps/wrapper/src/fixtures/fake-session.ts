@@ -33,6 +33,10 @@ export type FakeSession = {
   readonly reads: SessionRead[];
   readonly starts: Bet[];
   readonly cashOuts: () => number;
+  /** How many reads the session served (`read`, not "check again"). */
+  readonly served: () => number;
+  /** How often the player asked to check again. */
+  readonly checks: () => number;
   readonly answerStart: (read: SessionRead) => void;
   readonly answerCashOut: (read: SessionRead) => void;
   readonly setRound: (round: RoundState | undefined) => void;
@@ -47,6 +51,9 @@ export type FakeSession = {
 /** The next answer of a queue (the last one repeats). */
 const next = (queue: SessionRead[]): SessionRead =>
   (queue.length > 1 ? queue.shift() : queue[0]) ?? { kind: "network" };
+
+/** Reads past this many never answer (far more than any test makes). */
+const READ_LIMIT = 1_000;
 
 /** The D the stand-in's redeem gave it; `setMount` decides the bridge's verdict. */
 export const FAKE_GAME_ORIGIN = "https://game.example.net";
@@ -66,12 +73,26 @@ export const createFakeSession = (): FakeSession => {
   const changeListeners = new Set<(read: SessionRead) => void>();
   const endListeners = new Set<() => void>();
   let cashOuts = 0;
+  let checks = 0;
+  let served = 0;
   let round: RoundState | undefined;
   let ended = false;
   let mount = refuseMount;
+  const nextRead = (): Promise<SessionRead> =>
+    Promise.resolve(ended ? { kind: "session-ended" } : next(reads));
   const session: PlaySession = {
-    read: () =>
-      Promise.resolve(ended ? { kind: "session-ended" } : next(reads)),
+    read: () => {
+      served += 1;
+      // A runaway read loop (a bug) is stopped here: the reads answer at once,
+      // so it would never yield to a timer, and the test would hang instead of
+      // failing on its count.
+      if (served > READ_LIMIT) return new Promise<SessionRead>(() => {});
+      return nextRead();
+    },
+    checkAgain: () => {
+      checks += 1;
+      return nextRead();
+    },
     start: bet => {
       starts.push(bet);
       return Promise.resolve(next(startAnswers));
@@ -104,6 +125,8 @@ export const createFakeSession = (): FakeSession => {
     reads,
     starts,
     cashOuts: () => cashOuts,
+    served: () => served,
+    checks: () => checks,
     answerStart: read => startAnswers.push(read),
     answerCashOut: read => cashOutAnswers.push(read),
     setRound: value => {

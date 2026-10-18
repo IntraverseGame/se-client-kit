@@ -58,21 +58,40 @@ Part of the [Wrapper spec](../wrapper.md), section
   contract `se.snapshot/1` as vendored from b27afc5); with
   `closeReason: "expired"` the time limit had closed the round first, and it is
   shown as the round's result with no error. After the shell's own cancel, the
-  Wrapper shows the cancel state (W-25):
+  Wrapper shows the cancel state (W-25), which the session gives with every read
+  of the round (`RoundState.cancel`); a read from elsewhere never reaches the UI
+  while the cancel is `in-flight`, `settling`, or `check-later` (the session
+  gives the round's own latest Snapshot instead):
   - `in-flight` and `settling`: the round as it was before the cancel (for the
     required cancel, "this round failed verification", W-26), with inputs
     disabled while a `resolving` read shows it, and no result, no "your bet was
     returned", and no new-round control;
-  - `check-later`: "still resolving — contact support", with the round id and
-    the verify link (W-39) and a "check again" control, and still no result, no
-    "your bet was returned", and no new-round control (the message copy comes
-    with the Wrapper's wiring);
-  - `ended`: a neutral "round ended" with the round id and the verify link, no
-    win, loss, refund, or bet-returned amount, and no result claim; the balance
-    is the Snapshot's as usual (W-32), and a new round may start;
+  - `check-later`: "still resolving — contact support" (the status heading,
+    announced politely), with the round id and the verify link (W-39) and a
+    "check again" control, beside the round's "this round failed verification"
+    (the alert panel, W-26), and still no result, no "your bet was returned",
+    and no new-round control;
+  - `ended`: a neutral "round ended" (the status heading) with the round id and
+    the verify link, no win, loss, refund, or bet-returned amount, and no result
+    claim; a new round may start, and the round's failed verification lifts, as
+    it does once a round is over. The read that settled the cancel `ended` is
+    not read into the round (W-25), so the Wrapper then reads the Snapshot once
+    (W-35) and shows that read's balance (W-32), still under "round ended" while
+    it shows `idle`, until the player starts a new round; the read also gives
+    the game the current Snapshot, so it no longer shows the round as live. If
+    that read gets no response, a typed error, or a rejected answer, it is
+    dropped: the balance of the round's last Snapshot stays, with no error state
+    (decided by human review, 2026-10-18);
     <!-- TODO(Snapshot contract): the planned read of the last round shows its real result; show it then instead of "round ended". -->
   - `not-taken`: "this round failed verification" (W-26), the round open until
-    its expiry rule closes it, whether the answer or a read showed `active`.
+    its expiry rule closes it, whether the answer or a read showed `active`;
+  - `sent` with `canceled` (the shell's own cancel took): "round canceled" with
+    "this round failed verification and was canceled" (W-26) in place of "your
+    bet was returned"; `sent` with `won` or `lost` shows that result as usual.
+
+  The copy (English): "Still resolving — contact support", "Check again", "Round
+  ended", and "This round failed verification and was canceled."
+
 - **W-34.** Money: the Wrapper MUST read `Amount.value` as a string and use
   `BigInt` for any comparison (for example the bet against the balance), and
   MUST display `Amount.formatted`. It MUST NOT compute money from `normalized`
@@ -87,23 +106,38 @@ Part of the [Wrapper spec](../wrapper.md), section
   after a read with no response (W-43). PROVISIONAL: the "longer wait" before
   the notice is 15 s (W-43's request timeout) until this spec gives a number. A
   poll stops in every status but `starting` and `resolving`, on a typed error
-  (until the player asks to try again), and in any blocking state (W-44).
-  Whether a round is over is decided in one place, the shell's `isRoundOver`,
-  which the Wrapper's polling and rendering read; the Wrapper keeps no status
-  list of its own. From a Snapshot alone, `canceled` is final, with or without a
+  (until the player asks to try again), and in any blocking state (W-44), except
+  while the shell's cancel is `settling` or `check-later` (below). Whether a
+  round is over is decided in one place, the shell's `isRoundOver`, which the
+  Wrapper's polling and rendering read; the Wrapper keeps no status list of its
+  own. From a Snapshot alone, `canceled` is final, with or without a
   `closeReason` (W-25); while the shell's own cancel is not settled, the round
   flow's cancel state decides instead (below). While the shell's cancel is
-  `settling` (W-25), the Wrapper also polls, through the round flow's `refresh`,
-  with the same backoff and slow rate, whatever the status of the round's last
-  Snapshot; a read with no response, another round's Snapshot, or `resolving`
-  does not stop it; a final read (`canceled`, `won`, `lost`), `active`, or
-  `idle` settles the cancel. The shell counts these reads; after 30 it reports
-  `check-later`, and the Wrapper stops the fast poll and shows "still resolving
-  — contact support" (W-33). In `check-later` the Wrapper reads once when the
-  player asks to check again (the flow's `checkAgain`), and once every 30 s in
-  the background until the session ends (Wrapper configuration; time comes from
-  the Wrapper's injected timers, never the shell). Either read may settle the
-  cancel, after which polling follows the round's status as usual.
+  `settling` (W-25), the Wrapper also polls, through the round flow's `refresh`
+  (the session's `read` is then one of the cancel's counted reads), with the
+  same backoff and slow rate, whatever the status of the round's last Snapshot;
+  a read with no response, another round's Snapshot, `resolving`, a typed error,
+  or a rejected read does not stop it, and neither does the round's failed
+  verification (W-26), which the required cancel always comes with and which the
+  player could not retry; only a final state (W-44: the session ended, another
+  tab, the configuration error) stops it. A final read (`canceled`, `won`,
+  `lost`), `active`, or `idle` settles the cancel. The shell counts these reads;
+  after 30 it reports `check-later`, and the Wrapper stops the fast poll and
+  shows "still resolving — contact support" (W-33). In `check-later` the Wrapper
+  reads once when the player asks to check again (the session's `checkAgain`,
+  the flow's `checkAgain`), and once every 30 s in the background (the session's
+  `read`, which is then the same read) until the session ends, with no "taking
+  longer" notice, also after a read with no response (Wrapper configuration;
+  time comes from the Wrapper's injected timers, never the shell). Either read
+  may settle the cancel, after which polling follows the round's status as
+  usual: it stops once the cancel is `ended`, `not-taken`, or `sent`, whatever
+  the status of the round's last Snapshot. Once the cancel is `ended`, the
+  Wrapper reads the Snapshot exactly once more, through the session's `read`
+  (the normal read, which passes `idle` on to the UI and the game), for the
+  current balance (W-33); it is never repeated for the round and restarts no
+  poll beyond what its answer calls for (an `idle` one calls for none). A final
+  state (W-44: the session ended, another tab) is kept: that read's answer never
+  replaces one, and the session's end that answers it is shown.
 - **W-36.** Idempotency. Each player intent (start, a move, cash-out, cancel)
   gets one `idempotencyKey` (`crypto.randomUUID()`), reused for every retry of
   that intent and never for another.

@@ -3,28 +3,32 @@
 // out, the game's pick, and the game's mount, with the read-only state of the
 // current round. One start or cash-out at a time: a second while one is in
 // flight is refused `busy`, and a start while the held round is not over is
-// refused `round-exists`; neither sends anything. Every answer is a validated
-// Snapshot, a validated typed error, or a closed code; nothing here returns
-// the key, the token, a signature, or the transcript. It logs nothing.
+// refused `round-exists`; neither sends anything. While the round's required
+// cancel holds the round (`in-flight`, `settling`, `check-later`; W-25), the
+// round is open and the session's reads are the cancel's own (W-35;
+// session-reads.ts). Every answer is a validated Snapshot, a validated typed
+// error, or a closed code; nothing here returns the key, the token, a
+// signature, or the transcript. It logs nothing.
 
-import {
-  NetworkError,
-  ProblemError,
-  ProtocolError,
-  type RandomUuid,
-} from "@intraverse/se-client-play-client";
-import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
+import type { RandomUuid } from "@intraverse/se-client-play-client";
 
 import {
   type ControllerBridge,
   createControllerBridge,
   type PickUseCase,
 } from "./controller-bridge.ts";
-import { ShellError } from "./errors.ts";
 import { createPickUseCase } from "./pick-use-case.ts";
 import { redacting } from "./redaction.ts";
 import type { RoundFlow, RoundFlowOptions } from "./round-flow.ts";
 import { type Bet, startRoundFlow } from "./round-start.ts";
+import {
+  beforeOf,
+  createSessionReads,
+  ENDED,
+  FRESH,
+  readOfError,
+  refused,
+} from "./session-reads.ts";
 import type {
   GameMount,
   GameMountOptions,
@@ -32,7 +36,7 @@ import type {
   RoundState,
   SessionRead,
 } from "./session-types.ts";
-import { createSnapshotReader, snapshotReadOfError } from "./snapshot-read.ts";
+import { createSnapshotReader } from "./snapshot-read.ts";
 
 export type PlaySessionParts = {
   /** The round flows' options: the signing session, transport, token, checks. */
@@ -54,28 +58,6 @@ export type PlaySessionHandle = {
   readonly notifyEnd: () => void;
 };
 
-const ENDED: SessionRead = Object.freeze({ kind: "session-ended" });
-const REJECTED: SessionRead = Object.freeze({ kind: "rejected" });
-
-const refused = (
-  reason: Extract<SessionRead, { readonly kind: "refused" }>["reason"],
-): SessionRead => Object.freeze({ kind: "refused", reason });
-
-/** A failure the round flow kept, as the UI's read (W-42, W-43). */
-const readOfError = (error: Error): SessionRead => {
-  if (error instanceof ShellError) {
-    return error.code === "snapshot-rejected" ? REJECTED : refused(error.code);
-  }
-  if (
-    error instanceof NetworkError ||
-    error instanceof ProblemError ||
-    error instanceof ProtocolError
-  ) {
-    return snapshotReadOfError(error);
-  }
-  return REJECTED;
-};
-
 export const createPlaySession = (
   parts: PlaySessionParts,
 ): PlaySessionHandle => {
@@ -86,8 +68,6 @@ export const createPlaySession = (
   let bridge: ControllerBridge | undefined;
   // A start or a cash-out in flight: a second one is refused, never sent.
   let acting = false;
-  // The latest validated Snapshot the session saw, of any round.
-  let shown: ValidSnapshot | undefined;
   const gameOrigins: readonly string[] = Object.freeze([...parts.gameOrigins]);
   const { ownOrigin } = parts;
 
@@ -95,36 +75,12 @@ export const createPlaySession = (
     transport: flowOptions.transport,
     authorization: flowOptions.authorization,
   });
-
-  /** Lets the current round's checks, and the game, see a validated Snapshot. */
-  const see = async (snapshot: ValidSnapshot): Promise<void> => {
-    shown = snapshot;
-    if (current !== undefined && snapshot.roundId === current.roundId) {
-      await current.observe(snapshot);
-    }
-    bridge?.sendSnapshot(snapshot);
-  };
-
-  const read = async (): Promise<SessionRead> => {
-    if (ended()) return ENDED;
-    const outcome = await reader.read();
-    if (outcome.kind === "snapshot") await see(outcome.snapshot);
-    if (outcome.kind === "problem" && outcome.problem.snapshot !== undefined) {
-      await see(outcome.problem.snapshot);
-    }
-    return ended() ? ENDED : outcome;
-  };
-
-  /** An action's answer: its new failure, or the round's latest Snapshot. */
-  const settle = (flow: RoundFlow, before: Error | undefined): SessionRead => {
-    if (ended()) return ENDED;
-    const error = flow.lastError();
-    if (error !== undefined && error !== before) return readOfError(error);
-    const snapshot = flow.latest();
-    shown = snapshot;
-    bridge?.sendSnapshot(snapshot);
-    return Object.freeze({ kind: "snapshot", snapshot });
-  };
+  const { see, settle, read, holdsOpenRound } = createSessionReads({
+    reader,
+    current: () => current,
+    bridge: () => bridge,
+    ended,
+  });
 
   /**
    * Runs one start or cash-out at a time: while one is in flight, another is
@@ -142,16 +98,6 @@ export const createPlaySession = (
     }
   };
 
-  /**
-   * Whether the round the shell holds is still open: its latest Snapshot is not
-   * over, and the latest Snapshot the session saw is of that round (a read that
-   * shows `idle` or another round lets a new round start).
-   */
-  const holdsOpenRound = (): boolean =>
-    current !== undefined &&
-    !current.over() &&
-    shown?.roundId === current.roundId;
-
   const startOnce = async (bet: Bet): Promise<SessionRead> => {
     // A new round beside the open one the shell holds is never started.
     if (holdsOpenRound()) return refused("round-exists");
@@ -160,9 +106,15 @@ export const createPlaySession = (
         ...flowOptions,
         randomUuid: parts.randomUuid,
         bet,
+        // The round is the session's before its first Snapshot is read, so a
+        // read during the cancel that Snapshot requires is held (W-25).
+        onFlow: started => {
+          current = started;
+        },
       });
-      current = flow;
-      return settle(flow, undefined);
+      // A cancel the round's first Snapshot required is part of the start: once
+      // its reads decide it, the start answers with the round (W-25).
+      return settle(flow, FRESH);
     } catch (error) {
       if (ended()) return ENDED;
       if (!(error instanceof Error)) throw error;
@@ -185,7 +137,7 @@ export const createPlaySession = (
   const cashOutOnce = async (): Promise<SessionRead> => {
     const flow = current;
     if (flow === undefined) return refused("not_active");
-    const before = flow.lastError();
+    const before = beforeOf(flow);
     const outcome = await flow.cashOut();
     return outcome.accepted ? settle(flow, before) : refused(outcome.reason);
   };
@@ -198,7 +150,7 @@ export const createPlaySession = (
   // reaches the UI through `onChange`.
   const pick: PickUseCase = async value => {
     const flow = current;
-    const before = flow?.lastError();
+    const before = beforeOf(flow);
     const outcome = await flowPick(value);
     if (outcome.accepted && flow !== undefined) {
       const answer = settle(flow, before);
@@ -217,6 +169,7 @@ export const createPlaySession = (
       ...(verdict.state === "failed" ? { shown: verdict.shown } : {}),
       outOfSync: flow.phase() === "out-of-sync",
       cashOutOffered: flow.cashOutOffered(),
+      cancel: flow.cancel(),
     });
   };
 
@@ -252,6 +205,8 @@ export const createPlaySession = (
 
   const session: PlaySession = redacting({
     read,
+    // From `check-later`, `read` is the cancel's "check again" read (W-35).
+    checkAgain: read,
     start,
     cashOut,
     round,

@@ -71,6 +71,7 @@ describe("the Snapshot poller (W-35)", () => {
   it("has the spec's default rates", () => {
     expect(DEFAULT_POLL_CONFIG.initialDelayMs).toBe(500);
     expect(DEFAULT_POLL_CONFIG.slowDelayMs).toBe(2_000);
+    expect(DEFAULT_POLL_CONFIG.checkLaterDelayMs).toBe(30_000);
   });
 
   it("backs off from 500 ms to 2 s while starting", async () => {
@@ -206,4 +207,56 @@ describe("the Snapshot poller (W-35)", () => {
     expect(results).toEqual([]);
     expect(timers.pendingDelays()).toEqual([]);
   });
+});
+
+describe("the Snapshot poller with the shell's cancel (W-25, W-35)", () => {
+  it("polls while the cancel is settling, even at active, with the backoff", async () => {
+    const h = harness();
+    h.poller.follow({ status: "active" }, "settling");
+    await h.step(4_000);
+    expect(h.reads.slice(0, 3)).toEqual([500, 1_500, 3_500]);
+    expect(h.poller.running()).toBe(true);
+  });
+
+  it("does not poll an active round without a settling cancel", async () => {
+    const h = harness();
+    h.poller.follow({ status: "active" });
+    h.poller.follow({ status: "active" }, "in-flight");
+    await h.step(10_000);
+    expect(h.reads).toEqual([]);
+    expect(h.poller.running()).toBe(false);
+  });
+
+  it("in check-later reads once every 30 s, with no notice, also after no response", async () => {
+    const h = harness();
+    h.answers.splice(0, 1, { kind: "network" });
+    h.poller.follow({ status: "resolving" }, "check-later");
+    await h.step(95_000);
+    expect(h.reads).toEqual([30_000, 60_000, 90_000]);
+    expect(h.slow).toEqual([]);
+  });
+
+  it("goes from the fast poll to the background read when check-later follows", async () => {
+    const h = harness();
+    h.poller.follow({ status: "active" }, "settling");
+    await h.step(2_000);
+    expect(h.reads).toEqual([500, 1_500]);
+    h.poller.follow({ status: "active" }, "check-later");
+    await h.step(40_000);
+    expect(h.reads).toEqual([500, 1_500, 32_000]);
+  });
+
+  it.each(["ended", "not-taken", "sent"] as const)(
+    "stops once the cancel is %s, also at resolving",
+    async cancel => {
+      const h = harness();
+      h.poller.follow({ status: "resolving" }, "settling");
+      await h.step(1_000);
+      h.poller.follow({ status: "resolving" }, cancel);
+      const reads = h.reads.length;
+      await h.step(10_000);
+      expect(h.reads).toHaveLength(reads);
+      expect(h.poller.running()).toBe(false);
+    },
+  );
 });
