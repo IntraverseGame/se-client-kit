@@ -328,12 +328,47 @@ development-only, so it may import the test-only entry of `contracts`.
   `SE_E2E_BROWSER_CHANNEL=chrome` runs the Chromium project on an installed
   Chrome. It is a development-only option: CI does not use it and always runs
   Playwright's own Chromium.
-- **Telemetry**: the harness writes nothing but Playwright's own report. A
-  finding's detail, a refused URL or WebSocket, and the fake's record of
-  unexpected calls have every form of every known secret (the fake's launch code
-  and tokens, and the 32-byte draws) and anything secret-shaped replaced by
-  `[redacted]`; the fake keeps whether a request was authorized, never the
-  token.
+- **Browser starts**: every browser the suite starts, each worker's and any a
+  test launches of its own (`hermetic-workers.spec.ts` launches two per test),
+  starts through `startBrowser` (`e2e/tests/harness/browser-start.ts`),
+  development and CI alike. The worker's browser does so through
+  `e2e/tests/harness/worker-browser.ts`, which launches it with the project's
+  options as Playwright does; a remote browser (`connectOptions`) fails the
+  worker, and Playwright's dashboard bind is not made. A start is the launch and
+  the browser's first context, and each has 10 s.
+  - **One start at a time per user** on the machine, under a lock file created
+    exclusively in the temporary directory and named for the user's id
+    (`e2e/tests/harness/start-lock.ts`), removed when the start ends. A lock
+    whose holder process is gone is taken over at once, and one older than 60 s
+    whatever its holder; the takeover is not atomic, so two starts may overlap
+    once after a holder died, which is the failure the lock prevents and no
+    worse.
+  - **Why:** on macOS, an installed Google Chrome whose start overlaps another's
+    can deadlock for good (its main thread waits on RunningBoard for an App Nap
+    assertion) and never answer, so a longer timeout does not help. A start the
+    lock does not see (another Chrome on the machine) can still set it off.
+  - **A start that runs out of time has deadlocked:** the process group of the
+    browser it launched is killed with SIGKILL, one line on stderr says so, and
+    exactly one new browser is started under the same hold of the lock. A second
+    timeout fails the start, saying so, and any other error fails it at once.
+    The group killed is found with `ps` (so every start needs `ps`, on macOS and
+    Linux): a child of the worker process that leads its own process group (as
+    Playwright starts every browser) and was not a child before the launch. The
+    listing and the signals run in one synchronous turn, and only the group is
+    signalled, never a bare process id, so no other process can be reached: a
+    child's id, and the group it leads, are not reused before the worker reaps
+    it, which cannot happen within that turn. A group already gone (ESRCH, or
+    EPERM for an unreaped one on macOS) is left.
+  - **This is not a retry of a test:** no test or assertion is ever run again,
+    the browser it runs on is a fresh one with the same options, and a start
+    that keeps failing still fails the test.
+- **Telemetry**: the harness writes nothing but Playwright's own report, the
+  start lock (a process id and a counter), and the one stderr line of a killed
+  start (which part timed out and after how long; nothing else). A finding's
+  detail, a refused URL or WebSocket, and the fake's record of unexpected calls
+  have every form of every known secret (the fake's launch code and tokens, and
+  the 32-byte draws) and anything secret-shaped replaced by `[redacted]`; the
+  fake keeps whether a request was authorized, never the token.
 
 **Where the preview-stack e2e runs.** The SuperEngine preview stack is private,
 so a public CI job cannot reach it without a credential. This repository owns

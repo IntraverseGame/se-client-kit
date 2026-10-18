@@ -8,6 +8,11 @@
 import type { Browser, BrowserType, Page, TestInfo } from "@playwright/test";
 
 import { BLOCK_HOST_RESOLUTION } from "./harness/browser-flags.ts";
+import {
+  launchedCommandLines,
+  startBrowser,
+  startedAlone,
+} from "./harness/browser-start.ts";
 import { expect, test } from "./harness/fixtures.ts";
 import { guardNetwork } from "./harness/hermetic.ts";
 import {
@@ -99,16 +104,25 @@ const OPENERS: readonly (readonly [string, Opener])[] = [
 
 type Launch = (args: readonly string[]) => Promise<Browser>;
 
+/**
+ * Each test here starts two browsers of its own besides the worker's, so it
+ * starts them through the start lock, as the worker's browser is: on macOS a
+ * Google Chrome whose start overlaps another's can hang for good
+ * (harness/browser-start.ts).
+ */
 const launcher =
   (
     playwright: { readonly chromium: BrowserType },
     channel: string | undefined,
   ): Launch =>
   args =>
-    playwright.chromium.launch({
-      args: [...args],
-      ...(channel === undefined ? {} : { channel }),
-    });
+    startBrowser(timeout =>
+      playwright.chromium.launch({
+        args: [...args],
+        timeout,
+        ...(channel === undefined ? {} : { channel }),
+      }),
+    );
 
 /**
  * Opens a socket from `open` in a fresh browser, with or without the block, and
@@ -172,9 +186,18 @@ const keptListener = (): {
 };
 
 test.describe("sockets outside the routes", () => {
-  test("the suite's browser runs with the host-resolution block", (// oxlint-disable-next-line no-empty-pattern -- Playwright needs the fixtures argument before testInfo
-  {}, testInfo) => {
+  test("the suite's browser runs with the host-resolution block", ({
+    browser,
+  }, testInfo) => {
     expect(projectArgs(testInfo)).toContain(BLOCK_HOST_RESOLUTION);
+    // The worker's browser itself, as launched: through the start lock, and
+    // with the block on its command line (no other browser is open here).
+    expect(startedAlone(browser)).toBe(true);
+    expect(
+      launchedCommandLines().filter(command =>
+        command.includes(BLOCK_HOST_RESOLUTION),
+      ),
+    ).toHaveLength(1);
   });
 
   for (const [where, open] of OPENERS) {

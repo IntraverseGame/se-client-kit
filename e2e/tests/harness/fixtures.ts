@@ -1,12 +1,11 @@
-// The suite's `test`: Playwright's, extended with the fixtures every e2e test
+// The suite's `test`: Playwright's (its worker browser started through the
+// start lock, worker-browser.ts), extended with the fixtures every e2e test
 // stands on. Automatic for every test: the hermetic guard (no request leaves
 // the fake origins), the static origins (the Wrapper's release bundle, the
 // suite's test pages, and the reference game at D), and the seeded
 // `crypto.getRandomValues`. On request: the fake Play API, the secret scan,
 // and the network control. The accessibility audit is a plain function
 // (accessibility.ts).
-
-import { test as base, expect } from "@playwright/test";
 
 import { createFakePlayApi } from "./fake-play-api.ts";
 import type { FakePlayApi } from "./fake-play-types.ts";
@@ -21,6 +20,7 @@ import {
 } from "./random-stub.ts";
 import { startSecretScan, type SecretScan } from "./secret-scan.ts";
 import { serveOrigins } from "./serve-origins.ts";
+import { test as base, expect } from "./worker-browser.ts";
 
 type Options = {
   /** Where the fake Play API is served; the configuration's `playApiBaseUrl`. */
