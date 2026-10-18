@@ -39,9 +39,10 @@ import { ShellError } from "./errors.ts";
 import type { DeliveryOptions, RoundDelivery } from "./round-delivery.ts";
 import {
   isCallError,
-  isLostOrUnavailable,
   isRefusal,
+  isUnavailable,
   type Sent,
+  isUnknownOutcome,
   signedBody,
   snapshotOf,
 } from "./round-request.ts";
@@ -216,10 +217,11 @@ export const createRoundCancel = (
       if (!isCallError(error)) throw error;
       delivery.fail(error);
       if (error instanceof ProblemError) refusals.push(refusalOf(error));
-      const unknown = isLostOrUnavailable(error);
-      // A 400 (or another problem that is not retryable but a 422) refused it
-      // for good; anything else may have left the cancel stored.
-      const refused = !unknown && isRefusal(error) && !isRepeat(error);
+      // W-16's one lost send (W-42). A 422, or a 503 even `retryable: false`,
+      // may have stored it: the reads decide.
+      const unknown = isUnknownOutcome(error);
+      const stored = isRepeat(error) || isUnavailable(error);
+      const refused = !unknown && isRefusal(error) && !stored;
       // Still `in-flight`: the read below is the cancel's own.
       const read = await delivery.fetch();
       if (read !== undefined && unsettled(read)) {

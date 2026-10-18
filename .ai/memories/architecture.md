@@ -135,9 +135,21 @@ structure below.
   moved to a read-decided state answers with the round, not the cancel call's
   failure (`lastError` is never cleared: compare it by identity and compare the
   cancel state). `RoundState.cancel` carries the state to the UI. A
-  re-issue stops every new signature while a W-16 resend still goes out; any
-  other failed verdict puts the transcript state in `failed`. A pick needs both
-  a `ready` verdict and an `open` or `adopted` state: keep both guards.
+  re-issue stops every new signature while a W-16 resend still goes out. A
+  move or cash-out whose send had an unknown outcome (no answer, or a 503 not
+  marked `retryable: false`) is resent once, from the flow's `observe`, when a
+  read shows the round `active` at the step before it (`round-flow.ts`,
+  `resendLost`; human review, 2026-10-18): the recorded body, never re-signed,
+  also after a re-issue (unlike the cancel). The once-only state is the
+  delivery's (`resendOnce`), shared with the manual `resend`: never a third
+  send. `isUnknownOutcome` is the one definition of a lost send for every
+  action, the cancel included. The backend recognises a repeat by its signed
+  action (sequence and bytes) in the round's action log, not by the key (still
+  sent, not stored yet). Only the newest read by `version` triggers the resend.
+  A cancel 503 `retryable: false` earns no resend but keeps the reads going
+  (it may be stored). Any other failed verdict puts the transcript state
+  in `failed`. A pick needs both a `ready` verdict and an `open` or `adopted`
+  state: keep both guards.
   `createSnapshotReader` is built only by the shell or the Wrapper's
   composition root; only the reader object reaches the UI.
   The `typedData` the flows send is `signing`'s `encodeTypedData` in base64

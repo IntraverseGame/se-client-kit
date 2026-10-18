@@ -1,8 +1,12 @@
-// T-4 (W-16, W-25): after a lost response or a 503 to the required cancel, the
+// T-4 (W-16, W-25): after a lost send of the required cancel (no answer, or a
+// 503 not marked `retryable: false`, the one definition for every action), the
 // shell reads the Snapshot and sends the same signed cancel again, once, only
 // when the round is still `active` with no move. It never signs a second
-// cancel and never sends a third time.
+// cancel and never sends a third time. A 503 marked `retryable: false` earns
+// no resend, but may come with the cancel stored: the reads decide, and a
+// failed read leaves it `settling`.
 
+import { ProtocolError } from "@intraverse/se-client-play-client";
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 import { describe, expect, it } from "vitest";
 
@@ -20,7 +24,13 @@ import type { RoundFlow } from "./round-flow.ts";
 
 const UNKNOWN: readonly (readonly [string, Responder])[] = [
   ["a lost response", lost],
-  ["a 503", problem(503, "UNAVAILABLE", true)],
+  ["a 503 marked retryable: true", problem(503, "UNAVAILABLE", true)],
+  [
+    "a 503 with no problem body",
+    request => {
+      throw new ProtocolError(request, 503, "unexpected response");
+    },
+  ],
 ];
 
 /** Starts a round whose tip check failed, so its cancel is required. */
@@ -111,4 +121,23 @@ describe.each(UNKNOWN)("after %s to the cancel (W-25)", (_, unknown) => {
     expect(setup.play.sent("cancelRound")).toHaveLength(1);
     expect(flow.evidence().signed).toHaveLength(1);
   });
+});
+
+describe("after a 503 marked retryable: false to the cancel (W-25, W-42)", () => {
+  it.each<[string, (setup: FlowSetup) => Responder, string]>([
+    ["active", s => ok(s.at(0)), "not-taken"],
+    ["canceled", s => ok(s.closed("canceled", 0)), "sent"],
+    ["unread (the read lost)", () => lost, "settling"],
+  ])(
+    "sends nothing more, and a read that shows the round %s decides it",
+    async (_, read, decided) => {
+      const { setup, flow } = await cancelRound(s => {
+        s.play.answer("cancelRound", problem(503, "UNAVAILABLE", false));
+        s.play.answer("getSnapshot", read(s));
+      });
+      expect(setup.play.sent("cancelRound")).toHaveLength(1);
+      expect(flow.cancel()).toBe(decided);
+      expect(flow.evidence().signed).toHaveLength(1);
+    },
+  );
 });

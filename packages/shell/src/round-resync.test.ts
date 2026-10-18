@@ -178,11 +178,15 @@ describe("a re-issue (T-8, W-26)", () => {
     const { setup, flow } = await started({ steps: THREE_STEPS });
     setup.play.answer("continueRound", lost, ok(setup.reissued()));
     await flow.pick({ step: 0, option: 1 });
+    // The re-issued read shows the lost move not applied: its one resend goes
+    // out at once (W-16, decided in human review, 2026-10-18).
     await flow.observe(setup.reissued());
     expect(flow.phase()).toBe("reissued");
-    expect(await flow.resend()).toEqual(ACCEPTED);
     const [first, again] = setup.play.sent("continueRound");
     expect(bodyOf(again)).toEqual(bodyOf(first));
+    // That was the one resend: never a third send (W-16).
+    expect(await flow.resend()).toEqual(NOT_ACTIVE);
+    expect(setup.play.sent("continueRound")).toHaveLength(2);
     expect(flow.evidence().signed).toHaveLength(1);
   });
 });

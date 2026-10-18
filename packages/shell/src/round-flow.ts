@@ -4,9 +4,12 @@
 // (W-25, W-26), and the player actions (W-23, W-24). The flow signs nothing
 // until the verdict is `ready`, except the one `PlayerCancel` the verdict
 // requires; a re-issue stops every new signature while a W-16 resend still goes
-// out (W-26). From signing that cancel until it settles (`resolving` is not
-// final), the round's Snapshots reach the tracking only through the cancel's
-// own answer and reads (W-25).
+// out (W-26). A move or a cash-out whose send had an unknown outcome is sent
+// again, once, with its recorded bytes and key, when a later read of the round
+// shows it not applied (W-16; decided in human review, 2026-10-18). From
+// signing that cancel until it settles (`resolving` is not final), the round's
+// Snapshots reach the tracking only through the cancel's own answer and reads
+// (W-25).
 //
 // The flow emits no log, metric, or event. What it keeps (the round's
 // evidence: the `CreateRoundAuth` objects, the tip-check record, and every
@@ -138,11 +141,51 @@ export const createRoundFlow = (
       signer.fail();
     }
   };
+  // The highest `version` of the round's Snapshots read so far: a late, older
+  // read never decides a resend (W-16's "a later read").
+  let newest = -1;
+
+  // W-16's one resend of a lost move or cash-out (decided in human review,
+  // 2026-10-18): its last send was lost (no answer, or a 503 not marked
+  // `retryable: false`), and this read, the newest of the round, shows it
+  // `active` at the step before the action, which is still pending (not
+  // applied) and resendable (not after W-19's hold, a failed check, an
+  // out-of-sync read, or the session's end; a re-issue still allows it, W-26).
+  // The recorded body goes out again, the same bytes and idempotency key,
+  // never re-signed, and only once (`resendOnce`): when that send fails too,
+  // the action stays pending and the round ends by its expiry rule. A cancel
+  // is never resent here (`resendable` never gives one; W-25 has its own).
+  // Belt and braces: the step check repeats what `resendable` and the newest
+  // read already imply (an applied or out-of-sync step leaves nothing
+  // resendable), as `lost` being cleared on an answer repeats `resendOnce`.
+  const resendLost = async (snapshot: ValidSnapshot): Promise<void> => {
+    const action = delivery.lost();
+    const sent = delivery.lastSent();
+    if (
+      action === undefined ||
+      delivery.resent(action) ||
+      delivery.busy() ||
+      sent?.action !== action ||
+      tracking.signer()?.resendable() !== action ||
+      snapshot.roundId !== round.roundId ||
+      snapshot.version < newest ||
+      snapshot.status !== "active" ||
+      snapshot.step !== action.message.sequence - 1
+    ) {
+      return;
+    }
+    await delivery.resendOnce(sent);
+  };
+
   // The cancel's gate comes before the tracking: while it settles, no
   // Snapshot of the round from elsewhere (a stale read included) is read in.
   const observe = async (snapshot: ValidSnapshot): Promise<void> => {
     if (cancel.holds(snapshot)) return;
+    if (snapshot.status !== "idle" && snapshot.roundId === round.roundId) {
+      newest = Math.max(newest, snapshot.version);
+    }
     await intoRound(snapshot);
+    await resendLost(snapshot);
   };
   host.observe = observe;
 

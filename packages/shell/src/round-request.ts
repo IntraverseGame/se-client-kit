@@ -68,10 +68,28 @@ const RESYNC: ReadonlySet<string> = new Set([
 export const asksResync = (error: unknown): boolean =>
   error instanceof ProblemError && RESYNC.has(error.problem.code);
 
-/** No response, or a 503: the outcome of the call is unknown (W-43). */
-export const isLostOrUnavailable = (error: unknown): boolean =>
+/**
+ * The outcome of a signed action's call (a move, a cash-out, or the cancel) is
+ * unknown, so its one resend may follow (W-16, W-25): no response, or a 503 the
+ * server did not mark `retryable: false` (a problem that says `retryable:
+ * true`, or a 503 with no problem body, which carries no `retryable` at all). A
+ * 503 marked `retryable: false` is not an unknown outcome (no resend), as W-42
+ * reads `retryable`; the cancel still reads after it (W-25; decided in human
+ * review, 2026-10-18).
+ */
+export const isUnknownOutcome = (error: unknown): boolean =>
   error instanceof NetworkError ||
-  (error instanceof ProblemError && error.problem.status === 503);
+  (error instanceof ProblemError &&
+    error.problem.status === 503 &&
+    error.problem.retryable) ||
+  (error instanceof ProtocolError && error.status === 503);
+
+/**
+ * A 503 problem, whatever its `retryable`: for the cancel, never proof of a
+ * refusal (it may come with the cancel stored; human review, 2026-10-18).
+ */
+export const isUnavailable = (error: unknown): boolean =>
+  error instanceof ProblemError && error.problem.status === 503;
 
 /** A problem that refuses the call for good (not retryable). */
 export const isRefusal = (error: unknown): boolean =>
