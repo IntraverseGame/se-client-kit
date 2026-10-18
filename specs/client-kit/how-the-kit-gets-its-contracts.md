@@ -80,6 +80,23 @@ Rules:
    served, a Snapshot read that keeps showing the session's most recent round
    after it ended; the kit relies on nothing planned.
 
+   **The payout** (the Snapshot schema, the Play API document, and the `payout`
+   vectors, synced from se-backend `f8cc92b`): an additive change, a new
+   optional top-level `payout`, an `Amount` computed by the server and never
+   pending, that says what the finished round credited the player. The schema
+   allows it on `won` and `lost` only, 0 included (`valid/coinflip-won-payout`,
+   `valid/coinflip-lost-payout-zero`), and rejects it on `idle`, `starting`,
+   `active`, `resolving`, and `canceled` (`invalid/payout-on-*`); the server
+   always sends it on `won` and `lost`, but the schema keeps it optional. It is
+   always what the round paid: a `lost` round that its time limit closed after a
+   cash-out above 0 but below the bet has that credit as `payout` and the last
+   multiplier it survived as `currentMultiplier`
+   (`valid/steps-lost-expired-payout`); every other `lost` round has `payout` 0.
+   The kit takes it as the schema gives it: the shell does not forward it to the
+   game (W-38), and the Wrapper does not show it yet (the
+   `TODO(Snapshot contract)` under W-31 in
+   [Rendering from the Snapshot](../wrapper/rendering-from-the-snapshot.md)).
+
    **One pre-release exception** (decided with
    [OQ-7](../wrapper.md#decided-questions); nothing had shipped against the old
    shape): `se.snapshot/1` made `proofs.createRoundAuth` required on a config

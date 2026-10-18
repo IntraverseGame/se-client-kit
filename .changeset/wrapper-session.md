@@ -16,7 +16,7 @@ it, and a second start or cash-out click while one is in flight does nothing
 game iframe is mounted, sandboxed and titled, on the session's game origin D
 (the redeem answer's `gameOrigin`) with `?parentOrigin=<the Wrapper's origin>`
 only once the shell's bridge accepted D. No payout amount is shown on `won`
-until the Snapshot carries one. The tip check's JSON-RPC
+yet. The tip check's JSON-RPC
 transport is added. Operator embedding, the W-49 minimum: a framed Wrapper
 opens no session unless `location.ancestorOrigins` exists and every entry is on
 `operatorOrigins` (a masked entry refuses); without that list (Firefox) it

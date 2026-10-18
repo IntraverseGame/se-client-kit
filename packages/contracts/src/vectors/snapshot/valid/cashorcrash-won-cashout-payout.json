@@ -1,0 +1,166 @@
+{
+  "vector": "snapshot/valid/cashorcrash-won-cashout-payout",
+  "description": "Cash or Crash, cashed out after row 1 on a 1.00 EUR bet: payout 1.45 EUR (floor(100 x 1.455) base units); whole board revealed.",
+  "definition": "Snapshot",
+  "expected": "valid",
+  "input": {
+    "schema": "se.snapshot/1",
+    "version": 5,
+    "presentation": "steps",
+    "model": "config",
+    "context": {
+      "sessionId": "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N",
+      "language": "de",
+      "country": "DE",
+      "device": "mobile",
+      "links": {
+        "lobby": "https://luckybet.example.com/lobby",
+        "deposit": "https://luckybet.example.com/cashier"
+      },
+      "theme": {
+        "appearance": "dark"
+      },
+      "view": {
+        "playerName": "Kai",
+        "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png"
+      }
+    },
+    "status": "won",
+    "roundId": "01927c5e-8b3a-7f21-9c4d-5e6f7a8b9c0d",
+    "bet": {
+      "balance": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "minBet": {
+        "value": "10",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 0.1,
+        "formatted": "€0.10"
+      },
+      "maxBet": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "suggestedBets": [
+        {
+          "value": "100",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 1.0,
+          "formatted": "€1.00"
+        },
+        {
+          "value": "500",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 5.0,
+          "formatted": "€5.00"
+        },
+        {
+          "value": "1000",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 10.0,
+          "formatted": "€10.00"
+        }
+      ],
+      "defaultBet": {
+        "value": "100",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 1.0,
+        "formatted": "€1.00"
+      }
+    },
+    "step": 1,
+    "currentMultiplier": 1.455,
+    "proofs": {
+      "randomnessProof": {
+        "source": "ethereum:block",
+        "blockNumber": 21000123,
+        "roundSecretHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "blockValue": "0x3333333333333333333333333333333333333333333333333333333333333333",
+        "blockExplorerUrl": "https://explorer.example.com/block/21000123",
+        "roundSecret": "0x4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "createRoundAuth": {
+        "newRound": {
+          "roundId": "0x01927c5e8b3a7f219c4d5e6f7a8b9c0d00000000000000000000000000000000",
+          "playerRef": "0x224b3963a9d633c8a70f3531142532fa45ac05555b3ec98d7972080d07e7433d",
+          "currency": "EUR",
+          "betAmount": "100",
+          "gameId": 2,
+          "gameVersion": 1,
+          "circuitVersion": 0,
+          "roundSecretHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+          "randomnessTarget": "0xf8438024e074642bb4ed5ddb8c1d6e2884a471ede3e80e1751b3058045412ebd",
+          "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+          "payoutTermsHash": "0x7777777777777777777777777777777777777777777777777777777777777777"
+        },
+        "entropyChainId": 1,
+        "prepareWindow": 120,
+        "expiry": "1800000600",
+        "domain": {
+          "name": "SuperEngine",
+          "version": "1",
+          "chainId": 31337,
+          "verifyingContract": "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+        },
+        "signer": "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc",
+        "signature": "0xe8391b39bec8e5d548030c1c11ed7ae9f05c103ca7193f1554bbc94845d9285038826b28c5e14419fe72dc83cc8564c8e44eb1251adca6bc9ee6efff5dedbdcd1c"
+      },
+      "fairnessProof": {
+        "seedHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "zkProof": {
+          "status": "pending"
+        },
+        "seed": "0x5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "record": {
+        "chainId": 8453,
+        "roundId": "0x01927c5e8b3a7f219c4d5e6f7a8b9c0d00000000000000000000000000000000",
+        "txHash": "0x9999999999999999999999999999999999999999999999999999999999999999",
+        "explorerUrl": "https://explorer.example.com/tx/0x9999999999999999999999999999999999999999999999999999999999999999"
+      }
+    },
+    "payout": {
+      "value": "145",
+      "decimals": 2,
+      "unit": "EUR",
+      "normalized": 1.45,
+      "formatted": "€1.45"
+    },
+    "config": {
+      "kind": "steps",
+      "steps": [
+        {
+          "index": 0,
+          "optionCount": 3,
+          "multiplier": 1.455,
+          "selectedIndex": 2,
+          "losingIndex": 1
+        },
+        {
+          "index": 1,
+          "optionCount": 3,
+          "multiplier": 2.182,
+          "losingIndex": 0
+        },
+        {
+          "index": 2,
+          "optionCount": 4,
+          "multiplier": 2.909,
+          "losingIndex": 3
+        }
+      ]
+    }
+  }
+}

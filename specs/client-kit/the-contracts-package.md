@@ -72,18 +72,20 @@ logic packages read it and never write to it.
   there, and a test fails while a generated type is neither exported nor
   deliberately left out. `Snapshot1` is left out: it is the generator's
   structural copy of `Snapshot`, which the schema refers to from
-  `PlayProblem.snapshot`. The Play API document's types are its three roots,
-  renamed on export: `PlayApiPaths` (by path and method), `PlayApiOperations`
-  (by `operationId`), and `PlayApiComponents` (its schemas and responses); its
-  empty `webhooks`, `$defs`, and `external` are left out. The generator appends
-  one more type, `operationRoutes` (exported as `PlayApiOperationRoutes`): each
-  operation's literal path and method by `operationId`, read from the generated
-  `paths`, since two operations of one shape (a move and a cash-out) are the
-  same type structurally and `paths` alone cannot tell them apart; a `paths`
-  member it cannot read fails the generation. The document embeds a copy of the
-  Snapshot schema's definitions, so `PlayApiComponents["schemas"]["Snapshot"]`
-  duplicates `Snapshot`; `play-client` never reads it (a Snapshot answer stays
-  `unknown`).
+  `PlayProblem.snapshot`; so is `Amount1`, its structural copy of `Amount` for
+  `Snapshot.payout` (a `$ref` with a description of its own, which the generator
+  emits as a type of its own). The Play API document's types are its three
+  roots, renamed on export: `PlayApiPaths` (by path and method),
+  `PlayApiOperations` (by `operationId`), and `PlayApiComponents` (its schemas
+  and responses); its empty `webhooks`, `$defs`, and `external` are left out.
+  The generator appends one more type, `operationRoutes` (exported as
+  `PlayApiOperationRoutes`): each operation's literal path and method by
+  `operationId`, read from the generated `paths`, since two operations of one
+  shape (a move and a cash-out) are the same type structurally and `paths` alone
+  cannot tell them apart; a `paths` member it cannot read fails the generation.
+  The document embeds a copy of the Snapshot schema's definitions, so
+  `PlayApiComponents["schemas"]["Snapshot"]` duplicates `Snapshot`;
+  `play-client` never reads it (a Snapshot answer stays `unknown`).
 - **Display numbers are not amounts.** The generated Snapshot types carry two
   JSON numbers from the contract: `Amount.normalized` and `Multiplier`, both
   display-only by the contract's own definition. They are never an input to

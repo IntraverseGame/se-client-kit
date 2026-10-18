@@ -5,15 +5,15 @@
       "path": "src/schemas/play.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "play/v1 OpenAPI document",
-      "sourceCommit": "b27afc588a84dc40518a681d112e8c23db3f3fbf",
-      "sha256": "6cac6f5ea279c779c4faf28af471226bd748f1904a00e4bfc53d3b4250167e52"
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "890615d613dd3f11ab8413728e3ae4a918b531327a8eec6fda84459a4e7fbb4c"
     },
     {
       "path": "src/schemas/se.snapshot.v1.schema.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 schema",
-      "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
-      "sha256": "67790ae1bff9b5e6984cacc1679b7e8ed5a97af2528d6a6cf929b45051323bd3"
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "16b2a8e79453126fd6e01faaf2ab1c4d89b95ac6322341799ca532f17f282458"
     },
     {
       "path": "src/vectors/signing.json",
@@ -345,6 +345,48 @@
       "sha256": "a31323539b1cb122927fdf5834222fed4a02df1ff5344edcb006e354e75b4180"
     },
     {
+      "path": "src/vectors/snapshot/invalid/payout-on-active.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/payout-on-active.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "9a39b73066bee1128556ab1bb06b135fcb5ba99157a69bfeb21bc18a16757291"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/payout-on-canceled.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/payout-on-canceled.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "e4f20f9c9fcd19a5c71d469ec331a559e64bdcde896dcc09a949a0c4a64631b7"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/payout-on-idle.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/payout-on-idle.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "704fb5990dc0f7ca51829224b09c61b0318e76e872a5827888b67eb30d1229a0"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/payout-on-resolving.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/payout-on-resolving.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "9c2754fc05ce1ce6e0b2c18e8ea6cce750f5e9cd343175ec690edde2714dc953"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/payout-on-starting.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/payout-on-starting.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "43bd1c921515a1d03879a4b3928b938978fb537efb16551266f5d5333ccb57d1"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/payout-value-number.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/payout-value-number.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "da7b644e655e24530c6bc159324df4d2a5306b2404a87c406aa30517a33ceb21"
+    },
+    {
       "path": "src/vectors/snapshot/invalid/presentation-config-mismatch.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 vectors/invalid/presentation-config-mismatch.json",
@@ -597,6 +639,13 @@
       "sha256": "68619bad17bfc2fb2d8b8c32187963ef7e03b2c883fe141229e8e5de321749cd"
     },
     {
+      "path": "src/vectors/snapshot/valid/book-playback-won-payout.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/book-playback-won-payout.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "1d8a4a8775315b78f3d7612519db9f8abe0260a18e3573f41f0a2ea34c6279b8"
+    },
+    {
       "path": "src/vectors/snapshot/valid/book-playback-won-placeholder.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 vectors/valid/book-playback-won-placeholder.json",
@@ -625,11 +674,25 @@
       "sha256": "4f5fac967c744c11f19393b871b451733886a6e7015302454787d1b6d2b07f2d"
     },
     {
+      "path": "src/vectors/snapshot/valid/cashorcrash-won-cashout-payout.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-won-cashout-payout.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "fd02eeda01916b878d1c7d402db0e8d212fbc3e4f9213fcde094dc61953b976e"
+    },
+    {
       "path": "src/vectors/snapshot/valid/cashorcrash-won-cashout.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-won-cashout.json",
       "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
       "sha256": "271641aac855d7de441edcfbcb86a1d223e9c7be2b5c1af69ace9385b49be47c"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-won-expired-payout.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-won-expired-payout.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "c0756f512e7a8ccfc6855df588aa28edc5585292627086344b63cc77618c0ee3"
     },
     {
       "path": "src/vectors/snapshot/valid/cashorcrash-won-expired.json",
@@ -702,6 +765,13 @@
       "sha256": "e2f088b098c8cdf0acd6468b57eaa30f69c8ca3cf993e6265c6413c8ff965537"
     },
     {
+      "path": "src/vectors/snapshot/valid/coinflip-lost-payout-zero.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-lost-payout-zero.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "1adea62d5b26c2f469393d277d8db674cc1a6ca8a77bfe95ae41e22ee7a02bbf"
+    },
+    {
       "path": "src/vectors/snapshot/valid/coinflip-lost.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 vectors/valid/coinflip-lost.json",
@@ -749,6 +819,13 @@
       "sourceName": "se.snapshot/1 vectors/valid/coinflip-starting.json",
       "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
       "sha256": "ba2ec3047e75994b8c10f7aa0bdba5725bcdd45b9ea2b6e2390bea7ba4a1b6a8"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-won-payout.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-won-payout.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "5b0433b2c297e8ca554efb0d558aac21e4ef3295d65364320e7e67c54f1fb4c3"
     },
     {
       "path": "src/vectors/snapshot/valid/coinflip-won-proofs-verified.json",
@@ -819,6 +896,13 @@
       "sourceName": "se.snapshot/1 vectors/valid/problem-round-active.json",
       "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
       "sha256": "d46f5d7ead17bacf23cd37d351319ac541f938716420f4a3628e6ebe6da73c6d"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/steps-lost-expired-payout.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/steps-lost-expired-payout.json",
+      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
+      "sha256": "b883202575dc4ec8df3c32bbfcc13fc344f39d2c53a65ce624a12b1f6f289a81"
     }
   ]
 }

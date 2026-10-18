@@ -36,6 +36,7 @@ const KEYS = [
   "step",
   "currentMultiplier",
   "bankedAmount",
+  "payout",
   "config",
   "proofs",
   "kind",

@@ -31,6 +31,7 @@ bet: BetContext
 step?: number
 currentMultiplier?: Multiplier
 bankedAmount?: Amount
+payout?: Amount1
 config: GameConfig
 proofs?: FairnessContext
 }
@@ -115,6 +116,7 @@ bet: BetContext
 step?: number
 currentMultiplier?: Multiplier
 bankedAmount?: Amount
+payout?: Amount1
 config: GameConfig
 proofs?: FairnessContext
 }
@@ -165,6 +167,19 @@ suggestedBets: []|[Amount]|[Amount, Amount]|[Amount, Amount, Amount]|[Amount, Am
 defaultBet: Amount
 }
 export type Amount = {
+value: BaseUnits
+decimals: number
+unit: Unit
+/**
+ * Display-only number. Never used for money math.
+ */
+normalized: number
+formatted: string
+}
+/**
+ * What the finished round credits the player, in base units: on won and lost only; 0 when nothing is credited. Computed by the server; never derived from a multiplier.
+ */
+export type Amount1 = {
 value: BaseUnits
 decimals: number
 unit: Unit
