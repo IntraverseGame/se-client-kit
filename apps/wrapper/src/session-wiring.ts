@@ -45,6 +45,7 @@ const checkOf = (round: RoundState): RoundCheck => ({
       : round.verdict,
   outOfSync: round.outOfSync,
   cashOutOffered: round.cashOutOffered,
+  cancel: round.cancel,
 });
 
 /** A session's answer, as the UI's read port gives it. */
@@ -170,8 +171,9 @@ const mountGame = (
 };
 
 /**
- * Connects an open session to the UI: its read port (polled per W-35), the
- * start, cash-out, and new-round intents, the answers of the game's picks, and
+ * Connects an open session to the UI: its read port (polled per W-35, also the
+ * background read of a cancel in `check-later`), the start, cash-out,
+ * new-round, and "check again" intents, the answers of the game's picks, and
  * the session's end (W-7). Then mounts the game.
  */
 export const wireSession = (
@@ -187,8 +189,8 @@ export const wireSession = (
     }
     app.accept(uiReadOf(session, read), cause);
   };
-  // One start or cash-out at a time: a click while one is in flight does
-  // nothing (the shell refuses a second one too).
+  // One start, cash-out, or "check again" at a time: a click while one is in
+  // flight does nothing (the shell refuses a second start or cash-out too).
   let acting = false;
   // A use case that rejects acted on nothing the UI can show: the generic error.
   const run = (call: () => Promise<SessionRead>): void => {
@@ -228,6 +230,9 @@ export const wireSession = (
       },
       newRound: (): void => {
         app.newRound();
+      },
+      checkAgain: (): void => {
+        run(() => session.checkAgain());
       },
     },
   });

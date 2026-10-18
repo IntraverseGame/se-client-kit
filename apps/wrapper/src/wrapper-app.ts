@@ -1,5 +1,6 @@
 // The Wrapper's UI controller: it holds `WrapperState`, renders it, and polls
-// the Snapshot while a round is `starting` or `resolving` (W-35). It reads the
+// the Snapshot while a round is `starting` or `resolving`, or while the shell's
+// cancel of the round is `settling` or `check-later` (W-35). It reads the
 // Snapshot only through the read port the session hands it, which returns a
 // validated Snapshot or typed error (W-28); it never sees a key or a token.
 //
@@ -10,7 +11,11 @@
 
 import type { EnvironmentConfig } from "./environment-config.ts";
 import { createView } from "./render.ts";
-import type { RoundProgress, SnapshotRead } from "./round-input.ts";
+import type {
+  CancelState,
+  RoundProgress,
+  SnapshotRead,
+} from "./round-input.ts";
 import { createSnapshotPoller, type PollConfig } from "./snapshot-poller.ts";
 import type { Timers } from "./timers.ts";
 import type { ChangeCause, Intents, ViewOptions } from "./view-options.ts";
@@ -20,6 +25,7 @@ import {
   type BlockingState,
   clearProblem,
   initialState,
+  isFinal,
   startNewRound,
   type WrapperState,
 } from "./wrapper-state.ts";
@@ -41,8 +47,14 @@ export type WrapperAppOptions = {
   readonly pollConfig?: PollConfig;
 };
 
-/** The player intents the session wires in (start, cash-out, new round). */
-export type RoundIntents = Pick<Intents, "start" | "cashOut" | "newRound">;
+/**
+ * The player intents the session wires in (start, cash-out, new round, and
+ * "check again").
+ */
+export type RoundIntents = Pick<
+  Intents,
+  "start" | "cashOut" | "newRound" | "checkAgain"
+>;
 
 export type WrapperApp = {
   /** Applies a validated environment configuration (W-26a, W-39). */
@@ -69,11 +81,30 @@ export type WrapperApp = {
   readonly dispose: () => void;
 };
 
-/** The round the poller follows, or none when nothing may be polled. */
-const polledRound = (state: WrapperState): RoundProgress | undefined =>
-  state.blocking === undefined && state.problem === undefined
-    ? state.snapshot
-    : undefined;
+/** What the poller follows: the shown round and the shell's cancel of it. */
+type Followed = {
+  readonly round: RoundProgress | undefined;
+  readonly cancel?: CancelState;
+};
+
+const NOTHING: Followed = Object.freeze({ round: undefined });
+
+/**
+ * The round the poller follows, or none when nothing may be polled. While the
+ * shell's cancel of the round is `settling` or `check-later`, its reads go on
+ * through the round's own failed state, a typed error, or a rejected read, none
+ * of which the player could retry (W-35: no cancel left unread); only a final
+ * state stops them.
+ */
+const followed = (state: WrapperState): Followed => {
+  const cancel = state.check?.cancel;
+  if (cancel === "settling" || cancel === "check-later") {
+    return isFinal(state) ? NOTHING : { round: state.snapshot, cancel };
+  }
+  return state.blocking === undefined && state.problem === undefined
+    ? { round: state.snapshot, ...(cancel === undefined ? {} : { cancel }) }
+    : NOTHING;
+};
 
 export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
   let state: WrapperState = {
@@ -83,6 +114,8 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
   let verifyBaseUrl: string | undefined;
   let readSnapshot: (() => Promise<SnapshotRead>) | undefined;
   let roundIntents: RoundIntents = {};
+  // The round whose `ended` cancel was followed by its one read (W-33).
+  let endedReadFor: string | undefined;
 
   // `apply`, `view`, and `poller` refer to each other; each is called only
   // after all three exist.
@@ -92,7 +125,37 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     }
     state = next;
     view.update(state, cause);
-    poller.follow(polledRound(state));
+    const { round, cancel } = followed(state);
+    poller.follow(round, cancel);
+    const ended =
+      state.check?.cancel === "ended" ? state.snapshot?.roundId : undefined;
+    if (ended !== undefined && ended !== endedReadFor) {
+      endedReadFor = ended;
+      void readAfterEnded();
+    }
+  };
+
+  /**
+   * Once the shell's cancel ended a round, the Snapshot is read once, through
+   * the session's read (W-33, W-35), so "round ended" shows the current
+   * balance: a Snapshot or the session's end is applied as usual; a failed read
+   * (no response, a typed error, a rejected answer) is dropped, and the round's
+   * last balance stays, with no error state. It is never repeated for the
+   * round. A final state (session ended, another tab) is kept: `acceptRead`
+   * never replaces one, and a round in one never shows its cancel `ended`.
+   */
+  const readAfterEnded = async (): Promise<void> => {
+    const port = readSnapshot;
+    if (port === undefined) return;
+    let read: SnapshotRead;
+    try {
+      read = await port();
+    } catch {
+      return;
+    }
+    if (read.kind === "snapshot" || read.kind === "session-ended") {
+      apply(acceptRead(state, read), "poll");
+    }
   };
 
   const readOnce = async (cause: ChangeCause): Promise<void> => {

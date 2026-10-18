@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-17 (Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-18 (shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -126,7 +126,15 @@ structure below.
   ("still resolving — contact support"). Cancel refusals go to the evidence.
   No new round while `in-flight`, `settling`, or `check-later`; `ended` does
   not block one. The rules change only with a vendored contract change
-  (W-25, W-35). A
+  (W-25, W-35). The session folds them in (`session-reads.ts`): the round
+  guard keys on the cancel state first (whatever the session read), a read
+  from elsewhere is replaced by the round's latest Snapshot for the UI, and not
+  sent to the game, while the cancel holds the round (the flow is the session's
+  round before its first observe, `startRoundFlow`'s `onFlow`), `read()` is the counted read while
+  `settling` and `checkAgain` from `check-later`, and an action whose cancel
+  moved to a read-decided state answers with the round, not the cancel call's
+  failure (`lastError` is never cleared: compare it by identity and compare the
+  cancel state). `RoundState.cancel` carries the state to the UI. A
   re-issue stops every new signature while a W-16 resend still goes out; any
   other failed verdict puts the transcript state in `failed`. A pick needs both
   a `ready` verdict and an `open` or `adopted` state: keep both guards.
@@ -213,8 +221,14 @@ structure below.
   environment configuration document (`environment-config.ts`, which reuses
   the shell's `validateChainConfig` for the chain part and both boot rules);
   `wrapper-app.ts` holds the UI state (`wrapper-state.ts`, pure transitions),
-  renders it (`render.ts` with `round-view.ts`, `state-views.ts`, `dom.ts`),
-  and polls (`snapshot-poller.ts`). `main.ts` takes the launch code first;
+  renders it (`render.ts` with `round-view.ts`, `state-views.ts`,
+  `cancel-views.ts`, `dom.ts`), and polls (`snapshot-poller.ts`). Whether a
+  round is over and how it is polled take the shell's cancel state
+  (`round-input.ts`: `roundEnded`, `pollModeOf`): `settling` polls fast at any
+  status and through the round's failed state, a typed error, or a rejected
+  read (only a final state stops it, `wrapper-app.ts` `followed`);
+  `check-later` reads every 30 s (`checkLaterDelayMs`) plus "check again";
+  `ended`, `not-taken`, and `sent` stop it. `main.ts` takes the launch code first;
   `boot.ts` opens the session once configured, and `session-wiring.ts` shows
   the opening, connects the session's read and intents, maps the shell's
   `RoundState` to the UI's `RoundCheck`, and mounts the game frame (sandboxed,

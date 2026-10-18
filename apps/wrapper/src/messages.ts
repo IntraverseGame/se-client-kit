@@ -14,9 +14,11 @@ export type MessageKey =
   | "status.won"
   | "status.lost"
   | "status.canceled"
+  | "status.ended"
   | "detail.starting"
   | "detail.resolving"
   | "detail.canceled"
+  | "detail.canceledUnverified"
   | "detail.expired"
   | "detail.verifying"
   | "label.balance"
@@ -31,6 +33,7 @@ export type MessageKey =
   | "action.cashOut"
   | "action.copyRoundId"
   | "action.retry"
+  | "action.checkAgain"
   | "action.verify"
   | "action.lobby"
   | "action.deposit"
@@ -55,6 +58,7 @@ export type MessageKey =
   | "state.verificationFailedDetail"
   | "state.outOfSync"
   | "state.outOfSyncDetail"
+  | "state.checkLater"
   | "state.rejected"
   | "state.rejectedDetail"
   | "error.heading"
@@ -85,9 +89,12 @@ const EN: Messages = {
   "status.won": "You won",
   "status.lost": "You lost",
   "status.canceled": "Round canceled",
+  "status.ended": "Round ended",
   "detail.starting": "The round is being prepared and checked.",
   "detail.resolving": "The result is being settled.",
   "detail.canceled": "Round canceled, your bet was returned.",
+  "detail.canceledUnverified":
+    "This round failed verification and was canceled.",
   "detail.expired": "The time limit ended this round.",
   "detail.verifying": "The round is being checked before you play.",
   "label.balance": "Balance",
@@ -102,6 +109,7 @@ const EN: Messages = {
   "action.cashOut": "Cash out",
   "action.copyRoundId": "Copy round ID",
   "action.retry": "Try again",
+  "action.checkAgain": "Check again",
   "action.verify": "Verify this round",
   "action.lobby": "Back to the lobby",
   "action.deposit": "Make a deposit",
@@ -133,6 +141,7 @@ const EN: Messages = {
   "state.outOfSync": "This round is out of sync",
   "state.outOfSyncDetail":
     "Nothing more is signed for this round. You can verify it.",
+  "state.checkLater": "Still resolving — contact support",
   "state.rejected": "The game state could not be read",
   "state.rejectedDetail": "Something went wrong. Nothing was signed.",
   "error.heading": "Something went wrong",

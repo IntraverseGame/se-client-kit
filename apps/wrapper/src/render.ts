@@ -22,7 +22,7 @@ import {
 } from "./dom.ts";
 import { icon } from "./icons.ts";
 import { type Localized, messagesFor } from "./messages.ts";
-import { roundIsOver } from "./round-input.ts";
+import { roundEnded } from "./round-input.ts";
 import { roundView } from "./round-view.ts";
 import {
   alertContent,
@@ -158,6 +158,12 @@ export const createView = (
     alert.toggleAttribute("data-empty", error === undefined);
 
     const showRound = state.blocking === undefined && snapshot !== undefined;
+    // The shell's cancel ended the round (W-33): "round ended" stays, with the
+    // balance of the read that followed (`idle`), until the player starts
+    // another round.
+    const cancelEnded =
+      state.check?.cancel === "ended" ||
+      (state.endedRound?.status === "ended" && snapshot?.status === "idle");
     section(
       status,
       JSON.stringify([
@@ -168,6 +174,9 @@ export const createView = (
         options.intents.start !== undefined,
         options.intents.cashOut !== undefined,
         options.intents.newRound !== undefined,
+        state.check?.cancel === "check-later",
+        options.intents.checkAgain !== undefined,
+        cancelEnded,
         state.blocking === "session-ended"
           ? (snapshot?.context.links?.lobby ?? null)
           : null,
@@ -181,8 +190,9 @@ export const createView = (
               snapshot,
               options.intents,
               state.check,
+              cancelEnded,
             )
-          : blockingView(el, doc, m, state),
+          : blockingView(el, doc, m, state, options.intents),
     );
 
     const endedRound = final ? undefined : state.endedRound;
@@ -219,7 +229,9 @@ export const createView = (
       const target =
         error !== undefined && alertChanged
           ? root.querySelector<HTMLElement>(`#${ALERT_HEADING_ID}`)
-          : snapshot !== undefined && roundIsOver(snapshot) && showRound
+          : snapshot !== undefined &&
+              roundEnded(snapshot, state.check?.cancel) &&
+              showRound
             ? statusHeadingElement
             : null;
       if (target instanceof HTMLElement) {

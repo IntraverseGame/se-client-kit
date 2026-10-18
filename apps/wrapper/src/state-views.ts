@@ -1,9 +1,11 @@
 // The states that replace the round (W-44) and the alert panel's errors
 // (W-41 to W-43): the session ended, another tab, the configuration error,
 // a rejected Snapshot, a failed verification, out of sync, a typed error with
-// its `requestId`, and the connection problem. The round id and the verify
-// link (W-39) are built here too.
+// its `requestId`, and the connection problem; beside a failed verification,
+// a cancel left to check later (W-33). The round id and the verify link
+// (W-39) are built here too.
 
+import { checkLaterView } from "./cancel-views.ts";
 import {
   ALERT_HEADING_ID,
   button,
@@ -16,7 +18,7 @@ import {
 } from "./dom.ts";
 import { type MessageKey, type Messages, problemMessage } from "./messages.ts";
 import { verifyUrlFor } from "./verify-link.ts";
-import type { ViewOptions } from "./view-options.ts";
+import type { Intents, ViewOptions } from "./view-options.ts";
 import type { WrapperState } from "./wrapper-state.ts";
 
 /** The non-error states that replace the round (W-44). */
@@ -25,6 +27,7 @@ export const blockingView = (
   doc: Document,
   m: Messages,
   state: WrapperState,
+  intents: Intents,
 ): Child[] => {
   switch (state.blocking) {
     case "loading": {
@@ -84,6 +87,12 @@ export const blockingView = (
         ),
         el("p", { class: "se-detail" }, [m["state.unsupportedDetail"]]),
       ];
+    }
+    case "verification-failed":
+    case "chain-unverified": {
+      return state.check?.cancel === "check-later"
+        ? checkLaterView(el, doc, m, intents)
+        : [];
     }
     default: {
       return [];

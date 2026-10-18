@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-17 (Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-18 (shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -191,6 +191,29 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   as final, `idle` as `ended`, another round, `active` as `not-taken`, the
   reads after each kind of failed call, the joined counted read, the 30-read
   limit and `check-later`; their mutants were checked).
+  `round-cancel-over.test.ts` pins the flow's `over()` per cancel state. The
+  session's cancel tests (`play-session-cancel-hold.test.ts`,
+  `play-session-cancel-settled.test.ts`, over `fixtures/session-cancel.ts`)
+  open a session whose RPC endpoints disagree (`disagreeingRpc` in
+  `fixtures/session-round.ts`), so only the tip check fails and the cancel is
+  required. The cancel is in flight through the session in two ways: a round
+  started `starting` (no cancel yet) and then read `active` puts it in flight
+  inside a `read()`; and a start whose own answer requires the cancel puts it
+  in flight inside `start()`, where the flow is already the session's round
+  (`startRoundFlow`'s `onFlow`), so a deferred cancel answer and concurrent
+  reads show the hold during the start. Snapshots meant to reach the game need a higher `version`
+  than the round's (`later`), or the bridge drops them and a hold test passes
+  vacuously. `issuedOther` (`fixtures/session-round.ts`) is a second round
+  for the session's key, for a read of one round that another round's start
+  overtakes. The Wrapper's are `cancel-states.test.ts` and
+  `cancel-ended.test.ts` (views, polling, and the one read after `ended`, over
+  `fixtures/cancel.ts` and the fake session, which counts `served()` reads and
+  `checks()`) and the
+  poller's cancel cases; a focus assertion checks the focused element's id,
+  since `body`'s text contains every heading. Their mutants were checked; one
+  shell mutant is equivalent: dropping `over()`'s hold clause, which is
+  defensive (the guard checks the hold first, and the latest Snapshot is not
+  over while held).
   `resolving-cancel-vector.test.ts` replays the golden
   `valid/coinflip-resolving-cancel`. The flow layers its guards, so
   `round-actions.test.ts` pins each one alone with stand-ins for the tracking

@@ -172,9 +172,21 @@ Part of the [Wrapper spec](../wrapper.md), section
     again" read the player asks for, and a slow background read every 30 s
     (W-35), each read once under the same rules and may still settle it.
   - While the cancel is `in-flight`, `settling`, or `check-later`, the shell
-    MUST NOT start a new round for the session (the round is not over). `ended`
+    MUST NOT start a new round for the session (the round is not over), whatever
+    the session last read (an `idle` or another round's read included). `ended`
     does not block one; `not-taken` leaves the round open until its expiry rule
-    closes it.
+    closes it. In those three states picks and the cash-out are refused and
+    nothing is signed, and the UI gets the round's own latest Snapshot, never
+    one read from elsewhere, which the game is not sent either; the session's
+    reads are the cancel's own (W-35). This holds from the moment the start's
+    answer is read: a cancel that answer requires is in flight before the start
+    returns, and a read meanwhile is held the same way.
+  - An action of the session (a start, a read, a pick, or a cash-out) during
+    which the cancel reached `settling`, `check-later`, `sent`, `not-taken`, or
+    `ended` answers with the round's Snapshot, with the cancel state, and not
+    with the failure of the cancel's call or of a read on the way: a lost or
+    refused cancel call that a read then settled is not shown as an error. A
+    refusal stays in the round's evidence (W-27).
   - A `rounds:cancel` answer that is `active` is `not-taken`, as an `active`
     read is (one state, one display). An answer that is final (`canceled`,
     `won`, `lost`) is the round's result at once, with no error. An answer that

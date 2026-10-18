@@ -33,7 +33,8 @@ are in brackets.
   `MAX_LAUNCH_CODE_LENGTH` and the types `LaunchCode`, `LaunchLocation`, and
   `LaunchHistory`; `openPlaySession` with `PlaySessionOptions`, `SessionParts`,
   `SessionOpening`, `PlaySession`, `SessionRead`, `RoundState`, `GameMount`,
-  `GameMountOptions`, `Bet`, `BindMode`, and `FailReason`; `isRoundOver` with
+  `GameMountOptions`, `Bet`, `BindMode`, `FailReason`, and `CancelState` (the
+  required cancel's states, which `RoundState.cancel` gives); `isRoundOver` with
   `RoundEnd`; and the re-exported platform types of `play-client` the session
   takes (`Clock`, `FetchLike`, `RefreshConfig`, `TimerHandle`), since the
   Wrapper imports only `shell`. The validation is public because the Wrapper
@@ -94,25 +95,56 @@ are in brackets.
     (frozen, `[redacted]`) gives:
   - `read()`: the Snapshot read (`SnapshotRead`), whose validated Snapshot, or
     the one a `ROUND_ACTIVE` problem embeds, is first observed by the current
-    round's flow (its checks) and sent to the game's bridge;
+    round's flow (its checks) and sent to the game's bridge. While the round's
+    cancel is `in-flight`, `settling`, or `check-later` (W-25; below), a
+    Snapshot read from elsewhere (of the round, `idle`, or another round) is
+    neither sent to the game nor seen by the round guard: the answer is the
+    round's latest Snapshot, and the game is sent nothing (it gets the round
+    from the cancel's own answer or read). The round is the session's from
+    before its first Snapshot is read (`startRoundFlow`'s `onFlow`), so a read
+    while `start` signs and sends the cancel that Snapshot requires is held too.
+    The hold that decides is the one of the session's round once the read was
+    observed, so a read of a previous round that a new round's start overtook is
+    held by the new round's cancel, and passes on as it is once that cancel
+    settled. While the cancel is `settling`, `read()` is the flow's counted read
+    (`refresh`), and from `check-later` its "check again" read (`checkAgain`),
+    never `getSnapshot` through the reader and `observe` (the cancel's gate
+    drops those); its answer is the round's latest Snapshot, or the read's new
+    failure. Once the cancel is `ended`, a read passes `idle` on as usual, to
+    the game too: the read that ended it gives the round's latest Snapshot (the
+    one before the cancel), so the Wrapper reads once more for the current
+    balance and Snapshot (W-33, W-35). The read side lives in
+    `session-reads.ts`;
+  - `checkAgain()`: "check again" (W-35): from `check-later`, one read under the
+    cancel's settling rules, which may settle it; otherwise the same as
+    `read()`;
   - `start(bet)`: the round flow's start; the answer is the round's Snapshot, a
     typed error (a `ROUND_ACTIVE` round is shown but not held: nothing is signed
     in it), `rejected`, `network`, or `refused` with a `ShellErrorCode`. One
     start or cash-out runs at a time: a `start` while another start or a
     cash-out is in flight is `refused` with `busy`, and a `start` while the
-    round the session holds is not over (`isRoundOver` of its latest Snapshot,
-    while the latest Snapshot the session saw is of that round) is `refused`
-    with `round-exists`; neither signs or sends anything, so a late answer never
-    replaces the held round. A read that shows the round over, `idle`, or
-    another round lets the next `start` through;
+    round the session holds is open is `refused` with `round-exists`: while its
+    cancel is `in-flight`, `settling`, or `check-later`, whatever the session
+    read, and otherwise while it is not over (the flow's `over()`, `true` once
+    the cancel is `ended`) and the latest Snapshot the session saw is of that
+    round; neither signs or sends anything, so a late answer never replaces the
+    held round. Outside the cancel's states, a read that shows the round over,
+    `idle`, or another round lets the next `start` through;
   - `cashOut()`: the flow's cash-out, on the player's request only; its answer
     is the round's latest Snapshot, or the call's new failure. A `cashOut` while
     a start or a cash-out is in flight is `refused` with `busy`, and nothing
-    more is signed or sent;
+    more is signed or sent. The answer of an action (a start, a read, a pick, or
+    a cash-out) during which the cancel reached `settling`, `check-later`,
+    `sent`, `not-taken`, or `ended` is the round's Snapshot, not the failure of
+    the cancel's call or of a read on the way: the flow's `lastError()` is its
+    last failure and is never cleared, so an action compares it, by identity,
+    with the one before it, and the cancel state with the one before it (the #61
+    review found the start answering with the cancel call's failure);
   - `round()`: `RoundState`, the read-only state of the current round: the
     verdict (`checking`, `ready`, `failed` with what is shown), whether it is
-    out of sync, and whether a cash-out is offered (`cashOutOffered`: the flow's
-    gate and legality, with nothing signed);
+    out of sync, whether a cash-out is offered (`cashOutOffered`: the flow's
+    gate and legality, with nothing signed), and the required cancel's state
+    (`cancel`: `none` until it is reached; W-25, W-33, W-35);
   - `gameOrigin()` and `mountGame(options)`: the controller bridge for D with
     the session's pick use case, which answers the game and reports the answer's
     Snapshot through `onChange`, and the session's own `gameOrigins` and
@@ -133,7 +165,11 @@ are in brackets.
   rendering read it. While the shell's own cancel has not settled (the round
   flow's cancel state `in-flight`, `settling`, or `check-later`; below), the
   round is not over whatever a Snapshot from elsewhere shows: those Snapshots do
-  not reach the round.
+  not reach the round. The round flow's `over()` folds the cancel in: `true`
+  once the cancel is `ended` (the round's latest Snapshot is still the one from
+  before), `false` while it is `in-flight`, `settling`, or `check-later`, and
+  otherwise `isRoundOver` of the latest Snapshot; the Wrapper applies the same
+  rule to the cancel state the session gives (`RoundState.cancel`).
 - **The Snapshot reader (W-28, W-42, W-43).** `createSnapshotReader` takes the
   Play API transport and the play token's `Authorization` and returns `read()`
   and `latest()`. `read()` calls `getSnapshot` and resolves with one of:
@@ -741,43 +777,58 @@ are in brackets.
   round; a `canceled` answer of another round is an unknown outcome; a final
   answer (`canceled`, `won`, `lost`) closes the round with no error and no read;
   a cancel whose signing throws `lock-not-held` is `unavailable` with nothing
-  sent; a re-issue rejects picks and the cash-out while a pending resend still
-  goes out; and of two tabs on one lock manager, the one without the lock cannot
-  start or sign, and after a steal neither signs at a sequence already used. A
-  move, a cash-out, and a cancel built by the shell carry exactly the vendored
-  `typed-data/` vectors' base64: the Coin Flip pick and cancel through the round
-  flow with no encoder passed, on `valid/coinflip-active-ready-hash` (the
-  cancel's struct hash and digest are the `signed-action/coinflip-cancel`
-  vector's, and its signature recovers to the session's key), and the multi-path
-  pick and the cash-out through the request builder, on the worked round of
-  `signing.json`. The Snapshot reader's tests cover each outcome (`snapshot`,
-  `problem`, `rejected`, `network`) and that it prints `[redacted]`. The guards
-  of a new signature are pinned each on its own: in the flow, nothing is signed
-  while the tip check runs or after it rejects (its error kept), nor after a
-  failed verdict whose cancel could not be sent, a sent cancel, or a refused one
-  (the phase is then `failed`); with stand-ins for the tracking and the
-  transcript state, a verdict that is not `ready`, a phase that takes no
-  signature, a step already signed with no pending action, and a resendable
-  action that is not the one recorded are each refused alone; `legalMove`
-  refuses a Snapshot off the shell's own progress; a signed message that differs
-  from the encoded one (a cash-out whose path is a prefix of the other included)
-  is never sent and fails the round; `toBase64` matches RFC 4648's values and
-  `typedData` keeps to 1 to 4096 characters; the `failed` phase holds from
-  `open`, `stale`, and `adopted`, even after a Snapshot shows an action applied;
-  and a second refused move after an adopted resync holds the round again. The
-  session's tests (T-4a, T-7, T-17's shell half) run against the scripted Play
-  API and a manual wall clock (`fixtures/wall-clock.ts`): the fragment is
-  removed before the first request; no fragment, an empty one, 129 characters,
-  or a code only in the query string sends nothing, and 128 raw characters pass;
-  a lost, refused, or 503 redeem is not repeated; a second tab on one lock
-  manager opens nothing (no read, no timer); the refresh point comes from the
-  fixture's `tokenExpiresAt` and the offset, nothing is sent before it, the old
-  token is presented and stays in use until the answer, one refresh is in
-  flight, a lost answer is retried with the same token after backoff, the
-  session-ending codes and the deadline end the session, and a refusal that does
-  not end it waits for the deadline; the open session reads with the token,
-  starts a round with the key's address (issued for the session's own key, so
-  W-26 passes) and reports it `ready`, shows a `ROUND_ACTIVE` round it does not
-  hold, mounts the game and signs a pick through it, ends on each session-ending
-  code and then sends nothing, prints `[redacted]`; and the public options type
-  carries no `encodeTypedData`.
+  sent; the flow's `over()` is `false` while the cancel is `in-flight`,
+  `settling`, or `check-later`, `true` once it is `ended` (on a latest Snapshot
+  that is not over) or `sent` with `canceled`, and follows the latest Snapshot
+  once it is `not-taken`; through the session (a failed tip check from RPC
+  endpoints that disagree), picks and the cash-out are refused, nothing is
+  signed, and a start is refused `round-exists` while the cancel is `in-flight`,
+  `settling`, or `check-later`, also after an `idle` or another round's read,
+  the answer is the round's latest Snapshot and the game is sent nothing from a
+  read from elsewhere (an `idle` or another round's), also while the start
+  itself has the cancel in flight (a second start is then refused `busy`), a
+  read is one counted read (`checkAgain` in `check-later`), a failed counted
+  read answers with its failure and the next one with the round, a start is let
+  through once the cancel is `ended`, an `idle` read is then passed on, and a
+  start, a read that signs the cancel, and a settling read answer with the
+  cancel's result (or, while it settles, the round) and not with the earlier
+  failure of the cancel's call or of a read; a re-issue rejects picks and the
+  cash-out while a pending resend still goes out; and of two tabs on one lock
+  manager, the one without the lock cannot start or sign, and after a steal
+  neither signs at a sequence already used. A move, a cash-out, and a cancel
+  built by the shell carry exactly the vendored `typed-data/` vectors' base64:
+  the Coin Flip pick and cancel through the round flow with no encoder passed,
+  on `valid/coinflip-active-ready-hash` (the cancel's struct hash and digest are
+  the `signed-action/coinflip-cancel` vector's, and its signature recovers to
+  the session's key), and the multi-path pick and the cash-out through the
+  request builder, on the worked round of `signing.json`. The Snapshot reader's
+  tests cover each outcome (`snapshot`, `problem`, `rejected`, `network`) and
+  that it prints `[redacted]`. The guards of a new signature are pinned each on
+  its own: in the flow, nothing is signed while the tip check runs or after it
+  rejects (its error kept), nor after a failed verdict whose cancel could not be
+  sent, a sent cancel, or a refused one (the phase is then `failed`); with
+  stand-ins for the tracking and the transcript state, a verdict that is not
+  `ready`, a phase that takes no signature, a step already signed with no
+  pending action, and a resendable action that is not the one recorded are each
+  refused alone; `legalMove` refuses a Snapshot off the shell's own progress; a
+  signed message that differs from the encoded one (a cash-out whose path is a
+  prefix of the other included) is never sent and fails the round; `toBase64`
+  matches RFC 4648's values and `typedData` keeps to 1 to 4096 characters; the
+  `failed` phase holds from `open`, `stale`, and `adopted`, even after a
+  Snapshot shows an action applied; and a second refused move after an adopted
+  resync holds the round again. The session's tests (T-4a, T-7, T-17's shell
+  half) run against the scripted Play API and a manual wall clock
+  (`fixtures/wall-clock.ts`): the fragment is removed before the first request;
+  no fragment, an empty one, 129 characters, or a code only in the query string
+  sends nothing, and 128 raw characters pass; a lost, refused, or 503 redeem is
+  not repeated; a second tab on one lock manager opens nothing (no read, no
+  timer); the refresh point comes from the fixture's `tokenExpiresAt` and the
+  offset, nothing is sent before it, the old token is presented and stays in use
+  until the answer, one refresh is in flight, a lost answer is retried with the
+  same token after backoff, the session-ending codes and the deadline end the
+  session, and a refusal that does not end it waits for the deadline; the open
+  session reads with the token, starts a round with the key's address (issued
+  for the session's own key, so W-26 passes) and reports it `ready`, shows a
+  `ROUND_ACTIVE` round it does not hold, mounts the game and signs a pick
+  through it, ends on each session-ending code and then sends nothing, prints
+  `[redacted]`; and the public options type carries no `encodeTypedData`.

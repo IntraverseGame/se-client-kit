@@ -12,6 +12,11 @@ export type Intents = {
   /** Cashes out the round, on the player's request only (W-24). */
   readonly cashOut?: () => void;
   readonly newRound?: () => void;
+  /**
+   * "Check again" (W-33, W-35): one read of a round whose cancel is
+   * `check-later`, which may settle it.
+   */
+  readonly checkAgain?: () => void;
   readonly retry?: () => void;
   /** Copies a round id (the platform clipboard). */
   readonly copyText?: (text: string) => Promise<void>;

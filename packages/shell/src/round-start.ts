@@ -30,6 +30,12 @@ export type StartRoundFlowOptions = RoundFlowOptions & {
   /** `crypto.randomUUID`: the start's idempotency key (W-22, W-36). */
   readonly randomUuid: RandomUuid;
   readonly bet: Bet;
+  /**
+   * Called with the round's flow once it exists, before its first Snapshot is
+   * read: a cancel that Snapshot requires is signed and sent before this
+   * function resolves, so the session holds the round from here (W-25).
+   */
+  readonly onFlow?: (flow: RoundFlow) => void;
 };
 
 /**
@@ -66,6 +72,7 @@ export const startRoundFlow = async (
     snapshot,
     hooks,
   );
+  options.onFlow?.(flow);
   await flow.observe(snapshot);
   return flow;
 };

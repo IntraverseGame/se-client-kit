@@ -6,7 +6,9 @@
 // the golden vectors to that). The UI never reads a field it does not list
 // here, so an absent field is never read as hidden state (W-29).
 
-import { isRoundOver } from "@intraverse/se-client-shell";
+import { type CancelState, isRoundOver } from "@intraverse/se-client-shell";
+
+export type { CancelState };
 
 /** `Amount`: the fields used for a decision (`value`) and for display. */
 export type ShownAmount = {
@@ -40,15 +42,63 @@ export type RoundProgress = {
 export const roundIsOver = (snapshot: RoundProgress): boolean =>
   isRoundOver(snapshot);
 
+/** The cancel states in which the round is not over (W-25). */
+const HOLDING: ReadonlySet<CancelState> = new Set([
+  "in-flight",
+  "settling",
+  "check-later",
+]);
+
 /**
- * Whether the Wrapper polls while it shows `snapshot` (W-35): a round that is
- * not over and waits on the server, not on the player (`starting` and
- * `resolving` today).
+ * Whether the round is over, with the shell's cancel state of it (W-25, W-33):
+ * over once the cancel is `ended` (a neutral "round ended"), never while it is
+ * `in-flight`, `settling`, or `check-later`, and otherwise `roundIsOver`.
  */
-export const isPolled = (snapshot: RoundProgress): boolean =>
-  snapshot.status !== "idle" &&
-  snapshot.status !== "active" &&
-  !roundIsOver(snapshot);
+export const roundEnded = (
+  snapshot: RoundProgress,
+  cancel?: CancelState,
+): boolean => {
+  if (cancel === "ended") return true;
+  if (cancel !== undefined && HOLDING.has(cancel)) return false;
+  return roundIsOver(snapshot);
+};
+
+/**
+ * How the Wrapper reads the Snapshot again (W-35): `fast`, with bounded backoff
+ * and the slow rate; or `background`, one read every 30 s, while the cancel is
+ * `check-later`.
+ */
+export type PollMode = "fast" | "background";
+
+/**
+ * How the Wrapper polls while it shows `snapshot`, with the shell's cancel
+ * state of its round (W-35): fast while the cancel is `settling`, whatever the
+ * status; in the background while it is `check-later`; not at all once it is
+ * `ended`, `not-taken`, or `sent`; otherwise fast while the round is not over
+ * and waits on the server, not on the player (`starting` and `resolving`
+ * today).
+ */
+export const pollModeOf = (
+  snapshot: RoundProgress,
+  cancel?: CancelState,
+): PollMode | undefined => {
+  if (cancel === "settling") return "fast";
+  if (cancel === "check-later") return "background";
+  if (cancel === "ended" || cancel === "not-taken" || cancel === "sent") {
+    return undefined;
+  }
+  return snapshot.status !== "idle" &&
+    snapshot.status !== "active" &&
+    !roundIsOver(snapshot)
+    ? "fast"
+    : undefined;
+};
+
+/** Whether the Wrapper polls fast while it shows `snapshot` (W-35). */
+export const isPolled = (
+  snapshot: RoundProgress,
+  cancel?: CancelState,
+): boolean => pollModeOf(snapshot, cancel) === "fast";
 
 export type SnapshotInput = {
   /** Per session, increasing; a lower one is a stale response (W-29). */
@@ -108,6 +158,13 @@ export type RoundCheck = {
   readonly outOfSync: boolean;
   /** The cash-out control is offered (W-24). */
   readonly cashOutOffered: boolean;
+  /**
+   * The required cancel's progress (W-25, W-33, W-35): `none` until it is
+   * reached; `settling` and `check-later` are read again; `ended` is a neutral
+   * "round ended"; `sent` with `canceled` is the round failed verification and
+   * canceled (W-26).
+   */
+  readonly cancel: CancelState;
 };
 
 /** The outcome of one Snapshot read, as the session hands it to the UI. */
