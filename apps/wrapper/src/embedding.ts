@@ -8,8 +8,9 @@
 // - Framed, where `location.ancestorOrigins` exists: every entry must be on
 //   `operatorOrigins` (exact match); a masked entry (`"null"`) refuses, and so
 //   does an empty list (a framed page always has an ancestor).
-// - Framed, where it does not exist (Firefox): refused. The operator handshake
-//   that would lift this is RFC-001's (the operator launch contract), not built.
+// - Framed, in a browser without `location.ancestorOrigins`: refused. The
+//   operator handshake that would lift this is RFC-001's (the operator launch
+//   contract), not built.
 //
 // It is the minimum until RFC-001 is accepted and built. Only a reason code is
 // logged, never an origin.
@@ -29,7 +30,7 @@ export type EmbeddingRefusal =
   /** An ancestor origin is masked (`"null"`). */
   | "ancestor-masked"
   /**
-   * Framed with no `location.ancestorOrigins` to check (Firefox), or an empty
+   * Framed in a browser without `location.ancestorOrigins`, or with an empty
    * one: nothing proves who frames the page.
    */
   | "ancestors-unknown";

@@ -157,7 +157,7 @@ describe("operator embedding, the minimum (W-49)", () => {
       "ancestor-masked",
     ],
     [
-      "no ancestorOrigins (Firefox)",
+      "a browser without `location.ancestorOrigins`",
       { embedding: { framed: true, ancestorOrigins: undefined } },
       "ancestors-unknown",
     ],

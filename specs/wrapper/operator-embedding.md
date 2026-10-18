@@ -47,13 +47,15 @@ land with #42's implementation, not before.
     today it is.
   - **Framed and nested** (`window.parent !== window.top`): the
     configuration-error state; nothing is redeemed or signed. Only direct
-    embedding is supported: on Firefox only the parent can be checked in code.
+    embedding is supported: where `location.ancestorOrigins` is missing, only
+    the parent can be checked in code.
   - **Framed, and `location.ancestorOrigins` exists:** unless it holds exactly
     one entry and that entry is on `operatorOrigins` (exact match), the
     configuration-error state; nothing is redeemed or signed. A masked entry
     (`"null"`) refuses, and so does an empty list. A listed entry still needs
     the handshake (W-49c).
-  - **Framed, and `location.ancestorOrigins` is missing** (Firefox): the
+  - **Framed, and `location.ancestorOrigins` is missing** (no browser the suite
+    runs; Firefox has it too, as its first run there showed, 2026-10-18): the
     handshake (W-49c).
 
   **`ancestorOrigins` masking.** The HTML standard masks an ancestor's origin
@@ -112,8 +114,8 @@ land with #42's implementation, not before.
 
 - **W-49c.** A framed Wrapper (W-49a) MUST complete this handshake before the
   gate opens. The operator page sends first: the Wrapper never posts to a window
-  whose origin it has not verified, and on Firefox it cannot learn the parent's
-  origin until the parent writes to it.
+  whose origin it has not verified, and where `location.ancestorOrigins` is
+  missing it cannot learn the parent's origin until the parent writes to it.
   1. **Record, then check.** The Wrapper installs its `message` listener at
      boot, before it reads the environment configuration document. Until the
      document is validated it cannot check an origin, so it records the first
@@ -280,8 +282,8 @@ content. The reasons:
 Nothing is logged for an ignored message, so a hostile page cannot flood the
 console. This follows the [Observability](../wrapper.md#observability) section:
 console only, no backend telemetry. Until #42, the built minimum also logs
-`ancestors-unknown` for a framed page without `location.ancestorOrigins`
-(Firefox); under W-49c that page waits for the handshake instead.
+`ancestors-unknown` for a framed page without `location.ancestorOrigins`; under
+W-49c that page waits for the handshake instead.
 
 ## Security
 
@@ -367,9 +369,10 @@ the Wrapper app):
    from the fixed origin and the parent is answered with `welcome` again and
    changes nothing else; one from any other origin or source is ignored.
 4. **The gate.** Before `welcome`: no redeem, no start, no signature, no game
-   iframe, and no control, on the `ancestorOrigins` path and the Firefox path.
-   After 10 s on the injected clock with no valid `hello`, the
-   configuration-error state, and a later valid `hello` changes nothing.
+   iframe, and no control, on the `ancestorOrigins` path and the path without it
+   (a component test: every project's browser has the list). After 10 s on the
+   injected clock with no valid `hello`, the configuration-error state, and a
+   later valid `hello` changes nothing.
 5. **Record, then check.** A well-formed `hello` from the parent before the
    configuration is validated is recorded and not answered; once validated, a
    listed recorded origin completes the handshake without another `hello`, and
@@ -406,12 +409,13 @@ the Wrapper app):
 13. **With the `frame-ancestors` header**, an unlisted framer gets no Wrapper
     document.
 14. **Without the header** (served so on purpose, to prove the JavaScript layer
-    alone): on Chromium and WebKit an unlisted framer gets the
-    configuration-error state and the fake Play API sees no redeem; on Firefox
-    an unlisted framer that sends a perfect `hello` unlocks nothing and the fake
-    sees no redeem. A listed framer whose iframe has
-    `referrerpolicy="no-referrer"` is refused where the engine masks the entry;
-    the test records what each engine does.
+    alone): in every project (each browser has `location.ancestorOrigins`,
+    Firefox's included) an unlisted framer gets the configuration-error state
+    and the fake Play API sees no redeem; where the list is missing, an unlisted
+    framer that sends a perfect `hello` unlocks nothing and nothing is redeemed
+    (a component test, since no project lacks the list). A listed framer whose
+    iframe has `referrerpolicy="no-referrer"` is refused where the engine masks
+    the entry; the test records what each engine does.
 15. **A listed operator** that sends `hello`: `welcome` arrives, a round plays,
     and `resize` arrives with exactly its fields. One that sends nothing reaches
     the timeout state. A page that nests the Wrapper is refused.
@@ -437,8 +441,8 @@ not framed is unchanged. A framed one:
   configuration-error state, nothing signed) unless every entry is on
   `operatorOrigins` (exact match); a masked entry (`"null"`) or an empty list
   refuses;
-- where it does not exist (Firefox), opens no session and signs nothing while
-  framed.
+- where it does not exist, opens no session and signs nothing while framed (no
+  browser the suite runs lacks it; the path is a component test).
 
 A refusal logs `embedding.refused` with its reason code only
 (`ancestor-not-allowed`, `ancestor-masked`, `ancestors-unknown`), never an

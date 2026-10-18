@@ -4,7 +4,8 @@
 // proxy carries, so without a socket to count it, "nothing arrived" would
 // prove nothing. Both families share the port, so `localhost` resolved either
 // way lands on a counted socket. They answer nothing. With the TCP listener
-// (loopback-listener.ts), the suite's only open sockets.
+// and the stand-in proxy (loopback-listener.ts), the suite's only open
+// sockets.
 
 import { createSocket, type Socket } from "node:dgram";
 

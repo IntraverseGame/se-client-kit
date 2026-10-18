@@ -22,8 +22,10 @@
 // Before a scan, every pending random-draw report and console serialization is
 // settled. A channel, a frame, or a console argument that cannot be read is an
 // `unreadable` finding naming the channel and the error's name (decided
-// 2026-10-17); only a `SecurityError` in a frame whose origin is "null" is
-// excused (secret-scan-page.ts).
+// 2026-10-17). Two excuses, and only these: a `SecurityError` in a frame whose
+// origin is "null" (secret-scan-page.ts), and, in WebKit only, an origin
+// private file system read that fails with `UnknownError` in a frame where the
+// write probe failed too (`isExcusedOpfs`, decided 2026-10-18).
 //
 // Not covered: request and response bodies (the Play API carries the token in
 // a header and secrets in bodies by design), a base64 form of a secret that is
@@ -48,7 +50,7 @@ import {
   type Secret,
   type SecretSource,
 } from "./secret-needles.ts";
-import { inPage } from "./secret-scan-page.ts";
+import { inPage, type OpfsWrite } from "./secret-scan-page.ts";
 
 export type ScanChannel =
   | "console"
@@ -102,7 +104,23 @@ type Recorded = {
   readonly channel: ScanChannel;
   readonly where: string;
   readonly text: string;
+  /** For an unreadable origin private file system: the write probe. */
+  readonly opfsWrite?: OpfsWrite;
 };
+
+/**
+ * WebKit's OPFS excuse: WebKit, the OPFS channel, `UnknownError`, and a write
+ * probe in the same frame that failed too. Anything else stays a finding.
+ */
+export const isExcusedOpfs = (
+  browserName: string | undefined,
+  entry: Readonly<Recorded>,
+): boolean =>
+  browserName === "webkit" &&
+  entry.channel === "unreadable" &&
+  entry.where === "origin-private-file-system" &&
+  entry.text === "UnknownError" &&
+  entry.opfsWrite === "failed";
 
 const errorName = (error: unknown): string =>
   error instanceof Error ? error.name : typeof error;
@@ -140,6 +158,7 @@ export const startSecretScan = (
 ): SecretScan => {
   const secrets: Secret[] = [];
   const recorded: Recorded[] = [];
+  const browserName = context.browser()?.browserType().name();
   const pending: Promise<void>[] = [];
   const allowedLaunches: string[] = [];
 
@@ -224,6 +243,7 @@ export const startSecretScan = (
     const out: Finding[] = [];
     for (const entry of await collect()) {
       if (entry.channel === "unreadable") {
+        if (isExcusedOpfs(browserName, entry)) continue;
         out.push({
           channel: "unreadable",
           secret: entry.text,

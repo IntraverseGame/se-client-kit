@@ -127,3 +127,138 @@ export const probeStun = (page: Page, port: number): Promise<StunProbe> =>
       host => `stun:${host}:${String(port)}`,
     ),
   );
+
+/**
+ * Where Playwright routes a service worker's script fetch: in a context of
+ * `browser` whose test pages are served by a route, a second route counts the
+ * requests for `/socket-sw.js` and passes them on. The page registers the
+ * script as a service worker (aimed at a port nothing listens on), then fetches
+ * the same script itself. Where the registration's fetch is not routed, the
+ * registration fails and the route counts only the page's fetch.
+ * `beforeRegister` runs once the page is open and the route is in place, just
+ * before the registration. With `register: false` the same window is run with
+ * no registration (a baseline): the route, then the page's own fetch.
+ */
+export const serviceWorkerScriptRouting = async (
+  browser: Browser,
+  beforeRegister?: () => void,
+  { register = true }: { readonly register?: boolean } = {},
+): Promise<{
+  readonly registered: string;
+  readonly fetched: number;
+  readonly routed: number;
+}> => {
+  const page = await openPage(browser);
+  let routed = 0;
+  await page.context().route(`${PAGES_ORIGIN}/socket-sw.js*`, route => {
+    routed += 1;
+    return route.fallback();
+  });
+  beforeRegister?.();
+  const registered = register
+    ? await page.evaluate(() =>
+        navigator.serviceWorker
+          .register(
+            `/socket-sw.js?url=${encodeURIComponent("wss://localhost:9/")}`,
+          )
+          .then(
+            () => "registered",
+            (error: unknown) =>
+              `register failed ${error instanceof Error ? error.name : typeof error}`,
+          ),
+      )
+    : "not registered";
+  const fetched = await page.evaluate(() =>
+    fetch("/socket-sw.js?probe").then(response => response.status),
+  );
+  return { registered, fetched, routed };
+};
+
+/**
+ * Whether a script can get WebRTC back from a new same-origin window, by the
+ * `typeof` of `RTCPeerConnection` and of `webkitRTCPeerConnection` in each: a
+ * new iframe read at once through `contentWindow`, through `frames[n]`, and
+ * through `contentDocument`; a `srcdoc` iframe once it has loaded, read through
+ * `frames[n]` and then through `contentWindow`; an `<object>`'s window once it
+ * has loaded the test pages' blank page; a window from `window.open`; and a
+ * window from a new iframe's own `open` (`frames[n].open`). A popup that did
+ * not open is "not opened", and an object that did not load "not loaded".
+ */
+export const freshWindowsWebRtc = (
+  page: Page,
+): Promise<Readonly<Record<string, string>>> =>
+  page.evaluate(async () => {
+    // oxlint-disable-next-line unicorn/consistent-function-scoping -- it runs in the page, inside the one function Playwright sends there
+    const kinds = (target: unknown): string =>
+      typeof target === "object" && target !== null
+        ? [
+            typeof Reflect.get(target, "RTCPeerConnection"),
+            typeof Reflect.get(target, "webkitRTCPeerConnection"),
+          ].join(",")
+        : "no window";
+    // oxlint-disable-next-line unicorn/consistent-function-scoping -- it runs in the page, inside the one function Playwright sends there
+    const appended = (): HTMLIFrameElement => {
+      const frame = document.createElement("iframe");
+      document.body.append(frame);
+      return frame;
+    };
+    const contentWindow = kinds(appended().contentWindow);
+    appended();
+    // `frames[n]`, read before anything touches the new frame's element.
+    const frames = kinds(Reflect.get(window, String(window.length - 1)));
+    const contentDocument = kinds(appended().contentDocument?.defaultView);
+    const srcdoc = document.createElement("iframe");
+    srcdoc.srcdoc = "<p>srcdoc</p>";
+    await new Promise<void>(resolve => {
+      srcdoc.addEventListener("load", () => {
+        resolve();
+      });
+      document.body.append(srcdoc);
+    });
+    // `frames[n]` first: reading `contentWindow` would clear the window.
+    const srcdocFrames = kinds(Reflect.get(window, String(window.length - 1)));
+    const loaded = kinds(srcdoc.contentWindow);
+    const object = document.createElement("object");
+    object.type = "text/html";
+    object.data = "/blank.html";
+    const objectLoaded = await new Promise<boolean>(resolve => {
+      object.addEventListener("load", () => {
+        resolve(true);
+      });
+      object.addEventListener("error", () => {
+        resolve(false);
+      });
+      document.body.append(object);
+    });
+    const objectWindow = objectLoaded
+      ? kinds(object.contentWindow)
+      : "not loaded";
+    const popup = window.open("about:blank");
+    const opened = popup === null ? "not opened" : kinds(popup);
+    popup?.close();
+    appended();
+    const child: unknown = Reflect.get(window, String(window.length - 1));
+    const childOpen: unknown =
+      typeof child === "object" && child !== null
+        ? Reflect.get(child, "open")
+        : undefined;
+    const childPopup: unknown =
+      typeof childOpen === "function"
+        ? Reflect.apply(childOpen, child, ["about:blank"])
+        : null;
+    const childOpened =
+      typeof childPopup === "object" && childPopup !== null
+        ? kinds(childPopup)
+        : "not opened";
+    (childPopup as Window | null)?.close();
+    return {
+      contentWindow,
+      "frames[n]": frames,
+      contentDocument,
+      srcdoc: loaded,
+      "srcdoc through frames[n]": srcdocFrames,
+      object: objectWindow,
+      "window.open": opened,
+      "frames[n].open": childOpened,
+    };
+  });

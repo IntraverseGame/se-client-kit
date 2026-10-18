@@ -239,7 +239,8 @@ structure below.
   tip check's transport. `embedding.ts` is W-49's fail-closed minimum, checked
   in `boot.ts` before the session opens: a framed page needs
   `location.ancestorOrigins` with every entry on `operatorOrigins` (`"null"`
-  refuses; no list, as in Firefox, refuses) until #42 builds the accepted
+  refuses; no list refuses, a path no browser the suite runs takes: Firefox
+  has the list too) until #42 builds the accepted
   contract (`specs/wrapper/operator-embedding.md`, W-49a to W-49f; ADR-006,
   proposed): direct embedding only, the `se.operator/1` handshake (operator
   first, record-then-check) gating the redeem, the start, and every signature,

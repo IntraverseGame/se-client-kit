@@ -23,8 +23,8 @@ does not, and a neutral "round ended" when the round ended with no result. The
 game iframe is mounted only once the game's origin comes from the session, which
 the Play API does not serve yet. Framed by another page, it opens a session only
 when the browser can show that every framing page is a listed operator; the
-operator handshake is not built yet, so where the browser cannot show it
-(Firefox), a framed Wrapper opens no session.
+operator handshake is not built yet, so where the browser cannot show it (a
+browser without `location.ancestorOrigins`), a framed Wrapper opens no session.
 
 ## What it guarantees
 

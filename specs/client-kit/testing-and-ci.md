@@ -212,36 +212,57 @@ development-only, so it may import the test-only entry of `contracts`.
   The Firefox and WebKit projects have their own block (decided by the human,
   2026-10-18; `browser-flags.ts`): both launch with a proxy at a dead loopback
   port (`http://127.0.0.1:9`, privileged on the Linux runners and listened on by
-  nothing) and no bypass, so anything outside a route fails, and Firefox also
-  runs with WebRTC off (`media.peerconnection.enabled: false`) and with
-  localhost and loopback sent through the proxy too
+  nothing) and no bypass, so anything outside a route fails. Firefox also runs
+  with WebRTC off (`media.peerconnection.enabled: false`) and with localhost and
+  loopback sent through the proxy too
   (`network.proxy.allow_hijacking_localhost: true`; Firefox sends them direct by
-  default). The routes still answer: every request the suite expects is
-  fulfilled or aborted by a route, none is continued to the network, and a route
-  intercepts before the proxy is used; no fake origin is on loopback.
-  `e2e/tests/hermetic-proxy.spec.ts` proves it, in the Firefox and WebKit
-  projects only: the worker's browser has exactly those launch options and
-  started through the start lock; a request outside every route (to `localhost`
-  by name and to `127.0.0.1`), a dedicated worker's socket, and a service
-  worker's socket, aimed at the loopback listener, never reach it, and a control
-  launch without the proxy reaches it with the same request or socket (each
-  count is read after the browser is closed, so a late retry by a worker is
-  counted). WebRTC's STUN traffic is UDP, which no HTTP proxy carries: a probe
-  aims STUN at `localhost`, `127.0.0.1`, and `[::1]` on one port, where UDP
-  sockets on both loopback addresses count datagrams, and records its outcome
-  (whether `RTCPeerConnection` exists, whether gathering completed, the
-  candidates' types, and the count) as a test annotation. In Firefox the probe
-  finds no `RTCPeerConnection` and nothing arrives, and a control launch with
-  WebRTC back on (the proxy kept) sends datagrams to those sockets. On WebKit,
-  which has no preference that turns WebRTC off, a pass shows only that this
-  probe sent no datagram to loopback: with no WebKit control, it does not prove
-  WebRTC traffic is blocked. The gap is open (decided by the human, 2026-10-18).
-  Before any of it, the file fails, saying so, if anything accepts a TCP
-  connection at `127.0.0.1:9`, which would make the dead proxy a live one. The
-  TCP listener and the UDP sockets are the suite's only open sockets; each takes
-  nothing but connections or datagrams. No server or port is opened otherwise.
-  The static origins answer a missing file, or a path with a malformed `%`
-  escape, with a 404.
+  default). WebKit has no WebRTC preference, so every context of a WebKit
+  browser of the suite gets an init script
+  (`e2e/tests/harness/context-blocks.ts`, applied to the worker's browser and to
+  every browser a proof launches) that deletes every global named `RTC…` or
+  `webkitRTC…` in every frame before any page script runs, and clears the same
+  from a window an iframe's or frame's `contentWindow` or `contentDocument`, or
+  `window.open`, hands out (decided by the human, 2026-10-18). Playwright's
+  context reuse (UI mode, editor integrations) makes its context without going
+  through that, so the worker fixture refuses it in WebKit, saying why. The
+  routes still answer: every request the suite expects is fulfilled or aborted
+  by a route, none is continued to the network, and a route intercepts before
+  the proxy is used; no fake origin is on loopback. Two files prove it, in the
+  Firefox and WebKit projects only. `e2e/tests/hermetic-proxy.spec.ts`: the
+  worker's browser has exactly those launch options and started through the
+  start lock; a request outside every route (to `localhost` by name and to
+  `127.0.0.1`) and a dedicated worker's socket, aimed at the loopback listener,
+  never reach it, and a control launch without the proxy reaches it with the
+  same request or socket (each count is read after the browser is closed, so a
+  late retry by a worker is counted); a service worker's socket does the same in
+  WebKit, and in Firefox, where Playwright does not route a service worker's
+  script fetch, the registration itself fails at the dead proxy with no
+  connection (that is the block). A probe shows the cause: a route sees the
+  page's own fetch of the script and never the registration's; and a control
+  that points the proxy at a listener recording each request line shows a
+  `CONNECT` to the test pages' host arriving there during the registration
+  (counted just before it and just after, since the browser may send requests of
+  its own to that host). `e2e/tests/hermetic-webrtc.spec.ts`: the worker's
+  browser has no `RTCPeerConnection` or `webkitRTCPeerConnection`; a script gets
+  none back in eight ways: a new iframe read at once through `contentWindow`,
+  `frames[n]`, or `contentDocument`; a `srcdoc` iframe once loaded, through
+  `frames[n]` and through `contentWindow`; an `<object>`'s window;
+  `window.open`; and a new iframe's own `open` (a way not on this list is not
+  proven closed); and a STUN probe aimed at `localhost`, `127.0.0.1`, and
+  `[::1]` on one port, where UDP sockets on both loopback addresses count
+  datagrams, finds no `RTCPeerConnection` and nothing arrives, while a control
+  without the removal and without the proxy (Firefox with WebRTC back on, WebKit
+  without the init script) gathers and its datagrams arrive. Each probe's
+  outcome (whether `RTCPeerConnection` exists, whether gathering completed, the
+  candidates' types, and the count) is recorded as a test annotation. Before any
+  of it, each file fails, saying so, if anything accepts a TCP connection at
+  `127.0.0.1:9`, which would make the dead proxy a live one. The suite's only
+  open sockets are three, all on loopback: the TCP listener, which takes nothing
+  but connections; the UDP sockets, which take nothing but datagrams; and the
+  stand-in proxy of the Firefox service-worker control (`listenAsProxy`), which
+  reads one request line from each connection and answers nothing. No server or
+  port is opened otherwise. The static origins answer a missing file, or a path
+  with a malformed `%` escape, with a 404.
 - **The fake Play API** is a route at the configuration's `playApiBaseUrl`
   (default `https://wrapper.e2e.test/play/v1`; a test may move it). It answers
   from the vendored contract only. Its routes, each operation's listed statuses,
@@ -313,12 +334,25 @@ development-only, so it may import the test-only entry of `contracts`.
   URL. A finding names the channel and the secret's label, never its value. **A
   read error fails the scan** (decided 2026-10-17): a channel, a frame, or a
   console argument that cannot be read is an `unreadable` finding naming the
-  channel and the error's name, never a value; the one excuse is a
+  channel and the error's name, never a value. There are two excuses. One is a
   `SecurityError` in a frame whose origin is `"null"` (a sandboxed frame, which
   has no such storage), where the origin is the one an init script recorded
   before any page code ran, not `self.origin`, which a page can overwrite. A
   `SecurityError` in a frame with a real origin, or in a page that wrote
-  `"null"` over `self.origin`, is reported. Not covered: request and response
+  `"null"` over `self.origin`, is reported. The other is WebKit's origin private
+  file system (decided by the human, 2026-10-18): in WebKit only, a read that
+  fails with `UnknownError` is excused only if a write probe in the same frame
+  fails too. Every call the probe makes goes through a frozen capture an init
+  script made before any page code ran (`Reflect.apply`, `navigator.storage`,
+  `StorageManager.prototype.getDirectory`, `getFileHandle`, `removeEntry`,
+  `createWritable`, the writable stream's `write`, and
+  `WritableStream.prototype.close`), read as an own non-writable property, so a
+  page that replaces any of them cannot make the probe fail; only the language's
+  own `await` and `typeof` come from the page's realm. The probe fails when the
+  root cannot be had (no root, no write). Any other error, any other browser, or
+  a frame where the probe wrote (or could not tell) is reported
+  (`e2e/tests/secret-scan-opfs.spec.ts`: the rule itself, a faked read failure
+  where OPFS works, and WebKit's real one). Not covered: request and response
   bodies, a base64 form not aligned with the start of a larger base64 string,
   and workers. The scan runs in the page's own world and trusts the page's
   built-in APIs: a page that replaces a built-in (a storage getter, `console`,
@@ -329,7 +363,10 @@ development-only, so it may import the test-only entry of `contracts`.
   `history.state`, the origin private file system, and the key as a decimal
   number included), pass the same page leaking nothing, fail on an unreadable
   channel and an unserializable console argument, excuse an opaque frame, and
-  see a draw made just before it. The forms and the redaction are tested in Node
+  see a draw made just before it. Two channels cannot be written in one browser
+  each, so their leak test is skipped there, with the reason: the service worker
+  in Firefox (it cannot register, below) and the origin private file system in
+  WebKit (it has none here). The forms and the redaction are tested in Node
   alone (`e2e/tests/secret-needles.spec.ts`).
 - **The accessibility audit** (T-14) is an axe scan (`@axe-core/playwright`)
   with the WCAG 2.2 A and AA tags (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`,
@@ -358,14 +395,15 @@ development-only, so it may import the test-only entry of `contracts`.
   that need a round W-26 passes (the vectors are not issued for the session's
   own key), a multi-step game, or W-49's handshake are declared with
   `test.fixme` in `e2e/tests/pending.spec.ts`, reported as skipped, never as
-  passed. Every spec file runs in all three projects except the two proofs of
-  the blocks (above): `hermetic-workers.spec.ts` in Chromium only and
-  `hermetic-proxy.spec.ts` in Firefox and WebKit only, each skipped elsewhere
-  with its reason. T-9a's W-49 minimum covers both of its paths: framed by a
-  listed page, the session opens where `location.ancestorOrigins` exists
-  (Chromium, WebKit) and the Wrapper refuses to start where it does not
-  (Firefox); which projects have the list is asserted too. The handshake's cases
-  (T-9a,
+  passed. Every spec file runs in all three projects except the proofs of the
+  blocks (above): `hermetic-workers.spec.ts` in Chromium only, and
+  `hermetic-proxy.spec.ts` and `hermetic-webrtc.spec.ts` in Firefox and WebKit
+  only, each skipped elsewhere with its reason. T-9a's W-49 minimum runs in all
+  three: framed by an unlisted page the Wrapper refuses to start, and framed by
+  a listed page it opens the session. Every project's browser has
+  `location.ancestorOrigins`, Firefox's included (the first Firefox run,
+  2026-10-18), and that is asserted; the Wrapper's path without the list is a
+  component test. The handshake's cases (T-9a,
   [the test plan](../wrapper/operator-embedding.md#the-test-plan-for-t-9a)) come
   with #42, which adds a fake operator page on a third test origin (with a lobby
   and a deposit page), an unlisted fourth origin, and a way to serve the bundle
@@ -379,10 +417,10 @@ development-only, so it may import the test-only entry of `contracts`.
   Chrome. It is a development-only option: CI does not use it and always runs
   Playwright's own browsers.
 - **Browser starts**: every browser the suite starts, each worker's and any a
-  test launches of its own (`hermetic-workers.spec.ts` and
-  `hermetic-proxy.spec.ts` launch up to two per test), starts through
-  `startBrowser` (`e2e/tests/harness/browser-start.ts`), development and CI
-  alike. The worker's browser does so through
+  test launches of its own (`hermetic-workers.spec.ts`,
+  `hermetic-proxy.spec.ts`, and `hermetic-webrtc.spec.ts` launch up to two per
+  test), starts through `startBrowser` (`e2e/tests/harness/browser-start.ts`),
+  development and CI alike. The worker's browser does so through
   `e2e/tests/harness/worker-browser.ts`, which launches it with the project's
   options as Playwright does; a remote browser (`connectOptions`) fails the
   worker, and Playwright's dashboard bind is not made. A start is the launch and
