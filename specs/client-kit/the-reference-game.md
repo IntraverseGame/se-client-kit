@@ -155,11 +155,19 @@ else.
   as a group, focus moved to the heading whenever the calls hide while one of
   them holds focus, and when the player's own pick is answered by a Snapshot
   that hides them (decided in human review, 2026-10-17), so focus never drops to
-  the page; otherwise an update never moves focus. Rem sizes, 44 by 44 CSS pixel
-  targets, visible focus, no motion under `prefers-reduced-motion`, and the
-  Snapshot's `context.theme.appearance` and `context.device` as `data-theme` and
-  `data-device` on the root. The text is English only; `context.language` is not
-  used.
+  the page while the game's document has focus; otherwise an update never moves
+  focus. In both cases the game moves focus only while its own document has
+  focus (`document.hasFocus()`), and otherwise never calls `focus()`: the
+  Wrapper owns focus at a round's end, when it moves focus to its result heading
+  (W-46), so the game yields and focus ends there whichever of the two updates
+  comes first (decided in human review, 2026-10-18). When the game's document
+  does not have focus (the Wrapper took it, or the browser window is in the
+  background), a call that hides lets focus drop to the frame's body; at a
+  round's end the Wrapper's W-46 move puts it on the result heading. Rem sizes,
+  44 by 44 CSS pixel targets, visible focus, no motion under
+  `prefers-reduced-motion`, and the Snapshot's `context.theme.appearance` and
+  `context.device` as `data-theme` and `data-device` on the root. The text is
+  English only; `context.language` is not used.
 - **Observability.** The game logs nothing, stores nothing, and sends nothing
   but its `hello` and `action` messages to its parent.
 - **Tests.** Unit and component tests (Vitest, jsdom) cover the origin and

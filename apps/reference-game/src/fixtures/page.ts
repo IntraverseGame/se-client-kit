@@ -47,5 +47,29 @@ export const callButton = (
   return button;
 };
 
+/**
+ * Makes `document.hasFocus()` answer `focused` (as when the frame has or has
+ * lost focus to the Wrapper) and returns how to undo it. jsdom's own answer
+ * depends on what an earlier test focused, so the focus tests set it.
+ */
+export const setDocumentFocus = (focused: boolean): (() => void) => {
+  Object.defineProperty(document, "hasFocus", {
+    configurable: true,
+    value: (): boolean => focused,
+  });
+  return () => {
+    Reflect.deleteProperty(document, "hasFocus");
+  };
+};
+
+/** Counts the `focus` events the heading receives from now on. */
+export const headingFocusCount = (host: HTMLElement): (() => number) => {
+  let count = 0;
+  host.querySelector(`#${HEADING_ID}`)?.addEventListener("focus", () => {
+    count += 1;
+  });
+  return () => count;
+};
+
 export const callsShown = (host: HTMLElement): boolean =>
   host.querySelector<HTMLElement>(".rg-calls")?.hidden === false;

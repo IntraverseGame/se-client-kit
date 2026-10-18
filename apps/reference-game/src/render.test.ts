@@ -3,7 +3,7 @@
 // theme and layout it takes from the Snapshot. The accessibility rules are in
 // accessibility.test.ts.
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   alertText,
@@ -11,7 +11,9 @@ import {
   callsShown,
   detail,
   heading,
+  headingFocusCount,
   mount,
+  setDocumentFocus,
 } from "./fixtures/page.ts";
 import {
   rejectMessage,
@@ -193,6 +195,69 @@ describe("the calls", () => {
     expect(document.activeElement?.id).not.toBe(HEADING_ID);
     expect(callsShown(host)).toBe(false);
   });
+});
+
+describe("focus yields to the Wrapper (W-46)", () => {
+  const restores: (() => void)[] = [];
+  afterEach(() => {
+    for (const restore of restores.splice(0)) restore();
+  });
+
+  // [document focused, heading focus events, heading focused at the end]
+  const CASES = [
+    [true, 1, true],
+    [false, 0, false],
+  ] as const;
+
+  it.each(CASES)(
+    "the player's pick answered by a Snapshot that hides the calls (document focused: %s)",
+    (focused, focusEvents, headingFocused) => {
+      const { parent, host } = mount();
+      parent.send(snapshotMessage(SNAPSHOTS.active));
+      const tails = callButton(host, "Tails");
+      tails.focus();
+      tails.click();
+      restores.push(setDocumentFocus(focused));
+      const focusCount = headingFocusCount(host);
+      parent.send(snapshotMessage(SNAPSHOTS.won));
+      expect(callsShown(host)).toBe(false);
+      expect(focusCount()).toBe(focusEvents);
+      expect(document.activeElement?.id === HEADING_ID).toBe(headingFocused);
+    },
+  );
+
+  it.each(CASES)(
+    "the calls hiding while one holds focus (document focused: %s)",
+    (focused, focusEvents, headingFocused) => {
+      const { parent, host } = mount();
+      parent.send(snapshotMessage(SNAPSHOTS.active));
+      callButton(host, "Heads").focus();
+      restores.push(setDocumentFocus(focused));
+      const focusCount = headingFocusCount(host);
+      parent.send(snapshotMessage({ ...SNAPSHOTS.canceled, version: 9 }));
+      expect(callsShown(host)).toBe(false);
+      expect(focusCount()).toBe(focusEvents);
+      expect(document.activeElement?.id === HEADING_ID).toBe(headingFocused);
+    },
+  );
+
+  it.each(CASES)(
+    "the player's pick answered with focus off the calls (document focused: %s)",
+    (focused, focusEvents, headingFocused) => {
+      const { parent, host } = mount();
+      parent.send(snapshotMessage(SNAPSHOTS.active));
+      const tails = callButton(host, "Tails");
+      tails.focus();
+      tails.click();
+      tails.blur();
+      restores.push(setDocumentFocus(focused));
+      const focusCount = headingFocusCount(host);
+      parent.send(snapshotMessage(SNAPSHOTS.won));
+      expect(callsShown(host)).toBe(false);
+      expect(focusCount()).toBe(focusEvents);
+      expect(document.activeElement?.id === HEADING_ID).toBe(headingFocused);
+    },
+  );
 });
 
 describe("theme and layout", () => {
