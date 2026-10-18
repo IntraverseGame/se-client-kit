@@ -23,15 +23,15 @@ is published); `build` (the bundle, its manifest, a size budget, a check that
 the same bundle is what e2e runs and what is released (no test or
 per-environment build), and a check that no vector reaches any bundle or release
 output); `e2e-fake` (Playwright against the in-repo fake Play API, which answers
-from the contract's vectors); `audit` (`pnpm audit --prod`, failing on high and
-critical advisories only); `dependency-review` (pull requests only);
-`release-dry-run` (the release dry run: changesets applied on a scratch copy,
-the five tarballs packed and checked and imported as a consumer would, the
-Wrapper artifact built twice with one digest, and held to the size budget; no
-token, no network). The release itself is a separate workflow, `release`
-(changesets, provenance, run by hand from the default branch only, its `version`
-job pushing the version pull request's branch, its publish job in the protected
-`release` environment;
+from the contract's vectors, one job per browser project: Chromium, Firefox, and
+WebKit); `audit` (`pnpm audit --prod`, failing on high and critical advisories
+only); `dependency-review` (pull requests only); `release-dry-run` (the release
+dry run: changesets applied on a scratch copy, the five tarballs packed and
+checked and imported as a consumer would, the Wrapper artifact built twice with
+one digest, and held to the size budget; no token, no network). The release
+itself is a separate workflow, `release` (changesets, provenance, run by hand
+from the default branch only, its `version` job pushing the version pull
+request's branch, its publish job in the protected `release` environment;
 [release runbook](../../runbook/client-kit-release.md#release)).
 
 Today `contracts` runs the test-only-entry import check, the hash check against
@@ -40,14 +40,20 @@ Play API document's types, and the vector catalog). `contracts-drift` is not
 defined yet. `build` builds every workspace (the Wrapper's build writes and
 checks its manifest), and the job also runs `pnpm check:build-output` (the
 no-vector content check, now over the vendored vectors),
-`pnpm check:package-files`, and `pnpm check:size-budget` (below). `e2e-fake`
-installs Playwright's Chromium and runs the e2e harness's own tests, a smoke run
-on the Wrapper's release bundle, the browser rows of the Wrapper's test plan
-that run on the fake Play API, and a smoke run on the reference game's build;
-the others are pending ([The e2e harness](#the-e2e-harness)). The workflows hold
-no secret, run with `permissions: {}` at the top and `contents: read` per job
-(the release workflow's `publish` job adds `id-token: write`, for provenance and
-trusted publishing, and its `version` job has `contents: write` and
+`pnpm check:package-files`, and `pnpm check:size-budget` (below). `e2e-fake` is
+a matrix of three jobs side by side, one per Playwright project (`chromium`,
+`firefox`, `webkit`; their checks are named `e2e-fake (chromium)` and so on),
+all required through `ci-ok`, the one check branch protection names; each
+installs only its own browser (`playwright install --with-deps <project>`, at
+the `@playwright/test` version the lockfile pins) and runs only that project
+(`SE_E2E_PROJECT`, read by the e2e package's `test` script). Each runs the e2e
+harness's own tests, a smoke run on the Wrapper's release bundle, the browser
+rows of the Wrapper's test plan that run on the fake Play API, and a smoke run
+on the reference game's build; the others are pending
+([The e2e harness](#the-e2e-harness)). The workflows hold no secret, run with
+`permissions: {}` at the top and `contents: read` per job (the release
+workflow's `publish` job adds `id-token: write`, for provenance and trusted
+publishing, and its `version` job has `contents: write` and
 `pull-requests: read` instead, to push the version branch), and pin every Action
 by full commit SHA.
 
@@ -201,11 +207,41 @@ development-only, so it may import the test-only entry of `contracts`.
   name at a loopback listener the test owns, never reach it, and a control
   launch without the flag reaches it with the same socket (both launches turn
   off Chrome's local network access checks, which would otherwise stop a public
-  origin's socket to loopback and make the test pass for the wrong reason). That
-  listener is the suite's only open socket and takes nothing but connections.
-  Firefox and WebKit need their own equivalent of the block when their projects
-  are added (T-9a). No server or port is opened otherwise. The static origins
-  answer a missing file, or a path with a malformed `%` escape, with a 404.
+  origin's socket to loopback and make the test pass for the wrong reason). It
+  runs in the Chromium project only (an in-file `test.skip` with its reason).
+  The Firefox and WebKit projects have their own block (decided by the human,
+  2026-10-18; `browser-flags.ts`): both launch with a proxy at a dead loopback
+  port (`http://127.0.0.1:9`, privileged on the Linux runners and listened on by
+  nothing) and no bypass, so anything outside a route fails, and Firefox also
+  runs with WebRTC off (`media.peerconnection.enabled: false`) and with
+  localhost and loopback sent through the proxy too
+  (`network.proxy.allow_hijacking_localhost: true`; Firefox sends them direct by
+  default). The routes still answer: every request the suite expects is
+  fulfilled or aborted by a route, none is continued to the network, and a route
+  intercepts before the proxy is used; no fake origin is on loopback.
+  `e2e/tests/hermetic-proxy.spec.ts` proves it, in the Firefox and WebKit
+  projects only: the worker's browser has exactly those launch options and
+  started through the start lock; a request outside every route (to `localhost`
+  by name and to `127.0.0.1`), a dedicated worker's socket, and a service
+  worker's socket, aimed at the loopback listener, never reach it, and a control
+  launch without the proxy reaches it with the same request or socket (each
+  count is read after the browser is closed, so a late retry by a worker is
+  counted). WebRTC's STUN traffic is UDP, which no HTTP proxy carries: a probe
+  aims STUN at `localhost`, `127.0.0.1`, and `[::1]` on one port, where UDP
+  sockets on both loopback addresses count datagrams, and records its outcome
+  (whether `RTCPeerConnection` exists, whether gathering completed, the
+  candidates' types, and the count) as a test annotation. In Firefox the probe
+  finds no `RTCPeerConnection` and nothing arrives, and a control launch with
+  WebRTC back on (the proxy kept) sends datagrams to those sockets. On WebKit,
+  which has no preference that turns WebRTC off, a pass shows only that this
+  probe sent no datagram to loopback: with no WebKit control, it does not prove
+  WebRTC traffic is blocked. The gap is open (decided by the human, 2026-10-18).
+  Before any of it, the file fails, saying so, if anything accepts a TCP
+  connection at `127.0.0.1:9`, which would make the dead proxy a live one. The
+  TCP listener and the UDP sockets are the suite's only open sockets; each takes
+  nothing but connections or datagrams. No server or port is opened otherwise.
+  The static origins answer a missing file, or a path with a malformed `%`
+  escape, with a 404.
 - **The fake Play API** is a route at the configuration's `playApiBaseUrl`
   (default `https://wrapper.e2e.test/play/v1`; a test may move it). It answers
   from the vendored contract only. Its routes, each operation's listed statuses,
@@ -322,21 +358,31 @@ development-only, so it may import the test-only entry of `contracts`.
   that need a round W-26 passes (the vectors are not issued for the session's
   own key), a multi-step game, or W-49's handshake are declared with
   `test.fixme` in `e2e/tests/pending.spec.ts`, reported as skipped, never as
-  passed. The handshake's cases (T-9a,
+  passed. Every spec file runs in all three projects except the two proofs of
+  the blocks (above): `hermetic-workers.spec.ts` in Chromium only and
+  `hermetic-proxy.spec.ts` in Firefox and WebKit only, each skipped elsewhere
+  with its reason. T-9a's W-49 minimum covers both of its paths: framed by a
+  listed page, the session opens where `location.ancestorOrigins` exists
+  (Chromium, WebKit) and the Wrapper refuses to start where it does not
+  (Firefox); which projects have the list is asserted too. The handshake's cases
+  (T-9a,
   [the test plan](../wrapper/operator-embedding.md#the-test-plan-for-t-9a)) come
   with #42, which adds a fake operator page on a third test origin (with a lobby
   and a deposit page), an unlisted fourth origin, and a way to serve the bundle
   with and without the `frame-ancestors` header; its Firefox and WebKit cases
-  also need those Playwright projects, which are added separately.
+  run in the Firefox and WebKit projects.
 - **Locally**, `pnpm exec playwright install chromium` (in `e2e/`) installs the
-  browser once. Where Playwright's download is unavailable,
+  browser once; `pnpm test:e2e` runs the `chromium` project unless
+  `SE_E2E_PROJECT` names another (`firefox`, `webkit`, after installing that
+  browser). Where Playwright's download is unavailable,
   `SE_E2E_BROWSER_CHANNEL=chrome` runs the Chromium project on an installed
   Chrome. It is a development-only option: CI does not use it and always runs
-  Playwright's own Chromium.
+  Playwright's own browsers.
 - **Browser starts**: every browser the suite starts, each worker's and any a
-  test launches of its own (`hermetic-workers.spec.ts` launches two per test),
-  starts through `startBrowser` (`e2e/tests/harness/browser-start.ts`),
-  development and CI alike. The worker's browser does so through
+  test launches of its own (`hermetic-workers.spec.ts` and
+  `hermetic-proxy.spec.ts` launch up to two per test), starts through
+  `startBrowser` (`e2e/tests/harness/browser-start.ts`), development and CI
+  alike. The worker's browser does so through
   `e2e/tests/harness/worker-browser.ts`, which launches it with the project's
   options as Playwright does; a remote browser (`connectOptions`) fails the
   worker, and Playwright's dashboard bind is not made. A start is the launch and

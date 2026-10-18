@@ -512,15 +512,17 @@ issued for the session's own key nor signed by the configuration's signer; T-12
 also needs a multi-step game); T-15 during a signed action and T-16's
 out-of-sync state, session-ending codes, and rejected Snapshot (the same round,
 or answers no vector holds); and T-9a's handshake path (W-49a to W-49f, built
-with #42; its Firefox and WebKit cases also wait for those Playwright projects).
-The shell's required cancel and its Wrapper states (W-25, W-33, W-35) have no
+with #42; its Firefox and WebKit cases run in those Playwright projects). The
+shell's required cancel and its Wrapper states (W-25, W-33, W-35) have no
 browser row: a cancel needs a round whose `CreateRoundAuth` checks pass for the
 session's own key with only the tip check failing, which the fake's vectors
 cannot issue either, so they are covered by the shell's and the Wrapper's
-component tests (T-4b, T-6). W-49's built minimum runs on Chromium
-(`t9a-embedding.spec.ts`: framed by an unlisted page it refuses to start and
-redeems nothing; framed by a listed one it opens the session), and its path
-without `location.ancestorOrigins` is a component test.
+component tests (T-4b, T-6). W-49's built minimum runs in the Chromium, Firefox,
+and WebKit projects (`t9a-embedding.spec.ts`: framed by an unlisted page it
+refuses to start and redeems nothing; framed by a listed one it opens the
+session where `location.ancestorOrigins` exists, Chromium and WebKit, and
+refuses to start where it does not, Firefox), and the path without
+`location.ancestorOrigins` is also a component test.
 
 The e2e suite runs in two places: against an in-repo fake Play API on every
 change here, and against the SuperEngine preview stack from a job owned by the

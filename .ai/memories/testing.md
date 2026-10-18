@@ -82,7 +82,27 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   runs with `--host-resolver-rules=MAP * ~NOTFOUND` (`harness/browser-flags.ts`):
   worker sockets and other unrouted traffic reach no host by name, unrecorded
   (`hermetic-workers.spec.ts` proves it with a loopback listener and a control
-  launch). The opaque-frame excuse reads the origin an init script recorded
+  launch). **Projects:** `chromium`, `firefox`, `webkit`
+  (`e2e/playwright.config.ts`). `pnpm test:e2e` runs one,
+  `SE_E2E_PROJECT` (default `chromium`, so local runs need Chromium only); CI's
+  `e2e-fake` is a matrix with one job per project, each installing only its
+  browser. Firefox and WebKit block traffic outside the routes with a dead-port
+  proxy (`http://127.0.0.1:9`, no bypass), and Firefox also with
+  `media.peerconnection.enabled: false` and
+  `network.proxy.allow_hijacking_localhost: true` (`harness/browser-flags.ts`),
+  proven by `hermetic-proxy.spec.ts` (Firefox and WebKit only; page helpers in
+  `harness/outside-routes.ts`, a UDP datagram counter in
+  `harness/loopback-datagrams.ts` for the STUN probe); `hermetic-workers.spec.ts`
+  is Chromium only. Both skip in-file with a reason. Its own launches go
+  through `startBrowser`; a control drops the proxy with `proxy: undefined`
+  (Playwright spreads given launch options over the project's). Counts are read
+  after the browser closes. The STUN probe aims at `localhost`, `127.0.0.1`, and
+  `[::1]` (UDP sockets on both loopbacks, one port) and records its outcome as a
+  `stun-probe` annotation. On WebKit, which has no WebRTC preference, a pass
+  shows only that this probe sent no datagram to loopback; with no WebKit
+  control it does not prove WebRTC traffic is blocked (open gap, human
+  decision, 2026-10-18). A `beforeAll` fails the file if anything accepts on
+  `127.0.0.1:9` (`expectNothingAccepts`). The opaque-frame excuse reads the origin an init script recorded
   (`harness/origin-capture.ts`), never `self.origin`. The hermetic fixture
   also serves the Wrapper's environment configuration document
   (`harness/environment-config.ts`, a valid `preview` document pointing at the
@@ -101,8 +121,10 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   round `starting`, and a vector with one to show the failed verification.
   `fakePlayApi.redeemAgain()` allows one more redeem for the cloned tab of
   T-17. `t9a-embedding.spec.ts` frames the bundle from a test page on
-  `PAGES_ORIGIN` (Chromium has `ancestorOrigins`); the Firefox path is a
-  component test (`boot-session.test.ts`). Rows that cannot run yet stay `test.fixme` in
+  `PAGES_ORIGIN`: a listed page opens the session where `ancestorOrigins`
+  exists (Chromium, WebKit) and is refused where it does not (Firefox), with
+  a test asserting which project has it (the Firefox path is also a component
+  test, `boot-session.test.ts`). Rows that cannot run yet stay `test.fixme` in
   `pending.spec.ts`, never a body that passes. The reference game's build is
   served at D, `https://game.e2e-games.test` (`GAME_ORIGIN`, origins.ts), for
   every test (`serve-origins.ts`): the fake's redeem answers it as `gameOrigin`
@@ -348,5 +370,6 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   has no `files`, so it always runs. `pnpm clean:cache` forgets every
   cached result.
 - CI jobs (`.github/workflows/ci.yml`): `lint`, `format`, `typecheck`, `unit`,
-  `allow-list`, `contracts`, `build`, `e2e-fake`, `audit` (fails only on high and critical advisories; the weekly `audit.yml` reports every severity), `dependency-review` (pull requests only),
+  `allow-list`, `contracts`, `build`, `e2e-fake` (a matrix, so its checks are
+  `e2e-fake (chromium)`, `e2e-fake (firefox)`, `e2e-fake (webkit)`), `audit` (fails only on high and critical advisories; the weekly `audit.yml` reports every severity), `dependency-review` (pull requests only),
   and the aggregate `ci-ok`. `contracts-drift` and `release` are not defined yet.

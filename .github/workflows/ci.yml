@@ -149,15 +149,24 @@ jobs:
           pnpm exec tsx tools/release-dry-run.ts --out
           "$RUNNER_TEMP/release-dry-run"
 
-  # Playwright against the in-repo fake Play API (e2e/), on Chromium. The
-  # browser comes from Playwright's own download for the pinned
-  # @playwright/test; lifecycle scripts are off, so it is installed here.
+  # Playwright against the in-repo fake Play API (e2e/), one job per project
+  # (chromium, firefox, webkit), side by side, on every change. Each job
+  # installs only its own browser, from Playwright's own download for the
+  # @playwright/test the lockfile pins (lifecycle scripts are off, so it is
+  # installed here), and runs only that project (SE_E2E_PROJECT, read by the
+  # e2e package's test script). ci-ok needs every one of them.
   e2e-fake:
-    name: e2e-fake
+    name: e2e-fake (${{ matrix.project }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit]
+    env:
+      SE_E2E_PROJECT: ${{ matrix.project }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -165,7 +174,7 @@ jobs:
       - uses: ./.github/actions/setup
       - run:
           pnpm --filter @intraverse/se-client-e2e exec playwright install
-          --with-deps chromium
+          --with-deps "$SE_E2E_PROJECT"
       - run: pnpm run test:e2e
 
   audit:

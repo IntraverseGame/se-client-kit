@@ -345,11 +345,10 @@ A public integration note, written in this repository once #42 is built, says:
 
 T-9a is unit and e2e. Every case is hermetic: an injected clock for the timeout,
 the in-repo fake Play API, and a fake operator page on a third test origin (and
-an unlisted fourth). The cases that need Firefox or WebKit wait for those
-Playwright projects, which are added separately
-([testing-and-ci.md](../client-kit/testing-and-ci.md)); until they exist they
-are declared pending in `e2e/tests/pending.spec.ts`, never as passing, and the
-other e2e cases run on Chromium.
+an unlisted fourth). Its handshake cases run in the Chromium, Firefox, and
+WebKit projects ([testing-and-ci.md](../client-kit/testing-and-ci.md)) once #42
+builds them; until then they are declared pending in
+`e2e/tests/pending.spec.ts`, never as passing.
 
 **Unit** (the operator channel in the `shell`; the dispatch and the controls in
 the Wrapper app):

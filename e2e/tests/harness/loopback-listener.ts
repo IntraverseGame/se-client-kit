@@ -1,9 +1,11 @@
 // A TCP listener on the loopback interface that only counts connections, for
-// the one test that must prove a worker's socket never reaches a host: without
-// a listener, "the socket failed" would prove nothing. It answers nothing and
-// closes every connection at once. The only listener in the suite.
+// the tests that must prove a socket or a request outside the routes never
+// reaches a host (hermetic-workers.spec.ts, hermetic-proxy.spec.ts): without a
+// listener, "the socket failed" would prove nothing. It answers nothing and
+// closes every connection at once. With the UDP datagram counter
+// (loopback-datagrams.ts), the suite's only open sockets.
 
-import { createServer, type Server } from "node:net";
+import { connect, createServer, type Server } from "node:net";
 
 export type LoopbackListener = {
   readonly port: number;
@@ -38,4 +40,34 @@ export const listenOnLoopback = async (): Promise<LoopbackListener> => {
         });
       }),
   };
+};
+
+/**
+ * Fails, saying why, if anything accepts a TCP connection at `url` (an
+ * `http://host:port` address such as the dead proxy's): a listener there would
+ * turn the dead proxy into a live one. A refused or timed-out connection
+ * passes; the wait is at most 1 s.
+ */
+export const expectNothingAccepts = (url: string): Promise<void> => {
+  const { hostname, port } = new URL(url);
+  return new Promise<void>((resolve, reject) => {
+    const socket = connect({ host: hostname, port: Number(port) });
+    socket.setTimeout(1000);
+    socket.once("connect", () => {
+      socket.destroy();
+      reject(
+        new Error(
+          `Something accepts connections at ${url}, the dead proxy of the Firefox and WebKit block: stop it before running the suite.`,
+        ),
+      );
+    });
+    socket.once("timeout", () => {
+      socket.destroy();
+      resolve();
+    });
+    socket.once("error", () => {
+      socket.destroy();
+      resolve();
+    });
+  });
 };
