@@ -21,6 +21,7 @@
     "clean:cache": "find . -name .wireit -type d -not -path '*/node_modules/*' -prune -exec rm -rf {} +",
     "check:build-output": "wireit",
     "check:package-files": "wireit",
+    "check:size-budget": "wireit",
     "check:readmes": "wireit",
     "release:dry-run": "wireit"
   },
@@ -35,6 +36,7 @@
         "check:contracts",
         "check:build-output",
         "check:package-files",
+        "check:size-budget",
         "check:readmes"
       ]
     },
@@ -131,6 +133,8 @@
         "stylelint.config.mjs",
         ".gitignore",
         ".changeset/config.json",
+        ".github/workflows/release.yml",
+        ".github/workflows/ci.yml",
         "tsconfig.json",
         "tsconfig.base.json",
         "package.json",
@@ -279,6 +283,25 @@
         "tsconfig.base.json",
         "packages/*/package.json",
         "packages/*/dist/**"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "check:size-budget": {
+      "command": "tsx tools/check-size-budget.ts",
+      "dependencies": [
+        "./apps/wrapper:build"
+      ],
+      "files": [
+        "tools/**",
+        "!tools/**/*.test.ts",
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.base.json",
+        "apps/wrapper/package.json",
+        "apps/wrapper/dist/**"
       ],
       "output": [],
       "packageLocks": [

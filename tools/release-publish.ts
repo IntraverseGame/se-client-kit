@@ -5,9 +5,10 @@
 //   1. builds everything without the task cache, packs the five libraries,
 //      and runs the same tarball and consumer checks as the dry run;
 //   2. refuses to go on (tools/release-readiness.ts) while a changeset is
-//      pending, while a library is still `private` or at 0.0.0, or while the
+//      pending, while a library is still `private` or at 0.0.0, while the
 //      Wrapper build is not the one the dry run reported
-//      (`--expect-wrapper-digest`, required with `--publish`);
+//      (`--expect-wrapper-digest`, required with `--publish`), or while the
+//      Wrapper is over its size budget (tools/size-budget.ts);
 //   3. publishes **the checked tarballs themselves** (`pnpm publish <tarball>`,
 //      with provenance, public access, and lifecycle scripts off), in
 //      dependency order. A version the registry already has is skipped only
@@ -40,6 +41,7 @@ import {
 import {
   buildWrapperArtifact,
   checkTarballs,
+  checkWrapperSize,
   packLibraries,
   prepareOut,
   readJson,
@@ -86,6 +88,7 @@ const problems = [
     expectedDigest: values["expect-wrapper-digest"],
     actualDigest: wrapper.digest,
   }),
+  ...checkWrapperSize(root).problems,
   ...loaded.problems,
   ...checkTarballs(packed, loaded.vectors),
   ...checkResolution(root, packed, join(out, "consumer"), env),

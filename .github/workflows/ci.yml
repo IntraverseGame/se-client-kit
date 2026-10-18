@@ -105,10 +105,11 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm run check:contracts
 
-  # The bundle manifest and the size budget join this job with the Wrapper's
-  # first release build. check:build-output inspects every dist/ (no vector, no
-  # test file, only intended outputs); check:package-files holds each library's
-  # package.json files field to its dist/.
+  # The Wrapper's build writes and checks its manifest. check:build-output
+  # inspects every dist/ (no vector, no test file, only intended outputs);
+  # check:package-files holds each library's package.json files field to its
+  # dist/; check:size-budget holds the Wrapper's release output to its size
+  # budget (tools/size-budget.ts).
   build:
     name: build
     runs-on: ubuntu-latest
@@ -123,12 +124,13 @@ jobs:
       - run: pnpm run build
       - run: pnpm run check:build-output
       - run: pnpm run check:package-files
+      - run: pnpm run check:size-budget
 
   # The release dry run (tools/release-dry-run.ts): changesets applied on a
   # scratch copy, the five tarballs packed and checked (exports, no vector,
   # nothing of the contracts test-only entry), the packed packages imported as
-  # a consumer would, and the Wrapper artifact built twice with one digest. It
-  # publishes nothing and needs no token.
+  # a consumer would, the Wrapper artifact built twice with one digest, and the
+  # Wrapper's size budget. It publishes nothing and needs no token.
   release-dry-run:
     name: release-dry-run
     runs-on: ubuntu-latest

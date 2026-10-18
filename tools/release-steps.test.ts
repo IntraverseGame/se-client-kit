@@ -4,7 +4,11 @@ import { delimiter, join, sep } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { prepareOut, scratchEnvironment } from "./release-steps.ts";
+import {
+  checkWrapperSize,
+  prepareOut,
+  scratchEnvironment,
+} from "./release-steps.ts";
 
 describe("scratchEnvironment", () => {
   const root = join(sep, "work", "kit");
@@ -88,6 +92,73 @@ describe("prepareOut", () => {
       expect(prepareOut(root, join(base, "new"))).toBe(join(base, "new"));
     } finally {
       rmSync(base, { recursive: true, force: true });
+    }
+  });
+});
+
+/** A root whose `apps/wrapper/dist/` holds `files`. */
+const withDist = (files: Readonly<Record<string, Uint8Array>>): string => {
+  const root = mkdtempSync(join(tmpdir(), "se-client-kit-size-"));
+  const dist = join(root, "apps", "wrapper", "dist");
+  mkdirSync(join(dist, "assets"), { recursive: true });
+  for (const [path, bytes] of Object.entries(files)) {
+    writeFileSync(join(dist, path), bytes);
+  }
+  return root;
+};
+
+describe("checkWrapperSize", () => {
+  it("passes a built output within the budget", () => {
+    const root = withDist({
+      "index.html": new TextEncoder().encode("<!doctype html>"),
+      "assets/index.js": new TextEncoder().encode("console.log(1);"),
+    });
+    try {
+      const report = checkWrapperSize(root);
+      expect(report.problems).toEqual([]);
+      expect(report.rows.map(row => row.bytes)).toEqual([
+        30,
+        expect.any(Number),
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a built output over the budget, nested files included", () => {
+    const root = withDist({
+      "index.html": new Uint8Array(1),
+      "assets/big.js": new Uint8Array(204_800),
+    });
+    try {
+      expect(checkWrapperSize(root).problems).toContain(
+        "wrapper output: 204801 bytes, over its size budget of 204800 bytes by 1",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports an empty dist/ as no release build", () => {
+    const root = withDist({});
+    try {
+      expect(checkWrapperSize(root).problems).toEqual([
+        "the Wrapper output has no index.html, so it is not a release build",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a Wrapper that is not built, never a pass", () => {
+    const root = mkdtempSync(join(tmpdir(), "se-client-kit-size-"));
+    try {
+      expect(checkWrapperSize(root).problems).toEqual([
+        "wrapper output: not measured, so its size budget cannot pass",
+        "wrapper page, gzip: not measured, so its size budget cannot pass",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

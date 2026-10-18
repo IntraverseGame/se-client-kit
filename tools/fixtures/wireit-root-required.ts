@@ -125,6 +125,8 @@ export const rootRequirements = (
         "stylelint.config.mjs",
         ".gitignore",
         ".changeset/config.json",
+        ".github/workflows/release.yml",
+        ".github/workflows/ci.yml",
         "pnpm-workspace.yaml",
         ...withTsconfigs,
         "CONTRIBUTING.md",
@@ -197,6 +199,17 @@ export const rootRequirements = (
         "packages/contracts/dist/runtime/probe-a1.js",
         "packages/contracts/dist/chunks/probe-b2.js",
         ...distFiles(root).filter(path => path.startsWith("packages/")),
+      ],
+    ],
+    [
+      "check:size-budget",
+      [
+        ...tools.filter(path => !path.endsWith(".test.ts")),
+        "apps/wrapper/package.json",
+        ...withTsconfigs,
+        "apps/wrapper/dist/assets/probe.js",
+        "apps/wrapper/dist/probe.css",
+        ...distFiles(root).filter(path => path.startsWith("apps/wrapper/")),
       ],
     ],
   ];

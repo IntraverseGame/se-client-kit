@@ -1,9 +1,16 @@
 name: Release
 
 # Run by hand only (runbook/client-kit-release.md, Release). The `dry-run` job
-# runs every time and publishes nothing. The `publish` job runs only when all of
-# these hold, so it cannot run before the org owners' settings exist (#3):
-#   - it was dispatched from `main` with `publish` set;
+# runs every time and publishes nothing; it fails at once, so nothing else runs,
+# when both `version` and `publish` are set (they are never run together). The
+# `version` job runs only when it was dispatched from `main` with `version` set
+# and `publish` not set: it applies the pending changesets and pushes the
+# result to the `changeset-release/main` branch, from which a person opens the
+# version pull request (Actions never open one here). It publishes nothing and
+# names no environment. The `publish` job runs only when
+# all of these hold, so it cannot run before the org owners' settings exist
+# (#3):
+#   - it was dispatched from `main` with `publish` set and `version` not set;
 #   - the repository variable RELEASE_PUBLISH_ENABLED is `true` (set by an org
 #     owner once the protected `release` environment and the npm trusted
 #     publisher exist; a variable, never a secret);
@@ -20,6 +27,12 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
+      version:
+        description:
+          Push the changeset-release/main branch for the version pull request
+          (off by default)
+        type: boolean
+        default: false
       publish:
         description: Publish to npm (off by default; the dry run always runs)
         type: boolean
@@ -42,6 +55,14 @@ jobs:
     outputs:
       wrapper-digest: ${{ steps.dry-run.outputs.wrapper-digest }}
     steps:
+      # `version` and `publish` are exclusive: the version pull request must be
+      # merged before anything is published. Both set fails the run here, with
+      # this message, instead of skipping a job without a word.
+      - name: Refuse version and publish together
+        if: inputs.version && inputs.publish
+        run: |
+          echo "::error::Tick either version or publish, not both: merge the version pull request first, then publish in a run of its own."
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -50,7 +71,8 @@ jobs:
         with:
           cache: "false"
       # Applies the changesets on a scratch copy, packs and checks the five
-      # libraries, and builds the Wrapper artifact twice (same digest required).
+      # libraries, builds the Wrapper artifact twice (same digest required), and
+      # holds the Wrapper to its size budget.
       # The CLI directly, not `pnpm release:dry-run -- --out ...`: wireit
       # passes extra arguments to a `shell: true` spawn unescaped (Node's
       # DEP0190 warning).
@@ -59,11 +81,144 @@ jobs:
           pnpm exec tsx tools/release-dry-run.ts --out
           "$RUNNER_TEMP/release-dry-run"
 
+  # The version pull request's branch (runbook, Release step 2). Only from
+  # `main`, only after the dry run passed on the same commit. It publishes
+  # nothing, holds no OIDC token, and names no environment (naming `release`
+  # before the org owners create it would create it unprotected).
+  version:
+    name: version
+    needs: dry-run
+    if: inputs.version && !inputs.publish && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # To push the changeset-release/main branch, the only thing this job
+      # means to write (no tag, no release, no pull request; see the TODO at
+      # the end of the job for what the token could still do).
+      contents: write
+      # @changesets/changelog-github asks the GitHub GraphQL API for each
+      # changeset commit's associated pull request and its author, to link
+      # them in the changelog; with only `contents` granted, every other scope
+      # of the token is `none`, so the pull request lookup needs this read.
+      pull-requests: read
+    steps:
+      # The whole history: changesets finds the commit that added each
+      # changeset for the changelog. No credential is left in .git/config.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      # No cache: no wireit helper and no pnpm store restore in a release job.
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      # Versions and changelogs. The job's own token, for the changelog
+      # generator's GitHub API calls; never a stored secret.
+      - name: Apply the pending changesets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm exec changeset version
+      # Only what `changeset version` writes, as regular files, may be pushed:
+      # a modified `package.json`, an added or modified `CHANGELOG.md`, and a
+      # consumed changeset deleted directly under `.changeset/` (never its
+      # README.md); no `package.json` or `CHANGELOG.md` inside `.changeset/`,
+      # which changesets would read as a pending changeset. `--no-renames` splits a rename into a deletion and an
+      # addition, so neither half hides; a type or mode change, a path with
+      # any character outside [A-Za-z0-9._/@-], and anything else is refused.
+      # No token in this step. tools/release-version-guard.test.ts runs this
+      # script against temporary git repositories.
+      - name: Check what changeset version changed
+        id: changes
+        shell: bash
+        run: |
+          git -c core.hooksPath=/dev/null -c core.fsmonitor=false add --all
+          if git -c core.hooksPath=/dev/null -c core.fsmonitor=false diff --cached --quiet; then
+            echo "No pending changesets; nothing to push."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          versioned='(^|/)(package\.json|CHANGELOG\.md)$'
+          changelog='(^|/)CHANGELOG\.md$'
+          consumed='^\.changeset/[A-Za-z0-9._-]+\.md$'
+          safe='^[A-Za-z0-9._/@-]+$'
+          changes="$(mktemp)"
+          git -c core.hooksPath=/dev/null -c core.fsmonitor=false diff --cached --no-renames --raw -z \
+            > "$changes"
+          unexpected=0
+          while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
+            read -r old_mode new_mode _ _ status <<< "${meta#:}"
+            allowed=0
+            if [[ $path =~ $safe ]]; then
+              case "$status $old_mode $new_mode" in
+                "M 100644 100644")
+                  [[ $path =~ $versioned && $path != .changeset/* ]] &&
+                    allowed=1
+                  ;;
+                "A 000000 100644")
+                  [[ $path =~ $changelog && $path != .changeset/* ]] &&
+                    allowed=1
+                  ;;
+                "D 100644 000000")
+                  [[ $path =~ $consumed && $path != .changeset/README.md ]] &&
+                    allowed=1
+                  ;;
+              esac
+            fi
+            if [ "$allowed" -ne 1 ]; then
+              printf 'Unexpected change: %s %q\n' "$status" "$path"
+              unexpected=1
+            fi
+          done < "$changes"
+          rm -f "$changes"
+          if [ "$unexpected" -ne 0 ]; then
+            echo "changeset version changed more than it should; nothing pushed."
+            exit 1
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      # One commit on top of the dispatched `main` commit, force-pushed: the
+      # branch is regenerated on every run, so a fix belongs in a changeset on
+      # `main`, never on this branch. The token reaches git through a
+      # credential helper that reads it from the environment, never through
+      # the command line or .git/config. Only this one branch is pushed: no
+      # tag, no other ref. Every git command of the check and push steps runs
+      # with no hooks and no fsmonitor (`core.hooksPath=/dev/null`,
+      # `core.fsmonitor=false`, and `--no-verify`), so nothing that code loaded
+      # by `changeset version` planted in .git runs next to the token.
+      - name: Push the changeset-release/main branch
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          git -c core.hooksPath=/dev/null -c core.fsmonitor=false \
+            -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --no-verify --quiet --message "chore(release): version packages"
+          git -c core.hooksPath=/dev/null -c core.fsmonitor=false \
+            -c credential.helper= \
+            -c credential.helper='!f() { echo username=x-access-token; echo "password=${GITHUB_TOKEN}"; }; f' \
+            push --no-verify --force "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+            HEAD:refs/heads/changeset-release/main
+          {
+            echo "## Version branch"
+            echo ""
+            echo "Pushed \`changeset-release/main\` at $(git -c core.hooksPath=/dev/null -c core.fsmonitor=false rev-parse HEAD)."
+            echo "Open the pull request into \`main\` (or close and reopen an"
+            echo "open one so its checks run on the new commit)."
+          } >> "$GITHUB_STEP_SUMMARY"
+      # TODO(#12, ADR-005): split this job once actions/upload-artifact is
+      # allowed: `changeset version` in a job with `contents: read` and
+      # `pull-requests: read` that uploads the result, and the push in a job
+      # with `contents: write` that runs no repository tooling. Until then the
+      # code `changeset version` loads holds this job's `contents: write`
+      # token, which can push to any unprotected branch and create tags and
+      # releases (accepted for now; specs/client-kit/supply-chain.md).
+
   publish:
     name: publish
     needs: dry-run
     if: >-
-      inputs.publish && github.ref == 'refs/heads/main' &&
+      inputs.publish && !inputs.version && github.ref == 'refs/heads/main' &&
       vars.RELEASE_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -81,9 +236,10 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache: "false"
-      # Refuses pending changesets, a private or 0.0.0 library, and a Wrapper
-      # build that differs from the dry run's; then publishes the checked
-      # tarballs with provenance and lifecycle scripts off.
+      # Refuses pending changesets, a private or 0.0.0 library, a Wrapper
+      # build that differs from the dry run's, and a Wrapper over its size
+      # budget; then publishes the checked tarballs with provenance and
+      # lifecycle scripts off.
       - env:
           WRAPPER_DIGEST: ${{ needs.dry-run.outputs.wrapper-digest }}
         run: >-
@@ -97,7 +253,3 @@ jobs:
       # `id-token` and a publish-only job that runs no repository tooling
       # (verify the downloaded tarballs' and artifact's digests, then
       # `pnpm publish <tarball>`). Required before any real publish.
-      # TODO(#12): the version pull request job (decided): a job with
-      # `contents: write` runs `changeset version` with the real changelog and
-      # pushes a `changeset-release/main` branch; a person opens the pull
-      # request. No new Action.

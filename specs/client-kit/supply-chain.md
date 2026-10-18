@@ -67,7 +67,32 @@ the attack surface a player cannot see. The rules:
   (decided): stripping variables from a child's environment is not isolation, so
   the job that holds `id-token: write` runs no repository tooling; it only
   verifies the digests of the tarballs and the artifact a build job without
-  `id-token` produced, and publishes them.
+  `id-token` produced, and publishes them. The workflow's `version` job (only
+  from `main`, only with its `version` input, after the dry run) holds no OIDC
+  token and names no environment: with `contents: write` and
+  `pull-requests: read` it runs `changeset version` with the job's own
+  `GITHUB_TOKEN` (for the changelog generator), refuses to push anything but
+  what that command writes, as regular files (a modified `package.json`, an
+  added or modified `CHANGELOG.md`, neither inside `.changeset/`, a changeset
+  deleted directly under `.changeset/`, never its `README.md`; a rename counts
+  as a deletion and an addition, and a type or mode change or a path with an
+  unusual character is refused; `tools/release-version-guard.test.ts` runs the
+  step's script against temporary repositories), and force-pushes, with every
+  git command of the check and the push run without hooks or an fsmonitor
+  (`core.hooksPath=/dev/null`, `core.fsmonitor=false`, `--no-verify`), the
+  result to `changeset-release/main`; a person opens the version pull request,
+  so Actions never open or approve one. It never runs with `publish`: a run with
+  both inputs fails in its first job. **Accepted residual risk** (by the human,
+  2026-10-18): the code `changeset version` loads (changesets, its changelog
+  generator, the formatter, and their dependencies) runs with the job's
+  `contents: write` token in its environment, and such a token can push to any
+  branch no rule protects, create tags, and create releases. The push guard
+  limits what the job's own push sends, not what that code could do. Once
+  `actions/upload-artifact` is allowed
+  ([ADR-005](../../decisions/ADR-005-release-attestation-and-artifact-upload.md),
+  Follow-ups), it is split so that the tooling runs with `contents: read` and
+  only a job that runs no repository tooling holds `contents: write` and pushes.
+  <!-- TODO(#12, ADR-005): split the version job (tooling with a read-only token, push without tooling) once actions/upload-artifact is allowed. -->
   <!-- TODO(#12, ADR-005): the split into a build job and a publish-only job; required before RELEASE_PUBLISH_ENABLED is set (runbook, Bootstrap step 7). -->
   <!-- TODO(#12): the attestation and the GitHub release that carries the artifact; an ADR to come proposes `actions/attest-build-provenance` and `actions/upload-artifact`. -->
 - **Credentials.** The publishing credential is never in the repository. The

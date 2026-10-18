@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-18 (#53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI)
+last-verified: 2026-10-18 (#53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
 ---
 
 # Development workflow
@@ -49,11 +49,32 @@ Several agents and people work in one clone at once. Rules:
   offline; only a real `changeset version` (the version pull request) needs a
   `GITHUB_TOKEN`, the Actions-provided token with least privilege, never a stored
   secret. The release dry run turns the changelog off in its scratch copy, so it
-  needs no token. Version pull request (decided, not built yet, #12): a
-  release-workflow job with `contents: write` runs `changeset version` with the
-  real changelog and pushes a `changeset-release/main` branch, and a person
-  opens the pull request (Actions may not create pull requests here; no new
-  Action). Attestation and artifact upload: an ADR to come proposes
+  needs no token. Version pull request: the release workflow's `version` job
+  (only from `main`, with the `version` input and without `publish`, after
+  `dry-run`, whose first step fails a run with both inputs;
+  `contents: write` and `pull-requests: read`, no `id-token`, no environment)
+  runs `changeset version` with the job's `GITHUB_TOKEN`; a step without the
+  token reads `git diff --cached --no-renames --raw -z` and allows only `M` of
+  a `package.json`, `A`/`M` of a `CHANGELOG.md` (neither inside
+  `.changeset/`), and `D` of a `.changeset/<name>.md` (not README), all mode
+  100644 with paths in `[A-Za-z0-9._/@-]`; every git command of the check and
+  push steps runs with `-c core.hooksPath=/dev/null -c core.fsmonitor=false`,
+  and the commit and push with `--no-verify`; the last step (only when something changed)
+  force-pushes one `github-actions[bot]` commit to `changeset-release/main`
+  (credential helper reading the environment; checkout without persisted
+  credentials, `fetch-depth: 0`). A person opens the pull request (Actions may
+  not create pull requests here; no new Action). A `GITHUB_TOKEN` push starts
+  no workflow: close and reopen an open version pull request to rerun its
+  checks. Accepted residual risk (2026-10-18): the code `changeset version`
+  loads holds the `contents: write` token, which can push to unprotected
+  branches and create tags and releases; once `actions/upload-artifact` is
+  allowed (ADR-005 Follow-ups) the job is split so only a no-tooling job holds
+  `contents: write`. Org owners (#3): a tag ruleset and "dismiss stale
+  approvals". Tests: `tools/release-workflow.test.ts` (whole `if:` values,
+  permissions, job set, refspec, checkouts, pins, no `${{` in `run:`, via the
+  block-style reader `tools/workflow-text.ts`; no YAML parser in the
+  repository) and `tools/release-version-guard.test.ts` (runs the guard
+  step's own script against temporary git repositories). Attestation and artifact upload: an ADR to come proposes
   `actions/attest-build-provenance` and `actions/upload-artifact`.
 - **Release** ([runbook](../../runbook/client-kit-release.md#release)):
   `.github/workflows/release.yml`, `workflow_dispatch` only. Job `dry-run`
@@ -95,7 +116,19 @@ Several agents and people work in one clone at once. Rules:
   against `http://127.0.0.1:9/` (offline; no provenance outside Actions), and
   builds the Wrapper artifact (`se-client-wrapper-<version>.tar`,
   deterministic tar, digest = its SHA-256) in both copies (different paths,
-  time zones, and locales); the digests and the package tarballs must match. Its script has no `files` on purpose (always runs).
+  time zones, and locales); the digests and the package tarballs must match. It
+  holds the first copy's Wrapper to its size budget and prints the budget
+  table in its summary. Its script has no `files` on purpose (always runs).
+- **Size budget** (`tools/size-budget.ts`, pure, unit-tested): two Wrapper
+  measurements, `wrapper output` (every file of `apps/wrapper/dist/`,
+  uncompressed, limit 204800) and `wrapper page, gzip` (`index.html`, `.js`,
+  `.css`, each gzip at zlib's default level, summed, limit 65536), decided by
+  the human on 2026-10-18 (`WRAPPER_BUDGET`). Enforced by
+  `pnpm check:size-budget` (`tools/check-size-budget.ts`, in `pnpm check` and
+  the `build` CI job), and directly by the release dry run (listed once; the
+  dry run does not run the CLI) and `tools/release-publish.ts`. A test keeps
+  `WRAPPER_BUDGET` equal to the list in `specs/client-kit/testing-and-ci.md`;
+  change both together. Package tarballs have no budget (decided).
 - **tsdown** builds each package into `dist/` (`pnpm build`; shared options in
   `tsdown.base.ts`, entries in the package's `tsdown.config.ts`); `tsc --noEmit`
   only type-checks. **tsx** runs the TypeScript scripts under `tools/`; stylelint lints CSS
