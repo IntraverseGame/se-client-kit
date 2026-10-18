@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-18 (shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-18 (reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -34,8 +34,20 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   import only types from the kit, so no vector and no shell code. `build.test.ts`
   (Node environment) runs the real Vite build of the app in memory and the
   package-import guard over scratch sources under `tmpdir()` (a kit or
-  third-party package fails a build; the dev server still resolves a
-  third-party one, so tests may import `vitest`). `plain-data.test.ts` and the
+  third-party package fails a build, `vite/module-runner` included; the dev
+  server still resolves a third-party one, so tests may import `vitest`).
+  `package-import-guard.test.ts` holds the copied-asset cases (`new URL`, CSS
+  `url()`, HTML `<img src>`, a file under 4 KiB, a symlinked `<img src>`), the
+  worker cases (a worker importing a kit file or a third-party package; the
+  guard is in `worker.plugins`), the `packagesDirFor` path cases (a space, a
+  non-ASCII character), and runs the guard's `generateBundle` hook on its own.
+  The scratch root has a stand-in package `node_modules/scratch-dep`, so an
+  unguarded bare import would resolve and build. Both use `src/fixtures/scratch-build.ts`:
+  scratch builds with the game's own `vite.config.ts` (its guard and
+  `assetsInlineLimit: 0`), in a real-path scratch directory (Vite resolves a
+  relative URL from its importer's real path, and macOS's `tmpdir()` is a
+  symlink), treating `*.md` as an asset because the kit packages hold no
+  image. `plain-data.test.ts` and the
   accessor and sparse-array cases of `protocol.test.ts` exist because those
   parser mutants survived the message-level tests; keep them.
   `tools/type-re-exports.test.ts` runs the inline-type re-export check over the
