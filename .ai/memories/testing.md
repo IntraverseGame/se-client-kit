@@ -99,7 +99,30 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   after. `reference-game-smoke.spec.ts` runs it in a stand-in host page
   (`pages/game-host.html`), not the Wrapper. Locally,
   `SE_E2E_BROWSER_CHANNEL=chrome` runs on an installed Chrome when Playwright's
-  download is unavailable.
+  download is unavailable. Every browser starts through
+  `harness/browser-start.ts` (`startBrowser`): one start (launch and first
+  context) at a time per user on the machine (`harness/start-lock.ts`, a
+  uid-named lock file in the temp directory; a dead holder's lock is taken over
+  at once, any after 60 s), each part with 10 s. A part that times out has
+  deadlocked: the browser's process group is killed, one `[browser-start]`
+  line goes to stderr, and one new browser starts under the same hold (a second
+  timeout fails; other errors are never retried; a browser whose first context
+  failed is closed after the lock is released). It retries the start only,
+  never a test or an assertion, so it hides no failure of the code under test.
+  The kill lists processes with `ps` and signals in one synchronous turn, only
+  groups led by this process's own new children (`ppid`, `pgid === pid`, not in
+  the "before" set), never a bare pid: keep it that way, a free or reused pid
+  would be some other process (`browser-start-kill.spec.ts` proves it on real
+  `sleep` processes, behind a guard so a broken filter signals nothing). The
+  worker browser does it through `harness/worker-browser.ts`, the base `test` of
+  `fixtures.ts` (`hermetic-workers.spec.ts` checks the real worker browser:
+  `startedAlone`, and the block on its `ps` command line); a test that launches
+  a browser of its own passes its launch to `startBrowser`. Why: on macOS, a
+  Chrome whose start overlaps another's can deadlock for good (RunningBoard's
+  App Nap assertion, seen with `sample`) and never answer CDP. A test that
+  hangs at `browser.newContext`, or a launch that times out before any test, is
+  this; `test.slow()` or a longer timeout cannot fix it. Stand-ins for these
+  tests: `harness/stand-in-starts.ts`.
 - **Contracts check:** CI recomputes the hash of every file in the `contracts` package
   against its lock file, and regenerates the types to fail on a diff.
 - **Build output:** `pnpm check:build-output` (after `pnpm build`) inspects every
