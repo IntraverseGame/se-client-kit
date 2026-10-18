@@ -29,6 +29,8 @@ spec, and a behavior change updates its spec in the same pull request
   copies, supply chain, tests and CI.
 - [`wrapper.md`](./wrapper.md) — the Wrapper's behavior: sessions, key custody,
   the transcript, checks, the UI.
+- [`verify-page.md`](./verify-page.md) — the verify page: a round id in, the
+  round recomputed in the browser (specified, not built).
 
 ## Table of contents
 
@@ -112,3 +114,26 @@ the specs' headings.
   [What this spec does not own](./wrapper.md#what-this-spec-does-not-own) ·
   [Decided questions](./wrapper.md#decided-questions) (OQ-1 to OQ-8) ·
   [References](./wrapper.md#references)
+
+### [Verify page](./verify-page.md)
+
+- [Purpose](./verify-page.md#purpose) · [Scope](./verify-page.md#scope) ·
+  [Boundary](./verify-page.md#boundary)
+- [Contract](./verify-page.md#contract)
+  - [Vocabulary](./verify-page.md#vocabulary)
+  - [The URL and where the page is served](./verify-page.md#the-url-and-where-the-page-is-served-v-1-v-2)
+    — V-1, V-2
+  - [Configuration](./verify-page.md#configuration-v-3) — V-3
+  - [The page's states](./verify-page.md#the-pages-states-v-4-to-v-11) — V-4 to
+    V-11
+  - [What the page recomputes](./verify-page.md#what-the-page-recomputes-v-12-v-13)
+    — V-12, V-12a, V-13
+  - [Accessibility](./verify-page.md#accessibility-v-14) — V-14
+  - [Build and release](./verify-page.md#build-and-release-v-15-to-v-17) — V-15
+    to V-17
+- [Errors and edge cases](./verify-page.md#errors-and-edge-cases) ·
+  [Security](./verify-page.md#security) ·
+  [Observability](./verify-page.md#observability) ·
+  [Test plan](./verify-page.md#test-plan) (VT-1 to VT-10) ·
+  [Decisions](./verify-page.md#decisions) (D-1 to D-4) ·
+  [References](./verify-page.md#references)

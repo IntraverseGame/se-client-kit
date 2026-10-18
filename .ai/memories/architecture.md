@@ -260,4 +260,20 @@ structure below.
 
 ## Known open items
 
+- **The verify page** is the kit's (backend TPO, 2026-10-18), specified in
+  `specs/verify-page.md` and not built: it waits for the verify API document
+  (`TODO(verify API)`) and for the fairness kernel's vectors in `contracts`.
+  Its checks 5 and 7 follow the SuperEngine fairness kernel, kernelVersion 1
+  (public; SHA-256 commitments and seed via Web Crypto, StepsDerive with a raw
+  `keccak256` that `signing` will export). Decided 2026-10-18: a new private app `apps/verify`
+  that never imports `shell` and holds no credential; a quorum read of block
+  N's hash through its own read-only JSON-RPC module (W-26a and W-26b's rules);
+  its own size budget; a future `verifyApiBaseUrl` configuration field (the
+  Wrapper's validator refuses it today; its acceptance ships before, or with,
+  any document that carries it). Served on the Wrapper's origin, the page is
+  that origin's trusted code and MUST NOT use `navigator.locks`,
+  `BroadcastChannel`, storage, or workers. Its derivations are keyed on the kernel version the
+  verify API's response carries (the Snapshot has none); until that document
+  lands it assumes 1, and an unknown version is "not recomputable".
+
 <!-- TODO: hosting and deploy of the released Wrapper (credentials stay outside this repository); CODEOWNERS handles. -->

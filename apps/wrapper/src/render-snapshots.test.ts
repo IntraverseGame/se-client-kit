@@ -193,7 +193,9 @@ describe("the round id and the verify link (W-39, W-40)", () => {
         snapshot.roundId,
       );
       const link = linkNamed(ui.host, m["action.verify"]);
-      expect(link?.getAttribute("href")).toBe("https://verify.example/");
+      expect(link?.getAttribute("href")).toBe(
+        `https://verify.example/rounds/${snapshot.roundId}`,
+      );
       expect(link?.getAttribute("target")).toBe("_blank");
       expect(link?.getAttribute("rel")).toBe("noopener noreferrer");
       buttonNamed(ui.host, m["action.copyRoundId"])?.click();
