@@ -3,12 +3,14 @@
 // by `media.peerconnection.enabled: false` (browser-flags.ts), in WebKit by an
 // init script in every frame of every context (context-blocks.ts). These tests
 // prove that the suite's browser has no `RTCPeerConnection`, that a script
-// cannot get one back from a new window (the eight ways of outside-routes.ts's
+// cannot get one back from a new window (the eight ways of webrtc-probes.ts's
 // `freshWindowsWebRtc`), and that a STUN probe aimed at `localhost`,
 // `127.0.0.1`, and `[::1]` finds none and sends nothing to UDP sockets on both
-// loopback addresses; a control without the removal (and
-// without the proxy) shows the same probe gathers and its datagrams arrive.
-// Each probe's outcome is recorded as a test annotation. Chromium's block is
+// loopback addresses; a control without the removal and without the proxy
+// (in Firefox also with ICE allowed on loopback, which Firefox otherwise keeps
+// away from it) shows the same probe gathers and its datagrams arrive.
+// Each probe's outcome is recorded as a test annotation and printed as one
+// line on stdout, as is the object routing probe's. Chromium's block is
 // host resolution (hermetic-workers.spec.ts).
 
 import type { Browser, TestInfo } from "@playwright/test";
@@ -17,6 +19,7 @@ import {
   blockedBrowser,
   FIREFOX_WEBRTC_ON,
   launch,
+  type BlockedBrowser,
 } from "./harness/blocked-launch.ts";
 import { DEAD_PROXY } from "./harness/browser-flags.ts";
 import { expect, test } from "./harness/fixtures.ts";
@@ -26,12 +29,13 @@ import {
 } from "./harness/loopback-datagrams.ts";
 import { expectNothingAccepts } from "./harness/loopback-listener.ts";
 import { PAGES_ORIGIN } from "./harness/origins.ts";
+import { openPage } from "./harness/outside-routes.ts";
 import {
   freshWindowsWebRtc,
-  openPage,
+  objectRouting,
   probeStun,
   type StunProbe,
-} from "./harness/outside-routes.ts";
+} from "./harness/webrtc-probes.ts";
 
 type StunOutcome = {
   readonly probe: StunProbe;
@@ -61,11 +65,20 @@ const stunAttempt = async (
     datagrams = socket?.datagrams() ?? 0;
     await socket?.close();
   }
-  testInfo.annotations.push({
-    type: "stun-probe",
-    description: `${label}: ${JSON.stringify({ ...probe, datagrams })}`,
-  });
+  const description = `${label}: ${JSON.stringify({ ...probe, datagrams })}`;
+  testInfo.annotations.push({ type: "stun-probe", description });
+  // Also one plain line on stdout, so the CI log shows it: the outcome only
+  // (the probe's result and the count), nothing secret.
+  console.log(`stun-probe ${description}`);
   return { probe, datagrams };
+};
+
+/** What `objectRouting` finds in each blocked project. */
+const OBJECT_ROUTING: Readonly<
+  Record<BlockedBrowser, { readonly loaded: string; readonly routed: number }>
+> = {
+  firefox: { loaded: "error", routed: 0 },
+  webkit: { loaded: "load", routed: 1 },
 };
 
 /** Every window the fresh-window probe looks at, with no WebRTC in it. */
@@ -106,6 +119,20 @@ test.describe("Firefox and WebKit: WebRTC is off", () => {
   }) => {
     await page.goto(`${PAGES_ORIGIN}/blank.html`);
     expect(await freshWindowsWebRtc(page)).toEqual(NO_WEBRTC);
+  });
+
+  // Why the fresh-window probe's `<object>` holds a `blob:` document: in
+  // Firefox, Playwright does not route an object's document request, and the
+  // request fails; in WebKit the route serves it.
+  test("an <object>'s document request is routed in WebKit, not in Firefox", async ({
+    page,
+    browserName,
+  }) => {
+    await page.goto(`${PAGES_ORIGIN}/blank.html`);
+    const routing = await objectRouting(page);
+    // One plain line on stdout, so the CI log shows it: the outcome only.
+    console.log(`object-routing ${browserName}: ${JSON.stringify(routing)}`);
+    expect(routing).toEqual(OBJECT_ROUTING[blockedBrowser(browserName)]);
   });
 
   test("the STUN probe finds no RTCPeerConnection and reaches no socket", async ({

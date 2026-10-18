@@ -14,11 +14,12 @@
 // cleared the same way before they are handed out. `frames[n]` and
 // `window[n]` cannot be intercepted, so for them, and for a new window's own
 // `open`, the removal rests on that window's own init script having run. The
-// proof (hermetic-webrtc.spec.ts, `freshWindowsWebRtc`) checks eight ways: a
-// new iframe through `contentWindow`, `frames[n]`, and `contentDocument`; a
-// loaded `srcdoc` iframe through `frames[n]` and through `contentWindow`; an
-// `<object>`'s window; `window.open`; and a new iframe's own `open`. A way it
-// does not list is not proven closed.
+// proof (hermetic-webrtc.spec.ts, with `freshWindowsWebRtc` of
+// webrtc-probes.ts) checks eight ways: a new iframe through `contentWindow`,
+// `frames[n]`, and `contentDocument`; a loaded `srcdoc` iframe through
+// `frames[n]` and through `contentWindow`; an `<object>`'s window (a `blob:`
+// document); `window.open`; and a new iframe's own `open`. A way it does not
+// list is not proven closed.
 //
 // `applyContextBlocks` is the one place it is applied: to the worker's
 // browser (worker-browser.ts) and to every browser a proof launches of its own

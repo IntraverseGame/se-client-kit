@@ -105,15 +105,20 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   request lines, and counts the `CONNECT` to the pages' host just before and
   after the registration, since the browser sends some of its own) and
   `hermetic-webrtc.spec.ts` (no `RTCPeerConnection` in the worker's browser or
-  in a new window, the eight ways `freshWindowsWebRtc` lists; STUN probe `no RTCPeerConnection` with
-  0 datagrams; a control without the removal and without the proxy gathers and
-  its datagrams arrive). Shared launch helpers in `harness/blocked-launch.ts`
+  in a new window, the eight ways `freshWindowsWebRtc` lists, its `<object>`
+  holding a `blob:` document because Playwright's Firefox does not route an
+  object's document request (`objectRouting` shows it); STUN probe `no
+  RTCPeerConnection` with 0 datagrams; a control without the removal and
+  without the proxy gathers and its datagrams arrive, Firefox's with
+  `media.peerconnection.ice.loopback: true`, since Firefox otherwise sends no
+  STUN to loopback). WebRTC probes in `harness/webrtc-probes.ts`. Shared launch helpers in `harness/blocked-launch.ts`
   (every launch through `startBrowser`; `proxy: undefined` drops the proxy,
   `contextBlocks: false` drops the init script), page helpers in
   `harness/outside-routes.ts`, a UDP counter on both loopbacks in
   `harness/loopback-datagrams.ts`. `hermetic-workers.spec.ts` is Chromium only;
   each proof skips in-file with a reason. Counts are read after the browser
-  closes; probe outcomes are `stun-probe` annotations. A `beforeAll` fails each
+  closes; probe outcomes are `stun-probe` annotations and one stdout line each
+  (`stun-probe …`, `object-routing …`; data only), so the CI log shows them. A `beforeAll` fails each
   proof file if anything accepts on `127.0.0.1:9` (`expectNothingAccepts`).
   Leak-channel tests skipped per browser, with reasons: `service-worker` in
   Firefox, `origin-private-file-system` in WebKit. The scan's second excuse:

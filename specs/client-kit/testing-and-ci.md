@@ -246,23 +246,29 @@ development-only, so it may import the test-only entry of `contracts`.
   browser has no `RTCPeerConnection` or `webkitRTCPeerConnection`; a script gets
   none back in eight ways: a new iframe read at once through `contentWindow`,
   `frames[n]`, or `contentDocument`; a `srcdoc` iframe once loaded, through
-  `frames[n]` and through `contentWindow`; an `<object>`'s window;
-  `window.open`; and a new iframe's own `open` (a way not on this list is not
-  proven closed); and a STUN probe aimed at `localhost`, `127.0.0.1`, and
-  `[::1]` on one port, where UDP sockets on both loopback addresses count
-  datagrams, finds no `RTCPeerConnection` and nothing arrives, while a control
-  without the removal and without the proxy (Firefox with WebRTC back on, WebKit
-  without the init script) gathers and its datagrams arrive. Each probe's
-  outcome (whether `RTCPeerConnection` exists, whether gathering completed, the
-  candidates' types, and the count) is recorded as a test annotation. Before any
-  of it, each file fails, saying so, if anything accepts a TCP connection at
-  `127.0.0.1:9`, which would make the dead proxy a live one. The suite's only
-  open sockets are three, all on loopback: the TCP listener, which takes nothing
-  but connections; the UDP sockets, which take nothing but datagrams; and the
-  stand-in proxy of the Firefox service-worker control (`listenAsProxy`), which
-  reads one request line from each connection and answers nothing. No server or
-  port is opened otherwise. The static origins answer a missing file, or a path
-  with a malformed `%` escape, with a 404.
+  `frames[n]` and through `contentWindow`; an `<object>`'s window, its document
+  a `blob:` URL the page makes (same origin, no request: Playwright's Firefox
+  does not route an object's document request, and the request fails; a test
+  shows that and that WebKit's route serves it); `window.open`; and a new
+  iframe's own `open` (a way not on this list is not proven closed); and a STUN
+  probe aimed at `localhost`, `127.0.0.1`, and `[::1]` on one port, where UDP
+  sockets on both loopback addresses count datagrams, finds no
+  `RTCPeerConnection` and nothing arrives, while a control without the removal
+  and without the proxy (Firefox with WebRTC back on and
+  `media.peerconnection.ice.loopback: true`, without which Firefox sends no STUN
+  request to a loopback server at all; WebKit without the init script) gathers
+  and its datagrams arrive. Each probe's outcome (whether `RTCPeerConnection`
+  exists, whether gathering completed, the candidates' types, and the count) is
+  recorded as a test annotation and printed as one line on stdout (the outcome
+  only, nothing secret), as is the object routing probe's, so the CI log shows
+  them. Before any of it, each file fails, saying so, if anything accepts a TCP
+  connection at `127.0.0.1:9`, which would make the dead proxy a live one. The
+  suite's only open sockets are three, all on loopback: the TCP listener, which
+  takes nothing but connections; the UDP sockets, which take nothing but
+  datagrams; and the stand-in proxy of the Firefox service-worker control
+  (`listenAsProxy`), which reads one request line from each connection and
+  answers nothing. No server or port is opened otherwise. The static origins
+  answer a missing file, or a path with a malformed `%` escape, with a 404.
 - **The fake Play API** is a route at the configuration's `playApiBaseUrl`
   (default `https://wrapper.e2e.test/play/v1`; a test may move it). It answers
   from the vendored contract only. Its routes, each operation's listed statuses,

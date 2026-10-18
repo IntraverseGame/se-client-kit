@@ -63,11 +63,19 @@ export const launch = async (
   return contextBlocks ? applyContextBlocks(browser, browserName) : browser;
 };
 
-/** Firefox with WebRTC back on and no proxy, the rest kept: a control. */
+/**
+ * Firefox with WebRTC back on and no proxy, the rest kept: a control. It also
+ * allows ICE on loopback (`media.peerconnection.ice.loopback`, false by
+ * default): otherwise Firefox sends no STUN request to a loopback server at
+ * all, so the probe's sockets on 127.0.0.1 and ::1 would see nothing whatever
+ * the block did (a local check with Firefox 159: 0 datagrams with the default,
+ * 10 with this preference; `obfuscate_host_addresses` made no difference).
+ */
 export const FIREFOX_WEBRTC_ON: Overrides = {
   proxy: undefined,
   firefoxUserPrefs: {
     ...FIREFOX_BLOCK_PREFS,
     "media.peerconnection.enabled": true,
+    "media.peerconnection.ice.loopback": true,
   },
 };
