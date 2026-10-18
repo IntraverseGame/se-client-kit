@@ -66,6 +66,11 @@ export type RoundDelivery = {
    * the Snapshot this read validated, or `undefined` when the read failed.
    */
   readonly resync: () => Promise<ValidSnapshot | undefined>;
+  /**
+   * Reads and validates the Snapshot without observing it, keeping a call
+   * failure as `lastError`: `undefined` when the read failed.
+   */
+  readonly fetch: () => Promise<ValidSnapshot | undefined>;
   /** Observes an answer's body, validated. */
   readonly observeBody: (body: unknown) => Promise<void>;
 };
@@ -106,6 +111,18 @@ export const createRoundDelivery = (
   const refresh = async (): Promise<void> => {
     const result = await getSnapshot(transport, { authorization });
     await observeBody(result.body);
+  };
+
+  const fetch = async (): Promise<ValidSnapshot | undefined> => {
+    try {
+      const result = await getSnapshot(transport, { authorization });
+      return snapshotOf(result.body);
+    } catch (error) {
+      // A later read decides (W-19, W-43).
+      if (!isCallError(error)) throw error;
+      fail(error);
+      return undefined;
+    }
   };
 
   const resync = async (): Promise<ValidSnapshot | undefined> => {
@@ -184,6 +201,7 @@ export const createRoundDelivery = (
     send,
     refresh,
     resync,
+    fetch,
     observeBody,
   });
 };

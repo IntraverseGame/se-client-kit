@@ -17,8 +17,8 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   vector files (signing vectors, Snapshot `valid/`, `invalid/`, `signature/`,
   and `typed-data/` vectors) read through the test-only entry of the `contracts`
   package. The `signed-action/` vectors (`snapshotVectors.signedAction`) are
-  vendored but not replayed yet (#41); `tools/contracts-signed-action.test.ts`
-  checks their pairing with `typed-data/` and `valid/` and that their embedded
+  replayed by `signing`'s and the shell's `cancel-vector.test.ts`;
+  `tools/contracts-signed-action.test.ts` checks their pairing with `typed-data/` and `valid/` and that their embedded
   key is signing's `PLAYER_KEY`. Only tests may import that entry, and no
   vector may reach a bundle (a lint rule and a build check). Prefer adding a
   vector to adding a one-off assertion.
@@ -160,7 +160,21 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `typed-data-vectors.test.ts` checks that the shell's move, cash-out, and
   cancel carry the vendored `typed-data/` vectors' base64, through the flow
   with no encoder passed (the production default) and through the request
-  builder. The flow layers its guards, so
+  builder. The `PlayerCancel` vector (`signed-action/coinflip-cancel`) is
+  replayed twice: `signing`'s `cancel-vector.test.ts` reproduces every hash and
+  the exact signature with the `player` fixture key (its test key; never read
+  the key from the vector), and the shell's `cancel-vector.test.ts` checks that
+  the flow's cancel has its struct hash and digest. A scripted `cancelRound`
+  answer of `resolving` needs a `getSnapshot` answer too: the flow reads once at
+  once, and further reads go through `refresh` (`round-cancel-settle.test.ts`,
+  `round-cancel-answers.test.ts`, `round-cancel-check-later.test.ts`, and
+  `round-cancel-failures.test.ts`, over `fixtures/cancel-settle.ts`; they pin
+  the gate before the tracking, the in-flight hold, the stale read, `canceled`
+  as final, `idle` as `ended`, another round, `active` as `not-taken`, the
+  reads after each kind of failed call, the joined counted read, the 30-read
+  limit and `check-later`; their mutants were checked).
+  `resolving-cancel-vector.test.ts` replays the golden
+  `valid/coinflip-resolving-cancel`. The flow layers its guards, so
   `round-actions.test.ts` pins each one alone with stand-ins for the tracking
   and the transcript state; a mutation run (one mutant per guard) checks that
   each guard is tested on its own.

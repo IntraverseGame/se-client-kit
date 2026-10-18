@@ -1,11 +1,9 @@
 // The fixed set of EIP-712 struct types. Each `encodeType` and type hash is
-// pinned by the vendored signing vectors (the tests compare them).
-//
-// Not here yet: `PlayerCancel`. Its type is final in the signed-action
-// specification (the fields of `PlayerAction`), but no independent signer has
-// produced a vector for it yet (#41), and a type is added here only with the
-// vector that pins it. `PayoutTerms` reaches the player only as
-// `newRound.payoutTermsHash`, so there is no player-side type to encode.
+// pinned by a vendored vector (the tests compare them): the signing vectors,
+// and for `PlayerCancel` the independent signer's `signed-action/` Snapshot
+// vector. A type is added here only with the vector that pins it.
+// `PayoutTerms` reaches the player only as `newRound.payoutTermsHash`, so
+// there is no player-side type to encode.
 
 import type { StructType } from "./eip712.ts";
 
@@ -34,6 +32,11 @@ export const PLAYER_ACTION: StructType = {
 
 export const PLAYER_CASH_OUT: StructType = {
   name: "PlayerCashOut",
+  fields: PLAYER_FIELDS,
+};
+
+export const PLAYER_CANCEL: StructType = {
+  name: "PlayerCancel",
   fields: PLAYER_FIELDS,
 };
 

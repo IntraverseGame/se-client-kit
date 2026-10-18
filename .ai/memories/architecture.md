@@ -93,10 +93,10 @@ structure below.
   play token lives only in `token-keeper.ts` (sealed, refreshed there); a
   session-ending answer to any call ends the session through the transport
   wrapper in `play-session.ts`. Whether a round is over is decided only by
-  `isRoundOver` (`snapshot-reading.ts`); the Wrapper reads it and keeps no
-  status list, so #41's cancel rule changes that one function (since
-  se-backend b27afc5 the contract makes `canceled` final and shows a cancel
-  not yet answered as `resolving`; #41 reconciles its rule with that). The
+  `isRoundOver` (`snapshot-reading.ts`) from a Snapshot (`canceled` is final,
+  per b27afc5), and, while the shell's own cancel has not settled, by the
+  round flow's cancel state (`cancel-state.ts`); the Wrapper keeps no status
+  list. The
   launch code is taken by `takeLaunchCode`, which the Wrapper's entry calls
   before any request. The environment configuration, never a
   Snapshot or a response, pins the backend signer, the registry domain, and
@@ -107,14 +107,26 @@ structure below.
   through the round flows. Every use of the key checks the signer
   lock first (no lock, no Web Locks API, a lost lock: `lock-not-held`). Its
   injected seams are listed in `specs/client-kit/the-shell-package.md`
-  ("Provisional items"): the domain, the `PlayerCancel` hash (#41), the
+  ("Provisional items"): the domain, the
   tip check with the bind mode, and the Snapshot-reading rule, which is
   the shell's own. Do not hard-code them. After a 400 `INVALID_ARGUMENT` or a
   409 `STALE_ACTION` a round holds and reads the Snapshot; it signs again, from
   the next sequence, only when the Snapshot shows its own action applied
   (W-19). A round signs at most one cancel, and a cancel is never resent
   blindly: only after a lost response or a 503, and a read that shows the
-  round still `active` with no move, are the same bytes sent again, once. A
+  round still `active` with no move, are the same bytes sent again, once. Per `se.snapshot/1` as vendored from the backend's b27afc5, `canceled` is
+  final and a cancel not yet answered shows `resolving`: a `resolving` answer (or a `resolving` read after any failed cancel call, a failed read after an unknown outcome or a 422, or an unknown outcome and an `active` read with no move when no resend is
+  allowed) puts the cancel in `settling` (no
+  `unconfirmed` state: nothing leaves a possibly stored cancel unread); the flow's `observe` holds back every Snapshot of the round from
+  signing until it settles (`in-flight`, `settling`, `check-later`; the gate is
+  before the tracking), and only the flow's own counted reads (`refresh`,
+  `checkAgain`, one at a time) settle it: `canceled`, `won`, `lost` give `sent`,
+  `active` (also as the answer, or after a 400/422) gives `not-taken`, `idle`
+  gives `ended` (neutral "round ended"); after 30 reads it is `check-later`
+  ("still resolving — contact support"). Cancel refusals go to the evidence.
+  No new round while `in-flight`, `settling`, or `check-later`; `ended` does
+  not block one. The rules change only with a vendored contract change
+  (W-25, W-35). A
   re-issue stops every new signature while a W-16 resend still goes out; any
   other failed verdict puts the transcript state in `failed`. A pick needs both
   a `ready` verdict and an `open` or `adopted` state: keep both guards.
@@ -145,8 +157,9 @@ structure below.
   `encodeTypedData` builds the canonical `ActionTypedData` bytes (`typedData`)
   from plain fields, independent of the grammar module and of the transcript;
   the action grammar (`actionGrammar`) is the signed-action spec's, with the
-  row derived from the path (`r = len(path) - 1`). `PlayerCancel`'s type is
-  published but waits on an independent vector (#41). Draw-registry types are
+  row derived from the path (`r = len(path) - 1`). `hashPlayerCancel` encodes
+  `PlayerCancel`, pinned by the independent signer's `signed-action/` vector
+  (#41); the shell uses it directly (no injected cancel encoding). Draw-registry types are
   encoded internally for the vector
   replay only.
 

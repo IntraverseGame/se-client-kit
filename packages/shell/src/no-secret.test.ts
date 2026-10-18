@@ -198,7 +198,6 @@ describe("no secret leaves the shell", () => {
       "round-exists",
       "equivocation",
       "round-stopped",
-      "cancel-unavailable",
       "snapshot-rejected",
     ] as const;
     const messages = codes.map(code => new ShellError(code).message);

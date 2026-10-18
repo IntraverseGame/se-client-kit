@@ -13,22 +13,22 @@ import {
   validateSnapshot,
 } from "@intraverse/se-client-snapshot";
 
-type Json = Readonly<Record<string, unknown>>;
+export type Json = Readonly<Record<string, unknown>>;
 
-const record = (value: unknown, where: string): Json => {
+export const record = (value: unknown, where: string): Json => {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new TypeError(`${where}: not an object`);
   }
   return value as Json;
 };
 
-const text = (parent: Json, key: string, where: string): string => {
+export const text = (parent: Json, key: string, where: string): string => {
   const value = parent[key];
   if (typeof value !== "string") throw new TypeError(`${where}.${key}`);
   return value;
 };
 
-const hex = (parent: Json, key: string, where: string): Hex => {
+export const hex = (parent: Json, key: string, where: string): Hex => {
   const value = text(parent, key, where);
   if (!/^0x[0-9a-fA-F]*$/u.test(value)) throw new TypeError(`${where}.${key}`);
   return `0x${value.slice(2)}`;

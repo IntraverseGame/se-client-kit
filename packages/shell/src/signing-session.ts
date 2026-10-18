@@ -18,7 +18,6 @@ import {
 
 import type { SettledInitial } from "./create-round-auth.ts";
 import { ShellError } from "./errors.ts";
-import type { CancelHasher } from "./pending-action.ts";
 import { redacting } from "./redaction.ts";
 import { createRoundSigner, type RoundSigner } from "./round-signer.ts";
 import { acquireSignerLock, signerLockName } from "./web-lock.ts";
@@ -44,12 +43,6 @@ export type SigningSessionOptions = {
    * the signed-action spec says where the shell learns it.
    */
   readonly domain: Domain;
-  /**
-   * The `PlayerCancel` encoding, injected until `signing` encodes the type (its
-   * independent vector is missing, #41); without it a cancel is refused
-   * (`cancel-unavailable`).
-   */
-  readonly hashCancel?: CancelHasher;
 };
 
 /** What this page may do for the session. */
@@ -182,7 +175,6 @@ export const openSigningSession = async (
         assertLive,
         isEnded: (): boolean => state() === "ended",
         randomUuid: options.randomUuid,
-        hashCancel: options.hashCancel,
       });
       rounds.set(round.roundId, opened);
       return opened;
