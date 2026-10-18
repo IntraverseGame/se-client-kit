@@ -167,7 +167,9 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   `packages/signing/src/fixtures/keys.ts` and in the vendored `signed-action/`
   vectors in `packages/contracts` (`src/vectors/snapshot/signed-action/`), which
   embed the same public test key (anvil account 3, test-only, never funded) and
-  cannot be edited.
+  cannot be edited. The e2e suite may pass the signed-action vector's test key
+  to its seeded random stub, read from `contracts`' test-only entry at run time,
+  and never copies it into a file.
 - **Money amounts are strings or `bigint`, never JS `number`**, at every
   boundary and in every type. Arithmetic on amounts uses `bigint` in base units.
   A decimal value (a rate, a fee) is never a ledger amount; converting one to
@@ -211,7 +213,9 @@ add, in any file, commit, issue, pull request, log, or agent output:
 - credentials, tokens, private keys (other than the public development keys the
   vectors were signed with, in `packages/signing/src/fixtures/keys.ts` and in
   the vendored `signed-action/` vectors of `packages/contracts`, which embed the
-  same public test key and cannot be edited), connection strings, npm or deploy
+  same public test key and cannot be edited; the e2e suite may pass that test
+  key to its seeded random stub, read from `contracts`' test-only entry at run
+  time, and never copies it into a file), connection strings, npm or deploy
   credentials;
 - internal hostnames or URLs, dashboard links, cloud account or resource
   identifiers;

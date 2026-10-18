@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-18 (reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-18 (e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -142,10 +142,42 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   the scan's negative tests). The Wrapper's browser rows drive the release
   bundle through `harness/wrapper-page.ts` (`launch`, `launchAndStart`,
   `scriptStartingRound`, the English texts); a launch must be a new navigation
-  (a fragment-only change does not reload the page). The vectors are not issued
-  for the session's key, so a round never passes W-26 in e2e: use
-  `coinflip-starting-created` (no `CreateRoundAuth`, W-26 waits) to keep a
-  round `starting`, and a vector with one to show the failed verification.
+  (a fragment-only change does not reload the page). With the shared `test`,
+  the vectors are not issued for the session's key, so a round never passes
+  W-26: use `coinflip-starting-created` (no `CreateRoundAuth`, W-26 waits) to
+  keep a round `starting`, and a vector with one to show the failed
+  verification. A round that passes W-26 needs `harness/round-play.ts`'s `test`:
+  it overrides `randomDraws` so the Wrapper's key draw is the
+  `signed-action/coinflip-cancel` vector's test key (read at run time from
+  `vectors.ts`, never written into a file, not even a comment), serves the
+  round configuration, and installs the fake RPC endpoints (`fakeRpc`, whose
+  `behave` fails the tip check on purpose). Script it with `scriptRound` /
+  `toReady` / `callTails` (the move is tails, the vector's), or `scriptCancel`
+  for the cancel (the start answers the round `active`, so the cancel's reads
+  are the next reads, in order). The fake checks bodies through an answer's
+  `expect` (`startCheck`, `pickCheck`, `cancelCheck`). Mind W-29: the vectors'
+  versions are fixed, so never answer a later read with an equal version
+  (`coinflip-canceled` after `coinflip-resolving-cancel`, both v3, is
+  ignored). One round per session (the transcript refuses a second open of the
+  round id). The round `test` installs `page.clock` before every page loads
+  (`pageClock`), unpaused: the Wrapper's timers still run in real time, and
+  `advanceUntil` or `page.clock.runFor` moves them forward so a poll or a retry
+  comes at once. Do not pause it: `pauseAt` before load stops the Wrapper's
+  boot, and after load it races boot's timers against the network. Write no
+  assertion that needs a timer not to fire (T-19 counts reads up to
+  `check-later`, which no extra real-time poll changes). Tracing stays off (the key's bytes
+  are an init-script argument; the round fixture fails a traced test). In
+  T-15 offline, the browser's offline requests still reach the fake's route
+  (recorded, then aborted); assert only that the first call after `goOnline`
+  is a `getSnapshot`, not what is sent after it: the one resend of a move the
+  read shows not applied is a pending row until the resend change lands (W-16,
+  decided in human review 2026-10-18); the test already answers any later
+  move (`answerEvery`, checked with `pickCheck`), so the resend will not trip
+  the fake's teardown.
+  After a move in the game, the focus is on the Wrapper's result heading: the
+  reference game moves focus only while its own document has focus (#73);
+  `t14-every-state.spec.ts` waits for the game's own result heading before
+  asserting it stays.
   `fakePlayApi.redeemAgain()` allows one more redeem for the cloned tab of
   T-17. `t9a-embedding.spec.ts` frames the bundle from a test page on
   `PAGES_ORIGIN`: a listed page opens the session in every project; every

@@ -110,7 +110,7 @@ the specs' headings.
 - [Errors and edge cases](./wrapper.md#errors-and-edge-cases) ·
   [Security](./wrapper.md#security) ·
   [Observability](./wrapper.md#observability) ·
-  [Test plan](./wrapper.md#test-plan) (T-1 to T-18) ·
+  [Test plan](./wrapper.md#test-plan) (T-1 to T-19) ·
   [What this spec does not own](./wrapper.md#what-this-spec-does-not-own) ·
   [Decided questions](./wrapper.md#decided-questions) (OQ-1 to OQ-8) ·
   [References](./wrapper.md#references)

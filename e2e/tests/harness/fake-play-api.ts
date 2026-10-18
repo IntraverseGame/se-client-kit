@@ -9,9 +9,16 @@
 //   (vectors.ts), checked to be of the definition the answer needs, and a
 //   problem is sent with its own `status`, which must be one the operation
 //   lists;
-// - the bodies the fake writes itself (the redeem and refresh responses, and
-//   the problems of a missing token or a malformed body) are typed by the
-//   document's response types.
+// - the bodies the fake writes itself (the redeem and refresh responses, the
+//   problems of a missing token or a malformed body, and a scripted
+//   `own-problem` for a code no vector holds, with a listed status) are typed
+//   by the document's response types;
+// - the one exception is `invalid-snapshot`, an `invalid/` vector served on
+//   purpose for W-28's rejected Snapshot.
+//
+// An answer may check the request it answers (`expect`): the round tests check
+// a signed move and cancel byte for byte against the vendored vectors. A body
+// it refuses is recorded as unexpected and answered 400.
 //
 // It holds the session's secrets (the launch code and every play token it
 // issues) so the secret scan can look for them; they are deterministic, derived
@@ -45,7 +52,7 @@ import {
   type PlaySuccessBody,
 } from "./play-api-document.ts";
 import { redactSecrets } from "./secret-needles.ts";
-import { validVector } from "./vectors.ts";
+import { invalidVector, validVector } from "./vectors.ts";
 
 const API_SUFFIX = "/play/v1";
 
@@ -111,6 +118,14 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
       }
       case "problem": {
         await problem(route, validVector(answer.vector, "PlayProblem").input);
+        return;
+      }
+      case "invalid-snapshot": {
+        await json(route, 200, invalidVector(answer.vector));
+        return;
+      }
+      case "own-problem": {
+        await problem(route, ownProblem(answer.code, answer.status));
         return;
       }
       case "network-failure": {
@@ -211,6 +226,12 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
       return;
     }
     const answer = nextAnswer(operationId);
+    const refusal = answer?.expect?.(body);
+    if (refusal !== undefined) {
+      unexpected.push(`${operationId}: ${refusal}`);
+      await problem(route, ownProblem("INVALID_ARGUMENT", 400));
+      return;
+    }
     if (answer !== undefined) {
       await play(route, answer);
       return;

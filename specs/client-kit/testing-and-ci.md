@@ -404,8 +404,20 @@ development-only, so it may import the test-only entry of `contracts`.
   vectors can drive: T-13, T-14a, T-17, T-18, the game's mount at the redeem
   answer's D (`game-mount.spec.ts`), and parts of T-15 and T-16 (their own spec
   files; [wrapper.md, Test plan](../wrapper.md#test-plan) lists which). The rows
-  that need a round W-26 passes (the vectors are not issued for the session's
-  own key), a multi-step game, or W-49's handshake are declared with
+  that need a round W-26 passes (T-10, T-11, T-14, T-15's signed action, T-16's
+  round errors, T-19) run on the vendored Coin Flip round
+  (`harness/round-play.ts`): the seeded random source gives the Wrapper's key
+  draw the `signed-action/coinflip-cancel` vector's test key, read from
+  `contracts`' test-only entry at run time and never copied into a file, so the
+  round's vendored `CreateRoundAuth` is the session's; a round configuration
+  pins its signer, domain, and entropy source; fake RPC endpoints answer the tip
+  check (`harness/fake-rpc.ts`, which can fail it on purpose); and the fake Play
+  API checks the start's `actionKey` and the move's and cancel's bytes against
+  the vectors (an answer's `expect`), and can answer a code no vector holds
+  (`own-problem`) and, for W-28 only, an `invalid/` Snapshot. The harness's own
+  checks have their tests (`round-harness.spec.ts`). A multi-step game, the
+  shell's resend of a move lost offline (T-15: the resend change, W-16, decided
+  in human review 2026-10-18), and W-49's handshake are declared with
   `test.fixme` in `e2e/tests/pending.spec.ts`, reported as skipped, never as
   passed. Every spec file runs in all three projects except the proofs of the
   blocks (above): `hermetic-workers.spec.ts` in Chromium only, and

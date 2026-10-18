@@ -25,6 +25,11 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     serviceWorkers: "allow",
+    // Off, and never on: the round tests give the Wrapper's key draw the
+    // signed-action vector's test key as an `addInitScript` argument
+    // (tests/harness/round-play.ts), and a trace would write it to a file. The
+    // round fixture fails a test that runs with tracing on.
+    trace: "off",
   },
   projects: [
     {

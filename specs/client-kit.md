@@ -285,8 +285,10 @@ request, workflow log, agent output, or release note:
 - secrets: credentials, tokens, private keys (the test keys the vectors were
   signed with are public by design and are the only exception: in
   `packages/signing/src/fixtures/keys.ts`, and in the vendored `signed-action/`
-  vectors, which embed the same public test key and cannot be edited),
-  connection strings, signing keys, npm or deploy credentials;
+  vectors, which embed the same public test key and cannot be edited; the e2e
+  suite may pass the signed-action vector's test key to its seeded random stub,
+  read from `contracts`' test-only entry at run time, and never copies it into a
+  file), connection strings, signing keys, npm or deploy credentials;
 - internal hostnames, internal URLs, dashboard links, account identifiers, cloud
   resource names;
 - unpublished backend internals: only the player-facing contracts (the Play API

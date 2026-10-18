@@ -2,8 +2,7 @@
 // it is `resolving`; the connection-problem state appears (with the offline
 // notice when the browser reports it), the round is not lost, and after the
 // connection returns the Snapshot is read first and the round goes on. The
-// cut during a signed action needs a round W-26 passes, which the fake's
-// vectors cannot issue for the session's key: that part stays pending.
+// cut during a signed action, in a round W-26 passes, is t15-signed-action.
 
 import { expect, test } from "./harness/fixtures.ts";
 import {

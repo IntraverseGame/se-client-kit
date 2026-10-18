@@ -2,9 +2,8 @@
 // to a start, shows its message and `requestId` (a "try again" only when it is
 // retryable), and `ROUND_ACTIVE` resumes the open round; the degraded states
 // the fake can produce are each shown distinctly. Every state passes the
-// accessibility audit. The out-of-sync state needs a round W-26 passes, and
-// the session-ending codes and a rejected Snapshot need answers the fake's
-// vectors do not hold: those stay pending.
+// accessibility audit. The out-of-sync state, the session-ending codes in a
+// round, and a rejected Snapshot of the round are t16-round-errors.
 
 import { auditAccessibility } from "./harness/accessibility.ts";
 import {

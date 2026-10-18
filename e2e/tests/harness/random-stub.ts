@@ -7,6 +7,13 @@
 //
 // What the stub does not reach: workers (an init script runs only in pages and
 // frames) and `crypto.randomUUID`, which the test plan leaves unstubbed.
+//
+// A test may script one draw (`ScriptedDraw`): the first draw of its length in
+// each document of its origin is its bytes instead of the seeded ones. The
+// round tests give the Wrapper's key draw the signed-action vector's public
+// test key this way (round-play.ts), read at run time and never written to a
+// file. The scripted draw is reported like any other, so the secret scan
+// treats it as the action key it is.
 
 import type { BrowserContext, Frame } from "@playwright/test";
 
@@ -34,14 +41,21 @@ export type RandomDraws = {
   readonly settled: () => Promise<void>;
 };
 
+/** One draw a test scripts: the first of its length in a document of `origin`. */
+export type ScriptedDraw = {
+  readonly origin: string;
+  readonly bytes: readonly number[];
+};
+
 type StubArgs = {
   readonly seed: number;
   readonly binding: string;
   readonly count: string;
+  readonly scripted: ScriptedDraw | null;
 };
 
 // Runs in the page: no reference to anything outside its own body.
-const installStub = ({ seed, binding, count }: StubArgs): void => {
+const installStub = ({ seed, binding, count, scripted }: StubArgs): void => {
   // mulberry32: a small seeded generator, never Math.random.
   let state = seed >>> 0;
   const next = (): number => {
@@ -53,6 +67,8 @@ const installStub = ({ seed, binding, count }: StubArgs): void => {
   };
   const documentId = performance.timeOrigin;
   let drawn = 0;
+  let scriptedLeft =
+    scripted !== null && globalThis.location.origin === scripted.origin;
   Object.defineProperty(globalThis, count, {
     value: (): readonly [number, number] => [documentId, drawn],
   });
@@ -66,8 +82,17 @@ const installStub = ({ seed, binding, count }: StubArgs): void => {
       array.byteOffset,
       array.byteLength,
     );
-    for (let index = 0; index < bytes.length; index += 1) {
-      bytes[index] = next() & 0xff;
+    if (
+      scriptedLeft &&
+      scripted !== null &&
+      scripted.bytes.length === bytes.length
+    ) {
+      scriptedLeft = false;
+      bytes.set(scripted.bytes);
+    } else {
+      for (let index = 0; index < bytes.length; index += 1) {
+        bytes[index] = next() & 0xff;
+      }
     }
     drawn += 1;
     const report: unknown = Reflect.get(globalThis, binding);
@@ -97,10 +122,14 @@ const countOf = (frame: Frame): Promise<readonly [number, number] | null> =>
     // A frame that went away has no draws left to wait for.
     .catch(() => null);
 
-/** Installs the seeded `getRandomValues` in every page of `context`. */
+/**
+ * Installs the seeded `getRandomValues` in every page of `context`, with one
+ * draw scripted when `scripted` is given.
+ */
 export const stubRandomValues = async (
   context: BrowserContext,
   seed: number,
+  scripted?: ScriptedDraw,
 ): Promise<RandomDraws> => {
   const draws: Uint8Array[] = [];
   const received = new Map<Frame, Map<number, number>>();
@@ -120,6 +149,7 @@ export const stubRandomValues = async (
     seed,
     binding: BINDING,
     count: COUNT,
+    scripted: scripted ?? null,
   });
 
   const settleFrame = async (frame: Frame): Promise<void> => {
