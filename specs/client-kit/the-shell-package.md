@@ -511,6 +511,29 @@ are in brackets.
     retryable problem with the same bytes; `resend` sends the recorded body
     again later, in the phases `resendable` allows. Any other failure leaves the
     action pending.
+  - **The lost action's one resend (W-16; decided in human review,
+    2026-10-18).** The delivery keeps the move or cash-out whose last send had
+    an unknown outcome (`lost`, `isUnknownOutcome`: no response, or a 503 not
+    marked `retryable: false` after the transport's own retries, a 503 with no
+    problem body included; a 503 marked `retryable: false` is not lost, as W-42
+    reads `retryable`, and is never resent) until a send of it is answered. When
+    the flow then observes a read of the round, the newest it has read by
+    `version` (a late, older read decides nothing), that shows it `active` at
+    the step before that action (`step = sequence - 1`), with the action still
+    pending and `resendable`, it sends the recorded body again (the same bytes
+    and idempotency key, nothing signed or encoded), once per action. The
+    once-only state is the delivery's (`resendOnce`, `resent`), shared with the
+    player actions' `resend`: after either path sent it again, the other sends
+    nothing (`resend` answers `not_active`), and a read during that send, or any
+    later read, sends nothing more. A read that shows the action applied, the
+    step moved on, or the round not `active` (`resolving`, or over) sends
+    nothing, and so does a phase `resendable` refuses (W-19's hold, a failed
+    check, out of sync, or the session ended). A re-issued read still allows it
+    (W-26: a resend is not a new signature); the required cancel, unlike it,
+    resends nothing after a re-issue (W-25), and is never resent here. If the
+    resend fails too, the action stays pending: the game's next pick and a
+    cash-out are `busy`, and the round ends by a read that shows it applied or
+    by its expiry rule.
   - **Resynchronization (W-19).** A 400 `INVALID_ARGUMENT` or a 409
     `STALE_ACTION` calls `stale` and reads the Snapshot; when the read fails,
     the round stays held until a later read decides.
@@ -519,17 +542,22 @@ are in brackets.
     repeated by the transport); nothing is ever signed at sequence 1 again. The
     answer's Snapshot is read. After any failure the flow reads the Snapshot,
     and that read decides (below): after a 400 nothing more is sent, and a read
-    that decides nothing leaves the cancel `refused`; after no answer or a 503,
-    when the read (a fresh, successful one) shows the round `active`, at `step`
-    0, and not re-issued, the same signed bytes are sent again, once (decided by
-    human review, 2026-10-17). A resend that is also lost or answered 503 is
-    followed by another read and never a third send. Nothing else is resent. The
-    state is `unavailable` when the cancel is not sent: when the signed cancel
-    does not match its typed data nothing is sent, the transcript state is
-    `failed`, and `lastError()` is `invalid-input`. Not resending after a
-    re-issue is the shell's own reading of W-26 ("sign nothing more"), the
-    conservative side. The state is also `unavailable` when signing throws a
-    `ShellError` (the signer lock lost: `lock-not-held`), with nothing sent.
+    that decides nothing leaves the cancel `refused`; after a lost send
+    (`isUnknownOutcome`, the one definition for every action: no answer, or a
+    503 not marked `retryable: false`, a bare 503 included; a 503 marked
+    `retryable: false` earns no resend but, like a 422, is no refusal: a failed
+    read after it is settling; decided in human review, 2026-10-18), when the
+    read (a fresh, successful one) shows the round `active`, at `step` 0, and
+    not re-issued, the same signed bytes are sent again, once (decided by human
+    review, 2026-10-17). A resend that is also lost is followed by another read
+    and never a third send; a 422 to it is read and never answered with another
+    send. Nothing else is resent. The state is `unavailable` when the cancel is
+    not sent: when the signed cancel does not match its typed data nothing is
+    sent, the transcript state is `failed`, and `lastError()` is
+    `invalid-input`. Not resending after a re-issue is the shell's own reading
+    of W-26 ("sign nothing more"), the conservative side. The state is also
+    `unavailable` when signing throws a `ShellError` (the signer lock lost:
+    `lock-not-held`), with nothing sent.
   - **Settling the cancel (W-25, W-35; the Snapshot contract `se.snapshot/1` as
     vendored from the backend's b27afc5, whose meaning changed: `canceled` is
     final, and a cancel the engine has not answered shows `resolving`; decided
@@ -558,35 +586,34 @@ are in brackets.
     `resolving` is read in and settles nothing; another round's Snapshot and a
     failed read settle nothing. Only after an unknown outcome and a read of
     `active` with no move (not re-issued) is the same cancel sent again, once.
-    After an unknown outcome (a lost response, a 503, or an answer that is not
-    this round's Snapshot) or a 422, a read that fails or shows another round
-    puts the cancel in `settling` as read 1, with no resend: a later `active`
-    read with no move is `not-taken`, not a resend (decided by human review,
-    2026-10-18). After an unknown outcome, a read of `active` with no move does
-    the same (read 1, nothing sent) whenever no resend is allowed: after the
-    resend (a second unknown outcome, no third send) or when the read shows a
-    re-issue. After a 400 such a read leaves the cancel `refused` (the round is
-    back to `active` per the contract). There is no `unconfirmed` state: every
-    failed call ends `settling`, or decided by its read (`sent`, `ended`,
-    `not-taken`), or `refused` after a 400; so no state leaves a cancel that may
-    be stored with nothing reading the round (`settling` is read by the poll,
-    `check-later` by `checkAgain`). Every problem a cancel call is answered with
-    is kept in the evidence (`cancelRefusals`: status, code, `requestId`). An
-    answer that is not a Snapshot of this round is an unknown outcome
-    (`snapshot-rejected`, then a read). A failed read counts. After
-    `SETTLING_READS` (30) reads without one that settles it, the state is
-    `check-later` ("still resolving — contact support": today a round that had
-    already closed before the cancel arrived stays `resolving` for a person to
-    resolve): the fast poll stops, and each `checkAgain` (the "check again"
-    control, or the Wrapper's 30 s background read) reads once under the same
-    rules. The shell reads no clock; the Wrapper owns the timing. While the
-    state is `in-flight`, `settling`, or `check-later`, the round is not over
-    and no new round may start for the session (the guard of a new round reads
-    the flow's `cancel()`); `ended` does not block one. An `active` answer is
-    `not-taken`, as an `active` read is. A final answer (`canceled`, `won`,
-    `lost`) is read into the round at once: the round's result, with no error
-    and no extra read. The shell changes these rules only through a vendored
-    change of the Snapshot contract.
+    After an unknown outcome (a lost send, or an answer that is not this round's
+    Snapshot) or a 422, a read that fails or shows another round puts the cancel
+    in `settling` as read 1, with no resend: a later `active` read with no move
+    is `not-taken`, not a resend (decided by human review, 2026-10-18). After an
+    unknown outcome, a read of `active` with no move does the same (read 1,
+    nothing sent) whenever no resend is allowed: after the resend (a second
+    unknown outcome, no third send) or when the read shows a re-issue. After a
+    400 such a read leaves the cancel `refused` (the round is back to `active`
+    per the contract). There is no `unconfirmed` state: every failed call ends
+    `settling`, or decided by its read (`sent`, `ended`, `not-taken`), or
+    `refused` after a 400; so no state leaves a cancel that may be stored with
+    nothing reading the round (`settling` is read by the poll, `check-later` by
+    `checkAgain`). Every problem a cancel call is answered with is kept in the
+    evidence (`cancelRefusals`: status, code, `requestId`). An answer that is
+    not a Snapshot of this round is an unknown outcome (`snapshot-rejected`,
+    then a read). A failed read counts. After `SETTLING_READS` (30) reads
+    without one that settles it, the state is `check-later` ("still resolving —
+    contact support": today a round that had already closed before the cancel
+    arrived stays `resolving` for a person to resolve): the fast poll stops, and
+    each `checkAgain` (the "check again" control, or the Wrapper's 30 s
+    background read) reads once under the same rules. The shell reads no clock;
+    the Wrapper owns the timing. While the state is `in-flight`, `settling`, or
+    `check-later`, the round is not over and no new round may start for the
+    session (the guard of a new round reads the flow's `cancel()`); `ended` does
+    not block one. An `active` answer is `not-taken`, as an `active` read is. A
+    final answer (`canceled`, `won`, `lost`) is read into the round at once: the
+    round's result, with no error and no extra read. The shell changes these
+    rules only through a vendored change of the Snapshot contract.
     <!-- TODO(Snapshot contract): the planned read of the last round will show the ended round's real result (and `idle` with no error will mean "no round yet"); read it then instead of `ended`'s neutral display. -->
   - **Re-issue (W-26).** A re-issued verdict calls `reissue`: picks and the
     cash-out are `not_active`, and `resend` still sends a move or a cash-out
@@ -628,9 +655,9 @@ are in brackets.
     another round's: only a Snapshot of the round decides.
   - The Snapshot reader does not order Snapshots by `version`; W-29's ordering
     is the UI's.
-  - The cancel resend (Q2): after a lost response or a 503, the same signed
-    cancel is sent again once when a fresh read shows the round still cancelable
-    (the required cancel above).
+  - The cancel resend (Q2): after a lost send (no answer, or a 503 not marked
+    `retryable: false`), the same signed cancel is sent again once when a fresh
+    read shows the round still cancelable (the required cancel above).
   - The flow signs a cancel with `signing`'s `hashPlayerCancel`, pinned by the
     vendored `signed-action/coinflip-cancel` vector (#41); the injected
     `CancelHasher` it used before the vector existed is gone, and so is the
@@ -749,30 +776,30 @@ are in brackets.
   round out of sync, or stay held when the read fails; a failed check signs
   nothing, not even a cancel; with `T_0` settled and only the tip check failed,
   only the cancel is signed, once; after a 400 or a 422 it is never sent again;
-  after a lost response or a 503 the same bytes are sent again once when the
-  read shows the round still `active` with no move, never when it shows a move,
-  another status, a re-issue, or no Snapshot, and never a third time; a
-  `resolving` answer (or a `resolving` read after any failed call, the golden
-  `valid/coinflip-resolving-cancel` included) is `settling`: a repeated
-  `resolving` read keeps it so, with the phase not `closed`; another round, a
-  failed read, and a read sent before the answer settle nothing (the round is
-  held from signing on, the resend's flight included); after a lost cancel, an
-  active read, and a 422 to the resend (the round resolving), a `resolving` read
-  is `settling` with no third send; after a lost response, a 400, or a 422 an
-  `idle` read is `ended`; after a lost response an `active` read with a move,
-  and after a 400 or a 422 an `active` read, is `not-taken`, with the refusal in
-  the evidence; after a lost response, a 503, or a 422 a failed read is
-  `settling` (read 1, no resend), and a counted `active`, `canceled`, or `idle`
-  read then gives `not-taken`, `sent`, or `ended`, while after a 400 a failed
-  read leaves `refused`; two unknown outcomes and an `active` read with no move,
-  and an unknown outcome and a re-issued `active` read with no move, are
-  `settling` with nothing more sent, decided by the next counted read (`active`,
-  `canceled`, `idle`, `resolving`) and counting toward the 30; the read after a
-  failure, a failed one included, counts toward the 30; the refusal in the
-  evidence is exactly its status, code, and `requestId`, with no `detail` or
-  body field in the printed evidence; two counted reads at once send one; a
-  `resolving` read is read in; `idle` settles it as `ended` (also from
-  `check-later`); `canceled` (with or without a `closeReason`), `won`, and
+  after a lost send (no answer, or a 503 not marked `retryable: false`) the same
+  bytes are sent again once when the read shows the round still `active` with no
+  move, never when it shows a move, another status, a re-issue, or no Snapshot,
+  and never a third time; a `resolving` answer (or a `resolving` read after any
+  failed call, the golden `valid/coinflip-resolving-cancel` included) is
+  `settling`: a repeated `resolving` read keeps it so, with the phase not
+  `closed`; another round, a failed read, and a read sent before the answer
+  settle nothing (the round is held from signing on, the resend's flight
+  included); after a lost cancel, an active read, and a 422 to the resend (the
+  round resolving), a `resolving` read is `settling` with no third send; after a
+  lost response, a 400, or a 422 an `idle` read is `ended`; after a lost
+  response an `active` read with a move, and after a 400 or a 422 an `active`
+  read, is `not-taken`, with the refusal in the evidence; after a lost send or a
+  422 a failed read is `settling` (read 1, no resend), and a counted `active`,
+  `canceled`, or `idle` read then gives `not-taken`, `sent`, or `ended`, while
+  after a 400 a failed read leaves `refused`; two unknown outcomes and an
+  `active` read with no move, and an unknown outcome and a re-issued `active`
+  read with no move, are `settling` with nothing more sent, decided by the next
+  counted read (`active`, `canceled`, `idle`, `resolving`) and counting toward
+  the 30; the read after a failure, a failed one included, counts toward the 30;
+  the refusal in the evidence is exactly its status, code, and `requestId`, with
+  no `detail` or body field in the printed evidence; two counted reads at once
+  send one; a `resolving` read is read in; `idle` settles it as `ended` (also
+  from `check-later`); `canceled` (with or without a `closeReason`), `won`, and
   `lost` settle it as the result, and `active` (with no move or one, as a read
   or as the answer) as `not-taken`; Snapshots observed from elsewhere are held
   back before the tracking; 30 reads give `check-later`, where `checkAgain`

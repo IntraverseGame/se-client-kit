@@ -20,6 +20,7 @@ import type { PendingAction } from "./pending-action.ts";
 import {
   asksResync,
   isCallError,
+  isUnknownOutcome,
   type Route,
   type Sent,
   signedBody,
@@ -53,6 +54,22 @@ export type RoundDelivery = {
   readonly signed: () => readonly PendingAction[];
   /** The last action recorded, with its body. */
   readonly lastSent: () => Sent | undefined;
+  /**
+   * The move or cash-out whose last send had an unknown outcome (no response,
+   * or a 503 not marked `retryable: false`, after the transport's own retries),
+   * until a send of it is answered (W-16, W-42, W-43).
+   */
+  readonly lost: () => PendingAction | undefined;
+  /** Whether `action` has had its one W-16 resend, by any path. */
+  readonly resent: (action: PendingAction) => boolean;
+  /**
+   * W-16's one resend of a recorded move or cash-out: sends its recorded body
+   * again (with `busy` set) and resolves `true`, or sends nothing and resolves
+   * `false` when the action has had its resend already. Every resend, the
+   * flow's own and the player actions' `resend`, goes through here, so an
+   * action is sent at most twice.
+   */
+  readonly resendOnce: (sent: Sent) => Promise<boolean>;
   /** Records a signed action and its body before it is sent (W-16). */
   readonly record: (sent: Sent) => Sent;
   /** Encodes, signs, and records a move or a cash-out at the next sequence. */
@@ -91,6 +108,9 @@ export const createRoundDelivery = (
   const encode = encoderOf(hooks);
   const signed: PendingAction[] = [];
   let lastSent: Sent | undefined;
+  let lost: PendingAction | undefined;
+  // The actions that had their one resend (W-16): never a third send.
+  const resentActions = new WeakSet<PendingAction>();
   let lastError: Error | undefined;
   let busy = false;
 
@@ -167,10 +187,12 @@ export const createRoundDelivery = (
       const result = await routeOf(sent.action)(transport, sent.body, {
         authorization,
       });
+      if (lost === sent.action) lost = undefined;
       await observeBody(result.body);
     } catch (error) {
       if (!isCallError(error)) throw error;
       fail(error);
+      lost = isUnknownOutcome(error) ? sent.action : undefined;
       if (asksResync(error)) {
         host.signer()?.stale();
         await resync();
@@ -189,6 +211,13 @@ export const createRoundDelivery = (
     }
   };
 
+  const resendOnce = async (sent: Sent): Promise<boolean> => {
+    if (resentActions.has(sent.action)) return false;
+    resentActions.add(sent.action);
+    await whileBusy(() => send(sent));
+    return true;
+  };
+
   return Object.freeze({
     busy: (): boolean => busy,
     whileBusy,
@@ -196,6 +225,9 @@ export const createRoundDelivery = (
     fail,
     signed: (): readonly PendingAction[] => Object.freeze([...signed]),
     lastSent: (): Sent | undefined => lastSent,
+    lost: (): PendingAction | undefined => lost,
+    resent: (action: PendingAction): boolean => resentActions.has(action),
+    resendOnce,
     record,
     sign,
     send,

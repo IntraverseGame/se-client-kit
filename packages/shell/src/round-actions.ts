@@ -29,10 +29,11 @@ export type RoundActions = {
    */
   readonly cashOutOffered: () => boolean;
   /**
-   * Sends the pending move or cash-out again with the same bytes and key.
-   * `not_active` when nothing may be resent: no pending move or cash-out, a
-   * cancel (sent again only after a Snapshot read, W-25), or a round held after
-   * W-19.
+   * Sends the pending move or cash-out again with the same bytes and key, its
+   * one W-16 resend. `not_active` when nothing may be resent: no pending move
+   * or cash-out, a cancel (sent again only after a Snapshot read, W-25), a
+   * round held after W-19, or an action that had its resend already (the flow's
+   * own after a lost send included): never a third send.
    */
   readonly resend: () => Promise<PickOutcome>;
 };
@@ -127,10 +128,13 @@ export const createRoundActions = (
     if (delivery.busy()) return rejected("busy");
     const action = tracking.signer()?.resendable();
     const sent = delivery.lastSent();
-    if (action === undefined || sent?.action !== action) {
+    if (
+      action === undefined ||
+      sent?.action !== action ||
+      !(await delivery.resendOnce(sent))
+    ) {
       return rejected("not_active");
     }
-    await delivery.whileBusy(() => delivery.send(sent));
     return ACCEPTED;
   };
 

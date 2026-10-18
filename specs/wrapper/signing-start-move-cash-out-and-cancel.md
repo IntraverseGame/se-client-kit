@@ -74,24 +74,32 @@ Part of the [Wrapper spec](../wrapper.md), section
   review, 2026-10-17): after a refused cancel, a 400 included, it reads the
   Snapshot and signs nothing at that sequence again, so the round ends by its
   expiry rule unless the Snapshot shows the cancel applied (`canceled`). A
-  cancel is not answered from a log as a repeated move is: after a lost response
-  or a 503 `UNAVAILABLE`, the shell MUST read the Snapshot
+  cancel is not answered from a log as a repeated move is (a cancel sent again
+  after it was accepted, or while the round is `resolving`, is answered 422
+  `FAILED_PRECONDITION`, and a 503 `UNAVAILABLE` may come with the cancel
+  already stored): after a lost send (no answer, or a 503 not marked
+  `retryable: false`, a bare 503 included: W-16's one definition, decided in
+  human review, 2026-10-18), the shell MUST read the Snapshot
   (`GET /play/v1/snapshot`) before it sends the same signed cancel again, and
   `play-client` never repeats it on its own. When that read shows the round
   still `active` with no move (and its `CreateRoundAuth` not re-issued), the
   shell sends the same signed cancel bytes again, once, with the same
   `idempotencyKey`, never a new signature (W-16; decided by human review,
   2026-10-17); when it shows `resolving`, the cancel is settling (below); when
-  the read itself fails or shows another round (after a lost response, a 503, or
-  a 422), the cancel is settling too, and the resend is forgone: a later
-  `active` read with no move does not earn it (decided by human review,
-  2026-10-18; the counted reads decide instead). On anything else, or after a
-  refusal (a 400 or a 422), it sends nothing more. A resend that is also lost or
-  answered 503 is followed by another Snapshot read and never by a third send;
-  when that read shows the round `active` with no move again, the cancel may be
-  stored, so it is settling with that read as read 1 (decided by human review,
-  2026-10-18), and the counted reads decide. The cancel is encoded by
-  `signing`'s `PlayerCancel` (W-20). Its independent signer's vector
+  the read itself fails or shows another round (after a lost send, a 503 marked
+  `retryable: false`, or a 422), the cancel is settling too, and the resend is
+  forgone: a later `active` read with no move does not earn it (decided by human
+  review, 2026-10-18; the counted reads decide instead). On anything else, or
+  after a refusal (a 400 or a 422), it sends nothing more. A 503 marked
+  `retryable: false` earns no resend (W-42) but is no proof of a refusal, since
+  a 503 may come with the cancel stored: after it, a failed read is settling and
+  the counted reads decide, an `active` read gives `not-taken`, and a `canceled`
+  read gives `sent` (decided in human review, 2026-10-18). A resend that is also
+  lost is followed by another Snapshot read and never by a third send; when that
+  read shows the round `active` with no move again, the cancel may be stored, so
+  it is settling with that read as read 1 (decided by human review, 2026-10-18),
+  and the counted reads decide. The cancel is encoded by `signing`'s
+  `PlayerCancel` (W-20). Its independent signer's vector
   (`signed-action/coinflip-cancel`) is vendored in `contracts`, and the kit
   replays it (in `signing` and in the shell's round flow) before the shell signs
   a cancel.
@@ -115,13 +123,14 @@ Part of the [Wrapper spec](../wrapper.md), section
     round.
   - A `rounds:cancel` answer of this round that is `resolving` puts the cancel
     in **`settling`**. So does a `resolving` read after **any** failed cancel
-    call: a lost response or a 503 `UNAVAILABLE` (retryable, but the cancel may
-    already be stored, so the Snapshot is read before any resend, W-16), and a
-    refusal too (a 400, or a 422, which answers a resent cancel or a cancel of a
-    round that is not `active`). Nothing is resent then, and that read is the
-    first counted read. The answer is not read into the round: the latest
-    Snapshot, the verdict, and the transcript state stay as they were before the
-    cancel, and the round is not shown as over.
+    call: a lost send (no answer, or a 503 `UNAVAILABLE` not marked
+    `retryable: false`: the cancel may already be stored, so the Snapshot is
+    read before any resend, W-16), and a refusal too (a 400, or a 422, which
+    answers a resent cancel or a cancel of a round that is not `active`).
+    Nothing is resent then, and that read is the first counted read. The answer
+    is not read into the round: the latest Snapshot, the verdict, and the
+    transcript state stay as they were before the cancel, and the round is not
+    shown as over.
   - While `settling`, only the shell's own counted reads may settle it, one at a
     time (a read asked while one is in flight joins it). Each counts, a failed
     one included:
@@ -139,7 +148,8 @@ Part of the [Wrapper spec](../wrapper.md), section
       <!-- TODO(Snapshot contract): planned by the backend: the read keeps showing the ended round (and `idle` with no error means "no round yet", a voided or rejected round `idle` with its typed error); when a vendored contract version states it, show the round's real result instead of "round ended". -->
     - `resolving` settles nothing and is read into the round (W-35 polls it);
       another round's Snapshot and a failed read settle nothing.
-  - After an unknown outcome (a lost response or a 503) or a 422, a read that
+  - After an unknown outcome (a lost send: no answer, or a 503 not marked
+    `retryable: false`), a 503 marked `retryable: false`, or a 422, a read that
     also fails (or shows another round) puts the cancel in `settling` too, as
     read 1, with no resend; so does, after an unknown outcome, a read of
     `active` with no move whenever no resend is allowed: after the resend's
@@ -160,8 +170,9 @@ Part of the [Wrapper spec](../wrapper.md), section
     a resent cancel or a cancel of a round that is not `active`, so an `active`
     read after it means the cancel did not take either. A refusal is kept in the
     round's evidence (W-27: its status, code, and `requestId`). Only after an
-    unknown outcome (a lost response or a 503) and a read of `active` with no
-    move is the same cancel sent again, once (above).
+    unknown outcome (a lost send: no answer, or a 503 not marked
+    `retryable: false`) and a read of `active` with no move is the same cancel
+    sent again, once (above).
   - After **30** counted reads without one that settles it, the cancel is
     **`check-later`**: today a round that stays `resolving` with no end is one
     that had already closed before the cancel arrived (a lost answer to the
@@ -269,14 +280,15 @@ Part of the [Wrapper spec](../wrapper.md), section
     failed verification and was canceled", and the player's bet is returned by
     the cancel. The cancel is signed once and never signed again. A refused
     cancel (a 400 or a 422) is never sent again; a cancel whose outcome is
-    unknown (a lost response or a 503) follows W-25's single resend of the same
-    signed bytes. While the cancel is `in-flight`, `settling`, or `check-later`
-    (W-25) the round is shown as failed verification, never as canceled; when it
-    is `ended`, the Wrapper shows W-33's neutral "round ended", with no claim
-    that the bet was returned; when it is `not-taken`, the round stays failed
-    verification. When the cancel path ends without the Snapshot showing
-    `canceled`, the shell shows "this round failed verification", and the round
-    ends by its game's expiry rule (W-25).
+    unknown (a lost send: no answer, or a 503 not marked `retryable: false`)
+    follows W-25's single resend of the same signed bytes. While the cancel is
+    `in-flight`, `settling`, or `check-later` (W-25) the round is shown as
+    failed verification, never as canceled; when it is `ended`, the Wrapper
+    shows W-33's neutral "round ended", with no claim that the bet was returned;
+    when it is `not-taken`, the round stays failed verification. When the cancel
+    path ends without the Snapshot showing `canceled`, the shell shows "this
+    round failed verification", and the round ends by its game's expiry rule
+    (W-25).
   - **`T_0` not settled** (check 1, 2, 3, 4, or 5 failed): the shell MUST sign
     nothing for the round, not even `PlayerCancel`, because a cancel linked to
     an unconfirmed `previous` may be refused and can never be rebuilt at that
