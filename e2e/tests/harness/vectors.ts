@@ -6,7 +6,15 @@
 // (the `snapshot` package's T-5 replay proves it), and the Play API document's
 // `Snapshot` and `PlayProblem` components are generated from that schema, so a
 // body taken from one is a body the document allows. Only `valid/` vectors are
-// served; an `invalid/` vector is never a response.
+// served, except through `invalidVector`, the one answer of W-28's rejected
+// Snapshot: a body the document does not allow, on purpose.
+//
+// It also reads the action vectors of the vendored Coin Flip round
+// (`typed-data/`, `signed-action/`), whose bytes the Wrapper must send, and the
+// public test key of the signed-action vector (`signedActionTestKey`), which
+// the round tests give the seeded random source so that the session's key is
+// that vector's (round-play.ts). The key is read here at run time only and is
+// never copied into a file (AGENTS.md).
 
 import { snapshotVectors } from "@intraverse/se-client-contracts/testing";
 
@@ -59,3 +67,74 @@ export const validVectorNames = (
   Object.entries(snapshotVectors.valid)
     .filter(([, file]) => isRecord(file) && file["definition"] === definition)
     .map(([name]) => name);
+
+/**
+ * The `invalid/` vector `name`, a Snapshot the schema refuses: only for the
+ * answer that tests W-28's rejected Snapshot.
+ */
+export const invalidVector = (name: string): ValidVector["input"] => {
+  const file: unknown = snapshotVectors.invalid[name];
+  if (
+    !isRecord(file) ||
+    file["expected"] !== "invalid" ||
+    file["definition"] !== "Snapshot" ||
+    !isRecord(file["input"])
+  ) {
+    throw new Error(`no invalid/ Snapshot vector named "${name}"`);
+  }
+  return file["input"];
+};
+
+const fieldOf = (
+  record: Readonly<Record<string, unknown>>,
+  key: string,
+  where: string,
+): Readonly<Record<string, unknown>> => {
+  const value = record[key];
+  if (!isRecord(value)) throw new Error(`${where}: no ${key}`);
+  return value;
+};
+
+const textOf = (
+  record: Readonly<Record<string, unknown>>,
+  key: string,
+  where: string,
+): string => {
+  const value = record[key];
+  if (typeof value !== "string") throw new Error(`${where}: no ${key}`);
+  return value;
+};
+
+/** The base64 `typedData` of the `typed-data/` vector `name`. */
+export const typedDataBase64 = (name: string): string => {
+  const file: unknown = snapshotVectors.typedData[name];
+  if (!isRecord(file)) throw new Error(`no typed-data/ vector named "${name}"`);
+  return textOf(fieldOf(file, "typedData", name), "base64", name);
+};
+
+const signedAction = (name: string): Readonly<Record<string, unknown>> => {
+  const file: unknown = snapshotVectors.signedAction[name];
+  if (!isRecord(file)) {
+    throw new Error(`no signed-action/ vector named "${name}"`);
+  }
+  return file;
+};
+
+/** The signature of the `signed-action/` vector `name`, as `0x` hex. */
+export const signedActionSignature = (name: string): string =>
+  textOf(fieldOf(signedAction(name), "signature", name), "hex", name);
+
+/**
+ * The public test key the `signed-action/` vector `name` was signed with, and
+ * its address. Public by design and test-only: it holds nothing. Read at run
+ * time only; never copy it into a file.
+ */
+export const signedActionTestKey = (
+  name: string,
+): { readonly privateKey: string; readonly address: string } => {
+  const key = fieldOf(signedAction(name), "testKey", name);
+  return {
+    privateKey: textOf(key, "privateKey", name),
+    address: textOf(key, "address", name),
+  };
+};

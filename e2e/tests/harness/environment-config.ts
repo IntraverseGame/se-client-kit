@@ -69,3 +69,43 @@ export const serveEnvironmentConfig = async (
     }),
   );
 };
+
+/** What a round configuration pins, from the round's `CreateRoundAuth`. */
+export type RoundPins = {
+  /** The round's `CreateRoundAuth` signer: the configuration's `runtimeSigner`. */
+  readonly signer: string;
+  readonly domain: {
+    readonly chainId: number;
+    readonly verifyingContract: string;
+  };
+  /** The round's `proofs.randomnessProof.source`. */
+  readonly source: string;
+  readonly entropyChainId: number;
+};
+
+/** The round configuration's two RPC endpoints, each its own provider. */
+export const ROUND_RPC_ENDPOINTS: readonly {
+  readonly provider: string;
+  readonly url: string;
+}[] = [
+  { provider: "p1", url: "https://rpc1.e2e.test/round" },
+  { provider: "p2", url: "https://rpc2.e2e.test/round" },
+];
+
+/**
+ * A valid `preview` document that pins `pins`, the vendored round's signer,
+ * domain, and entropy source (round-play.ts), so a round of the session's own
+ * key passes W-26's checks 1 to 5; the tip check (W-26b) goes to the fake RPC
+ * endpoints (fake-rpc.ts), with a quorum of 2 and a lag margin of 2.
+ */
+export const roundEnvironmentConfig = (
+  playApiBaseUrl: string,
+  pins: RoundPins,
+): Readonly<Record<string, unknown>> => ({
+  ...environmentConfig(playApiBaseUrl),
+  runtimeSigner: pins.signer,
+  registryDomain: pins.domain,
+  rpcEndpoints: { [pins.source]: ROUND_RPC_ENDPOINTS },
+  entropyChainId: { [pins.source]: pins.entropyChainId },
+  tipLagMargin: { [pins.source]: 2 },
+});

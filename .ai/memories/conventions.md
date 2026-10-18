@@ -73,7 +73,10 @@ This note records the patterns behind them.
   the only keys that may appear in the repository, and only in
   `packages/signing/src/fixtures/keys.ts` and in the vendored `signed-action/`
   vectors of `packages/contracts`, which embed the same public test key (anvil
-  account 3, test-only, never funded) and cannot be edited.
+  account 3, test-only, never funded) and cannot be edited. The e2e suite may
+  pass the signed-action vector's test key to its seeded random stub, read from
+  `contracts`' test-only entry at run time (`e2e/tests/harness/vectors.ts`), and
+  never copies it into a file, a fixture, or a comment.
 - **Errors:** typed errors with a stable `code`; callers branch on `code`, never
   on message text. Do not leak internals or secrets in messages. Errors from the
   backend are mapped from its published error codes.

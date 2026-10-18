@@ -387,7 +387,13 @@ development-only, so it may import the test-only entry of `contracts`.
 - **The network control** (T-15): `goOffline` and `goOnline` toggle the
   browser's offline emulation and cut the fake Play API with it; `cutPlayApi`
   fails only the Play API while the page stays online. A single failing or
-  never-answering call is scripted on the fake.
+  never-answering call is scripted on the fake. `sent` is every Play API call
+  the page sent, its body decoded, read from the browser context's `request`
+  event, held in memory and never logged: offline, Playwright's Firefox fails a
+  request (`NS_ERROR_OFFLINE`) before any route sees it, so the fake records
+  none there, while Chromium and WebKit route it (`OFFLINE_ROUTED`, which a test
+  in `network.spec.ts` asserts per project, printing one stdout line); the
+  `request` event sees it in every project.
 - **What runs today**: the harness's own tests; a smoke run on the Wrapper's
   bundle opened with no launch code (it loads and accepts the served
   configuration with no outside request, error, or warning, passes the audit,
@@ -404,18 +410,40 @@ development-only, so it may import the test-only entry of `contracts`.
   vectors can drive: T-13, T-14a, T-17, T-18, the game's mount at the redeem
   answer's D (`game-mount.spec.ts`), and parts of T-15 and T-16 (their own spec
   files; [wrapper.md, Test plan](../wrapper.md#test-plan) lists which). The rows
-  that need a round W-26 passes (the vectors are not issued for the session's
-  own key), a multi-step game, or W-49's handshake are declared with
+  that need a round W-26 passes (T-10, T-11, T-14, T-15's signed action, T-16's
+  round errors, T-19) run on the vendored Coin Flip round
+  (`harness/round-play.ts`): the seeded random source gives the Wrapper's key
+  draw the `signed-action/coinflip-cancel` vector's test key, read from
+  `contracts`' test-only entry at run time and never copied into a file, so the
+  round's vendored `CreateRoundAuth` is the session's; a round configuration
+  pins its signer, domain, and entropy source; fake RPC endpoints answer the tip
+  check (`harness/fake-rpc.ts`, which can fail it on purpose); and the fake Play
+  API checks the start's `actionKey` and the move's and cancel's bytes against
+  the vectors (an answer's `expect`), and can answer a code no vector holds
+  (`own-problem`) and, for W-28 only, an `invalid/` Snapshot. The harness's own
+  checks have their tests (`round-harness.spec.ts`). A multi-step game, the
+  shell's resend of a move lost offline (T-15: the resend change, W-16, decided
+  in human review 2026-10-18), and W-49's handshake are declared with
   `test.fixme` in `e2e/tests/pending.spec.ts`, reported as skipped, never as
   passed. Every spec file runs in all three projects except the proofs of the
   blocks (above): `hermetic-workers.spec.ts` in Chromium only, and
   `hermetic-proxy.spec.ts` and `hermetic-webrtc.spec.ts` in Firefox and WebKit
-  only, each skipped elsewhere with its reason. T-9a's W-49 minimum runs in all
-  three: framed by an unlisted page the Wrapper refuses to start, and framed by
-  a listed page it opens the session. Every project's browser has
-  `location.ancestorOrigins`, Firefox's included (the first Firefox run,
-  2026-10-18), and that is asserted; the Wrapper's path without the list is a
-  component test. The handshake's cases (T-9a,
+  only, each skipped elsewhere with its reason. One browser behavior differs per
+  project and is proven as such, since the Wrapper works around it: a parent's
+  `focus()` while its frame has the focus (W-46's move from the game frame to
+  the result or error heading) moves the focus in Chromium and WebKit, and
+  leaves it in the frame in Playwright's Firefox build, whose frames run in
+  their parent's process (`fission.webContentIsolationStrategy` 0); with the
+  frame element blurred first, as the Wrapper does, it moves in every project
+  (`focus-from-frame.spec.ts`, `FOCUS_FROM_FRAME` in `harness/frame-focus.ts`,
+  one stdout line). A release Firefox (159) moves it without the blur, checked
+  by hand. T-14 asserts the full W-46 rule in every project: the result heading
+  focused, the game's heading not focused, and the game's document without
+  focus. T-9a's W-49 minimum runs in all three: framed by an unlisted page the
+  Wrapper refuses to start, and framed by a listed page it opens the session.
+  Every project's browser has `location.ancestorOrigins`, Firefox's included
+  (the first Firefox run, 2026-10-18), and that is asserted; the Wrapper's path
+  without the list is a component test. The handshake's cases (T-9a,
   [the test plan](../wrapper/operator-embedding.md#the-test-plan-for-t-9a)) come
   with #42, which adds a fake operator page on a third test origin (with a lobby
   and a deposit page), an unlisted fourth origin, and a way to serve the bundle

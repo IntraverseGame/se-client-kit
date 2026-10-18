@@ -8,7 +8,9 @@
 //     shown in a `role="alert"` panel;
 //   - focus moves to the result or error heading only when the player's own
 //     action caused the change (`cause: "player"`), never after a poll; a
-//     section whose content changes keeps the focused control focused;
+//     section whose content changes keeps the focused control focused; the
+//     result or error heading takes it back from a focused game frame by
+//     blurring the frame element first;
 //   - win, loss, and error carry text and an icon with a text alternative
 //     beside the colour;
 //   - every control and state has a text label in the session's language.
@@ -84,6 +86,19 @@ export const createView = (
     live,
   ]);
   host.replaceChildren(root);
+
+  /**
+   * Blurs the game's iframe element when it has the focus, so the result or
+   * error heading can take it (W-46): some engines do not move the focus out of
+   * a focused frame on `focus()` alone (Firefox with its frames in the parent's
+   * process, as in Playwright's Firefox build).
+   */
+  const blurFocusedGameFrame = (): void => {
+    const active = doc.activeElement;
+    if (active instanceof HTMLIFrameElement && gameHost.contains(active)) {
+      active.blur();
+    }
+  };
 
   const signatures = new Map<HTMLElement, string>();
   /** Re-renders a section only when what it shows changed. */
@@ -235,6 +250,7 @@ export const createView = (
             ? statusHeadingElement
             : null;
       if (target instanceof HTMLElement) {
+        blurFocusedGameFrame();
         target.focus();
       }
     }

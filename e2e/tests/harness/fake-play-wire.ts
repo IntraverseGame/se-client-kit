@@ -14,10 +14,44 @@ import {
   type PlayOperationId,
   type SnapshotOperationId,
 } from "./play-api-document.ts";
-import { validVector } from "./vectors.ts";
+import { invalidVector, validVector } from "./vectors.ts";
+
+/**
+ * A check of the request body an answer is for: the reason it is refused, or
+ * `undefined` when it is the one expected.
+ */
+export type BodyCheck = (body: unknown) => string | undefined;
 
 /** One scripted answer of an operation. */
 export type Answer<Id extends PlayOperationId = PlayOperationId> =
+  AnswerKind<Id> & {
+    /**
+     * Checks the body first: a body it refuses is recorded as unexpected (the
+     * fixture fails the test) and answered 400, never with this answer.
+     */
+    readonly expect?: BodyCheck;
+  };
+
+type AnswerKind<Id extends PlayOperationId> =
+  | (Id extends SnapshotOperationId
+      ? {
+          /**
+           * 200 with the `invalid/` Snapshot vector of this name: a body the
+           * schema refuses, for W-28's rejected Snapshot only.
+           */
+          readonly kind: "invalid-snapshot";
+          readonly vector: string;
+        }
+      : never)
+  | {
+      /**
+       * A problem the fake writes itself, for a code no vector holds; its
+       * status must be one the operation lists.
+       */
+      readonly kind: "own-problem";
+      readonly code: ErrorCode;
+      readonly status: number;
+    }
   | (Id extends SnapshotOperationId
       ? {
           /** 200 with the `valid/` Snapshot vector of this name. */
@@ -83,6 +117,18 @@ export const bearerOf = (
 export const checkAnswer = (id: PlayOperationId, answer: Answer): void => {
   if (answer.kind === "snapshot") {
     validVector(answer.vector, "Snapshot");
+    return;
+  }
+  if (answer.kind === "invalid-snapshot") {
+    invalidVector(answer.vector);
+    return;
+  }
+  if (answer.kind === "own-problem") {
+    if (!isListedStatus(id, answer.status)) {
+      throw new Error(
+        `own problem ${answer.code} has status ${String(answer.status)}, which ${id} does not list`,
+      );
+    }
     return;
   }
   if (answer.kind !== "problem") return;
