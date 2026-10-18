@@ -265,11 +265,11 @@ development-only, so it may import the test-only entry of `contracts`.
   only, nothing secret), as is the object routing probe's, so the CI log shows
   them. Before any of it, each file fails, saying so, if anything accepts a TCP
   connection at `127.0.0.1:9`, which would make the dead proxy a live one. The
-  suite's only open sockets are three, all on loopback: the TCP listener, which
-  takes nothing but connections; the UDP sockets, which take nothing but
-  datagrams; and the stand-in proxy of the Firefox service-worker control
-  (`listenAsProxy`), which reads one request line from each connection and
-  answers nothing. No server or port is opened otherwise. The static origins
+  suite's only open sockets are its own, all on loopback, of three kinds: the
+  TCP listener, which takes nothing but connections; the UDP sockets, which take
+  nothing but datagrams; and the stand-in proxy of the Firefox service-worker
+  control (`listenAsProxy`), which reads one request line from each connection
+  and answers nothing. No server or port is opened otherwise. The static origins
   answer a missing file, or a path with a malformed `%` escape, with a 404.
 - **The fake Play API** is a route at the configuration's `playApiBaseUrl`
   (default `https://wrapper.e2e.test/play/v1`; a test may move it). It answers
