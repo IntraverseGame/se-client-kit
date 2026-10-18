@@ -158,12 +158,14 @@ Part of the [Wrapper spec](../wrapper.md), section
 
 - **W-39.** After a round ends (`won`, `lost`, or `canceled`) the Wrapper MUST
   show the **round id** (the Snapshot's `roundId`, UUIDv7 text) with a control
-  to copy it, and a **link to the verify page** for that round. The verify base
-  URL comes from the environment configuration, and the link opens in a new
-  browsing context with `rel="noopener noreferrer"`.
-  <!-- TODO(verify API): the verify page URL shape and whether it takes the round id in the path or a fragment; the backend has reserved only an API prefix so far. -->
-  Until the shape is decided, the link opens `verifyBaseUrl` itself and the
-  round id is shown beside it with its copy control (one function,
-  `verifyUrlFor` in `apps/wrapper`, changes when it is decided).
+  to copy it, and a **link to the verify page** for that round. The verify page
+  is the kit's ([verify-page.md](../verify-page.md); decided by the backend's
+  TPO, 2026-10-18), and the link is `<verifyBaseUrl>/rounds/{roundId}`: the
+  environment configuration's `verifyBaseUrl` with one trailing `/` removed if
+  present, then `/rounds/`, then the round id in its canonical text form (it is
+  validated, so it needs no escaping). The link opens in a new browsing context
+  with `rel="noopener noreferrer"`; `verifyUrlFor` in `apps/wrapper` builds it.
+  The page's content, and what it shows from the verify API's response, are the
+  verify page spec's.
 - **W-40.** The round id and the link MUST stay visible until the player starts
   another round, and a new round MUST NOT replace them before the player acts.

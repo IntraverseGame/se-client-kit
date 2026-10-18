@@ -51,8 +51,9 @@ Out of scope:
 - wallet-delegated keys and player-supplied keys;
 - WebSocket. The first release uses the REST verbs and polls the Snapshot;
 - more than one game at a time, and the `playback` presentation;
-- the Play API itself, the verify API, and the verify page's content (backend
-  and verifier concerns).
+- the Play API itself and the verify API (backend concerns), and the verify
+  page, which the kit builds but which has its own spec,
+  [verify-page.md](./verify-page.md).
 
 ## Boundary
 
@@ -318,38 +319,40 @@ configuration document**, served from the SE origin and validated against a
 schema in this repository at boot, supplies the environment's values. It holds
 only public values; the Wrapper refuses to start on an invalid document.
 
-| Field             | Meaning                                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `environment`     | `production`, `preview`, or `local`; W-26a's boot rule reads it                                                    |
-| `playApiBaseUrl`  | the Play API base, ending with `/play/v1`                                                                          |
-| `verifyBaseUrl`   | the verify page base (W-39)                                                                                        |
-| `runtimeSigner`   | the pinned address that signs `CreateRoundAuth` (W-26, OQ-7)                                                       |
-| `registryDomain`  | the pinned `chainId` and `verifyingContract` (W-26, OQ-7)                                                          |
-| `rpcEndpoints`    | per entropy source: the public endpoints, each with its provider; the source's chain is pinned in `entropyChainId` |
-| `entropyChainId`  | per entropy source, required: its pinned chain id; W-26 (check 3) and W-26b                                        |
-| `minRpcQuorum`    | W-26a, default 2                                                                                                   |
-| `tipLagMargin`    | per entropy source, blocks; W-26b                                                                                  |
-| `gameOrigins`     | the allow-list of game origins D                                                                                   |
-| `operatorOrigins` | the allow-list of operator page origins A                                                                          |
+| Field              | Meaning                                                                                                                                                                                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `environment`      | `production`, `preview`, or `local`; W-26a's boot rule reads it                                                                                                                                                                                    |
+| `playApiBaseUrl`   | the Play API base, ending with `/play/v1`                                                                                                                                                                                                          |
+| `verifyBaseUrl`    | the verify page base, the Wrapper's origin plus `/verify` (W-39, [verify-page.md](./verify-page.md) V-1)                                                                                                                                           |
+| `verifyApiBaseUrl` | from the verify page's build on: the verify API base, ending with `/verify/v1`, which the verify page will read ([verify-page.md](./verify-page.md) V-3) and the Wrapper will accept and not use; today the Wrapper refuses it as an unknown field |
+| `runtimeSigner`    | the pinned address that signs `CreateRoundAuth` (W-26, OQ-7)                                                                                                                                                                                       |
+| `registryDomain`   | the pinned `chainId` and `verifyingContract` (W-26, OQ-7)                                                                                                                                                                                          |
+| `rpcEndpoints`     | per entropy source: the public endpoints, each with its provider; the source's chain is pinned in `entropyChainId`                                                                                                                                 |
+| `entropyChainId`   | per entropy source, required: its pinned chain id; W-26 (check 3) and W-26b                                                                                                                                                                        |
+| `minRpcQuorum`     | W-26a, default 2                                                                                                                                                                                                                                   |
+| `tipLagMargin`     | per entropy source, blocks; W-26b                                                                                                                                                                                                                  |
+| `gameOrigins`      | the allow-list of game origins D                                                                                                                                                                                                                   |
+| `operatorOrigins`  | the allow-list of operator page origins A                                                                                                                                                                                                          |
 
 The schema, as the Wrapper validates it at boot (`apps/wrapper`,
 `validateEnvironmentConfig`; the chain fields through the shell's
 `validateChainConfig`). Proposed with the Wrapper's first implementation, for
 review:
 
-| Field             | Shape                                                                                                                                                   |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `environment`     | one of the three strings                                                                                                                                |
-| `playApiBaseUrl`  | an absolute URL, `https:` (or `http:` on a loopback host), with no credentials, query, or fragment, whose path ends with `/play/v1` (no trailing slash) |
-| `verifyBaseUrl`   | an absolute URL under the same rule, any path                                                                                                           |
-| `runtimeSigner`   | a non-zero address (the shell's rule)                                                                                                                   |
-| `registryDomain`  | `{ chainId, verifyingContract }` (the shell's rule)                                                                                                     |
-| `rpcEndpoints`    | per source, a non-empty list of `{ provider, url }` (the shell's rule)                                                                                  |
-| `entropyChainId`  | per source, an integer of at least 1 (the shell's rule)                                                                                                 |
-| `minRpcQuorum`    | an integer of at least 1, default 2 (the shell's rule)                                                                                                  |
-| `tipLagMargin`    | per source, a non-negative integer (the shell's rule)                                                                                                   |
-| `gameOrigins`     | a non-empty list of distinct origins, each written as `URL.origin` serializes it, `https:` or loopback `http:`                                          |
-| `operatorOrigins` | a list of distinct origins under the same rule; it may be empty (no page may embed the Wrapper)                                                         |
+| Field              | Shape                                                                                                                                                                                                                                                     |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `environment`      | one of the three strings                                                                                                                                                                                                                                  |
+| `playApiBaseUrl`   | an absolute URL, `https:` (or `http:` on a loopback host), with no credentials, query, or fragment, whose path ends with `/play/v1` (no trailing slash)                                                                                                   |
+| `verifyBaseUrl`    | an absolute URL under the same rule, any path                                                                                                                                                                                                             |
+| `verifyApiBaseUrl` | from the verify page's build on (decided 2026-10-18): an absolute URL under `playApiBaseUrl`'s rule whose path ends with `/verify/v1` (no trailing slash). The Wrapper's acceptance ships before, or in the same release as, any document that carries it |
+| `runtimeSigner`    | a non-zero address (the shell's rule)                                                                                                                                                                                                                     |
+| `registryDomain`   | `{ chainId, verifyingContract }` (the shell's rule)                                                                                                                                                                                                       |
+| `rpcEndpoints`     | per source, a non-empty list of `{ provider, url }` (the shell's rule)                                                                                                                                                                                    |
+| `entropyChainId`   | per source, an integer of at least 1 (the shell's rule)                                                                                                                                                                                                   |
+| `minRpcQuorum`     | an integer of at least 1, default 2 (the shell's rule)                                                                                                                                                                                                    |
+| `tipLagMargin`     | per source, a non-negative integer (the shell's rule)                                                                                                                                                                                                     |
+| `gameOrigins`      | a non-empty list of distinct origins, each written as `URL.origin` serializes it, `https:` or loopback `http:`                                                                                                                                            |
+| `operatorOrigins`  | a list of distinct origins under the same rule; it may be empty (no page may embed the Wrapper)                                                                                                                                                           |
 
 Any other top-level field is refused. On any issue the Wrapper shows the
 configuration-error state and opens nothing; this includes the boot rules:
@@ -567,6 +570,7 @@ decision. The spec follows the decision.
 ## References
 
 - [client-kit.md](./client-kit.md) (the repository),
+  [verify-page.md](./verify-page.md) (the page the verify link opens),
   [ADR-001](../decisions/ADR-001-toolchain-and-signing.md) (toolchain and
   signing decisions),
   [runbook/client-kit-release.md](../runbook/client-kit-release.md).

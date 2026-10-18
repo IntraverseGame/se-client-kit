@@ -26,11 +26,11 @@ In scope: the repository layout and packages, how each package gets its
 contracts, versioning and compatibility, the supply chain, what must never be
 public, the tests and CI jobs, and who owns what.
 
-Out of scope: the Wrapper's behavior ([wrapper.md](./wrapper.md)); the
-signed-action grammar (the backend's signed-action spec); the hosting and the
-deploy credentials of the released Wrapper, an [open item](#open-items) for the
-infrastructure owner; the procedure to release
-([runbook](../runbook/client-kit-release.md)).
+Out of scope: the Wrapper's behavior ([wrapper.md](./wrapper.md)) and the verify
+page's ([verify-page.md](./verify-page.md)); the signed-action grammar (the
+backend's signed-action spec); the hosting and the deploy credentials of the
+released Wrapper, an [open item](#open-items) for the infrastructure owner; the
+procedure to release ([runbook](../runbook/client-kit-release.md)).
 
 ## Boundary
 

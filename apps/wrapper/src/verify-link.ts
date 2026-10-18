@@ -1,13 +1,17 @@
-// The link to the verify page after a round ends (W-39). The base comes from
-// the environment configuration (`verifyBaseUrl`).
-//
-// PLACEHOLDER: the verify page's URL shape, and whether it takes the round id
-// in the path or in a fragment, is still open (TODO(verify API) in
-// specs/wrapper/the-game-iframe-and-the-controller-boundary.md). Until it is
-// decided the link opens the configured verify page itself and carries no
-// round id; the round id is shown beside it with a control to copy it. This
-// function is the one place that changes when the shape is decided.
+// The link to the verify page after a round ends (W-39): the environment
+// configuration's `verifyBaseUrl` with one trailing `/` removed if present,
+// then `/rounds/` and the round id (specs/verify-page.md, V-1). The round id is
+// the validated Snapshot's `roundId`, canonical UUIDv7 text, so it needs no
+// escaping. The round id is also shown beside the link with a control to copy
+// it.
 
-/** The verify page URL for a round. */
-export const verifyUrlFor = (verifyBaseUrl: string, _roundId: string): string =>
-  verifyBaseUrl;
+/** The verify page URL for a round: `<verifyBaseUrl>/rounds/{roundId}`. */
+export const verifyUrlFor = (
+  verifyBaseUrl: string,
+  roundId: string,
+): string => {
+  const base = verifyBaseUrl.endsWith("/")
+    ? verifyBaseUrl.slice(0, -1)
+    : verifyBaseUrl;
+  return `${base}/rounds/${roundId}`;
+};
