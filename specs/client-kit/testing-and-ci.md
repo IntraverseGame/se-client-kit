@@ -62,7 +62,34 @@ outputs restored from the cache.
   `google/wireit`'s `setup-github-actions-caching` action (pinned by commit SHA,
   in `.github/actions/setup`). It hands the job's own Actions cache credentials
   to wireit on the runner; no repository secret is involved. There is no remote
-  cache service (ADR-001 rejected one because it needs a credential).
+  cache service (ADR-001 rejected one because it needs a credential). CI sets
+  `WIREIT_LOGGER=simple`, so the log shows each script's run, restore, or skip
+  and every `cache-info` message.
+- **A restored build is not trusted to have left its output.** wireit 0.14.13
+  reports a script as restored from the GitHub Actions cache even when the
+  tarball download failed, after it has deleted the output, and records it as
+  fresh. This is the likely cause of #53: reproduced locally, not yet seen in a
+  CI log (#53 stays open). So every script that reads a kit package's `dist/`
+  runs `tools/check-kit-dist.ts <script> [path...]` before its tool: each
+  workspace's `typecheck` and `test`, the Wrapper's Vite `build`, and the e2e
+  suite's `test`, which also names the apps' `dist/index.html` it serves by
+  path. The guard follows the workspace's `workspace:` dependencies (its own
+  `devDependencies` included, then each package's `dependencies` and
+  `peerDependencies`) through its `node_modules` links and fails, naming each
+  file, when a kit package is not linked, its manifest cannot be read, it has no
+  `exports` or uses a form the guard does not model (a subpath pattern such as
+  `"./*"`, a fallback array), or an `exports` target (`types` and JavaScript
+  alike) or a named path does not exist. It prints one line when everything
+  exists. Not guarded, because they read no kit `dist/`: the libraries' tsdown
+  builds (kit packages stay external, declarations come from oxc) and the
+  reference game's build and tests (type imports only, enforced by its
+  package-import guard). `tools/kit-dist-workspaces.test.ts` holds every
+  `typecheck`, `test`, and `build` of a workspace with a kit dependency to
+  running the guard first with its own name, listing the guard's three files
+  (`tools/check-kit-dist.ts`, `tools/kit-dist.ts`, `tools/kit-dist-fs.ts`), and
+  depending on the `build` of everything the guard checks, unless it is declared
+  there as reading no kit `dist/`. Procedure:
+  [runbook/development/ci-failures.md](../../runbook/development/ci-failures.md).
 - **A cache hit never replaces a gate that could fail.** A script is cached only
   if it declares `files`; the gating checks (`lint`, `format:check`,
   `test:tools`, `check:deps`, `check:contracts`, and the contracts hash check

@@ -69,7 +69,7 @@
       ]
     },
     "typecheck": {
-      "command": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
+      "command": "tsx ../../tools/check-kit-dist.ts typecheck && tsc -p tsconfig.json && tsc -p tsconfig.test.json",
       "dependencies": [
         "../signing:build",
         "../snapshot:build",
@@ -81,7 +81,10 @@
         "package.json",
         "tsconfig.json",
         "tsconfig.test.json",
-        "../../tsconfig.base.json"
+        "../../tsconfig.base.json",
+        "../../tools/check-kit-dist.ts",
+        "../../tools/kit-dist.ts",
+        "../../tools/kit-dist-fs.ts"
       ],
       "output": [],
       "packageLocks": [
@@ -89,7 +92,7 @@
       ]
     },
     "test": {
-      "command": "vitest run",
+      "command": "tsx ../../tools/check-kit-dist.ts test && vitest run",
       "dependencies": [
         "../signing:build",
         "../snapshot:build",
@@ -103,7 +106,10 @@
         "tsconfig.json",
         "tsconfig.test.json",
         "../../tsdown.base.ts",
-        "../../tsconfig.base.json"
+        "../../tsconfig.base.json",
+        "../../tools/check-kit-dist.ts",
+        "../../tools/kit-dist.ts",
+        "../../tools/kit-dist-fs.ts"
       ],
       "output": [],
       "packageLocks": [

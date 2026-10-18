@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-17 (release dry run pull request: the release workflow, `pnpm release:dry-run`, the Wrapper artifact digest)
+last-verified: 2026-10-18 (#53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI)
 ---
 
 # Development workflow
@@ -127,6 +127,33 @@ Several agents and people work in one clone at once. Rules:
   file, so `test:tools` lists `packages/*/**`, `apps/*/**`, and `e2e/**` (minus
   build output and build state); keep that when you touch its `files`. Use
   `src/**` (not `src/**/*.ts`) so JSON, CSS and assets count.
+- **A cache restore can leave no output (likely cause of #53: reproduced
+  locally, not yet seen in a CI log; #53 stays open, the PR says "Refs #53").**
+  wireit 0.14.13 deletes a
+  script's output, then downloads its GitHub Actions cache tarball; when the
+  download fails it logs a `cache-info` line and still reports "Restored from
+  cache", with no `dist/`. CI sets `WIREIT_LOGGER=simple` so that line is in the
+  log (the default CI logger drops it). wireit also records the build as
+  fresh, so locally only `pnpm clean:cache && pnpm build` recovers. Every
+  `typecheck`, `test`, and `build` of a workspace with a kit dependency runs
+  `tsx <up>/tools/check-kit-dist.ts <script> [path...] && <tool>` and lists the
+  three guard files (`check-kit-dist.ts`, `kit-dist.ts`, `kit-dist-fs.ts`) in
+  `files`, unless
+  `READS_NO_KIT_DIST` in `tools/kit-dist-workspaces.test.ts` declares it (the
+  libraries' tsdown builds; the reference game's build and tests). The e2e
+  `test` also names `../apps/{wrapper,reference-game}/dist/index.html`. The
+  guard checks every `exports` target (types and JavaScript) of the kit
+  packages reached, refuses `exports` patterns (`"./*"`) and fallback arrays,
+  and fails with one line per missing file instead of a
+  TS2307 per import or a failed import. A new such script gets the prefix and a
+  wireit dependency on each `build` the guard checks; the test fails
+  otherwise. `tools/kit-dist-fs.test.ts` runs the guard and its CLI on a
+  temporary tree. Decision (#53): keep the guard and the log, record each
+  occurrence on #53, and report the bug to wireit (a failed download should be
+  a cache miss). Locally a `dist/` deleted
+  by hand is noticed and restored by wireit, so this never reproduces without
+  the GitHub cache. Procedure:
+  [runbook/development/ci-failures.md](../../runbook/development/ci-failures.md).
 - **Package `files`.** Every library sets `files` (`["dist"]`; `contracts` an
   allow-list of `dist/index.*` and `dist/runtime/`, where its tsdown config puts
   only chunks of runtime sources). `pnpm check:package-files` checks it against
