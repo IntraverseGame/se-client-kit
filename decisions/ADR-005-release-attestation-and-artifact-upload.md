@@ -324,7 +324,15 @@ in the public transparency log.
     - the two uploads in `dry-run` (decision 5);
     - the `attest` job, with exactly `contents: read`, `id-token: write` and
       `attestations: write`, and `environment: attest` (decision 2);
-    - the `TODO`s that wait on this ADR, resolved.
+    - the `TODO`s that wait on this ADR, resolved;
+    - the split of the `version` job (#12). Today it runs `changeset version`,
+      which is repository tooling, with a `contents: write` token in its
+      environment; the human accepted that for now (2026-10-18). Once
+      `actions/upload-artifact` is allowed, a job with `contents: read` and
+      `pull-requests: read` runs `changeset version` and uploads the result, and
+      a job with `contents: write` that runs no repository tooling downloads it
+      and pushes `changeset-release/main`, so no repository tooling holds a
+      write token.
 
     Attaching the tar to a GitHub release (`contents: write`, with `gh`, no new
     Action) stays with #12.

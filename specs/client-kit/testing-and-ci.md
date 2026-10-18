@@ -27,25 +27,50 @@ from the contract's vectors); `audit` (`pnpm audit --prod`, failing on high and
 critical advisories only); `dependency-review` (pull requests only);
 `release-dry-run` (the release dry run: changesets applied on a scratch copy,
 the five tarballs packed and checked and imported as a consumer would, the
-Wrapper artifact built twice with one digest; no token, no network). The release
-itself is a separate workflow, `release` (changesets, provenance, run by hand
-from the default branch only, its publish job in the protected `release`
-environment; [release runbook](../../runbook/client-kit-release.md#release)).
+Wrapper artifact built twice with one digest, and held to the size budget; no
+token, no network). The release itself is a separate workflow, `release`
+(changesets, provenance, run by hand from the default branch only, its `version`
+job pushing the version pull request's branch, its publish job in the protected
+`release` environment;
+[release runbook](../../runbook/client-kit-release.md#release)).
 
 Today `contracts` runs the test-only-entry import check, the hash check against
 `contracts.lock.json`, and the generated-files diff (the Snapshot types, the
 Play API document's types, and the vector catalog). `contracts-drift` is not
 defined yet. `build` builds every workspace (the Wrapper's build writes and
-checks its manifest; the size budget is not defined yet), and the job also runs
-`pnpm check:build-output` (the no-vector content check, now over the vendored
-vectors) and `pnpm check:package-files`. `e2e-fake` installs Playwright's
-Chromium and runs the e2e harness's own tests, a smoke run on the Wrapper's
-release bundle, the browser rows of the Wrapper's test plan that run on the fake
-Play API, and a smoke run on the reference game's build; the others are pending
-([The e2e harness](#the-e2e-harness)). The workflows hold no secret, run with
-`permissions: {}` at the top and `contents: read` per job (the release
-workflow's `publish` job adds `id-token: write`, for provenance and trusted
-publishing), and pin every Action by full commit SHA.
+checks its manifest), and the job also runs `pnpm check:build-output` (the
+no-vector content check, now over the vendored vectors),
+`pnpm check:package-files`, and `pnpm check:size-budget` (below). `e2e-fake`
+installs Playwright's Chromium and runs the e2e harness's own tests, a smoke run
+on the Wrapper's release bundle, the browser rows of the Wrapper's test plan
+that run on the fake Play API, and a smoke run on the reference game's build;
+the others are pending ([The e2e harness](#the-e2e-harness)). The workflows hold
+no secret, run with `permissions: {}` at the top and `contents: read` per job
+(the release workflow's `publish` job adds `id-token: write`, for provenance and
+trusted publishing, and its `version` job has `contents: write` and
+`pull-requests: read` instead, to push the version branch), and pin every Action
+by full commit SHA.
+
+**The size budget** of the Wrapper's release output (`tools/size-budget.ts`,
+unit-tested) is checked by `pnpm check:size-budget` (part of `pnpm check`, and
+run by the `build` job), by the release dry run, which prints it in its summary
+and reports a problem once, and by the publish step; any measurement over its
+limit fails them. Two measurements, each with a limit in bytes (equal to the
+limit passes), decided by the human on 2026-10-18 at about 25% over the sizes
+measured that day (161873 and 52650 bytes):
+
+- wrapper output: 204800 bytes. Every file of `apps/wrapper/dist/`,
+  uncompressed: what the release artifact holds.
+- wrapper page, gzip: 65536 bytes. `index.html` and every `.js` and `.css` file,
+  each compressed on its own with gzip at zlib's default level and summed: about
+  what a player's browser downloads. Another Node's zlib can differ by a few
+  bytes; the measurement CI makes, with the pinned Node, is the one that counts.
+
+A budget with no measurement, a measurement with no budget, a missing Wrapper
+`dist/`, and an output without `index.html` (an empty `dist/` included) are
+failures too, never a pass. Raising a limit is a reviewed change to
+`tools/size-budget.ts` and this list together (a test keeps them equal). The
+packages' tarballs have no budget (decided).
 
 ## Task orchestration and caching
 

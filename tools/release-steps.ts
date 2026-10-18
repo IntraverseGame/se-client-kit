@@ -2,7 +2,8 @@
 // (tools/release-dry-run.ts, tools/release-publish.ts; the procedure is in
 // runbook/client-kit-release.md): running a command with a clean environment,
 // copying the working tree, packing and checking the five libraries, and
-// building the Wrapper's release artifact (the consumer import check is in
+// building the Wrapper's release artifact and holding it to its size budget
+// (tools/size-budget.ts; the consumer import check is in
 // tools/release-consumer.ts; the store lookup and the publish dry run in
 // tools/release-pnpm.ts). Nothing here reads or writes a credential.
 //
@@ -30,6 +31,7 @@ import { gunzipSync } from "node:zlib";
 
 import type { Vector } from "./build-output-canary.ts";
 import { findTarballProblems, PUBLISHED_PACKAGES } from "./package-tarball.ts";
+import { type WrapperSizeReport, wrapperSizeReport } from "./size-budget.ts";
 import { readTar } from "./tar.ts";
 import { type WrapperArtifact, wrapperArtifact } from "./wrapper-artifact.ts";
 
@@ -260,8 +262,22 @@ export const checkTarballs = (
     ),
   );
 
+/** The files of `root`'s built `apps/wrapper/dist/`, the release output. */
+const readWrapperOutput = (root: string): Map<string, Buffer> =>
+  readFiles(join(root, "apps", "wrapper", "dist"));
+
 /** The Wrapper's release artifact, from `root`'s built `apps/wrapper/dist/`. */
-export const buildWrapperArtifact = (root: string): WrapperArtifact => {
-  const wrapper = join(root, "apps", "wrapper");
-  return wrapperArtifact(versionOf(wrapper), readFiles(join(wrapper, "dist")));
+export const buildWrapperArtifact = (root: string): WrapperArtifact =>
+  wrapperArtifact(
+    versionOf(join(root, "apps", "wrapper")),
+    readWrapperOutput(root),
+  );
+
+/** `root`'s built Wrapper held to its size budget (tools/size-budget.ts). */
+export const checkWrapperSize = (root: string): WrapperSizeReport => {
+  const built =
+    lstatSync(join(root, "apps", "wrapper", "dist"), {
+      throwIfNoEntry: false,
+    })?.isDirectory() === true;
+  return wrapperSizeReport(built ? readWrapperOutput(root) : undefined);
 };

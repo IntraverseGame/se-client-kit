@@ -64,7 +64,12 @@ org owners apply the settings; ask them for each.
 2. **Branch protection or a ruleset** on `main`: require a pull request and
    approvals; require review from code owners; block direct and force pushes; no
    self-approval; do not allow administrators to bypass; require the `ci-ok`
-   check.
+   check; dismiss stale approvals when new commits are pushed (the `version` job
+   force-pushes its branch, so an approval must not outlive the commit it saw).
+   Also a **tag ruleset** that blocks creating, updating, and deleting tags for
+   everyone but the org owners, so a workflow token (such as the `version` job's
+   `contents: write`) cannot create a tag.
+   <!-- TODO(org owners, #3): the tag ruleset that blocks tag creation by Actions (bypass for the org owners only), and "dismiss stale pull request approvals when new commits are pushed" on `main`. -->
 3. **Secret scanning and push protection** on. Dependabot alerts and security
    updates on.
 4. **Actions settings:** read-only default workflow token; Actions may not
@@ -146,17 +151,20 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
 
 The kit uses changesets. The release workflow (`.github/workflows/release.yml`)
 runs only by hand (`workflow_dispatch`). Its `dry-run` job always runs and
-publishes nothing; its `publish` job runs only when it was started from `main`
-with **publish** ticked, the variable `RELEASE_PUBLISH_ENABLED` is `true`
-(Bootstrap step 8), and a required reviewer of the `release` environment
-approves. Every Action is pinned by full commit SHA; the workflow starts with
-`permissions: {}`; `dry-run` gets `contents: read`, and `publish`
-`contents: read` and `id-token: write` (provenance and trusted publishing). Both
-release jobs use the setup action with `cache: "false"`: no wireit cache helper
-(which holds the job's cache credentials) and no pnpm store cache, so nothing is
-restored from a cache into a release build. Lifecycle scripts stay off
-throughout (`allowBuilds`, `--ignore-scripts`, and the tarball check refuses any
-lifecycle script in a published manifest).
+publishes nothing; its `version` job runs only when it was started from `main`
+with **version** ticked, after the dry run passed (step 2); its `publish` job
+runs only when it was started from `main` with **publish** ticked, the variable
+`RELEASE_PUBLISH_ENABLED` is `true` (Bootstrap step 8), and a required reviewer
+of the `release` environment approves. Every Action is pinned by full commit
+SHA; the workflow starts with `permissions: {}`; `dry-run` gets
+`contents: read`, `version` `contents: write` and `pull-requests: read` (no
+`id-token`, no environment), and `publish` `contents: read` and
+`id-token: write` (provenance and trusted publishing). The release jobs use the
+setup action with `cache: "false"`: no wireit cache helper (which holds the
+job's cache credentials) and no pnpm store cache, so nothing is restored from a
+cache into a release build. Lifecycle scripts stay off throughout
+(`allowBuilds`, `--ignore-scripts`, and the tarball check refuses any lifecycle
+script in a published manifest).
 
 1. A pull request that changes a published package or the Wrapper includes a
    changeset (`pnpm changeset`) naming the packages and the bump (major for a
@@ -174,7 +182,44 @@ lifecycle script in a published manifest).
    to the step as an environment variable. It is never a stored secret or a
    personal token, and it is never committed. Nothing else needs it: install,
    build, `changeset status`, and the dry run work offline.
-   <!-- TODO(#12): the version pull request job (decided: option A). A job of the release workflow with `contents: write` runs `changeset version` with the real changelog generator and the job's `GITHUB_TOKEN`, and pushes the result to a `changeset-release/main` branch; a person opens the pull request from that branch, so Actions never create a pull request (Bootstrap step 4) and no new Action is needed. Not built yet. -->
+
+   To make it, start the release workflow from `main` with **version** ticked
+   and **publish** not ticked (a run with both ticked fails in its first step,
+   and nothing runs). After the `dry-run` job passes, the `version` job checks
+   out `main` with its whole history (changesets reads the commit that added
+   each changeset; no credential is left in `.git/config`), runs
+   `pnpm exec changeset version` with the job's `GITHUB_TOKEN`. A step without
+   the token then refuses to push anything but a modified `package.json`, an
+   added or modified `CHANGELOG.md` (neither inside `.changeset/`, where
+   changesets would read it as a pending changeset), or a changeset deleted
+   directly under `.changeset/` (never its `README.md`), all regular files: a
+   rename counts as a deletion and an addition, and a type or mode change or a
+   path with a character outside `A-Z a-z 0-9 . _ / @ -` is refused. Only then
+   does the last step commit the result (every git command of the two steps with
+   `core.hooksPath=/dev/null` and `core.fsmonitor=false`, the commit and the
+   push with `--no-verify`, so no hook or fsmonitor planted in `.git` runs) as
+   `github-actions[bot]` (`chore(release): version packages`) and
+   **force-pushes** it to the branch `changeset-release/main`; the token reaches
+   git through a credential helper that reads the environment, never the command
+   line. With no pending changeset it pushes nothing. Actions never open a pull
+   request here (Bootstrap step 4), so a person opens the pull request from
+   `changeset-release/main` into `main`; the job's summary names the commit. The
+   branch is regenerated on every run: never commit to it by hand (the next run
+   overwrites it); fix a note in its changeset on `main` and run the job again.
+   A push made with `GITHUB_TOKEN` starts no workflow, so when the job updates
+   the branch of a pull request that is already open, close and reopen the pull
+   request to run its checks on the new commit.
+
+   **Accepted residual risk** (the human, 2026-10-18): the code
+   `changeset version` loads runs with the job's `contents: write` token in its
+   environment, so it could push to any branch no rule protects, create tags,
+   and create releases; the push guard only limits what the job itself pushes.
+   Branch protection on `main` and the tag ruleset (Bootstrap step 2) bound it
+   until the job is split
+   ([ADR-005](../decisions/ADR-005-release-attestation-and-artifact-upload.md),
+   Follow-ups).
+   <!-- TODO(#12, ADR-005): split the version job once actions/upload-artifact is allowed: `changeset version` with a read-only token, the push in a job that runs no repository tooling. -->
+
 3. **Publish.** After the version pull request is merged, start the release
    workflow from `main` with **publish** ticked. The `dry-run` job runs first
    and reports the Wrapper digest. The `publish` job then waits for a required
@@ -236,9 +281,15 @@ and no network, and publishes nothing:
    policy, and manifest the Wrapper's build already enforced. Its **digest** is
    the SHA-256 of that file (`sha256:<hex>`). The two digests must be equal, and
    the two copies' package tarballs byte-identical.
-5. It writes to `--out` the artifact and its `.sha256`, the five tarballs, and
-   `release-dry-run.json` (source commit, versions, tarball hashes, digests,
-   problems), and prints the same summary (in CI, also to the job summary).
+5. It holds the first copy's Wrapper output to its size budget
+   (`tools/size-budget.ts`: every file uncompressed, and the page with its
+   scripts and stylesheets gzip-compressed); a measurement over its limit is a
+   problem, listed once. (`pnpm check:size-budget` applies the same check in
+   `pnpm check` and the `build` CI job.)
+6. It writes to `--out` the artifact and its `.sha256`, the five tarballs, and
+   `release-dry-run.json` (source commit, versions, tarball hashes, digests, the
+   size budget, problems), and prints the same summary (in CI, also to the job
+   summary).
 
 Run it locally. `--out` must be an empty directory outside the repository; by
 default it is a new temporary directory. Give options to the CLI itself, not
@@ -261,8 +312,9 @@ Before publishing (in the version pull request's CI): all required jobs green,
 `release-dry-run` included, which shows each published package contains its
 `README.md` and `LICENSE` and no test-only entry and that the Wrapper digest is
 reproducible; the contract hashes match the lock; the bundle is the unmodified
-bundle (no test or per-environment build) and contains no vector.
-<!-- TODO(#12): the bundle's size budget. -->
+bundle (no test or per-environment build) and contains no vector; the Wrapper is
+within its size budget (the dry run's summary shows each measurement, its limit,
+and what is left; [the budget](../specs/client-kit/testing-and-ci.md)).
 
 After publishing:
 
@@ -376,6 +428,31 @@ If the release uses a stored npm token (rather than trusted publishing):
   is already on npm with other bytes. Never overwrite it: bump the version with
   a changeset and release again; if the published bytes are not ours, treat it
   as a security incident (Escalation).
+- **"the Wrapper output has no index.html, so it is not a release build"**
+  (`check:size-budget`, the dry run, or the publish step). `apps/wrapper/dist/`
+  exists but is empty or lacks its page: a build failed halfway or something
+  else wrote there. Run `pnpm build` again (after `pnpm clean:cache` if wireit
+  restored a stale output) and check the Wrapper's build output; never release
+  such an output.
+- **"over its size budget"** (`check:size-budget`, the dry run, or the publish
+  step). The Wrapper's release output grew past a limit. Find what grew (compare
+  `apps/wrapper/dist/` with `main`'s build); shrink it, or raise the limit in a
+  reviewed change to `tools/size-budget.ts` and the budget list in
+  [the testing spec](../specs/client-kit/testing-and-ci.md) together (a test
+  keeps them equal), saying why in the pull request. Never raise it to make a
+  release pass unexamined.
+- **The `version` job says "changed more than it should".** `changeset version`
+  changed something other than a modified `package.json`, an added or modified
+  `CHANGELOG.md`, or a deleted changeset; each `Unexpected change:` line names
+  the status and the path. Nothing was pushed. Find out what wrote it before
+  running the job again.
+- **The release run failed at once with "Tick either version or publish, not
+  both".** The `dry-run` job's first step refuses a run with both inputs, so
+  nothing ran. Start the `version` run, merge its pull request, then start a
+  `publish` run on its own.
+- **The version pull request's checks did not run after the job pushed.** A push
+  made with the job's `GITHUB_TOKEN` starts no workflow: close and reopen the
+  pull request.
 - **The dry run reports "not reproducible".** Two builds of the same files gave
   different bytes. Keep the scratch copies (`--keep`), compare the two
   `apps/wrapper/dist/` trees (or the two tarballs) with `diff -r`, and find what

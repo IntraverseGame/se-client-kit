@@ -84,13 +84,14 @@ equivalent; Node and pnpm are pinned in `.node-version` and `packageManager`.
 
 - `pnpm install --frozen-lockfile` · `pnpm check` (format check, lint,
   typecheck, unit tests, the dependency allow-list, the contracts check, then a
-  build and the build-output check)
+  build, the build-output check, and the Wrapper's size budget)
 - `pnpm test` (unit and component) · `pnpm test:e2e` (Playwright, against the
   in-repo fake Play API)
 - `pnpm lint` (oxlint and stylelint; also `pnpm lint:ts` and `pnpm lint:css`) ·
   `pnpm format` (writes) · `pnpm format:check` · `pnpm typecheck` · `pnpm build`
   (tsdown for packages, Vite for the Wrapper and the reference game) ·
-  `pnpm check:build-output` (inspect every `dist/`)
+  `pnpm check:build-output` (inspect every `dist/`) · `pnpm check:size-budget`
+  (the Wrapper's release output within its size budget)
 - `pnpm check:deps` (every `package.json` dependency is on the ADR-001
   allow-list) · `pnpm check:readmes` (every package and app README follows the
   public-README rules) · `pnpm check:contracts` (only tests import the
