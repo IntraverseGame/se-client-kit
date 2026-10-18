@@ -69,12 +69,26 @@ else.
   - A Vite plugin (`package-import-guard.ts`) fails the **build** on every bare
     specifier in the production module graph: a kit package, a third-party
     package, a Node built-in, or a development tool such as `vite` or `vitest`.
-    Only Vite's own helper ids (`vite/...`, such as
-    `vite/modulepreload-polyfill`) and virtual ids (`\0...`) may resolve. The
-    rule is scoped to the build, so the component tests may import `vitest`; a
-    kit package (a bare `@intraverse/` specifier) and a file under `packages/`
-    are refused in the dev server and the tests too. A type import is erased
-    before anything resolves, so it passes.
+    Only Vite's own helper ids, exactly those its build emits
+    (`vite/modulepreload-polyfill` with Vite 8, found from real builds; any
+    other `vite/...` id, such as `vite/module-runner`, is a package import), and
+    virtual ids (`\0...`) may resolve. The rule is scoped to the build, so the
+    component tests may import `vitest`; a kit package (a bare `@intraverse/`
+    specifier) and a file under `packages/` are refused in the dev server and
+    the tests too. A file under `packages/` that the build would copy as an
+    asset file (a `new URL(..., import.meta.url)`, a CSS `url()`, an HTML `src`
+    or `href`) never reaches the guard's `load`, so the guard also fails the
+    build when an emitted asset's original file, resolved through symlinks, lies
+    under `packages/`. A worker's module graph is built with `worker.plugins`
+    only (none by default), so `vite.config.ts` lists the guard there too, and a
+    worker is held to the same rules. The guard finds `packages/` as a
+    file-system path (`fileURLToPath`), so a checkout path with a space or a
+    non-ASCII character matches. The build inlines no asset as a `data:` URL
+    (`build.assetsInlineLimit: 0` in `vite.config.ts`): the page's policy
+    refuses `data:` URLs anyway, and an inlined asset reaches no plugin hook, so
+    with every asset emitted as a file the check sees each one, a small file
+    included. A CSS `@import` of a file under `packages/` is not a guard path. A
+    type import is erased before anything resolves, so it passes.
   - The lint says the same at the source: the game's non-test sources
     (`apps/reference-game/src/**`, except the test files and fixtures) may
     import only relative modules and the controller types; any other bare
@@ -153,9 +167,14 @@ else.
   array items included), the rendering per status and per reject reason, focus,
   and the stylesheet's rules and contrast; a build test runs the real Vite build
   with the guard, checks its CSP, and proves the guard fails a runtime import of
-  a kit or a third-party package in a build and lets the dev server resolve a
+  a kit or a third-party package in a build (a `vite/` subpath that is not a
+  helper included), fails a kit package's file copied as an asset by
+  `new URL(..., import.meta.url)`, a CSS `url()`, or an HTML `<img src>` (and
+  one under 4 KiB, which the game does not inline, and one behind a symlink),
+  fails a worker that imports a kit package's file or a third-party package, all
+  with the game's own configuration, and lets the dev server resolve a
   third-party one. The e2e suite serves the build at
   `https://game.e2e-games.test` and runs a smoke test of the game page in a
   stand-in host page ([The e2e harness](./testing-and-ci.md#the-e2e-harness)); a
-  whole round through the Wrapper is T-10 and T-11, pending the Wrapper's
-  session.
+  whole round through the Wrapper is T-10 and T-11, pending a fake round in the
+  e2e harness that passes the shell's verification (W-26), tracked in #11.

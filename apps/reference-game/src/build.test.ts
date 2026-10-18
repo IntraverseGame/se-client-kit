@@ -1,6 +1,4 @@
 // @vitest-environment node
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { build, createServer, loadConfigFromFile } from "vite";
@@ -10,6 +8,11 @@ import {
   isAllowedInBuild,
   packageImportGuard,
 } from "../package-import-guard.ts";
+import {
+  appRoot,
+  kitPackageFile,
+  scratchBuilds,
+} from "./fixtures/scratch-build.ts";
 
 // The build of the reference game: the real Vite build of the app passes with
 // the package-import guard on, its page carries the Content Security Policy,
@@ -19,17 +22,16 @@ import {
 // (it is erased before anything resolves), and lets the dev server (and so the
 // component tests) resolve a third-party package but never a kit one. Each case
 // runs the actual Vite API; nothing is written to disk but the scratch
-// sources.
-
-const appRoot = join(import.meta.dirname, "..");
+// sources. The copied-asset cases are in package-import-guard.test.ts.
 
 /** The page's Content Security Policy: its own origin, and nothing inline. */
 const CSP =
   "default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'";
-const scratch = mkdtempSync(join(tmpdir(), "se-reference-game-guard-"));
+const scratch = scratchBuilds();
+const buildScratch = scratch.build;
 
 afterAll(() => {
-  rmSync(scratch, { recursive: true, force: true });
+  scratch.remove();
 });
 
 type Output = { readonly fileName: string; readonly text: string };
@@ -59,21 +61,6 @@ const pluginNamesOf = (plugins: readonly unknown[] | undefined): unknown[] =>
 /** The text of the output file `fileName`, empty when there is none. */
 const textOf = (files: readonly Output[], fileName: string): string =>
   files.find(file => file.fileName === fileName)?.text ?? "";
-
-/** Builds `entry` (in a scratch project) with the guard, in memory. */
-const buildScratch = (name: string, source: string): Promise<unknown> => {
-  const dir = join(scratch, name);
-  mkdirSync(dir, { recursive: true });
-  const entry = join(dir, "entry.ts");
-  writeFileSync(entry, source);
-  return build({
-    root: dir,
-    configFile: false,
-    logLevel: "silent",
-    plugins: [packageImportGuard()],
-    build: { write: false, rollupOptions: { input: entry } },
-  });
-};
 
 describe("the reference game's build", () => {
   it("has the package-import guard in its Vite configuration", async () => {
@@ -162,6 +149,10 @@ describe("the package-import guard", () => {
       "a dynamic import of a package",
       'export const load = () => import("stylelint");\n',
     ],
+    [
+      "a Vite subpath that is not one of its helpers",
+      'import { ModuleRunner } from "vite/module-runner";\nexport const m = ModuleRunner;\n',
+    ],
   ])("fails the build on %s (a third-party package)", async (name, source) => {
     await expect(
       buildScratch(name.replaceAll(" ", "-"), source),
@@ -170,6 +161,9 @@ describe("the package-import guard", () => {
 
   it.each([
     ["vite/modulepreload-polyfill", true],
+    ["vite/modulepreload-polyfill.js", false],
+    ["vite/module-runner", false],
+    ["vite/client", false],
     ["\0vite/preload-helper.js", true],
     ["/src/main.ts", true],
     ["./game.ts", true],
@@ -185,8 +179,6 @@ describe("the package-import guard", () => {
   });
 
   it("lets the dev server and the tests resolve a third-party package, never a kit one", async () => {
-    const dir = join(scratch, "serve");
-    mkdirSync(dir, { recursive: true });
     const server = await createServer({
       root: appRoot,
       configFile: false,
@@ -211,15 +203,7 @@ describe("the package-import guard", () => {
   });
 
   it("fails the build on a relative path into a kit package", async () => {
-    const target = join(
-      appRoot,
-      "..",
-      "..",
-      "packages",
-      "shell",
-      "src",
-      "controller-protocol.ts",
-    );
+    const target = kitPackageFile("shell", "src", "controller-protocol.ts");
     await expect(
       buildScratch(
         "relative",
