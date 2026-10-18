@@ -60,6 +60,9 @@ The fold-in checklist (on `main`, after the rebase):
   drops those). Pass an `idle` read on normally once the state is `ended`.
 - **`settle()` / `SessionRead`**: expose the cancel state (`settling`,
   `check-later`, `ended`, `not-taken`) to the UI, and the check-again use case.
+  A settled cancel reports its result, not an earlier cancel-call or read
+  failure: `lastError()` is the last failure and is never cleared, so
+  `settle(flow, before)` would otherwise return that failure (#61 review).
 - **Wrapper `round-input.ts` `isPolled` and the poller's `follow()`**: take the
   cancel state. Poll while `settling`, even when the latest status is
   `active`; in `check-later` no fast poll, only the 30 s background read from
@@ -86,7 +89,11 @@ The fold-in checklist (on `main`, after the rebase):
   `refresh`); `check-later` (`checkAgain` and the 30 s background read). The
   Wrapper must poll `settling` even at `active`.
 - **Fold-in test**: through `session-play`, picks and the cash-out are refused
-  while the cancel is `in-flight` (and `settling`, `check-later`).
+  while the cancel is `in-flight` (and `settling`, `check-later`); `start` is
+  refused `round-exists` in those states, also after an `idle` or another
+  round's read, and is allowed once the cancel is `ended`; and a settled cancel
+  returns its Snapshot, not the earlier cancel-call or read failure (#61
+  review).
 - **Done in the rebase (no longer to do)**: #60's `TODO(#41)` markers in
   W-25, W-35, and the shell spec are deleted; the vector tests run against
   #59's `signedAction` and #60's `valid/coinflip-resolving-cancel` exports and
