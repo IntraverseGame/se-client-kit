@@ -103,10 +103,13 @@ are in brackets.
     from the cancel's own answer or read). The round is the session's from
     before its first Snapshot is read (`startRoundFlow`'s `onFlow`), so a read
     while `start` signs and sends the cancel that Snapshot requires is held too.
-    The hold that decides is the one of the session's round once the read was
-    observed, so a read of a previous round that a new round's start overtook is
-    held by the new round's cancel, and passes on as it is once that cancel
-    settled. While the cancel is `settling`, `read()` is the flow's counted read
+    Otherwise, when observing the read led to a newer Snapshot of the round (by
+    `version`: the answer to the W-16 resend the read caused), the answer is
+    that Snapshot, and the game is sent it, never the read's older one. The hold
+    that decides is the one of the session's round once the read was observed,
+    so a read of a previous round that a new round's start overtook is held by
+    the new round's cancel, and passes on as it is once that cancel settled.
+    While the cancel is `settling`, `read()` is the flow's counted read
     (`refresh`), and from `check-later` its "check again" read (`checkAgain`),
     never `getSnapshot` through the reader and `observe` (the cancel's gate
     drops those); its answer is the round's latest Snapshot, or the read's new
@@ -143,8 +146,10 @@ are in brackets.
   - `round()`: `RoundState`, the read-only state of the current round: the
     verdict (`checking`, `ready`, `failed` with what is shown), whether it is
     out of sync, whether a cash-out is offered (`cashOutOffered`: the flow's
-    gate and legality, with nothing signed), and the required cancel's state
-    (`cancel`: `none` until it is reached; W-25, W-33, W-35);
+    gate and legality, with nothing signed), the required cancel's state
+    (`cancel`: `none` until it is reached; W-25, W-33, W-35), and, only while it
+    holds, `unconfirmed` (`move` or `cash-out`): the flow's `unconfirmed()`, the
+    move or cash-out not confirmed (W-16, below);
   - `gameOrigin()` and `mountGame(options)`: the controller bridge for D with
     the session's pick use case, which answers the game and reports the answer's
     Snapshot through `onChange`, and the session's own `gameOrigins` and
@@ -534,6 +539,16 @@ are in brackets.
     resend fails too, the action stays pending: the game's next pick and a
     cash-out are `busy`, and the round ends by a read that shows it applied or
     by its expiry rule.
+  - **Not confirmed (W-16; decided in human review, 2026-10-19).** The flow's
+    `unconfirmed()` is `move` or `cash-out` while that action's one resend was
+    lost too (the delivery's `lost` action, `resent`, no call in flight), the
+    action is still pending and `resendable`, and the round's latest Snapshot is
+    `active`; otherwise `undefined`. A resend answered (by the round, or by a
+    503 marked `retryable: false`, which is not lost) never gives it, nor does a
+    first lost send. A read only clears it (the action applied, refused by W-19,
+    out of sync, the round not `active`, or the session ended); it never leads
+    to another send or signature, so the session's `checkAgain` (then `read`) is
+    a read only.
   - **Resynchronization (W-19).** A 400 `INVALID_ARGUMENT` or a 409
     `STALE_ACTION` calls `stale` and reads the Snapshot; when the read fails,
     the round stays held until a later read decides.
@@ -823,12 +838,24 @@ are in brackets.
   start, a read that signs the cancel, and a settling read answer with the
   cancel's result (or, while it settles, the round) and not with the earlier
   failure of the cancel's call or of a read; a re-issue rejects picks and the
-  cash-out while a pending resend still goes out; and of two tabs on one lock
-  manager, the one without the lock cannot start or sign, and after a steal
-  neither signs at a sequence already used. A move, a cash-out, and a cancel
-  built by the shell carry exactly the vendored `typed-data/` vectors' base64:
-  the Coin Flip pick and cancel through the round flow with no encoder passed,
-  on `valid/coinflip-active-ready-hash` (the cancel's struct hash and digest are
+  cash-out while a pending resend still goes out; a read that causes the W-16
+  resend of a lost move answers with the resend's answer (the round `won`), and
+  the game is sent it, while a read whose resend is lost too answers with the
+  read and gives `RoundState.unconfirmed` `move`, which `checkAgain` (a read
+  only, no move sent) keeps and a read of the round `won` clears; the same for a
+  lost cash-out of a three-step round (its resend's answer `won` reaches the UI
+  and the game, and a resend lost too gives `cash-out`); the flow's
+  `unconfirmed()` is set once a move's or a cash-out's resend is lost too, never
+  after a first lost send, while the resend is in flight, after an answered
+  resend, or after a 503 marked `retryable: false`, and clears on a read that
+  shows the action applied, the step moved on, the round `resolving`, `lost`, or
+  canceled by its time limit, and once the session ended, with the player's
+  `resend` refused `not_active`; and of two tabs on one lock manager, the one
+  without the lock cannot start or sign, and after a steal neither signs at a
+  sequence already used. A move, a cash-out, and a cancel built by the shell
+  carry exactly the vendored `typed-data/` vectors' base64: the Coin Flip pick
+  and cancel through the round flow with no encoder passed, on
+  `valid/coinflip-active-ready-hash` (the cancel's struct hash and digest are
   the `signed-action/coinflip-cancel` vector's, and its signature recovers to
   the session's key), and the multi-path pick and the cash-out through the
   request builder, on the worked round of `signing.json`. The Snapshot reader's

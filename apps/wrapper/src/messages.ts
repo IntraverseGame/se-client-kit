@@ -59,6 +59,9 @@ export type MessageKey =
   | "state.outOfSync"
   | "state.outOfSyncDetail"
   | "state.checkLater"
+  | "state.moveUnconfirmed"
+  | "state.cashOutUnconfirmed"
+  | "state.unconfirmedDetail"
   | "state.rejected"
   | "state.rejectedDetail"
   | "error.heading"
@@ -142,6 +145,10 @@ const EN: Messages = {
   "state.outOfSyncDetail":
     "Nothing more is signed for this round. You can verify it.",
   "state.checkLater": "Still resolving — contact support",
+  "state.moveUnconfirmed": "Your move hasn't been confirmed",
+  "state.cashOutUnconfirmed": "Your cash-out hasn't been confirmed",
+  "state.unconfirmedDetail":
+    "If it never arrives, the round ends by its time limit.",
   "state.rejected": "The game state could not be read",
   "state.rejectedDetail": "Something went wrong. Nothing was signed.",
   "error.heading": "Something went wrong",

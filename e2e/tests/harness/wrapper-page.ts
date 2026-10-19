@@ -33,6 +33,8 @@ export const TEXT = {
   canceledUnverified: "This round failed verification and was canceled.",
   ended: "Round ended",
   checkLater: "Still resolving — contact support",
+  moveUnconfirmed: "Your move hasn't been confirmed",
+  unconfirmedDetail: "If it never arrives, the round ends by its time limit.",
   checkAgain: "Check again",
   chainUnverified: "Could not verify the chain",
   outOfSync: "This round is out of sync",

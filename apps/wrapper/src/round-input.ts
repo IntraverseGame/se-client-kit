@@ -66,7 +66,7 @@ export const roundEnded = (
 /**
  * How the Wrapper reads the Snapshot again (W-35): `fast`, with bounded backoff
  * and the slow rate; or `background`, one read every 30 s, while the cancel is
- * `check-later`.
+ * `check-later` or a move or cash-out is not confirmed (W-16).
  */
 export type PollMode = "fast" | "background";
 
@@ -74,19 +74,22 @@ export type PollMode = "fast" | "background";
  * How the Wrapper polls while it shows `snapshot`, with the shell's cancel
  * state of its round (W-35): fast while the cancel is `settling`, whatever the
  * status; in the background while it is `check-later`; not at all once it is
- * `ended`, `not-taken`, or `sent`; otherwise fast while the round is not over
- * and waits on the server, not on the player (`starting` and `resolving`
- * today).
+ * `ended`, `not-taken`, or `sent`; in the background while an `active` round's
+ * move or cash-out is not confirmed (`unconfirmed`, W-16); otherwise fast while
+ * the round is not over and waits on the server, not on the player (`starting`
+ * and `resolving` today).
  */
 export const pollModeOf = (
   snapshot: RoundProgress,
   cancel?: CancelState,
+  unconfirmed = false,
 ): PollMode | undefined => {
   if (cancel === "settling") return "fast";
   if (cancel === "check-later") return "background";
   if (cancel === "ended" || cancel === "not-taken" || cancel === "sent") {
     return undefined;
   }
+  if (unconfirmed && snapshot.status === "active") return "background";
   return snapshot.status !== "idle" &&
     snapshot.status !== "active" &&
     !roundIsOver(snapshot)
@@ -98,7 +101,8 @@ export const pollModeOf = (
 export const isPolled = (
   snapshot: RoundProgress,
   cancel?: CancelState,
-): boolean => pollModeOf(snapshot, cancel) === "fast";
+  unconfirmed = false,
+): boolean => pollModeOf(snapshot, cancel, unconfirmed) === "fast";
 
 export type SnapshotInput = {
   /** Per session, increasing; a lower one is a stale response (W-29). */
@@ -165,6 +169,13 @@ export type RoundCheck = {
    * canceled (W-26).
    */
   readonly cancel: CancelState;
+  /**
+   * The round's move or cash-out whose one resend was lost too, neither applied
+   * nor refused (W-16): "your move (or cash-out) hasn't been confirmed", read
+   * in the background and on "check again" until a read settles it. Absent
+   * otherwise.
+   */
+  readonly unconfirmed?: "move" | "cash-out";
 };
 
 /** The outcome of one Snapshot read, as the session hands it to the UI. */

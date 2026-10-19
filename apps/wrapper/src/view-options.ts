@@ -14,7 +14,8 @@ export type Intents = {
   readonly newRound?: () => void;
   /**
    * "Check again" (W-33, W-35): one read of a round whose cancel is
-   * `check-later`, which may settle it.
+   * `check-later`, or whose move or cash-out is not confirmed (W-16), which may
+   * settle it. It only reads: nothing is sent or signed.
    */
   readonly checkAgain?: () => void;
   readonly retry?: () => void;

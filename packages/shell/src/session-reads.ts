@@ -15,7 +15,7 @@ import {
 } from "@intraverse/se-client-play-client";
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
-import { type CancelState, holdsRound } from "./cancel-state.ts";
+import { type CancelState, holdsRound, isOfRound } from "./cancel-state.ts";
 import type { ControllerBridge } from "./controller-bridge.ts";
 import { ShellError } from "./errors.ts";
 import type { RoundFlow } from "./round-flow.ts";
@@ -131,7 +131,10 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
   // sent to the game: the UI gets the round's own latest Snapshot, the game
   // nothing (it gets the round from the cancel's own answer or read), and the
   // round guard keeps what it saw. Once this read moved the cancel to a state
-  // its own reads decide, the round's latest Snapshot is shown.
+  // its own reads decide, the round's latest Snapshot is shown. Otherwise,
+  // when observing the read led to a newer Snapshot of the round (by
+  // `version`: the answer to the W-16 resend the read caused), the UI and the
+  // game are shown that one, never the read's older one.
   const see = async (snapshot: ValidSnapshot): Promise<ValidSnapshot> => {
     const flow = current();
     const before = beforeOf(flow);
@@ -144,6 +147,13 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
     if (now === undefined) return show(snapshot);
     if (holdsRound(now.cancel())) return now.latest();
     if (now === flow && cancelDecided(now, before)) return show(now.latest());
+    if (
+      now === flow &&
+      isOfRound(snapshot, now.roundId) &&
+      now.latest().version > snapshot.version
+    ) {
+      return show(now.latest());
+    }
     return show(snapshot);
   };
 

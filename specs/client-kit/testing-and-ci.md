@@ -383,7 +383,15 @@ development-only, so it may import the test-only entry of `contracts`.
 - **The accessibility audit** (T-14) is an axe scan (`@axe-core/playwright`)
   with the WCAG 2.2 A and AA tags (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`,
   `wcag22aa`), optionally limited to a selector; axe's best-practice rules are
-  not applied. A test page with known violations proves it fails.
+  not applied. A test page with known violations proves it fails. axe resolves
+  each rule with a page timer, so under `page.clock` it runs only while that
+  clock moves; an audit is bounded at 20 s of real time and fails the test past
+  it instead of hanging the run (a paused clock proves the bound). On CI the
+  whole Playwright run is bounded too (`globalTimeout`, set only when `CI` is
+  set): 10 minutes, well above a normal run (the slowest `test:e2e` step in
+  recent runs, build included, took 92 s), so a hang that outlives a test's own
+  timeout fails the job with Playwright's report before the job's 20-minute
+  timeout. A local run is not bounded.
 - **The network control** (T-15): `goOffline` and `goOnline` toggle the
   browser's offline emulation and cut the fake Play API with it; `cutPlayApi`
   fails only the Play API while the page stays online. A single failing or

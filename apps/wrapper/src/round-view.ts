@@ -5,7 +5,8 @@
 // passed (W-26); until then it reads as being checked. After the shell's own
 // cancel (W-25, W-33), `ended` is a neutral "round ended" with no result
 // claim, and a `canceled` result is the round failed verification and canceled
-// (W-26). Money is the
+// (W-26). A move or cash-out not confirmed (W-16) shows its own state in place
+// of the `active` round. Money is the
 // Snapshot's `formatted`; a choice compares `value` as a `bigint`
 // (bet-options.ts). No payout is shown on `won` yet: the Snapshot carries
 // `payout` now, and its display comes in a pull request of its own
@@ -28,6 +29,7 @@ import {
   roundEnded,
   type SnapshotInput,
 } from "./round-input.ts";
+import { unconfirmedView } from "./unconfirmed-view.ts";
 import type { Intents } from "./view-options.ts";
 
 const STATUS_ICON: Partial<Record<SnapshotInput["status"], IconName>> = {
@@ -138,6 +140,17 @@ export const roundView = (
       field(el, m["label.balance"], snapshot.bet.balance.formatted),
     );
     return children;
+  }
+  // The move or cash-out whose one resend was lost too (W-16).
+  if (snapshot.status === "active" && check?.unconfirmed !== undefined) {
+    return unconfirmedView(
+      el,
+      doc,
+      m,
+      check.unconfirmed,
+      snapshot.roundId,
+      intents,
+    );
   }
   switch (snapshot.status) {
     case "idle": {
