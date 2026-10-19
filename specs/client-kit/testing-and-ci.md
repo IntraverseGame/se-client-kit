@@ -126,9 +126,21 @@ outputs restored from the cache.
   `test:tools`, `check:deps`, `check:contracts`, and the contracts hash check
   when it lands) list every file they read, the test suites list the files they
   read outside their package or depend on the task that produces them, and
-  `test:e2e` and `format` declare no `files`, so they always run. `pnpm audit`
-  is a plain CI step, never cached, because its result depends on the advisory
-  database and not on repository files.
+  `test:e2e` and `format` declare no `files`, so they always run (the e2e
+  package's `test` still declares, as `external` `env`, the variables it reads:
+  `SE_E2E_PROJECT`, `SE_E2E_BROWSER_CHANNEL`, and `CI`, so a cache key would
+  follow them if it ever got `files`). `lint:ts` depends on the build of every
+  kit package: oxlint's import plugin follows an import of a kit package through
+  its `exports` into its `dist/` and opens those files, so it must not run while
+  a build rewrites them. So `pnpm lint`, and CI's `lint` job, build the five
+  packages first (or restore them from the cache). Before this edge, a lint with
+  no `dist/` passed without following those imports: `import/no-cycle` silently
+  skipped every edge into another package. The two Vite builds (the Wrapper's
+  and the reference game's) declare `NODE_ENV` as `external` `env`, since
+  `NODE_ENV=development vite build` makes a development build; the tsdown builds
+  do not read it. `tools/wireit-edges.test.ts` holds these edges and
+  declarations. `pnpm audit` is a plain CI step, never cached, because its
+  result depends on the advisory database and not on repository files.
 - **Every input is listed.** A script lists every file its command reads: the
   sources of a workspace as `src/**` (all file types: JSON schemas and vectors,
   CSS, SVG, assets), `public/**` for a Vite app, its top-level `*.ts`

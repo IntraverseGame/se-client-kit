@@ -207,6 +207,13 @@
     },
     "lint:ts": {
       "command": "oxlint -c .oxlintrc.json packages apps e2e tools vitest.config.ts vitest.readmes.config.ts",
+      "dependencies": [
+        "./packages/contracts:build",
+        "./packages/signing:build",
+        "./packages/snapshot:build",
+        "./packages/play-client:build",
+        "./packages/shell:build"
+      ],
       "files": [
         "**/*.{ts,mts,cts,tsx,js,mjs,cjs,jsx,cjsx,mjsx,ctsx,mtsx}",
         "**/*.json",

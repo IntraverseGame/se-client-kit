@@ -12,6 +12,11 @@
   "wireit": {
     "build": {
       "command": "tsx ../../tools/check-kit-dist.ts build && vite build",
+      "env": {
+        "NODE_ENV": {
+          "external": true
+        }
+      },
       "files": [
         "index.html",
         "public/**",
