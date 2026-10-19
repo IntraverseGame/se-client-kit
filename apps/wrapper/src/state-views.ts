@@ -14,6 +14,7 @@ import {
   externalLink,
   field,
   heading,
+  roundIdField,
   STATUS_HEADING_ID,
 } from "./dom.ts";
 import { type MessageKey, type Messages, problemMessage } from "./messages.ts";
@@ -109,11 +110,7 @@ export const roundIdAndVerify = (
 ): Child[] => {
   const copy = options.intents.copyText;
   return [
-    el("p", { class: "se-field" }, [
-      el("span", { class: "se-field__label" }, [m["label.roundId"]]),
-      " ",
-      el("code", { class: "se-round-id" }, [roundId]),
-    ]),
+    roundIdField(el, m["label.roundId"], roundId),
     el("div", { class: "se-actions" }, [
       copy !== undefined &&
         button(el, m["action.copyRoundId"], "copy-round-id", () => {

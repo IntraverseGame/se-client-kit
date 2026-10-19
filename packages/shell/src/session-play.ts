@@ -163,6 +163,7 @@ export const createPlaySession = (
     const flow = current;
     if (flow === undefined) return undefined;
     const verdict = flow.verdict();
+    const unconfirmed = flow.unconfirmed();
     return Object.freeze({
       roundId: flow.roundId,
       verdict: verdict.state,
@@ -170,6 +171,7 @@ export const createPlaySession = (
       outOfSync: flow.phase() === "out-of-sync",
       cashOutOffered: flow.cashOutOffered(),
       cancel: flow.cancel(),
+      ...(unconfirmed === undefined ? {} : { unconfirmed }),
     });
   };
 

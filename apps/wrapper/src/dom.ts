@@ -80,6 +80,18 @@ export const field = (el: Builder, label: string, value: string): HTMLElement =>
     el("span", { class: "se-field__value" }, [value]),
   ]);
 
+/** A round id, labelled, as text (W-39, W-41). */
+export const roundIdField = (
+  el: Builder,
+  label: string,
+  roundId: string,
+): HTMLElement =>
+  el("p", { class: "se-field" }, [
+    el("span", { class: "se-field__label" }, [label]),
+    " ",
+    el("code", { class: "se-round-id" }, [roundId]),
+  ]);
+
 export const button = (
   el: Builder,
   label: string,

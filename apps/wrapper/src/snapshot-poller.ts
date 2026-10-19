@@ -3,10 +3,11 @@
 // shell's cancel is `settling`, whatever the status), the Snapshot is read
 // again with bounded backoff until the status changes; after a longer wait the
 // reads go on at the slow rate with a "taking longer than expected" notice.
-// While the cancel is `check-later` the fast poll stops and one background read
-// runs every 30 s, with no notice. W-43: a read that gets no response is
-// repeated at the slow rate (in the background, at its own rate). Polling
-// stops when the round is not polled (a terminal status, or the cancel
+// While the cancel is `check-later`, or an `active` round's move or cash-out is
+// not confirmed (W-16), the fast poll stops (or never starts) and one
+// background read runs every 30 s, with no notice. W-43: a read that gets no
+// response is repeated at the slow rate (in the background, at its own rate).
+// Polling stops when the round is not polled (a terminal status, or the cancel
 // `ended`, `not-taken`, or `sent`) or when the session ended. One read is in
 // flight at a time; time comes from the injected timers only.
 
@@ -46,14 +47,16 @@ export const DEFAULT_POLL_CONFIG: PollConfig = Object.freeze({
 
 export type SnapshotPoller = {
   /**
-   * Follows the last accepted Snapshot and the shell's cancel state of its
-   * round: polls while it is polled (`pollModeOf`), restarts the backoff when
-   * the status or the mode changes, and stops in any other (or when
-   * `undefined`: the session ended or a state blocks).
+   * Follows the last accepted Snapshot, the shell's cancel state of its round,
+   * and whether its move or cash-out is not confirmed (W-16): polls while it is
+   * polled (`pollModeOf`), restarts the backoff when the status or the mode
+   * changes, and stops in any other (or when `undefined`: the session ended or
+   * a state blocks).
    */
   readonly follow: (
     round: RoundProgress | undefined,
     cancel?: CancelState,
+    unconfirmed?: boolean,
   ) => void;
   /** Reads now instead of at the next tick (the connection came back). */
   readonly pollNow: () => void;
@@ -159,8 +162,15 @@ export const createSnapshotPoller = (
   };
 
   return Object.freeze({
-    follow: (round: RoundProgress | undefined, cancel?: CancelState): void => {
-      const mode = round === undefined ? undefined : pollModeOf(round, cancel);
+    follow: (
+      round: RoundProgress | undefined,
+      cancel?: CancelState,
+      unconfirmed = false,
+    ): void => {
+      const mode =
+        round === undefined
+          ? undefined
+          : pollModeOf(round, cancel, unconfirmed);
       if (round === undefined || mode === undefined) {
         stop();
         return;

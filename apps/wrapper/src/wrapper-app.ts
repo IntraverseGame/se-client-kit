@@ -1,8 +1,10 @@
 // The Wrapper's UI controller: it holds `WrapperState`, renders it, and polls
-// the Snapshot while a round is `starting` or `resolving`, or while the shell's
-// cancel of the round is `settling` or `check-later` (W-35). It reads the
-// Snapshot only through the read port the session hands it, which returns a
-// validated Snapshot or typed error (W-28); it never sees a key or a token.
+// the Snapshot while a round is `starting` or `resolving`, while the shell's
+// cancel of the round is `settling` or `check-later` (W-35), or while the
+// round's move or cash-out is not confirmed (W-16, in the background). It
+// reads the Snapshot only through the read port the session hands it, which
+// returns a validated Snapshot or typed error (W-28); it never sees a key or a
+// token.
 //
 // The session (session-wiring.ts) supplies `readSnapshot` and the start,
 // cash-out, and new-round intents through `connect`; its reads carry the
@@ -81,10 +83,14 @@ export type WrapperApp = {
   readonly dispose: () => void;
 };
 
-/** What the poller follows: the shown round and the shell's cancel of it. */
+/**
+ * What the poller follows: the shown round, the shell's cancel of it, and
+ * whether its move or cash-out is not confirmed (W-16).
+ */
 type Followed = {
   readonly round: RoundProgress | undefined;
   readonly cancel?: CancelState;
+  readonly unconfirmed?: boolean;
 };
 
 const NOTHING: Followed = Object.freeze({ round: undefined });
@@ -102,7 +108,11 @@ const followed = (state: WrapperState): Followed => {
     return isFinal(state) ? NOTHING : { round: state.snapshot, cancel };
   }
   return state.blocking === undefined && state.problem === undefined
-    ? { round: state.snapshot, ...(cancel === undefined ? {} : { cancel }) }
+    ? {
+        round: state.snapshot,
+        ...(cancel === undefined ? {} : { cancel }),
+        unconfirmed: state.check?.unconfirmed !== undefined,
+      }
     : NOTHING;
 };
 
@@ -125,8 +135,8 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     }
     state = next;
     view.update(state, cause);
-    const { round, cancel } = followed(state);
-    poller.follow(round, cancel);
+    const { round, cancel, unconfirmed } = followed(state);
+    poller.follow(round, cancel, unconfirmed);
     const ended =
       state.check?.cancel === "ended" ? state.snapshot?.roundId : undefined;
     if (ended !== undefined && ended !== endedReadFor) {
@@ -178,9 +188,23 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     void readOnce("player");
   };
 
+  /**
+   * "Check again" (W-33, W-35, W-16): the session's read, as the player asked.
+   * Like "try again", it first clears a typed error the round shows, so the
+   * reads it stopped (the background read of a move not confirmed) resume.
+   */
+  const checkAgainOf = (check: () => void) => (): void => {
+    apply(clearProblem(state), "player");
+    check();
+  };
+
   const viewOptions = (): ViewOptions => {
+    const { checkAgain } = roundIntents;
     const intents: Intents = {
       ...roundIntents,
+      ...(checkAgain === undefined
+        ? {}
+        : { checkAgain: checkAgainOf(checkAgain) }),
       ...(readSnapshot === undefined ? {} : { retry }),
       ...(options.copyText === undefined ? {} : { copyText: options.copyText }),
     };

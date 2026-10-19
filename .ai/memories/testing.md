@@ -168,8 +168,20 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   comes at once. Do not pause it: `pauseAt` before load stops the Wrapper's
   boot, and after load it races boot's timers against the network. Write no
   assertion that needs a timer not to fire (T-19 counts reads up to
-  `check-later`, which no extra real-time poll changes). Tracing stays off (the key's bytes
-  are an init-script argument; the round fixture fails a traced test). In
+  `check-later`, which no extra real-time poll changes). `advanceUntil` gives up
+  after 15 s of real time, about 10 s of the page's clock, so before waiting on
+  a 30 s background read (`check-later`, a move not confirmed) run
+  `page.clock.runFor(30_500)` first (t15-unconfirmed). axe resolves each rule
+  with a page `setTimeout(…, 0)`, so an audit under `page.clock` needs that
+  clock moving: paused, it never finishes. `auditAccessibility` is bounded at
+  `AUDIT_LIMIT_MS` (20 s, the runner's real timer) and fails past it; one
+  unexplained hang after a `runFor` was seen once in 58 Chrome runs of
+  t15-unconfirmed. On CI (`CI` set) `playwright.config.ts` also sets
+  `globalTimeout` to 10 minutes (a normal `test:e2e` step takes at most about
+  92 s, build included; the job's own timeout is 20 minutes); a local run has
+  none. Tracing stays off
+  (the key's bytes are an init-script argument; the round fixture fails a
+  traced test). In
   T-15 offline, read the attempts from `network.sent(id)` (the context's
   `request` event), not from `fakePlayApi.served`: Chromium and WebKit route
   an offline request (recorded, then aborted), Playwright's Firefox fails it

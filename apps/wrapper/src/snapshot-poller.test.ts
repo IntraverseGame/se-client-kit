@@ -260,3 +260,36 @@ describe("the Snapshot poller with the shell's cancel (W-25, W-35)", () => {
     },
   );
 });
+
+describe("the Snapshot poller with a move or cash-out not confirmed (W-16, W-35)", () => {
+  it("reads an active round once every 30 s, with no notice, also after no response", async () => {
+    const h = harness();
+    h.answers.splice(0, 1, { kind: "network" });
+    h.poller.follow({ status: "active" }, "none", true);
+    await h.step(95_000);
+    expect(h.reads).toEqual([30_000, 60_000, 90_000]);
+    expect(h.slow).toEqual([]);
+  });
+
+  it("stops once the move or cash-out is no longer unconfirmed", async () => {
+    const h = harness();
+    h.poller.follow({ status: "active" }, "none", true);
+    await h.step(31_000);
+    expect(h.reads).toEqual([30_000]);
+    h.poller.follow({ status: "active" }, "none", false);
+    await h.step(120_000);
+    expect(h.reads).toEqual([30_000]);
+    expect(h.poller.running()).toBe(false);
+  });
+
+  it("leaves every other status and cancel state to their own rules", async () => {
+    const h = harness();
+    h.poller.follow({ status: "resolving" }, "none", true);
+    await h.step(1_000);
+    expect(h.reads).toEqual([500]);
+    h.poller.follow({ status: "won" }, "none", true);
+    await h.step(60_000);
+    expect(h.reads).toEqual([500]);
+    expect(h.poller.running()).toBe(false);
+  });
+});

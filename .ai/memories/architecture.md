@@ -146,6 +146,13 @@ structure below.
   action, the cancel included. The backend recognises a repeat by its signed
   action (sequence and bytes) in the round's action log, not by the key (still
   sent, not stored yet). Only the newest read by `version` triggers the resend.
+  A read that caused the resend answers with the resend's answer
+  (`session-reads.ts` `see`: a newer Snapshot of the round than the read is
+  shown, and sent to the game). A resend lost too is the flow's
+  `unconfirmed()`, `RoundState.unconfirmed` (`move` or `cash-out`; human
+  review, 2026-10-19): the Wrapper's not-confirmed view
+  (`unconfirmed-view.ts`), read on "check again" and every 30 s in the
+  background, reads only, until a read settles the round.
   A cancel 503 `retryable: false` earns no resend but keeps the reads going
   (it may be stored). Any other failed verdict puts the transcript state
   in `failed`. A pick needs both a `ready` verdict and an `open` or `adopted`
@@ -255,7 +262,11 @@ structure below.
   (`round-input.ts`: `roundEnded`, `pollModeOf`): `settling` polls fast at any
   status and through the round's failed state, a typed error, or a rejected
   read (only a final state stops it, `wrapper-app.ts` `followed`);
-  `check-later` reads every 30 s (`checkLaterDelayMs`) plus "check again";
+  `check-later` reads every 30 s (`checkLaterDelayMs`) plus "check again",
+  and so does an `active` round whose move or cash-out is not confirmed
+  (`pollModeOf`'s `unconfirmed`, W-16), which a typed error stops like any
+  poll outside the cancel's states; "check again" first clears a shown typed
+  error, as "try again" does (`wrapper-app.ts`);
   `ended`, `not-taken`, and `sent` stop it. `main.ts` takes the launch code first;
   `boot.ts` opens the session once configured, and `session-wiring.ts` shows
   the opening, connects the session's read and intents, maps the shell's

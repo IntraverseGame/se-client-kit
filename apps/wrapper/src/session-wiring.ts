@@ -46,6 +46,9 @@ const checkOf = (round: RoundState): RoundCheck => ({
   outOfSync: round.outOfSync,
   cashOutOffered: round.cashOutOffered,
   cancel: round.cancel,
+  ...(round.unconfirmed === undefined
+    ? {}
+    : { unconfirmed: round.unconfirmed }),
 });
 
 /** A session's answer, as the UI's read port gives it. */

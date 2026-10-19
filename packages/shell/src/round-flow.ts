@@ -48,6 +48,9 @@ export type RoundEvidence = TrackingEvidence & {
 
 type Signer = NonNullable<ReturnType<RoundTracking["signer"]>>;
 
+/** Which action is not confirmed (W-16). */
+export type Unconfirmed = "move" | "cash-out";
+
 export type RoundFlow = RoundActions & {
   readonly roundId: string;
   readonly verdict: RoundTracking["verdict"];
@@ -70,6 +73,14 @@ export type RoundFlow = RoundActions & {
   readonly cancel: () => CancelState;
   /** The last failure of a call the flow made, for the error state (W-42). */
   readonly lastError: () => Error | undefined;
+  /**
+   * The pending move or cash-out whose one W-16 resend was lost too (no answer,
+   * or a 503 not marked `retryable: false`), while the round's latest Snapshot
+   * is `active` and the action is neither applied nor refused: the "move not
+   * confirmed" state (W-16). `undefined` otherwise, so any read that settles
+   * the round clears it.
+   */
+  readonly unconfirmed: () => Unconfirmed | undefined;
   readonly evidence: () => RoundEvidence;
   /**
    * Reads a validated Snapshot; another round's, or `idle`, is ignored, and so
@@ -189,6 +200,25 @@ export const createRoundFlow = (
   };
   host.observe = observe;
 
+  // Nothing more is sent for it (it had its one resend), so only a read can
+  // settle it: applied, refused (W-19), out of sync, or the round over.
+  const unconfirmed = (): Unconfirmed | undefined => {
+    const action = delivery.lost();
+    if (
+      action === undefined ||
+      !delivery.resent(action) ||
+      // Not implied by the rest: while the resend is in flight, `lost` still
+      // names the action (the first send's outcome) and `resent` is already
+      // set, so only `busy` keeps an unanswered resend from reading as lost.
+      delivery.busy() ||
+      tracking.signer()?.resendable() !== action ||
+      tracking.latest().status !== "active"
+    ) {
+      return undefined;
+    }
+    return action.kind === "cash-out" ? "cash-out" : "move";
+  };
+
   const refresh = async (): Promise<void> => {
     const state = cancel.state();
     if (state === "settling" || state === "check-later") {
@@ -217,6 +247,7 @@ export const createRoundFlow = (
     cancel: cancel.state,
     lastError: (): Error | undefined =>
       delivery.lastError() ?? tracking.tipError(),
+    unconfirmed,
     evidence: (): RoundEvidence =>
       Object.freeze({
         ...tracking.evidence(),

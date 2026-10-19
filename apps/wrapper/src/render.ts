@@ -179,7 +179,7 @@ export const createView = (
     const cancelEnded =
       state.check?.cancel === "ended" ||
       (state.endedRound?.status === "ended" && snapshot?.status === "idle");
-    section(
+    const statusChanged = section(
       status,
       JSON.stringify([
         localized.language,
@@ -240,13 +240,20 @@ export const createView = (
       announce(statusHeading);
     }
 
+    // A move or cash-out not confirmed (W-16) is a status of the player's own
+    // action: its heading takes the focus when it appears on their action.
+    const unconfirmedShown =
+      showRound &&
+      snapshot.status === "active" &&
+      state.check?.unconfirmed !== undefined;
     if (cause === "player") {
       const target =
         error !== undefined && alertChanged
           ? root.querySelector<HTMLElement>(`#${ALERT_HEADING_ID}`)
-          : snapshot !== undefined &&
-              roundEnded(snapshot, state.check?.cancel) &&
-              showRound
+          : (snapshot !== undefined &&
+                roundEnded(snapshot, state.check?.cancel) &&
+                showRound) ||
+              (unconfirmedShown && statusChanged)
             ? statusHeadingElement
             : null;
       if (target instanceof HTMLElement) {

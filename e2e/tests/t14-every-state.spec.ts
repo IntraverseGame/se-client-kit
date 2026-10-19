@@ -16,6 +16,7 @@
 // - out of sync, the session ended in a round, and a rejected Snapshot:
 //   t16-round-errors;
 // - the connection problem while a move is signed: t15-signed-action;
+// - a move not confirmed (W-16): t15-unconfirmed;
 // - a failed verification and "could not verify the chain" while the cancel
 //   settles, canceled, round ended, and still resolving: t19-cancel-paths;
 // - another tab: t17-two-tabs.

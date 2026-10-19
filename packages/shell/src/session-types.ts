@@ -62,6 +62,15 @@ export type RoundState = {
    * `not-taken` leaves the round open until its expiry rule closes it.
    */
   readonly cancel: CancelState;
+  /**
+   * Set while the pending move or cash-out had its one W-16 resend and that
+   * resend was lost too, with the round still `active` and the action neither
+   * applied nor refused: "your move (or cash-out) hasn't been confirmed".
+   * Nothing more is sent or signed for it; only a read settles it (the
+   * session's `checkAgain` is one), or the round ends by its expiry rule.
+   * Absent otherwise.
+   */
+  readonly unconfirmed?: "move" | "cash-out";
 };
 
 /**
@@ -93,7 +102,9 @@ export type PlaySession = {
   readonly read: () => Promise<SessionRead>;
   /**
    * "Check again" (W-35): from `check-later`, one read under the cancel's
-   * settling rules, which may settle it; otherwise the same as `read`.
+   * settling rules, which may settle it; otherwise the same as `read` (as for a
+   * move or cash-out not confirmed, `RoundState.unconfirmed`: it only reads,
+   * and sends nothing).
    */
   readonly checkAgain: () => Promise<SessionRead>;
   /** Starts a round with a bet copied from the Snapshot's `Amount` (W-22). */
