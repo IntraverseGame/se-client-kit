@@ -401,7 +401,10 @@ development-only, so it may import the test-only entry of `contracts`.
   request (`NS_ERROR_OFFLINE`) before any route sees it, so the fake records
   none there, while Chromium and WebKit route it (`OFFLINE_ROUTED`, which a test
   in `network.spec.ts` asserts per project, printing one stdout line); the
-  `request` event sees it in every project.
+  `request` event sees it in every project. `goOnline` turns the browser online
+  before it restores the fake, so the page's first request after it can still
+  reach a cut fake and fail once, and the transport repeats it (seen in WebKit
+  on CI): assert at least one read before an action, not exactly one.
 - **What runs today**: the harness's own tests; a smoke run on the Wrapper's
   bundle opened with no launch code (it loads and accepts the served
   configuration with no outside request, error, or warning, passes the audit,

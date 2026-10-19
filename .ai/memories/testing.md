@@ -195,7 +195,12 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   route's record waits on a round trip), and Chromium fails an offline request
   before the fake records it: read `fakePlayApi.served` only after the answer
   it records shows on the page, and poll a count that includes offline
-  requests (`expect.poll`), as `t15-resend-lost.spec.ts` does.
+  requests (`expect.poll`), as `t15-resend-lost.spec.ts` does. `goOnline`
+  sets the browser online, then restores the fake: the reconnect read can hit
+  the still-cut fake, fail, and be repeated by the transport, so the record
+  may show two `getSnapshot` before the resend (WebKit on CI, reproduced by
+  delaying the restore 200 ms). Assert "reads only, at least one, then the
+  one resend", never an exact list of reads.
   The resend's answer is what the Wrapper and the game show (test 1 asserts
   "You won" in both). A resend lost too leads to the not-confirmed state, whose
   later reads ("check again", the 30 s background read) send no move:

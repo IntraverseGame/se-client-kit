@@ -169,11 +169,21 @@ test.describe("T-15: the resend of a move lost offline (W-16)", () => {
     // The fake's record, read only now: it records a call before it answers
     // it, and "You won" is the resend's answer, so the record is complete
     // (the page's `sent` sees a request before the fake's route records it).
-    // The Snapshot is read first, and then the move is sent once more.
-    expect(servedSince(fakePlayApi, before)).toEqual([
-      "getSnapshot",
-      "continueRound",
-    ]);
+    // The Snapshot is read before the move is sent again, and the move is sent
+    // once. Only reads come before the resend, at least one: the shell resends
+    // only from a read it validated (W-16), and a read can come twice, when
+    // the browser is online again a moment before the fake is restored
+    // (`goOnline`), so the fake fails the first and the transport repeats it
+    // (W-43; seen in WebKit on CI). The resend is the last call: its answer
+    // ends the round.
+    const since = servedSince(fakePlayApi, before);
+    const resendAt = since.indexOf("continueRound");
+    expect(resendAt).toBeGreaterThan(0);
+    expect(since.slice(0, resendAt).every(id => id === "getSnapshot")).toBe(
+      true,
+    );
+    expect(since.filter(id => id === "continueRound")).toHaveLength(1);
+    expect(resendAt).toBe(since.length - 1);
     // Every move the fake saw is the one signed move.
     await expect
       .poll(() => servedFor(fakePlayApi, "continueRound").length)
