@@ -215,7 +215,8 @@ structure below.
   the action grammar (`actionGrammar`) is the signed-action spec's, with the
   row derived from the path (`r = len(path) - 1`). `hashPlayerCancel` encodes
   `PlayerCancel`, pinned by the independent signer's `signed-action/` vector
-  (#41); the shell uses it directly (no injected cancel encoding). Draw-registry types are
+  (#41) and by the signing vectors of contracts release 1.0.0 (`types` and the
+  `player-cancel` round of `closes`); the shell uses it directly (no injected cancel encoding). Draw-registry types are
   encoded internally for the vector
   replay only.
 

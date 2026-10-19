@@ -45,7 +45,7 @@ export const integer = (parent: Json, key: string, where: string): number => {
   return value;
 };
 
-const bool = (parent: Json, key: string, where: string): boolean => {
+export const bool = (parent: Json, key: string, where: string): boolean => {
   const value = at(parent, key, where);
   if (typeof value !== "boolean")
     throw new TypeError(`${where}.${key}: not a boolean`);
@@ -137,7 +137,7 @@ export type SigningVectors = {
   };
 };
 
-const signed = (value: Json, where: string): SignedVector => ({
+export const signed = (value: Json, where: string): SignedVector => ({
   digest: hex(value, "digest", where),
   signature: hex(value, "signature", where),
   signer: hex(value, "signer", where),

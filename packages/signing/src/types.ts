@@ -1,6 +1,7 @@
 // The fixed set of EIP-712 struct types. Each `encodeType` and type hash is
-// pinned by a vendored vector (the tests compare them): the signing vectors,
-// and for `PlayerCancel` the independent signer's `signed-action/` Snapshot
+// pinned by a vendored vector (the tests compare them): the signing vectors
+// (`PlayerCancel` included, since contracts release 1.0.0) and, for
+// `PlayerCancel`, also the independent signer's `signed-action/` Snapshot
 // vector. A type is added here only with the vector that pins it.
 // `PayoutTerms` reaches the player only as `newRound.payoutTermsHash`, so
 // there is no player-side type to encode.

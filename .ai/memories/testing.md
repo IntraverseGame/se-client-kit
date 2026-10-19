@@ -338,7 +338,12 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `typed-data-vectors.test.ts` checks that the shell's move, cash-out, and
   cancel carry the vendored `typed-data/` vectors' base64, through the flow
   with no encoder passed (the production default) and through the request
-  builder. The `PlayerCancel` vector (`signed-action/coinflip-cancel`) is
+  builder. `signing`'s `close-vectors.test.ts` replays the signing vectors'
+  `closes` (nine rounds, read through `fixtures/close-vectors.ts`) with the
+  kit's encoders: struct hashes, digests, signatures, signers, `CloseRoundAuth`,
+  and the `closed` and `canceled` hashes; the `payoutTerms` hashes are only
+  checked against each round's `payoutTermsHash` (no `PayoutTerms` encoder).
+  The `PlayerCancel` vector (`signed-action/coinflip-cancel`) is
   replayed twice: `signing`'s `cancel-vector.test.ts` reproduces every hash and
   the exact signature with the `player` fixture key (its test key; never read
   the key from the vector), and the shell's `cancel-vector.test.ts` checks that

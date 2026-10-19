@@ -40,8 +40,8 @@
       "path": "src/vectors/signing.json",
       "source": "se-contracts",
       "sourceName": "test/vectors/signing.json",
-      "sourceCommit": "5ce86811558e713cdf41bf39c4d79a6de99326d9",
-      "sha256": "dfe46ab82d9c88287bebbfa23413531dc6076cbd20eecf8297f6fa29c679dfb3"
+      "sourceCommit": "b9c15567527fd16beefc8ad9fbb2d20518bdcb9c",
+      "sha256": "c3747cf55841b642ced15477a2b328f6ff391e7c07adebb65e4194fd7c7c3b38"
     },
     {
       "path": "src/vectors/snapshot/invalid/allowlist-fairness-proof-on-book.json",

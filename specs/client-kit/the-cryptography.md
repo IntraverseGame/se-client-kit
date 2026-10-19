@@ -40,14 +40,21 @@ Part of the [Client kit spec](../client-kit.md), section
   shell replays, pin `randomnessTarget`. `NewRound` is not an EIP-712 struct and
   has no type string: it is the Play API document's `NewRound` schema, and only
   its `created` hash is signed (in `CreateRoundAuth`).
-  - **`PlayerCancel`** is published in the signed-action specification: the same
-    fields as `PlayerAction`, type hash
+  - **`PlayerCancel`** is published in the signed-action specification and is a
+    type of the contracts repository's registry (it records the player's cancel
+    of a `Ready` round): the same fields as `PlayerAction`, type hash
     `0xacaf7a5ad98f54f1cf2ba32c94a782121894bc4306dbb28b7683c5ef579a9ce6`.
     `hashPlayerCancel` encodes it, pinned by the independent signer's
-    `signed-action/coinflip-cancel` Snapshot vector (Foundry cast; #41).
+    `signed-action/coinflip-cancel` Snapshot vector (Foundry cast; #41) and by
+    the signing vectors of contracts release 1.0.0 (their `types.PlayerCancel`
+    entry and their `player-cancel` round, below).
   - **`PayoutTerms`** reaches the player only as `newRound.payoutTermsHash`,
     taken as signed (W-26, check 3). No player-facing document publishes a
-    `PayoutTerms` type, so the kit has none to encode.
+    `PayoutTerms` type, so the kit has none to encode. The signing vectors list
+    six named terms with their hashes (`payoutTerms`); the tests check only that
+    each round of `closes` names the hash of its terms, and do not rebuild one.
+    The kit computes no payout: the server does, and the Snapshot carries it
+    (`payout`).
 - **Keys.** `createSigner` draws 32 bytes from the platform's cryptographic
   random source (`crypto.getRandomValues`, through `@noble/hashes`; a test
   injects its own source), redraws a value that is zero or not below the curve
@@ -133,23 +140,38 @@ Part of the [Client kit spec](../client-kit.md), section
   test-only entry of the `contracts` package, where they are copied with their
   source commit noted. The signed-action specification publishes no separate
   player-facing vector file: its independent vectors for `PlayerAction` and
-  `PlayerCashOut` are these signing vectors. `PlayerCancel`'s is the backend's
-  independent `signed-action/coinflip-cancel` Snapshot vector, vendored and read
-  through the same entry (`snapshotVectors.signedAction["coinflip-cancel"]`,
-  signed with `PLAYER_KEY`) and replayed: the tests reproduce its type hash,
-  domain separator, struct hash, and digest, sign the digest with the `player`
-  key (its test key, the same public account) to its exact bytes, and recover
-  both that signature and the vector's to its address (#41). That vector file
-  carries its test key (`testKey`): the tests read its address, a contracts test
-  checks that it is the same public key as `PLAYER_KEY`, and the tests sign with
-  the fixture below, not with it. The signing vector file names its two signing
-  keys (the action key `player` and the admin `engine`) as the well-known local
+  `PlayerCashOut` are these signing vectors. `PlayerCancel`'s independent
+  signature is the backend's `signed-action/coinflip-cancel` Snapshot vector,
+  vendored and read through the same entry
+  (`snapshotVectors.signedAction["coinflip-cancel"]`, signed with `PLAYER_KEY`)
+  and replayed: the tests reproduce its type hash, domain separator, struct
+  hash, and digest, sign the digest with the `player` key (its test key, the
+  same public account) to its exact bytes, and recover both that signature and
+  the vector's to its address (#41). That vector file carries its test key
+  (`testKey`): the tests read its address, a contracts test checks that it is
+  the same public key as `PLAYER_KEY`, and the tests sign with the fixture
+  below, not with it. The signing vector file names its two signing keys (the
+  action key `player` and the admin `engine`) as the well-known local
   development accounts but does not carry them, so the tests hold those two keys
   in a test fixture (`packages/signing/src/fixtures/keys.ts`). They are the
   vectors' test keys (the AGENTS.md exception): public by design, the default
   accounts of the local Ethereum development node, holding nothing and never
   used outside tests. The tests prove each derives the address the vectors give.
-  The negative cases (a high `s`, a bad `v`, a wrong length, `r` or `s` out of
-  range, a changed `previous`) are derived from the vector signatures; the
-  zero-address case replaces Keccak-256 in one test file, since no key with the
-  zero address is known.
+  **Since contracts release 1.0.0** (`1.0.0`, vendored by the re-vendor of the
+  signing vectors; the file keeps its older fields as they were and adds three
+  things) the file also holds a `PlayerCancel` entry in `types`, `payoutTerms`
+  (six named terms with their hashes), and `closes` (nine full rounds on the
+  same domain and keys, one per way a round ends, each ending in `closed`, or in
+  `canceled = keccak256(abi.encode(ready, T_1))` for the `player-cancel` round).
+  `close-vectors.test.ts` replays every round of `closes` with the kit's own
+  encoders: `created`, `T_0`, each action's struct hash (a move, a cash-out, or
+  a cancel by its kind), digest, exact signature, and recovered signer, the
+  `CloseRoundAuth` of a `closeRound`, `lastActionHash`, and the `closed` and
+  `canceled` hashes (through the internal `abi.encode` helper, with tuples held
+  in the test: the shell never computes either hash). `vectors.test.ts` now
+  reproduces the `PlayerCancel` type string and type hash as it does the other
+  types. The kit has no encoder for `PayoutTerms` (see above), so
+  `hashPayoutTerms` is not replayed. The negative cases (a high `s`, a bad `v`,
+  a wrong length, `r` or `s` out of range, a changed `previous`) are derived
+  from the vector signatures; the zero-address case replaces Keccak-256 in one
+  test file, since no key with the zero address is known.
