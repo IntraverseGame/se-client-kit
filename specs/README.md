@@ -33,7 +33,8 @@ spec, and a behavior change updates its spec in the same pull request
 - [`wrapper.md`](./wrapper.md) — the Wrapper's behavior: sessions, key custody,
   the transcript, checks, the UI.
 - [`verify-page.md`](./verify-page.md) — the verify page: a round id in, the
-  round recomputed in the browser (specified, not built).
+  round recomputed in the browser (specified; only the fairness kernel's
+  derivations of checks 5 and 7 are built).
 
 ## Table of contents
 
@@ -131,6 +132,7 @@ the specs' headings.
     V-11
   - [What the page recomputes](./verify-page.md#what-the-page-recomputes-v-12-v-13)
     — V-12, V-12a, V-13
+  - [What is built](./verify-page.md#what-is-built)
   - [Accessibility](./verify-page.md#accessibility-v-14) — V-14
   - [Build and release](./verify-page.md#build-and-release-v-15-to-v-17) — V-15
     to V-17
@@ -138,5 +140,5 @@ the specs' headings.
   [Security](./verify-page.md#security) ·
   [Observability](./verify-page.md#observability) ·
   [Test plan](./verify-page.md#test-plan) (VT-1 to VT-10) ·
-  [Decisions](./verify-page.md#decisions) (D-1 to D-4) ·
+  [Decisions](./verify-page.md#decisions) (D-1 to D-9) ·
   [References](./verify-page.md#references)

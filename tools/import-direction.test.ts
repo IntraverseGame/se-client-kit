@@ -17,8 +17,14 @@ import {
 } from "./fixtures/import-direction-cases.ts";
 import { ruleCases } from "./fixtures/lint-rule-cases.ts";
 import { styleCases } from "./fixtures/style-rule-cases.ts";
+import { verifyCases } from "./fixtures/verify-direction-cases.ts";
 
-const cases: readonly Case[] = [...directionCases, ...ruleCases, ...styleCases];
+const cases: readonly Case[] = [
+  ...directionCases,
+  ...verifyCases,
+  ...ruleCases,
+  ...styleCases,
+];
 
 // Proof that the dependency-direction lint rule (specs/client-kit/packages.md,
 // "Dependency direction") fails on a violation. Each case writes a small file

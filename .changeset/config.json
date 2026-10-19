@@ -19,6 +19,7 @@
   "updateInternalDependencies": "patch",
   "ignore": [
     "@intraverse/se-client-e2e",
-    "@intraverse/se-client-reference-game"
+    "@intraverse/se-client-reference-game",
+    "@intraverse/se-client-verify"
   ]
 }

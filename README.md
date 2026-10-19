@@ -38,11 +38,12 @@ claiming them on npm is part of the publishing work (#12).
 | `shell`          | package | the headless part of the Wrapper: sessions, key custody, transcript, checks |
 | `wrapper`        | app     | the UI, built into a release bundle                                         |
 | `reference-game` | app     | a minimal sandboxed game for tests and as a sample                          |
+| `verify`         | app     | the verify page; today the fairness kernel's derivations only               |
 
 Dependencies point one way: `contracts` (data only) ← `snapshot` and
-`play-client` ← `shell` ← `wrapper`; `signing` ← `shell`; `signing`'s tests read
-the vectors from `contracts`' test-only entry (read only by tests; the consumers
-are listed in the
+`play-client` ← `shell` ← `wrapper`; `signing` ← `shell`; `signing` ← `verify`,
+which never takes `shell`; `signing`'s tests read the vectors from `contracts`'
+test-only entry (read only by tests; the consumers are listed in the
 [client kit spec](./specs/client-kit/the-contracts-package.md)). No cycles. The
 design lives in `specs/` ([client kit](./specs/client-kit.md) and
 [Wrapper](./specs/wrapper.md)) and `decisions/`.

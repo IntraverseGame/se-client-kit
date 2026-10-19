@@ -8,7 +8,7 @@ The kit's tests are the executable half of
 
 | Level     | Tool                                 | What                                                                                                                                           |
 | --------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit      | Vitest                               | per package; the signing, Snapshot, and transcript vectors; the token schedule; redaction                                                      |
+| Unit      | Vitest                               | per package; the signing, Snapshot, transcript, and fairness kernel vectors (the verify page's); the token schedule; redaction                 |
 | Component | Vitest and jsdom                     | the Wrapper renders every `valid/` Snapshot (the payout ones too); the reference game's message handling and rendering per status              |
 | e2e       | Playwright                           | win, loss, cash-out, offline, typed errors, two tabs, the sandbox, accessibility, the no-secret scan                                           |
 | Static    | oxlint, stylelint, oxfmt, TypeScript | lint (oxlint for TypeScript, stylelint for CSS), format check (oxfmt, for every file type it supports), `tsc --noEmit`, import-direction rules |

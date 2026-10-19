@@ -67,6 +67,8 @@ signer.destroy(); // at the end of the session
   - `createSigner`: generates a key and signs digests; the key is never returned
     or serialized.
   - `recoverAddress`: the signer's address (EIP-55) of a canonical signature.
+  - `keccak256`: Ethereum's Keccak-256 of raw bytes (a `Uint8Array` in, 32 new
+    bytes out), for a caller that encodes its own input.
   - `createTranscript`: the `previous` chain and sequence numbers of one round,
     with one signature per sequence.
   - `encodeTypedData`: the canonical bytes of a move's, a cash-out's, or a

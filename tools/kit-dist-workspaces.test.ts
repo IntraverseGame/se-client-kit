@@ -161,6 +161,8 @@ describe("the scripts that read a kit package's dist", () => {
   it("are every typecheck, test, and build of a workspace with a kit dependency, but the declared ones", () => {
     expect(guarded).toEqual([
       "apps/reference-game#typecheck",
+      "apps/verify#test",
+      "apps/verify#typecheck",
       "apps/wrapper#build",
       "apps/wrapper#test",
       "apps/wrapper#typecheck",

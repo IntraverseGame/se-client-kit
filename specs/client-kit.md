@@ -74,6 +74,7 @@ se-client-kit/
   apps/
     wrapper/        the Wrapper UI (Vite)
     reference-game/ a minimal sandboxed game for tests and as a sample
+    verify/         the verify page (today its fairness-kernel derivations only)
   e2e/              Playwright suite and the fake Play API
   tools/            repository checks and their tests (allow-list, test-only entry)
   .changeset/       pending release notes
@@ -90,12 +91,14 @@ the root `package.json` fans them out. Exactly: the five `packages/*` and
 `typecheck` and `test` (Playwright: the e2e harness's own tests and a smoke run
 on the Wrapper's bundle,
 [The e2e harness](./client-kit/testing-and-ci.md#the-e2e-harness)) and no
-`build`. **A package gets a `test` script with its first real test**, not
-before: a `test` script that passes with no tests would be a green check that
-checks nothing, so the empty skeletons have none, and the root `test` runs the
-Wrapper's tests and the `tools/` tests (`test:tools`). The pull request that
-adds a package's first test adds its `test` script and its entry in the root
-`test` dependencies.
+`build`; `apps/verify` (`@intraverse/se-client-verify`, private) has `typecheck`
+and `test` (Vitest) and no `build` until its page is built
+([Verify page](./verify-page.md#build-and-release-v-15-to-v-17)). **A package
+gets a `test` script with its first real test**, not before: a `test` script
+that passes with no tests would be a green check that checks nothing, so the
+empty skeletons have none, and the root `test` runs the Wrapper's tests and the
+`tools/` tests (`test:tools`). The pull request that adds a package's first test
+adds its `test` script and its entry in the root `test` dependencies.
 
 Directories are `packages/<name>` and `apps/<name>`. The intended npm names are
 `@intraverse/se-client-<name>` (scope `@intraverse`, decided in
