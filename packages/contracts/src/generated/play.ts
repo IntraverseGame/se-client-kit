@@ -35,6 +35,11 @@ export type paths = {
      * never a Snapshot; retry such a start with a new key. `actionKey` is the
      * address the shell signs the round's actions with: it is sealed with the
      * round and cannot change during it.
+     *
+     * After a lost response, `UNAVAILABLE` or `INTERNAL`, the round may
+     * already have been started: the same key and body answer it, so sending
+     * them again is safe. A resend may fail the same way;
+     * `GET /play/v1/snapshot` shows the round either way.
      */
     post: operations["startRound"];
   };
@@ -48,6 +53,11 @@ export type paths = {
      * answers the round; another action signed at an accepted sequence
      * number is `STALE_ACTION`. For now, the engine's own stale refusals (a
      * wrong `sequence` or `previous`) answer `INVALID_ARGUMENT`.
+     *
+     * After a lost response, `UNAVAILABLE` or `INTERNAL`, the move may
+     * already have been taken: the same request (key and signed action)
+     * answers the round, so resending it is safe. A resend may fail the same
+     * way; `GET /play/v1/snapshot` shows the round either way.
      */
     post: operations["continueRound"];
   };
@@ -536,6 +546,11 @@ export type operations = {
    * never a Snapshot; retry such a start with a new key. `actionKey` is the
    * address the shell signs the round's actions with: it is sealed with the
    * round and cannot change during it.
+   *
+   * After a lost response, `UNAVAILABLE` or `INTERNAL`, the round may
+   * already have been started: the same key and body answer it, so sending
+   * them again is safe. A resend may fail the same way;
+   * `GET /play/v1/snapshot` shows the round either way.
    */
   startRound: {
     requestBody: {
@@ -568,6 +583,11 @@ export type operations = {
    * answers the round; another action signed at an accepted sequence
    * number is `STALE_ACTION`. For now, the engine's own stale refusals (a
    * wrong `sequence` or `previous`) answer `INVALID_ARGUMENT`.
+   *
+   * After a lost response, `UNAVAILABLE` or `INTERNAL`, the move may
+   * already have been taken: the same request (key and signed action)
+   * answers the round, so resending it is safe. A resend may fail the same
+   * way; `GET /play/v1/snapshot` shows the round either way.
    */
   continueRound: {
     requestBody: {

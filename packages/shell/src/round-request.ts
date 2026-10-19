@@ -75,7 +75,12 @@ export const asksResync = (error: unknown): boolean =>
  * true`, or a 503 with no problem body, which carries no `retryable` at all). A
  * 503 marked `retryable: false` is not an unknown outcome (no resend), as W-42
  * reads `retryable`; the cancel still reads after it (W-25; decided in human
- * review, 2026-10-18).
+ * review, 2026-10-18). The Play API document (since se-backend 075b850) says a
+ * move or a cash-out may already have been taken after a lost response,
+ * `UNAVAILABLE`, or `INTERNAL`, and that resending the same request is safe;
+ * the kit stays more conservative and resends neither after a 503 marked
+ * `retryable: false` nor after a 500 `INTERNAL`: the reads decide (human
+ * review, 2026-10-19).
  */
 export const isUnknownOutcome = (error: unknown): boolean =>
   error instanceof NetworkError ||
@@ -102,12 +107,14 @@ export const mayBeStored = (error: unknown): boolean =>
  * body are sent once more, and never a third time, the transport's own repeats
  * aside (W-22, W-36; decided in human review, 2026-10-19): no response, a 503
  * `UNAVAILABLE` whatever its `retryable`, a bare 503, or a 500 `INTERNAL`. The
- * Play API document says the same key and body answer the stored round, even
- * when it has ended, and neither a 503 nor a 500 `INTERNAL` proves nothing was
- * stored. A start voided before any money moved (a 503 of another code, such as
- * `FUNDING_UNCONFIRMED`) is retried with a new key, as the document says, and
- * only by the player; a 500 with another code, a 400, a 409 (`ROUND_ACTIVE`
- * included), and a 422 are not resent either.
+ * Play API document (since se-backend 075b850) says that after a lost response,
+ * `UNAVAILABLE`, or `INTERNAL` the round may already have been started, and the
+ * same key and body answer it, so sending them again is safe; a bare 503 (no
+ * problem body) is the kit's own reading of a lost response. A start voided
+ * before any money moved (a 503 of another code, such as `FUNDING_UNCONFIRMED`)
+ * is retried with a new key, as the document says, and only by the player; a
+ * 500 with another code, a 400, a 409 (`ROUND_ACTIVE` included), and a 422 are
+ * not resent either.
  */
 export const startMayBeStored = (error: unknown): boolean =>
   error instanceof NetworkError ||

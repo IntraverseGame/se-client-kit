@@ -131,6 +131,21 @@ Rules:
    that stays `resolving` ends in `check-later` ("still resolving — contact
    support").
 
+   **A start, a move, or a cash-out that may have been taken** (the Play API
+   document's `startRound` and `continueRound` descriptions, which
+   `cashOutRound` follows, synced from se-backend `075b850`; no schema, route,
+   vector, field, or status changed): after a lost response, `UNAVAILABLE`, or
+   `INTERNAL`, the round may already have been started, or the move taken; the
+   same key and body (for a move, the same key and signed action) answer it, so
+   sending them again is safe. A resend may fail the same way, and
+   `GET /play/v1/snapshot` shows the round either way. The shell sends a start
+   again once after those, and after a 503 with no problem body (W-22). For a
+   move or a cash-out it stays more conservative (decided in human review,
+   2026-10-19; W-16): its one resend follows only a lost send (no answer, or a
+   503 not marked `retryable: false`) and a read that shows it not applied;
+   after a 500 `INTERNAL`, or a 503 marked `retryable: false`, it resends
+   nothing, the action stays pending, and the reads decide.
+
    **The payout** (the Snapshot schema, the Play API document, and the `payout`
    vectors, synced from se-backend `f8cc92b`): an additive change, a new
    optional top-level `payout`, an `Amount` computed by the server and never

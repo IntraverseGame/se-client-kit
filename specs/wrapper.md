@@ -190,48 +190,56 @@ the storage rule, what may outlive a page, and serializing the key's use. See
   get past, a bare 503 with no problem body included (it carries no
   `retryable`). A 503 marked `retryable: false` is never resent, as W-42 reads
   `retryable`: a move or a cash-out settles by a read or by its expiry rule, and
-  the cancel keeps reading, since a 503 may come with it stored (W-25). The
-  backend recognises a repeat by its signed action (its sequence and bytes) in
-  the round's action log, not by the key, which it requires and checks but does
-  not store yet: the same signed bytes sent again are answered with the round
-  when they were applied (even once the round has closed) and processed normally
-  when they were not, so the shell still sends the same key and never re-signs.
-  Another action at an accepted sequence is a 409 `STALE_ACTION` (today the
-  backend's own stale refusals still arrive as a 400 `INVALID_ARGUMENT`); either
-  answer to a resend is a refusal (W-19), with no further send. The one resend
-  is shared by every path: the shell's own after the read and any resend the
-  player asks for, so that action is sent at most twice. It never re-signs,
-  never sends that action a third time, never resends once a read showed it
-  applied, the step moved on, or the round no longer `active`, and never in a
-  state that takes no resend (W-19's hold, a failed check, out of sync, or the
-  session ended). A re-issue (W-26) does not stop it: the resend is not a new
-  signature, so a move or a cash-out already signed is never stranded. The
-  cancel flow differs on purpose: after a re-issue it resends nothing (W-25). If
-  the resend fails too, the action stays pending, nothing new is signed at that
-  sequence, and the round ends as this item says (by a read that shows it
-  applied, or by its expiry rule). While the round is still `active` with that
-  move or cash-out neither applied nor refused, the Wrapper shows it as **not
-  confirmed** (decided in human review, 2026-10-19; the session's
-  `RoundState.unconfirmed`), never as a plain round in play: "Your move hasn't
-  been confirmed" (or "Your cash-out hasn't been confirmed"), "If it never
-  arrives, the round ends by its time limit.", the round id, and "Check again".
-  The expiry is text only, with no clock. "Check again" reads the round once (a
-  click while that read is in flight does nothing), and the Wrapper reads it
-  once every 30 s in the background (W-35); neither ever sends or signs
-  anything. A typed error stops the background read, as it stops every poll,
-  until the player tries again or checks again: "Check again", like "Try again",
-  first clears the typed error shown. The game stays waiting. Any read that
-  settles the round clears the state: the move applied shows the result, and the
-  step moved on or the round ended follow their usual rules. Only a lost resend
-  gives the state: a resend answered with a 503 marked `retryable: false` keeps
-  the handling above. A `PlayerCancel` is the exception: the backend does not
-  answer a repeated cancel from a log, so the shell sends a cancel again only
-  after it read the Snapshot (W-25), never as a blind resend, and only when that
-  read showed the round `active` with no move: a read that fails instead puts
-  the cancel in settling, and the resend is forgone; after the resend, a second
-  unknown outcome and an `active` read with no move put it in settling too, with
-  no third send, and so does a re-issued `active` read with no move after an
-  unknown outcome (W-25).
+  the cancel keeps reading, since a 503 may come with it stored (W-25). The Play
+  API document (since se-backend `075b850`) says that after a lost response,
+  `UNAVAILABLE`, or `INTERNAL` the move (or the cash-out) may already have been
+  taken, and that the same request (key and signed action) answers the round, so
+  resending it is safe. The kit stays more conservative (decided in human
+  review, 2026-10-19): after a 500 `INTERNAL`, or a 503 marked
+  `retryable: false`, it never resends the move or the cash-out; the action
+  stays pending and the reads decide (by a read that shows it applied, or by its
+  expiry rule). The one resend after a lost send (no answer, or a 503 not marked
+  `retryable: false`) is unchanged. The backend recognises a repeat by its
+  signed action (its sequence and bytes) in the round's action log, not by the
+  key, which it requires and checks but does not store yet: the same signed
+  bytes sent again are answered with the round when they were applied (even once
+  the round has closed) and processed normally when they were not, so the shell
+  still sends the same key and never re-signs. Another action at an accepted
+  sequence is a 409 `STALE_ACTION` (today the backend's own stale refusals still
+  arrive as a 400 `INVALID_ARGUMENT`); either answer to a resend is a refusal
+  (W-19), with no further send. The one resend is shared by every path: the
+  shell's own after the read and any resend the player asks for, so that action
+  is sent at most twice. It never re-signs, never sends that action a third
+  time, never resends once a read showed it applied, the step moved on, or the
+  round no longer `active`, and never in a state that takes no resend (W-19's
+  hold, a failed check, out of sync, or the session ended). A re-issue (W-26)
+  does not stop it: the resend is not a new signature, so a move or a cash-out
+  already signed is never stranded. The cancel flow differs on purpose: after a
+  re-issue it resends nothing (W-25). If the resend fails too, the action stays
+  pending, nothing new is signed at that sequence, and the round ends as this
+  item says (by a read that shows it applied, or by its expiry rule). While the
+  round is still `active` with that move or cash-out neither applied nor
+  refused, the Wrapper shows it as **not confirmed** (decided in human review,
+  2026-10-19; the session's `RoundState.unconfirmed`), never as a plain round in
+  play: "Your move hasn't been confirmed" (or "Your cash-out hasn't been
+  confirmed"), "If it never arrives, the round ends by its time limit.", the
+  round id, and "Check again". The expiry is text only, with no clock. "Check
+  again" reads the round once (a click while that read is in flight does
+  nothing), and the Wrapper reads it once every 30 s in the background (W-35);
+  neither ever sends or signs anything. A typed error stops the background read,
+  as it stops every poll, until the player tries again or checks again: "Check
+  again", like "Try again", first clears the typed error shown. The game stays
+  waiting. Any read that settles the round clears the state: the move applied
+  shows the result, and the step moved on or the round ended follow their usual
+  rules. Only a lost resend gives the state: a resend answered with a 503 marked
+  `retryable: false` keeps the handling above. A `PlayerCancel` is the
+  exception: the backend does not answer a repeated cancel from a log, so the
+  shell sends a cancel again only after it read the Snapshot (W-25), never as a
+  blind resend, and only when that read showed the round `active` with no move:
+  a read that fails instead puts the cancel in settling, and the resend is
+  forgone; after the resend, a second unknown outcome and an `active` read with
+  no move put it in settling too, with no third send, and so does a re-issued
+  `active` read with no move after an unknown outcome (W-25).
 - **W-17.** `PlayerCancel` and the first `PlayerAction` of a round are both at
   sequence 1. After the shell signs one, it MUST NOT sign the other for that
   round (signing both is equivocation).

@@ -3,8 +3,9 @@
 // address. There is no signed start: nothing is signed here, and the round's
 // `CreateRoundAuth` then commits to that address (W-26, check 3). A start whose
 // round may exist although its answer was lost is sent once more with the same
-// key and body (`startMayBeStored`), which the Play API document answers with
-// the stored round.
+// key and body (`startMayBeStored`): the Play API document says that after a
+// lost response, `UNAVAILABLE`, or `INTERNAL` the round may already have been
+// started, and the same key and body answer it.
 
 import {
   newIntent,
@@ -49,12 +50,13 @@ export type StartRoundFlowOptions = RoundFlowOptions & {
  * anything is sent; an answer that is not a valid Snapshot of a round is
  * `snapshot-rejected`. A start whose round may exist (`startMayBeStored`: no
  * response, a 503 `UNAVAILABLE` or a bare 503, a 500 `INTERNAL`) is sent once
- * more, right away, with the same `idempotencyKey` and body (W-22, W-36), once
- * the lock is checked again: a page that lost it, or a session that ended,
- * sends nothing more (`lock-not-held`, `session-ended`). The resend's answer is
- * read as a first answer would be, and its failure is thrown; the shell never
- * sends the start a third time, the transport's own repeats aside. `hooks` is
- * test-only (typed-data.ts): production passes none.
+ * more, right away, with the same `idempotencyKey` and body, which the Play API
+ * document says answer a round already started (W-22, W-36), once the lock is
+ * checked again: a page that lost it, or a session that ended, sends nothing
+ * more (`lock-not-held`, `session-ended`). The resend's answer is read as a
+ * first answer would be, and its failure is thrown; the shell never sends the
+ * start a third time, the transport's own repeats aside. `hooks` is test-only
+ * (typed-data.ts): production passes none.
  */
 export const startRoundFlow = async (
   options: StartRoundFlowOptions,

@@ -45,11 +45,14 @@ Part of the [Wrapper spec](../wrapper.md), section
   it again right away, once, with the same `idempotencyKey` and the same body
   (W-36). The signer lock is checked again before the resend, as before the
   first send: a page that lost it sends nothing more (`lock-not-held`), and a
-  session that ended sends nothing more either. The Play API document says the
-  same key and body answer the stored round, even when it has ended; the kit
-  reads a 503 or a 500 `INTERNAL` as no proof that nothing was stored, as it
-  does for the cancel (W-25). Without the resend the round could exist while the
-  shell holds nothing, and the player's next start (a new key) would be answered
+  session that ended sends nothing more either. The Play API document (since
+  se-backend `075b850`) says that after a lost response, `UNAVAILABLE`, or
+  `INTERNAL` the round may already have been started, that the same key and body
+  answer it (even when it has ended), so sending them again is safe, and that a
+  resend may fail the same way, with `GET /play/v1/snapshot` showing the round
+  either way. A 503 with no problem body is the kit's own reading of a lost
+  response. Without the resend the round could exist while the shell holds
+  nothing, and the player's next start (a new key) would be answered
   `ROUND_ACTIVE` with a round the shell cannot sign in. The resend's answer is
   read as a first answer is (the round it answers, an ended one included, is the
   round the shell holds), and a failure of the resend is handled as a first

@@ -478,7 +478,10 @@ are in brackets.
   is `snapshot-rejected`. It signs nothing. A start whose round may exist
   (`startMayBeStored`: no response, a 503 `UNAVAILABLE` whatever its
   `retryable`, a bare 503, or a 500 `INTERNAL`) is sent once more, right away,
-  with the same key and body; the resend's answer is read as a first answer is,
+  with the same key and body (the Play API document since se-backend `075b850`:
+  after a lost response, `UNAVAILABLE`, or `INTERNAL` the round may already have
+  been started, and the same key and body answer it; a bare 503 is the kit's own
+  reading of a lost response); the resend's answer is read as a first answer is,
   and its failure is thrown as a first failure is; the shell never sends it a
   third time (the transport's own repeats aside). The lock is checked again
   before the resend: a page that lost it sends nothing more (`lock-not-held`),
@@ -529,7 +532,10 @@ are in brackets.
     an unknown outcome (`lost`, `isUnknownOutcome`: no response, or a 503 not
     marked `retryable: false` after the transport's own retries, a 503 with no
     problem body included; a 503 marked `retryable: false` is not lost, as W-42
-    reads `retryable`, and is never resent) until a send of it is answered. When
+    reads `retryable`, and is never resent, nor is a 500 `INTERNAL`, though the
+    Play API document since se-backend `075b850` says resending the same request
+    after either is safe: the kit stays more conservative and the reads decide;
+    decided in human review, 2026-10-19) until a send of it is answered. When
     the flow then observes a read of the round, the newest it has read by
     `version` (a late, older read decides nothing), that shows it `active` at
     the step before that action (`step = sequence - 1`), with the action still
