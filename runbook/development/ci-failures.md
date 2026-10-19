@@ -106,6 +106,14 @@ pnpm clean:cache && pnpm build
   points in `exports`; the guard and the tools resolve through it.
 - **The same failure on every rerun.** Not #53 (a download fails at random).
   Look at the build's own output and its `output` globs in `package.json`.
+- **`lint:ts` fails with `Failed to open file …/packages/<name>/dist/index.js`
+  (`No such file or directory`).** Not #53, and not a lint finding: oxlint's
+  import plugin follows an import of a kit package through its `exports` into
+  its `dist/` and opens the files, and a package build ran at the same time
+  (wireit deletes a script's output before it runs). `lint:ts` depends on the
+  five package builds so that never overlaps; if it fails this way, check that
+  its `dependencies` still name every `./packages/<name>:build`
+  (`tools/wireit-edges.test.ts` holds it to that).
 
 ## Escalation
 

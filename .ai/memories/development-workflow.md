@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-18 (#53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
+last-verified: 2026-10-19 (wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
 ---
 
 # Development workflow
@@ -142,7 +142,19 @@ Several agents and people work in one clone at once. Rules:
   Unchanged tasks are skipped from the local cache in `.wireit/` (git-ignored,
   **per worktree**, as is `node_modules`: run `pnpm install --frozen-lockfile`
   once in each worktree). A script with no `files` is never cached
-  (`format`, `test:e2e`). If a result looks stale, `pnpm clean:cache`.
+  (`format`, `test:e2e`); e2e's `test` still declares the variables it reads
+  (`SE_E2E_PROJECT`, `SE_E2E_BROWSER_CHANNEL`, `CI`) as `external` `env`.
+  `lint:ts` depends on the five package builds: oxlint's import plugin opens
+  kit packages' `dist/` through their `exports`, and a build running beside it
+  made it fail ("Failed to open file …/dist/index.js"). So `pnpm lint` and
+  CI's lint job now build (or restore) the five packages first; before, with
+  no `dist/`, `import/no-cycle` silently skipped cross-package edges. The two
+  Vite builds declare `NODE_ENV` as `external` `env` (a development build
+  otherwise shares the production one's cache key); the tsdown builds do not
+  read it. A script that reads another package's `dist/` needs the build edge;
+  `tools/wireit-edges.test.ts` holds the edges and the declarations, and its
+  scan of `process.env["X"]` relies on `noPropertyAccessFromIndexSignature`.
+  If a result looks stale, `pnpm clean:cache`.
 - **CI cache.** Workflows set `WIREIT_CACHE=github` and the local composite
   action `.github/actions/setup` starts `google/wireit`'s caching helper (pinned
   by commit SHA) and installs with `--frozen-lockfile --ignore-scripts`, so no

@@ -12,6 +12,11 @@
   "wireit": {
     "build": {
       "command": "vite build",
+      "env": {
+        "NODE_ENV": {
+          "external": true
+        }
+      },
       "files": [
         "index.html",
         "public/**",
