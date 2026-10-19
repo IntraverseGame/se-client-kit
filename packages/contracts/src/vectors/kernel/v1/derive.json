@@ -1,0 +1,1486 @@
+{
+  "set": "kernel/public/v1/derive",
+  "kernelVersion": 1,
+  "spec": "SuperEngine fairness kernel, kernelVersion 1: step losers along a path",
+  "description": "Step losers along a path: losers_j = StepsDerive(seed, [(n_0, k_0), ..., (n_j, k_j)])[j], so step j depends only on (seed, j, n_j, k_j); losers ascending",
+  "vectors": [
+    {
+      "vector": "kernel/public/v1/derive/board-3-3-4",
+      "description": "Cash or Crash [3, 3, 4], reference seed, path [0, 1, 2]: losers [2], [0], [1]",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "terms": {
+          "nodes": [
+            {
+              "options": 3,
+              "losers": 1,
+              "next": [
+                1
+              ]
+            },
+            {
+              "options": 3,
+              "losers": 1,
+              "next": [
+                2
+              ]
+            },
+            {
+              "options": 4,
+              "losers": 1,
+              "next": []
+            }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [
+          0,
+          1,
+          2
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "losers": [
+              2
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 1,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 2,
+            "losers": [
+              1
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/derive/board-3-3-4-first-step",
+      "description": "Cash or Crash [3, 3, 4], path [0]: only step 0 is drawn",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "terms": {
+          "nodes": [
+            {
+              "options": 3,
+              "losers": 1,
+              "next": [
+                1
+              ]
+            },
+            {
+              "options": 3,
+              "losers": 1,
+              "next": [
+                2
+              ]
+            },
+            {
+              "options": 4,
+              "losers": 1,
+              "next": []
+            }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [
+          0
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "losers": [
+              2
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/derive/n4-k2",
+      "description": "One node n = 4, k = 2, reference seed: losers {1, 2}",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "terms": {
+          "nodes": [
+            {
+              "options": 4,
+              "losers": 2,
+              "next": []
+            }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [
+          0
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "losers": [
+              1,
+              2
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/derive/n1-k0",
+      "description": "n = 1 with k = 0 at step 1 and k = 0 at step 2: no losers",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "terms": {
+          "nodes": [
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                1
+              ]
+            },
+            {
+              "options": 1,
+              "losers": 0,
+              "next": [
+                2
+              ]
+            },
+            {
+              "options": 3,
+              "losers": 0,
+              "next": []
+            }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [
+          0,
+          1,
+          2
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "losers": [
+              1
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 1,
+            "losers": [],
+            "acceptedAtCtr": []
+          },
+          {
+            "node": 2,
+            "losers": [],
+            "acceptedAtCtr": []
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/derive/branch-0-1",
+      "description": "Branching tree, path [0, 1]: step 1 in node 1 (n = 2, k = 1)",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "terms": {
+          "nodes": [
+            {
+              "options": 3,
+              "losers": 1,
+              "next": [
+                1,
+                2
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": []
+            },
+            {
+              "options": 4,
+              "losers": 1,
+              "next": [
+                3
+              ]
+            },
+            {
+              "options": 5,
+              "losers": 2,
+              "next": []
+            }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [
+          0,
+          1
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "losers": [
+              2
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 1,
+            "losers": [
+              1
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/derive/branch-0-2-3",
+      "description": "Branching tree, path [0, 2, 3]: step 1 in node 2 (n = 4) draws the same (j, t) stream as node 1 with another n",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "terms": {
+          "nodes": [
+            {
+              "options": 3,
+              "losers": 1,
+              "next": [
+                1,
+                2
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": []
+            },
+            {
+              "options": 4,
+              "losers": 1,
+              "next": [
+                3
+              ]
+            },
+            {
+              "options": 5,
+              "losers": 2,
+              "next": []
+            }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [
+          0,
+          2,
+          3
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "losers": [
+              2
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 2,
+            "losers": [
+              3
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 3,
+            "losers": [
+              0,
+              2
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/derive/deepest-chain-25",
+      "description": "The deepest path: a chain of 25 nodes with n = 2, k = 1",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "terms": {
+          "nodes": [
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                1
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                2
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                3
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                4
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                5
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                6
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                7
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                8
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                9
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                10
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                11
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                12
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                13
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                14
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                15
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                16
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                17
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                18
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                19
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                20
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                21
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                22
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                23
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": [
+                24
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 1,
+              "next": []
+            }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "losers": [
+              1
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 1,
+            "losers": [
+              1
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 2,
+            "losers": [
+              1
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 3,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 4,
+            "losers": [
+              1
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 5,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 6,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 7,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 8,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 9,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 10,
+            "losers": [
+              1
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 11,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 12,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 13,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 14,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 15,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 16,
+            "losers": [
+              1
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 17,
+            "losers": [
+              1
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 18,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 19,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 20,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 21,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 22,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 23,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 24,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/derive/deepest-chain-25-mixed",
+      "description": "A chain of 25 nodes with n = 2 + j mod 24 and k = 7j mod n (k = 0 at j = 0, k up to 22)",
+      "input": {
+        "seed": "c99afadf866c0c970500bd6459abde67bfae698fba18ab6a44d307c83eccd976",
+        "terms": {
+          "nodes": [
+            {
+              "options": 2,
+              "losers": 0,
+              "next": [
+                1
+              ]
+            },
+            {
+              "options": 3,
+              "losers": 1,
+              "next": [
+                2
+              ]
+            },
+            {
+              "options": 4,
+              "losers": 2,
+              "next": [
+                3
+              ]
+            },
+            {
+              "options": 5,
+              "losers": 1,
+              "next": [
+                4
+              ]
+            },
+            {
+              "options": 6,
+              "losers": 4,
+              "next": [
+                5
+              ]
+            },
+            {
+              "options": 7,
+              "losers": 0,
+              "next": [
+                6
+              ]
+            },
+            {
+              "options": 8,
+              "losers": 2,
+              "next": [
+                7
+              ]
+            },
+            {
+              "options": 9,
+              "losers": 4,
+              "next": [
+                8
+              ]
+            },
+            {
+              "options": 10,
+              "losers": 6,
+              "next": [
+                9
+              ]
+            },
+            {
+              "options": 11,
+              "losers": 8,
+              "next": [
+                10
+              ]
+            },
+            {
+              "options": 12,
+              "losers": 10,
+              "next": [
+                11
+              ]
+            },
+            {
+              "options": 13,
+              "losers": 12,
+              "next": [
+                12
+              ]
+            },
+            {
+              "options": 14,
+              "losers": 0,
+              "next": [
+                13
+              ]
+            },
+            {
+              "options": 15,
+              "losers": 1,
+              "next": [
+                14
+              ]
+            },
+            {
+              "options": 16,
+              "losers": 2,
+              "next": [
+                15
+              ]
+            },
+            {
+              "options": 17,
+              "losers": 3,
+              "next": [
+                16
+              ]
+            },
+            {
+              "options": 18,
+              "losers": 4,
+              "next": [
+                17
+              ]
+            },
+            {
+              "options": 19,
+              "losers": 5,
+              "next": [
+                18
+              ]
+            },
+            {
+              "options": 20,
+              "losers": 6,
+              "next": [
+                19
+              ]
+            },
+            {
+              "options": 21,
+              "losers": 7,
+              "next": [
+                20
+              ]
+            },
+            {
+              "options": 22,
+              "losers": 8,
+              "next": [
+                21
+              ]
+            },
+            {
+              "options": 23,
+              "losers": 9,
+              "next": [
+                22
+              ]
+            },
+            {
+              "options": 24,
+              "losers": 10,
+              "next": [
+                23
+              ]
+            },
+            {
+              "options": 25,
+              "losers": 11,
+              "next": [
+                24
+              ]
+            },
+            {
+              "options": 2,
+              "losers": 0,
+              "next": []
+            }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "losers": [],
+            "acceptedAtCtr": []
+          },
+          {
+            "node": 1,
+            "losers": [
+              2
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 2,
+            "losers": [
+              0,
+              2
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "node": 3,
+            "losers": [
+              2
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 4,
+            "losers": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 5,
+            "losers": [],
+            "acceptedAtCtr": []
+          },
+          {
+            "node": 6,
+            "losers": [
+              5,
+              6
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "node": 7,
+            "losers": [
+              2,
+              3,
+              4,
+              7
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 8,
+            "losers": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              9
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 9,
+            "losers": [
+              0,
+              1,
+              2,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 10,
+            "losers": [
+              0,
+              1,
+              2,
+              4,
+              5,
+              6,
+              8,
+              9,
+              10,
+              11
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 11,
+            "losers": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 12,
+            "losers": [],
+            "acceptedAtCtr": []
+          },
+          {
+            "node": 13,
+            "losers": [
+              11
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 14,
+            "losers": [
+              7,
+              13
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "node": 15,
+            "losers": [
+              6,
+              14,
+              15
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 16,
+            "losers": [
+              1,
+              3,
+              10,
+              14
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 17,
+            "losers": [
+              6,
+              8,
+              12,
+              16,
+              18
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 18,
+            "losers": [
+              5,
+              7,
+              11,
+              13,
+              14,
+              18
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 19,
+            "losers": [
+              8,
+              11,
+              12,
+              14,
+              15,
+              16,
+              20
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 20,
+            "losers": [
+              0,
+              6,
+              10,
+              11,
+              13,
+              16,
+              19,
+              20
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 21,
+            "losers": [
+              1,
+              5,
+              6,
+              7,
+              11,
+              18,
+              19,
+              20,
+              21
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 22,
+            "losers": [
+              3,
+              4,
+              5,
+              6,
+              7,
+              14,
+              16,
+              17,
+              19,
+              23
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 23,
+            "losers": [
+              4,
+              5,
+              6,
+              8,
+              9,
+              11,
+              12,
+              13,
+              17,
+              20,
+              23
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "node": 24,
+            "losers": [],
+            "acceptedAtCtr": []
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/derive/board-3-3-4-other-seed",
+      "description": "Cash or Crash [3, 3, 4] with another seed",
+      "input": {
+        "seed": "5c361a5bd759fc59f04fbe121fd40db4117af6e68f81849d202cdcd88e0b1fd5",
+        "terms": {
+          "nodes": [
+            {
+              "options": 3,
+              "losers": 1,
+              "next": [
+                1
+              ]
+            },
+            {
+              "options": 3,
+              "losers": 1,
+              "next": [
+                2
+              ]
+            },
+            {
+              "options": 4,
+              "losers": 1,
+              "next": []
+            }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [
+          0,
+          1,
+          2
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 1,
+            "losers": [
+              0
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "node": 2,
+            "losers": [
+              3
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

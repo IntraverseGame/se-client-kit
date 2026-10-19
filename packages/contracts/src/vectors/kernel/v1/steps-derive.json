@@ -1,0 +1,908 @@
+{
+  "set": "kernel/public/v1/steps-derive",
+  "kernelVersion": 1,
+  "spec": "SuperEngine fairness kernel, kernelVersion 1: StepsDerive over ShuffleDraw",
+  "description": "StepsDerive(seed, steps): per step j, the k_j losers among n_j options by the forward partial Fisher-Yates over ShuffleDraw(\"steps-v1\", seed, j, t, n_j - t); losers listed ascending",
+  "vectors": [
+    {
+      "vector": "kernel/public/v1/steps-derive/board-3-3-4",
+      "description": "Cash or Crash [3, 3, 4] with one loser per row, reference seed; losers [2], [0], [1]",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 3,
+            "k": 1
+          },
+          {
+            "n": 3,
+            "k": 1
+          },
+          {
+            "n": 4,
+            "k": 1
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              2
+            ],
+            "draws": [
+              "2"
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "losers": [
+              0
+            ],
+            "draws": [
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "losers": [
+              1
+            ],
+            "draws": [
+              "1"
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/n4-k2",
+      "description": "n = 4, k = 2, reference seed; the forward partial Fisher-Yates gives {1, 2} (a backward one would give {1, 3})",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 4,
+            "k": 2
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              1,
+              2
+            ],
+            "draws": [
+              "1",
+              "1"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/k-equals-n",
+      "description": "k = n = 4: every option is a loser, all four draws still run",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 4,
+            "k": 4
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "draws": [
+              "1",
+              "1",
+              "1",
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/k-zero",
+      "description": "k = 0: no draws, no losers",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 5,
+            "k": 0
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [],
+            "draws": [],
+            "acceptedAtCtr": []
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/n1-k1",
+      "description": "n = 1, k = 1: the only option loses, one draw with m = 1",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 1,
+            "k": 1
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              0
+            ],
+            "draws": [
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/n1-k0",
+      "description": "n = 1, k = 0: no draw",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 1,
+            "k": 0
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [],
+            "draws": [],
+            "acceptedAtCtr": []
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/mixed-steps",
+      "description": "Steps with different n and k, including a k = 0 step in the middle: [(3, 1), (6, 0), (5, 2), (2, 2)]",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 3,
+            "k": 1
+          },
+          {
+            "n": 6,
+            "k": 0
+          },
+          {
+            "n": 5,
+            "k": 2
+          },
+          {
+            "n": 2,
+            "k": 2
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              2
+            ],
+            "draws": [
+              "2"
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "losers": [],
+            "draws": [],
+            "acceptedAtCtr": []
+          },
+          {
+            "losers": [
+              0,
+              2
+            ],
+            "draws": [
+              "2",
+              "1"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "losers": [
+              0,
+              1
+            ],
+            "draws": [
+              "0",
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/ten-steps",
+      "description": "Ten steps of n = 10, k = 2: j runs 0..9",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 10,
+            "k": 2
+          },
+          {
+            "n": 10,
+            "k": 2
+          },
+          {
+            "n": 10,
+            "k": 2
+          },
+          {
+            "n": 10,
+            "k": 2
+          },
+          {
+            "n": 10,
+            "k": 2
+          },
+          {
+            "n": 10,
+            "k": 2
+          },
+          {
+            "n": 10,
+            "k": 2
+          },
+          {
+            "n": 10,
+            "k": 2
+          },
+          {
+            "n": 10,
+            "k": 2
+          },
+          {
+            "n": 10,
+            "k": 2
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              2,
+              7
+            ],
+            "draws": [
+              "7",
+              "1"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "losers": [
+              8,
+              9
+            ],
+            "draws": [
+              "9",
+              "7"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "losers": [
+              0,
+              7
+            ],
+            "draws": [
+              "7",
+              "6"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "losers": [
+              2,
+              8
+            ],
+            "draws": [
+              "8",
+              "1"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "losers": [
+              7,
+              9
+            ],
+            "draws": [
+              "7",
+              "8"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "losers": [
+              1,
+              6
+            ],
+            "draws": [
+              "6",
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "losers": [
+              0,
+              2
+            ],
+            "draws": [
+              "2",
+              "1"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "losers": [
+              1,
+              4
+            ],
+            "draws": [
+              "4",
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "losers": [
+              1,
+              4
+            ],
+            "draws": [
+              "4",
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          },
+          {
+            "losers": [
+              4,
+              6
+            ],
+            "draws": [
+              "6",
+              "3"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/n-max-k2",
+      "description": "n = 2^32 (the largest n), k = 2: an implementation must not allocate n slots",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 4294967296,
+            "k": 2
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              149965841,
+              766006449
+            ],
+            "draws": [
+              "766006449",
+              "149965840"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/n-max-k0",
+      "description": "n = 2^32, k = 0: no draw",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 4294967296,
+            "k": 0
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [],
+            "draws": [],
+            "acceptedAtCtr": []
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/n-large-k3",
+      "description": "n = 2^31 + 7, k = 3, seed = keccak256(\"steps large 0\")",
+      "input": {
+        "seed": "1f6aee9df46ad40949d0c7dd6fcefb68b0e13f2ef90715276028730b5b632dcc",
+        "steps": [
+          {
+            "n": 2147483655,
+            "k": 3
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              600803135,
+              988925290,
+              1873429672
+            ],
+            "draws": [
+              "988925290",
+              "1873429671",
+              "600803133"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/no-steps",
+      "description": "An empty step list derives nothing",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": []
+      },
+      "expected": {
+        "steps": []
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/zero-seed",
+      "description": "All-zero seed, board [3, 3, 4]",
+      "input": {
+        "seed": "0000000000000000000000000000000000000000000000000000000000000000",
+        "steps": [
+          {
+            "n": 3,
+            "k": 1
+          },
+          {
+            "n": 3,
+            "k": 1
+          },
+          {
+            "n": 4,
+            "k": 1
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              2
+            ],
+            "draws": [
+              "2"
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "losers": [
+              0
+            ],
+            "draws": [
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "losers": [
+              0
+            ],
+            "draws": [
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/ff-seed",
+      "description": "All-0xff seed, board [3, 3, 4]",
+      "input": {
+        "seed": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "steps": [
+          {
+            "n": 3,
+            "k": 1
+          },
+          {
+            "n": 3,
+            "k": 1
+          },
+          {
+            "n": 4,
+            "k": 1
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              0
+            ],
+            "draws": [
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "losers": [
+              0
+            ],
+            "draws": [
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          },
+          {
+            "losers": [
+              1
+            ],
+            "draws": [
+              "1"
+            ],
+            "acceptedAtCtr": [
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/n8-k3-0",
+      "description": "n = 8, k = 3; seed = keccak256(\"steps 8-3 0\")",
+      "input": {
+        "seed": "ada913d0c200f48720327b11b5700b7d8e56b35299ec487e007525ba8a867d22",
+        "steps": [
+          {
+            "n": 8,
+            "k": 3
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              1,
+              3,
+              5
+            ],
+            "draws": [
+              "5",
+              "0",
+              "1"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/n8-k3-1",
+      "description": "n = 8, k = 3; seed = keccak256(\"steps 8-3 1\")",
+      "input": {
+        "seed": "7f130deb055e319b1f065a4556f7b2c9ce89eb299c41c395b0c24d0ea1770e1d",
+        "steps": [
+          {
+            "n": 8,
+            "k": 3
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              1,
+              5,
+              6
+            ],
+            "draws": [
+              "1",
+              "4",
+              "4"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/n8-k3-2",
+      "description": "n = 8, k = 3; seed = keccak256(\"steps 8-3 2\")",
+      "input": {
+        "seed": "6fa72c3738ec5b4a16582288766ecd88c56f9ac39849d943c855387d363c9caa",
+        "steps": [
+          {
+            "n": 8,
+            "k": 3
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "losers": [
+              1,
+              2,
+              3
+            ],
+            "draws": [
+              "3",
+              "0",
+              "0"
+            ],
+            "acceptedAtCtr": [
+              0,
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/invalid-seed-short",
+      "description": "A 31-byte seed",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed",
+        "steps": [
+          {
+            "n": 3,
+            "k": 1
+          }
+        ]
+      },
+      "expected": {
+        "error": "seed-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/invalid-n-zero",
+      "description": "n = 0 is not a step, even with k = 0",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 0,
+            "k": 0
+          }
+        ]
+      },
+      "expected": {
+        "error": "n-out-of-range"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/invalid-n-too-large",
+      "description": "n = 2^32 + 1 is above the cap",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 4294967297,
+            "k": 1
+          }
+        ]
+      },
+      "expected": {
+        "error": "n-out-of-range"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/invalid-k-above-n",
+      "description": "k = 5 losers among n = 4 options",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 4,
+            "k": 5
+          }
+        ]
+      },
+      "expected": {
+        "error": "k-out-of-range"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/invalid-k-second-step",
+      "description": "The second step has k > n",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 3,
+            "k": 1
+          },
+          {
+            "n": 3,
+            "k": 4
+          }
+        ]
+      },
+      "expected": {
+        "error": "k-out-of-range"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/invalid-order-seed-before-n",
+      "description": "A bad seed and n = 0: the seed is checked first",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed",
+        "steps": [
+          {
+            "n": 0,
+            "k": 0
+          }
+        ]
+      },
+      "expected": {
+        "error": "seed-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/steps-derive/invalid-order-n-before-k",
+      "description": "Step 0 has k > n and step 1 has n = 0: every n is checked before any k",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "steps": [
+          {
+            "n": 3,
+            "k": 4
+          },
+          {
+            "n": 0,
+            "k": 0
+          }
+        ]
+      },
+      "expected": {
+        "error": "n-out-of-range"
+      }
+    }
+  ]
+}

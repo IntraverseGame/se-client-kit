@@ -67,6 +67,9 @@ describe("sync", () => {
     expect(entries.map(entry => entry.path)).toEqual([
       "src/schemas/play.v1.openapi.yaml",
       "src/schemas/se.snapshot.v1.schema.json",
+      "src/vectors/kernel/v1/derive.json",
+      "src/vectors/kernel/v1/seed.json",
+      "src/vectors/kernel/v1/steps-derive.json",
       "src/vectors/signing.json",
       "src/vectors/snapshot/invalid/b.json",
       "src/vectors/snapshot/signature/d.json",
@@ -122,6 +125,27 @@ describe("sync", () => {
       syncInto(changed);
     }).toThrow(/append-only; refusing to change/u);
     expect(verifyLock(packageDir)).toEqual([]);
+  });
+
+  it("records each fairness kernel vector set under its set id, append-only", () => {
+    syncInto(memorySource());
+    expect(
+      readLock(packageDir)
+        .entries.filter(e => e.path.startsWith("src/vectors/kernel/"))
+        .map(e => [e.path, e.sourceName]),
+    ).toEqual([
+      ["src/vectors/kernel/v1/derive.json", "kernel/public/v1/derive"],
+      ["src/vectors/kernel/v1/seed.json", "kernel/public/v1/seed"],
+      [
+        "src/vectors/kernel/v1/steps-derive.json",
+        "kernel/public/v1/steps-derive",
+      ],
+    ]);
+    const changed = memorySource();
+    changed.files.set("k/derive.json", '{"k":99}\n');
+    expect(() => {
+      syncInto(changed);
+    }).toThrow(/derive\.json: vector files are append-only/u);
   });
 
   it("changes a locked vector only when told to", () => {

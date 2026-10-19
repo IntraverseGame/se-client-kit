@@ -182,29 +182,34 @@ export const catalogSource = (packageDir: string): string => {
     BANNER("the vendored files under src/vectors/"),
     "// Test-only: only the `testing` entry imports this module.\n",
   ];
-  const groups: string[] = [];
   let counter = 0;
+  /** Import every file of a folder under src/vectors/; its members by name. */
+  const folderGroup = (folder: string, key: string): string => {
+    const names = findFiles(join(root, folder), () => true);
+    const members: string[] = [];
+    for (const file of names) {
+      const identifier = `vector${String(counter)}`;
+      counter += 1;
+      lines.push(
+        `import ${identifier} from "./${folder}/${file}" with { type: "json" };`,
+      );
+      members.push(`    ${JSON.stringify(vectorName(file))}: ${identifier},`);
+    }
+    return `  ${key}: {\n${members.join("\n")}\n  },`;
+  };
   // Each folder under src/vectors/snapshot/ and the key it is exported under.
-  const folders = [
+  const snapshotFolders = [
     ["valid", "valid"],
     ["invalid", "invalid"],
     ["signature", "signature"],
     ["typed-data", "typedData"],
     ["signed-action", "signedAction"],
   ] as const;
-  for (const [kind, key] of folders) {
-    const names = findFiles(join(root, "snapshot", kind), () => true);
-    const members: string[] = [];
-    for (const file of names) {
-      const identifier = `vector${String(counter)}`;
-      counter += 1;
-      lines.push(
-        `import ${identifier} from "./snapshot/${kind}/${file}" with { type: "json" };`,
-      );
-      members.push(`    ${JSON.stringify(vectorName(file))}: ${identifier},`);
-    }
-    groups.push(`  ${key}: {\n${members.join("\n")}\n  },`);
-  }
+  const snapshotGroups = snapshotFolders.map(([kind, key]) =>
+    folderGroup(`snapshot/${kind}`, key),
+  );
+  // Each kernel version's folder under src/vectors/kernel/.
+  const kernelGroups = [folderGroup("kernel/v1", "v1")];
   lines.push(
     'import signing from "./signing.json" with { type: "json" };',
     "",
@@ -225,9 +230,16 @@ export const catalogSource = (packageDir: string): string => {
     "  readonly signedAction: VectorSet;",
     "};",
     "",
+    "export type KernelVectors = {",
+    "  /** The SuperEngine fairness kernel, kernelVersion 1: its public sets, by file name. */",
+    "  readonly v1: VectorSet;",
+    "};",
+    "",
     "export const signingVectors: unknown = signing;",
     "",
-    `export const snapshotVectors: SnapshotVectors = {\n${groups.join("\n")}\n};`,
+    `export const snapshotVectors: SnapshotVectors = {\n${snapshotGroups.join("\n")}\n};`,
+    "",
+    `export const kernelVectors: KernelVectors = {\n${kernelGroups.join("\n")}\n};`,
     "",
   );
   return lines.join("\n");

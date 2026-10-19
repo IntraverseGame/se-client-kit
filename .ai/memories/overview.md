@@ -1,6 +1,6 @@
 ---
 description: What se-client-kit is, why it is public, the package map, and its boundary to the backend. Read first on any task.
-last-verified: 2026-10-17 (play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
+last-verified: 2026-10-19 (fairness kernel vectors pull request: the public kernel vector bundle joins the shared contracts; play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
 ---
 
 # Overview
@@ -43,9 +43,11 @@ Details: [architecture.md](./architecture.md).
 
 The player-facing contracts are defined by a separate, private backend
 repository and are **copied** here as documents: the Play API document, the
-Snapshot schema and vectors, the signed-action specification, and the signing
-vectors. Neither side imports the other's code. Refer to those contracts by
-name only; never paste private text or link to private repositories.
+Snapshot schema and vectors, the signed-action specification, the signing
+vectors, and the public vector bundle of the SuperEngine fairness kernel,
+kernelVersion 1 (its sets `kernel/public/v1/*`). Neither side imports the
+other's code. Refer to those contracts by name only; never paste private text
+or link to private repositories.
 
 ## Current state
 

@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-19 (Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-19 (fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -211,6 +211,13 @@ structure below.
   it yet (the `TODO(Snapshot contract)` under W-31 in
   `specs/wrapper/rendering-from-the-snapshot.md`: the display is a pull
   request of its own) and never computes a payout (W-34).
+- The fairness kernel's public vector sets (the SuperEngine fairness kernel,
+  kernelVersion 1: `kernel/public/v1/seed`, `steps-derive`, `derive`) are
+  vendored as data only, under `vectors/kernel/v1/`, each locked under its set
+  id. The kit holds no kernel logic: StepsDerive is the verify page's
+  (`apps/verify`), with a raw `keccak256` from `signing`, when it is built. The
+  bundle's path in its source repository never appears here: it lives only in
+  the sync's sources file, outside the repository.
 
 ## Things not to "fix"
 
@@ -282,7 +289,10 @@ structure below.
 
 - **The verify page** is the kit's (backend TPO, 2026-10-18), specified in
   `specs/verify-page.md` and not built: it waits for the verify API document
-  (`TODO(verify API)`) and for the fairness kernel's vectors in `contracts`.
+  (`TODO(verify API)`); the fairness kernel's public vectors are in
+  `contracts` (`kernelVectors.v1`, from se-backend `ad36bc4`), with none yet
+  for ShuffleDraw alone, Coin Flip's payouts, or `roundSecretHash`, which the
+  page checks against its definition.
   Its checks 5 and 7 follow the SuperEngine fairness kernel, kernelVersion 1
   (public; SHA-256 commitments and seed via Web Crypto, StepsDerive with a raw
   `keccak256` that `signing` will export). Decided 2026-10-18: a new private app `apps/verify`
