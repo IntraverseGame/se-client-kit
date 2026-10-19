@@ -7,8 +7,9 @@
 // claim, and a `canceled` result is the round failed verification and canceled
 // (W-26). Money is the
 // Snapshot's `formatted`; a choice compares `value` as a `bigint`
-// (bet-options.ts). No payout is shown on `won`: the Snapshot carries none yet
-// (TODO(Snapshot contract) in the rendering spec), and none is ever computed.
+// (bet-options.ts). No payout is shown on `won` yet: the Snapshot carries
+// `payout` now, and its display comes in a pull request of its own
+// (TODO(Snapshot contract) in the rendering spec); none is ever computed.
 
 import { betChoice } from "./bet-options.ts";
 import { endedView } from "./cancel-views.ts";

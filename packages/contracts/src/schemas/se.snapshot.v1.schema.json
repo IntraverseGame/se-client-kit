@@ -36,6 +36,7 @@
     },
     "currentMultiplier": { "$ref": "#/$defs/Multiplier" },
     "bankedAmount": { "$ref": "#/$defs/Amount" },
+    "payout": { "description": "What the finished round credits the player, in base units: on won and lost only; 0 when nothing is credited. Computed by the server; never derived from a multiplier.", "$ref": "#/$defs/Amount" },
     "config": { "$ref": "#/$defs/GameConfig" },
     "proofs": { "$ref": "#/$defs/FairnessContext" }
   },
@@ -182,6 +183,11 @@
       "$comment": "A book draw is shown only on won and lost, never on canceled.",
       "if": { "properties": { "status": { "const": "canceled" } } },
       "then": { "properties": { "config": { "not": { "required": ["draw"] } } } }
+    },
+    {
+      "$comment": "payout is what a finished round credits, so it is shown on won and lost only. A canceled round's bet is returned, not paid, so it carries none.",
+      "if": { "properties": { "status": { "enum": ["idle", "starting", "active", "resolving", "canceled"] } } },
+      "then": { "not": { "required": ["payout"] } }
     }
   ],
   "$defs": {

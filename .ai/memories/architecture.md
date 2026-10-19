@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-18 (backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-19 (Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -204,6 +204,13 @@ structure below.
   `proofs.createRoundAuth` required on a config Snapshot with `proofs`, and
   changed or removed existing vectors; the kit vendored it with
   `--allow-vector-change`. After the first release, additive only.
+- The Snapshot's `payout` (synced from the backend's f8cc92b) is an optional
+  server-computed `Amount` on `won` and `lost` only. The generator emits it as
+  `Amount1`, a structural copy of `Amount` that, like `Snapshot1`, is not
+  exported (`tools/contracts-public-types.test.ts`). The Wrapper does not show
+  it yet (the `TODO(Snapshot contract)` under W-31 in
+  `specs/wrapper/rendering-from-the-snapshot.md`: the display is a pull
+  request of its own) and never computes a payout (W-34).
 
 ## Things not to "fix"
 

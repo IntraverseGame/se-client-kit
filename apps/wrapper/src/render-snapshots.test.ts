@@ -129,9 +129,10 @@ describe("status details (W-31 to W-33)", () => {
     expect(ui.host.querySelector(".se-icon--progress")).toBeNull();
   });
 
-  it("shows no payout amount on won: the Snapshot carries none yet", () => {
-    // Until the Snapshot contract adds a server-computed payout `Amount`, none
-    // is shown, and none is ever computed from a multiplier (W-34).
+  it("shows no payout amount on won until the payout display is built", () => {
+    // The Snapshot carries a server-computed `payout` now, but the Wrapper
+    // shows it only from the payout display's own pull request; none is ever
+    // computed from a multiplier (W-34).
     const ui = rendered(snapshotVector("coinflip-won"));
     expect(allText(ui.host)).not.toMatch(/payout/iu);
   });

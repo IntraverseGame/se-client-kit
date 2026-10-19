@@ -398,6 +398,8 @@ components:
           $ref: "#/components/schemas/Multiplier"
         bankedAmount:
           $ref: "#/components/schemas/Amount"
+        payout:
+          $ref: "#/components/schemas/Amount"
         config:
           $ref: "#/components/schemas/GameConfig"
         proofs:

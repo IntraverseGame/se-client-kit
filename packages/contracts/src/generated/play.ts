@@ -178,6 +178,7 @@ export type components = {
       step?: number;
       currentMultiplier?: components["schemas"]["Multiplier"];
       bankedAmount?: components["schemas"]["Amount"];
+      payout?: components["schemas"]["Amount"];
       config: components["schemas"]["GameConfig"];
       proofs?: components["schemas"]["FairnessContext"];
     };
