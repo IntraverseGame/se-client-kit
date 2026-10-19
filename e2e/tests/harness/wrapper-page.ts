@@ -45,6 +45,7 @@ export const TEXT = {
   outOfSync: "This round is out of sync",
   rejected: "The game state could not be read",
   verify: "Verify this round",
+  lobby: "Back to the lobby",
 } as const;
 
 /**

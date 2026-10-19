@@ -18,6 +18,16 @@ export const PAGES_ORIGIN = "https://pages.e2e.test";
  */
 export const GAME_ORIGIN = "https://game.e2e-games.test";
 
+/**
+ * The fake operator page A (T-9a): on `operatorOrigins` when a test lists it,
+ * with its lobby and deposit pages (`tests/operator`). A registrable domain of
+ * its own.
+ */
+export const OPERATOR_ORIGIN = "https://casino.e2e-operator.test";
+
+/** The same pages on an origin no configuration lists (T-9a). */
+export const UNLISTED_ORIGIN = "https://pages.e2e-unlisted.test";
+
 export const WRAPPER_DIST = fileURLToPath(
   new URL("../../../apps/wrapper/dist/", import.meta.url),
 );
@@ -28,6 +38,11 @@ export const REFERENCE_GAME_DIST = fileURLToPath(
 );
 
 export const TEST_PAGES = fileURLToPath(new URL("../pages/", import.meta.url));
+
+/** The fake operator's pages (`tests/operator`). */
+export const OPERATOR_PAGES = fileURLToPath(
+  new URL("../operator/", import.meta.url),
+);
 
 /** The fixed server time of the fake Play API. */
 export const FAKE_NOW = new Date("2026-10-16T12:00:00.000Z");

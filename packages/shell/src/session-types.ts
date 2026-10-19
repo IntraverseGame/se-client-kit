@@ -75,12 +75,13 @@ export type RoundState = {
 
 /**
  * The game frame's mount: the frame, its messages, and the incompatible-game
- * notice. The game origin, the allow-list, the Wrapper's own origin, and the
- * pick use case are the session's own, fixed at open (W-37).
+ * notice. The game origin, the allow-list, the Wrapper's own origin, the
+ * configuration's `environment`, and the pick use case are the session's own,
+ * fixed at open (W-37).
  */
 export type GameMountOptions = Omit<
   ControllerBridgeOptions,
-  "gameOrigin" | "gameOrigins" | "ownOrigin" | "pick"
+  "gameOrigin" | "gameOrigins" | "ownOrigin" | "environment" | "pick"
 >;
 
 export type GameMount =

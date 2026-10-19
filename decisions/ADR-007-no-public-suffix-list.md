@@ -48,10 +48,10 @@ that never accepts a pair on the same registrable domain:
    are loopback hosts (`localhost`, `127.0.0.1`, `[::1]`), only an equal origin
    is refused: local development serves the Wrapper and the game from one
    machine on different ports. In `preview` and `production` the rule applies to
-   loopback hosts like any other, so two loopback origins there are refused. The
-   bridge is given the environment, with the allow-list and the Wrapper's
-   origin, when the session opens from the accepted configuration; the UI cannot
-   pass it.
+   loopback hosts like any other, so two origins on one loopback host are
+   refused there (wording decided 2026-10-19; the rule is W-37's). The bridge is
+   given the environment, with the allow-list and the Wrapper's origin, when the
+   session opens from the accepted configuration; the UI cannot pass it.
 
 **Why it is sound.** A registrable domain has at least two labels, so two hosts
 on the same registrable domain always share their last two labels: the
@@ -96,7 +96,9 @@ two labels, which a production setup does anyway.
 ## Open questions (for acceptance)
 
 1. **The refusal code's name** for the bridge (for example `same-site`). For the
-   implementer to propose with #42.
+   implementer to propose with #42. Proposed and built with #42: `same-site`
+   (`ControllerMountRefusal`), for the human to confirm with this decision's
+   acceptance.
 
 Decided by the human on 2026-10-18, and folded into the decision above: the
 loopback exemption applies only when the configuration's `environment` is

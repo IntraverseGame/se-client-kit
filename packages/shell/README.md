@@ -7,15 +7,16 @@ game.
 **Status:** pre-release. Not published to npm yet. Today the public entry holds
 the redacting logger, the package's error type, the validation of the chain part
 of the environment configuration, the game bridge with the `se.controller/1`
-message types, the Snapshot reader, and the session: `takeLaunchCode`,
-`discardLaunchCode`, and `openPlaySession`, whose use cases (`read`,
-`checkAgain`, `start`, `cashOut`, the game's pick through `mountGame`) and
-read-only round state (with the required cancel's state) are what a UI gets. Key
-custody, the signer lock, the transcript state, the play token and its refresh,
-the chain tip check, the round's `CreateRoundAuth` and `T_0` checks, and the one
-cancel a round that failed only its tip check requires are built and tested
-inside the package and are not exposed. The bind mode is a provisional input
-until the contract that carries it is published.
+message types, the operator channel with the `se.operator/1` message types, the
+Snapshot reader, and the session: `takeLaunchCode`, `discardLaunchCode`, and
+`openPlaySession`, whose use cases (`read`, `checkAgain`, `start`, `cashOut`,
+the game's pick through `mountGame`) and read-only round state (with the
+required cancel's state) are what a UI gets. Key custody, the signer lock, the
+transcript state, the play token and its refresh, the chain tip check, the
+round's `CreateRoundAuth` and `T_0` checks, and the one cancel a round that
+failed only its tip check requires are built and tested inside the package and
+are not exposed. The bind mode is a provisional input until the contract that
+carries it is published.
 
 ## Install
 

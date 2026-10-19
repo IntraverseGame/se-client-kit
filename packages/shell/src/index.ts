@@ -5,9 +5,13 @@
 // Security Policy). The game bridge and the `se.controller/1` message types are
 // public because the Wrapper mounts the game iframe and owns the window it
 // talks through; the bridge holds no secret and no signing capability, and gets
-// the pick use case injected. The Snapshot reader is public because the
-// Wrapper UI renders only Snapshots and typed errors the shell validated (W-28,
-// W-42); it returns data, never a key, a token, or a signing capability.
+// the pick use case injected. The operator channel and the `se.operator/1`
+// message types are public for the same reason: the Wrapper routes the parent
+// window's messages to it and awaits its handshake before it opens the
+// session; it holds no secret and posts only `welcome` and `resize`. The
+// Snapshot reader is public because the Wrapper UI renders only Snapshots and
+// typed errors the shell validated (W-28, W-42); it returns data, never a key,
+// a token, or a signing capability.
 //
 // The session (`openPlaySession`) is the UI's way to play: it opens the
 // session from the launch code, holds the play token and the key, and gives
@@ -59,6 +63,25 @@ export {
   type WrapperMessage,
 } from "./controller-protocol.ts";
 export { ShellError, type ShellErrorCode } from "./errors.ts";
+export {
+  createOperatorChannel,
+  HANDSHAKE_TIMEOUT_MS,
+  type HandshakeOutcome,
+  type HandshakeRefusal,
+  type OperatorChannel,
+  type OperatorChannelState,
+  type OperatorCheck,
+  type OperatorMessageEvent,
+  type OperatorWindow,
+} from "./operator-channel.ts";
+export {
+  MAX_RESIZE_HEIGHT,
+  OPERATOR_SCHEMA,
+  type OperatorBoundMessage,
+  type OperatorHello,
+  type ResizeMessage,
+  type WelcomeMessage,
+} from "./operator-protocol.ts";
 export type { BindMode, FailReason } from "./chain-decision.ts";
 export {
   discardLaunchCode,

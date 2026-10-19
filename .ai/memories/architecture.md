@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-19 (verify kernel pull request: `apps/verify` with the kernel derivations of checks 5 and 7, `signing`'s raw `keccak256`; start resend pull request: `startMayBeStored`, W-22's one resend of a start whose round may exist; Play API document 075b850: a start, move, or cash-out may be stored after a lost response, `UNAVAILABLE`, or `INTERNAL`; Play API document b47b286: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request, 726f0a2: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-19 (operator launch contract pull request, #42: the shell's operator channel and `serialized-origin.ts`, the Wrapper's operator gate, dispatch, and links; verify kernel pull request: `apps/verify` with the kernel derivations of checks 5 and 7, `signing`'s raw `keccak256`; start resend pull request: `startMayBeStored`, W-22's one resend of a start whose round may exist; Play API document 075b850: a start, move, or cash-out may be stored after a lost response, `UNAVAILABLE`, or `INTERNAL`; Play API document b47b286: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request, 726f0a2: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -210,8 +210,16 @@ structure below.
   Provisional session input: `bindMode` (the Wrapper wires `tip`). D is the
   redeem answer's `gameOrigin`, fixed at open; no session option gives it, so
   do not add one back (W-37). W-37's registrable-domain rule is the
-  last-two-labels comparison of ADR-007 (proposed; built with #42): do not add
-  a public suffix list.
+  last-two-labels comparison of ADR-007 (proposed; built: `serialized-origin.ts`,
+  the bridge's `same-site` refusal): do not add a public suffix list. The bridge
+  takes the configuration's `environment` from the session (the loopback
+  exemption is `local` only); the UI's mount cannot pass it.
+  The operator channel (`operator-channel.ts`, `operator-protocol.ts`) is the
+  shell's, beside the bridge: it records an early `hello`, `check` accepts or
+  refuses it (or times out after 10 s on the injected clock), posts only
+  `welcome` and `resize` to the fixed origin, and holds no secret. Do not add
+  operator messages beyond `hello`, `welcome`, and `resize` (a change is
+  `se.operator/2`), and never take a URL or a capability from one.
 - **A Snapshot is untrusted until validated.** `play-client` returns it as
   `unknown`; only `snapshot`'s validator produces a typed value, so an
   unvalidated Snapshot cannot reach the renderer by construction.
@@ -321,18 +329,23 @@ structure below.
   `RoundState` to the UI's `RoundCheck`, and mounts the game frame (sandboxed,
   `src` set only after the bridge accepted D, with `?parentOrigin=`), into a
   game host `render.ts` builds once and never re-renders. `json-rpc.ts` is the
-  tip check's transport. `embedding.ts` is W-49's fail-closed minimum, checked
-  in `boot.ts` before the session opens: a framed page needs
-  `location.ancestorOrigins` with every entry on `operatorOrigins` (`"null"`
-  refuses; no list refuses, a path no browser the suite runs takes: Firefox
-  has the list too) until #42 builds the accepted
-  contract (`specs/wrapper/operator-embedding.md`, W-49a to W-49f; ADR-006,
-  proposed): direct embedding only, the `se.operator/1` handshake (operator
-  first, record-then-check) gating the redeem, the start, and every signature,
-  in the shell beside the controller bridge, and lobby and deposit as anchors to
-  `context.links`, never messages. Do not relax the minimum to "allow when
-  unknown" meanwhile, and do not add operator messages beyond `hello`,
-  `welcome`, and `resize` (a change is `se.operator/2`). The UI reads only its input types (`round-input.ts`),
+  tip check's transport. The operator contract
+  (`specs/wrapper/operator-embedding.md`, W-49a to W-49f; ADR-006, proposed)
+  is built: `message-dispatch.ts` is the page's one `message` listener,
+  installed at boot before the configuration is read and routing by `source`
+  (the parent to the shell's operator channel, the game frame to the bridge);
+  `embedding.ts` is W-49a's framing decision (direct embedding only; with
+  `location.ancestorOrigins`, exactly one listed entry); `operator-gate.ts`
+  awaits the handshake before `boot.ts` opens the session, so nothing is
+  redeemed, signed, mounted, or offered before `welcome`, and starts
+  `height-observer.ts` for `resize` after it; `operator-links.ts` builds the
+  lobby and deposit anchors from `context.links` in W-49f's states only, once
+  the gate opened (`allowLinks`), never while a start or cash-out call is in
+  flight (`callInFlight`, from `session-wiring.ts`), and the "chain check not
+  independent" notice hides nothing. Never relax a refusal to "allow when
+  unknown", never navigate from script, and keep the configuration's
+  disjoint-origins rule (`overlapping-origins`) checked against the page's own
+  origin. The UI reads only its input types (`round-input.ts`),
   handed over already validated by the session; it imports only `shell`
   (lint). The build adds SRI, a `<meta>` CSP, the
   headers file, and the integrity manifest, then verifies the output directory

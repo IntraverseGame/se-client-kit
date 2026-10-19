@@ -8,6 +8,7 @@
 
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
+import type { Environment } from "./chain-config.ts";
 import {
   type ActionMessage,
   CONTROLLER_SCHEMA,
@@ -18,6 +19,7 @@ import {
   type WrapperMessage,
 } from "./controller-protocol.ts";
 import { isCompatible, parseGameMessage } from "./game-message.ts";
+import { isSerializedOrigin, mayShareSite } from "./serialized-origin.ts";
 
 /** The game frame's window (`iframe.contentWindow`): only `postMessage`. */
 export type GameFrame = {
@@ -58,12 +60,17 @@ export type PickOutcome =
 export type PickUseCase = (pick: Pick) => Promise<PickOutcome>;
 
 export type ControllerBridgeOptions = {
-  /** The game origin D, taken from the environment configuration (W-37). */
+  /** The game origin D, the `sessions:redeem` answer's `gameOrigin` (W-37). */
   readonly gameOrigin: string;
   /** The configuration's allow-list of game origins (`gameOrigins`). */
   readonly gameOrigins: readonly string[];
   /** The Wrapper's own origin, the SE origin. */
   readonly ownOrigin: string;
+  /**
+   * The configuration's `environment`: only `local` exempts two loopback hosts
+   * from the registrable-domain rule (W-37, ADR-007).
+   */
+  readonly environment: Environment;
   readonly frame: GameFrame;
   readonly listen: ListenForMessages;
   readonly pick: PickUseCase;
@@ -82,7 +89,12 @@ export type ControllerMountRefusal =
   /** D is not on the configuration's allow-list. */
   | "origin-not-allowed"
   /** D is the Wrapper's own origin. */
-  | "same-origin";
+  | "same-origin"
+  /**
+   * D's host shares its comparison key (its last two labels) with the
+   * Wrapper's: they may be on one registrable domain (W-37, ADR-007).
+   */
+  | "same-site";
 
 /** Where the bridge is. */
 export type ControllerBridgeState =
@@ -112,49 +124,17 @@ export type ControllerBridgeResult =
   | { readonly ok: true; readonly bridge: ControllerBridge }
   | { readonly ok: false; readonly refusal: ControllerMountRefusal };
 
-// A serialized origin, as `event.origin` gives it: `https://host[:port]`, or
-// `http:` on a loopback host only; lowercase, no path, no credentials. A host
-// is dot-separated labels of 1 to 63 letters, digits, or hyphens, none starting
-// or ending with a hyphen, with no empty label and no trailing dot. A port is
-// 1 to 65535 without a leading zero, and never the scheme's default (`:443`,
-// `:80`), which a serialized origin omits. `null` and `*` are not origins.
-const ORIGIN = /^(https|http):\/\/([^:/]+|\[::1\])(?::([0-9]+))?$/u;
-const LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u;
-const LOOPBACK: ReadonlySet<string> = new Set([
-  "localhost",
-  "127.0.0.1",
-  "[::1]",
-]);
-const DEFAULT_PORT: Readonly<Record<string, string>> = {
-  https: "443",
-  http: "80",
-};
-
-const isPort = (port: string, scheme: string): boolean =>
-  /^[1-9][0-9]{0,4}$/u.test(port) &&
-  Number(port) <= 65_535 &&
-  port !== DEFAULT_PORT[scheme];
-
-const isOrigin = (value: unknown): value is string => {
-  if (typeof value !== "string") return false;
-  const match = ORIGIN.exec(value);
-  if (match === null) return false;
-  const [, scheme = "", host = "", port] = match;
-  if (port !== undefined && !isPort(port, scheme)) return false;
-  if (scheme === "http") return LOOPBACK.has(host);
-  return host.split(".").every(label => LABEL.test(label));
-};
-
 const checkMount = (
   options: ControllerBridgeOptions,
 ): ControllerMountRefusal | undefined => {
-  const { gameOrigin, ownOrigin, gameOrigins } = options;
-  if (!isOrigin(gameOrigin) || !isOrigin(ownOrigin)) return "invalid-origin";
+  const { gameOrigin, ownOrigin, gameOrigins, environment } = options;
+  if (!isSerializedOrigin(gameOrigin) || !isSerializedOrigin(ownOrigin)) {
+    return "invalid-origin";
+  }
   if (gameOrigin === ownOrigin) return "same-origin";
+  // W-37's "different registrable domain", by the comparison key (ADR-007).
+  if (mayShareSite(gameOrigin, ownOrigin, environment)) return "same-site";
   if (!gameOrigins.includes(gameOrigin)) return "origin-not-allowed";
-  // Not checked here: W-37's "different registrable domain" needs a public
-  // suffix list, a new dependency that needs an ADR (the shell spec's open
-  // item). Only an equal origin is refused.
   return undefined;
 };
 

@@ -66,13 +66,13 @@ describe("typed errors (W-42, T-16)", () => {
   );
 
   it.each(["SESSION_EXPIRED", "SESSION_REVOKED", "UNAUTHENTICATED"])(
-    "%s shows the session-ended state with the lobby link",
+    "%s shows the session-ended state with the lobby as the way to relaunch",
     code => {
       const ui = idleWith(problem(code, false));
       expect(statusHeading(ui.host)).toBe(m["state.sessionEnded"]);
-      expect(linkNamed(ui.host, m["action.lobby"])?.getAttribute("href")).toBe(
-        "https://luckybet.example.com/lobby",
-      );
+      expect(
+        linkNamed(ui.host, m["action.relaunch"])?.getAttribute("href"),
+      ).toBe("https://luckybet.example.com/lobby");
       // Nothing is polled after the session ended.
       ui.app.accept(
         { kind: "snapshot", snapshot: snapshotVector("coinflip-won") },

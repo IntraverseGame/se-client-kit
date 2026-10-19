@@ -61,6 +61,15 @@ type AnswerKind<Id extends PlayOperationId> =
           /** 200 with the `valid/` Snapshot vector of this name. */
           readonly kind: "snapshot";
           readonly vector: string;
+          /**
+           * The operator's `context.links` in place of the vector's (T-9a: a
+           * lobby and a deposit on the fake operator's origin); each an
+           * `https:` URL, as the schema requires.
+           */
+          readonly links?: {
+            readonly lobby?: string;
+            readonly deposit?: string;
+          };
         }
       : never)
   | (Id extends SnapshotOperationId
@@ -174,9 +183,12 @@ export const snapshotBody = (
   answer: Extract<Answer, { readonly kind: "snapshot" | "snapshot-version" }>,
 ): Readonly<Record<string, unknown>> => {
   const { input } = validVector(answer.vector, "Snapshot");
-  return answer.kind === "snapshot"
-    ? input
-    : { ...input, version: answer.version };
+  if (answer.kind === "snapshot-version") {
+    return { ...input, version: answer.version };
+  }
+  if (answer.links === undefined) return input;
+  const context = input["context"] as Readonly<Record<string, unknown>>;
+  return { ...input, context: { ...context, links: answer.links } };
 };
 
 /** Checks a scripted answer against the document before it is queued. */

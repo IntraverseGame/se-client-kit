@@ -45,7 +45,7 @@ export const blockingView = (
       ];
     }
     case "session-ended": {
-      const lobby = state.snapshot?.context.links?.lobby;
+      // The lobby, the way to relaunch, is a control of its own (W-49f).
       return [
         heading(
           el,
@@ -57,8 +57,6 @@ export const blockingView = (
           m["icon.info"],
         ),
         el("p", { class: "se-detail" }, [m["state.sessionEndedDetail"]]),
-        lobby !== undefined &&
-          externalLink(el, m, lobby, "action.lobby", "lobby"),
       ];
     }
     case "other-tab": {
@@ -143,7 +141,6 @@ export type AlertContent = {
   readonly lines: readonly string[];
   readonly requestId?: string;
   readonly roundId?: string;
-  readonly deposit?: string;
   readonly retry: boolean;
 };
 
@@ -212,7 +209,7 @@ export const alertContent = (
   }
   const { problem } = state;
   if (problem !== undefined) {
-    const deposit = state.snapshot?.context.links?.deposit;
+    // `INSUFFICIENT_FUNDS` at `idle` keeps the deposit control (W-49f).
     return {
       key: `problem:${problem.code}:${problem.requestId ?? ""}`,
       heading: m["error.heading"],
@@ -220,9 +217,6 @@ export const alertContent = (
       ...(problem.requestId === undefined
         ? {}
         : { requestId: problem.requestId }),
-      ...(problem.code === "INSUFFICIENT_FUNDS" && deposit !== undefined
-        ? { deposit }
-        : {}),
       retry: problem.retryable,
     };
   }
@@ -282,8 +276,6 @@ export const alertView = (
     ...(error.roundId === undefined
       ? []
       : roundIdAndVerify(el, m, error.roundId, options, announce)),
-    error.deposit !== undefined &&
-      externalLink(el, m, error.deposit, "action.deposit", "deposit"),
     error.retry &&
       retry !== undefined &&
       button(el, m["action.retry"], "retry", retry),

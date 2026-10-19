@@ -189,6 +189,42 @@ describe("the open session", () => {
     });
   });
 
+  it("applies W-37's registrable-domain rule with the configuration's environment (ADR-007)", async () => {
+    const loopback = {
+      gameOrigin: "http://localhost:5174",
+      gameOrigins: ["http://localhost:5174"],
+      ownOrigin: "http://localhost:5173",
+    };
+    const local = sessionOf(
+      await open({
+        ...loopback,
+        config: { ...issued.config, environment: "local" },
+      }),
+    );
+    expect(local.mountGame(mountOf(createFakeGame())).ok).toBe(true);
+    const elsewhere = await Promise.all(
+      (["preview", "production"] as const).map(async environment =>
+        sessionOf(
+          await open({
+            ...loopback,
+            config: { ...issued.config, environment },
+          }),
+        ),
+      ),
+    );
+    // A caller that slips in another environment past the type.
+    const widened = {
+      ...mountOf(createFakeGame()),
+      environment: "local",
+    } as ReturnType<typeof mountOf>;
+    for (const session of elsewhere) {
+      expect(session.mountGame(widened)).toEqual({
+        ok: false,
+        refusal: "same-site",
+      });
+    }
+  });
+
   it.each(["SESSION_EXPIRED", "SESSION_REVOKED", "UNAUTHENTICATED"])(
     "ends on %s: the key and the token are gone, and nothing more is sent",
     async code => {

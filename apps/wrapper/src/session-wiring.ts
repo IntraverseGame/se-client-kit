@@ -12,29 +12,19 @@ import type {
   SessionRead,
 } from "@intraverse/se-client-shell";
 
+import type { MessageDispatch } from "./message-dispatch.ts";
 import { messagesFor } from "./messages.ts";
 import type { RoundCheck, ShownAmount, SnapshotRead } from "./round-input.ts";
 import type { ChangeCause } from "./view-options.ts";
 import type { WrapperApp } from "./wrapper-app.ts";
 
-/** The parts of the page's window the game boundary uses. */
-export type GameWindow = {
-  readonly addEventListener: (
-    type: "message",
-    listener: (event: MessageEvent) => void,
-  ) => void;
-  readonly removeEventListener: (
-    type: "message",
-    listener: (event: MessageEvent) => void,
-  ) => void;
-  /** The Wrapper's own origin, the SE origin. */
-  readonly origin: string;
-};
-
 export type SessionWiringOptions = {
   readonly app: WrapperApp;
   readonly doc: Document;
-  readonly window: GameWindow;
+  /** The Wrapper's own origin, the SE origin: the game URL's `parentOrigin`. */
+  readonly ownOrigin: string;
+  /** The page's one `message` listener: the game frame's route (W-49b). */
+  readonly messages: MessageDispatch;
 };
 
 /** The shell's checks of the round, as the UI reads them. */
@@ -134,7 +124,7 @@ const mountGame = (
   options: SessionWiringOptions,
   session: PlaySession,
 ): void => {
-  const { app, doc, window } = options;
+  const { app, doc, messages } = options;
   const frame = doc.createElement("iframe");
   frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
   frame.setAttribute("referrerpolicy", "no-referrer");
@@ -149,19 +139,8 @@ const mountGame = (
   }
   const mounted = session.mountGame({
     frame: target,
-    listen: handler => {
-      const listener = (event: MessageEvent): void => {
-        handler({
-          source: event.source,
-          origin: event.origin,
-          data: event.data,
-        });
-      };
-      window.addEventListener("message", listener);
-      return (): void => {
-        window.removeEventListener("message", listener);
-      };
-    },
+    // Only the frame's own messages reach the bridge (W-38, W-49b).
+    listen: handler => messages.onGame(target, handler),
     onIncompatible: () => {
       app.gameIncompatible();
     },
@@ -170,7 +149,7 @@ const mountGame = (
     frame.remove();
     return;
   }
-  frame.src = gameUrlOf(mounted.gameOrigin, window.origin);
+  frame.src = gameUrlOf(mounted.gameOrigin, options.ownOrigin);
 };
 
 /**
@@ -196,9 +175,12 @@ export const wireSession = (
   // flight does nothing (the shell refuses a second start or cash-out too).
   let acting = false;
   // A use case that rejects acted on nothing the UI can show: the generic error.
-  const run = (call: () => Promise<SessionRead>): void => {
+  // While a start or cash-out call (`call`, not "check again") is in flight,
+  // no lobby or deposit is offered (W-49f).
+  const run = (call: () => Promise<SessionRead>, isCall = false): void => {
     if (acting) return;
     acting = true;
+    if (isCall) app.callInFlight(true);
     call()
       .then(
         read => {
@@ -212,6 +194,7 @@ export const wireSession = (
       )
       .finally(() => {
         acting = false;
+        if (isCall) app.callInFlight(false);
       });
   };
   session.onEnd(() => {
@@ -226,10 +209,10 @@ export const wireSession = (
       uiReadOf(session, await session.read()),
     intents: {
       start: (bet: ShownAmount): void => {
-        run(() => session.start(betOf(bet)));
+        run(() => session.start(betOf(bet)), true);
       },
       cashOut: (): void => {
-        run(() => session.cashOut());
+        run(() => session.cashOut(), true);
       },
       checkAgain: (): void => {
         run(() => session.checkAgain());

@@ -38,6 +38,7 @@ export type MessageKey =
   | "action.checkAgain"
   | "action.verify"
   | "action.lobby"
+  | "action.relaunch"
   | "action.deposit"
   | "notice.copied"
   | "notice.slow"
@@ -120,6 +121,7 @@ const EN: Messages = {
   "action.checkAgain": "Check again",
   "action.verify": "Verify this round",
   "action.lobby": "Back to the lobby",
+  "action.relaunch": "Relaunch from the lobby",
   "action.deposit": "Make a deposit",
   "notice.copied": "Round ID copied",
   "notice.slow": "This is taking longer than expected.",

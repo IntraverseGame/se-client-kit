@@ -16,20 +16,30 @@ import {
   endpoints,
   environmentDocument,
   localDocument,
+  SE_ORIGIN,
   SOURCE,
 } from "./fixtures/environment.ts";
 
 const codes = (document: unknown): readonly EnvironmentConfigIssueCode[] => {
-  const result = validateEnvironmentConfig(document);
+  const result = validateEnvironmentConfig(document, SE_ORIGIN);
   return result.ok ? [] : result.issues.map(issue => issue.code);
 };
 
 const accepted = (document: unknown): EnvironmentConfig => {
-  const result = validateEnvironmentConfig(document);
+  const result = validateEnvironmentConfig(document, SE_ORIGIN);
   if (!result.ok) {
     throw new Error(result.issues.map(issue => issue.code).join(", "));
   }
   return result.config;
+};
+
+/** The issues of the fixture document with `overrides`, codes and fields. */
+const issuesOf = (overrides: Readonly<Record<string, unknown>>): unknown => {
+  const result = validateEnvironmentConfig(
+    environmentDocument(overrides),
+    SE_ORIGIN,
+  );
+  return result.ok ? [] : result.issues;
 };
 
 describe("validateEnvironmentConfig", () => {
@@ -56,6 +66,7 @@ describe("validateEnvironmentConfig", () => {
   it("refuses a field the schema does not list, naming the field only", () => {
     const result = validateEnvironmentConfig(
       environmentDocument({ telemetryUrl: "https://collector.example" }),
+      SE_ORIGIN,
     );
     expect(result).toEqual({
       ok: false,
@@ -212,6 +223,59 @@ describe("the Wrapper's fields", () => {
     expect(
       codes(environmentDocument({ operatorOrigins: ["operator.example"] })),
     ).toEqual(["invalid-operator-origins"]);
+  });
+
+  describe("the disjoint-origins rule (T-9a, 7)", () => {
+    const GAME = "https://game.example";
+    const OPERATOR = "https://operator.example";
+
+    it.each<[string, readonly string[], readonly string[], readonly string[]]>([
+      [
+        "an operator origin that is a game origin",
+        [GAME],
+        [GAME],
+        ["operatorOrigins"],
+      ],
+      [
+        "an operator origin that is the SE origin",
+        [GAME],
+        [SE_ORIGIN],
+        ["operatorOrigins"],
+      ],
+      [
+        "a game origin that is the SE origin",
+        [GAME, SE_ORIGIN],
+        [OPERATOR],
+        ["gameOrigins"],
+      ],
+      [
+        "both",
+        [SE_ORIGIN, GAME],
+        [OPERATOR, GAME],
+        ["operatorOrigins", "gameOrigins"],
+      ],
+    ])("refuses %s, naming the field only", (_what, game, operator, fields) => {
+      expect(
+        issuesOf({ gameOrigins: game, operatorOrigins: operator }),
+      ).toEqual(fields.map(field => ({ code: "overlapping-origins", field })));
+    });
+
+    it("accepts disjoint lists, and an SE origin on neither", () => {
+      expect(
+        accepted(
+          environmentDocument({
+            gameOrigins: [GAME, "https://games.example"],
+            operatorOrigins: [OPERATOR, "https://lobby.operator.example"],
+          }),
+        ).operatorOrigins,
+      ).toEqual([OPERATOR, "https://lobby.operator.example"]);
+    });
+
+    it("checks the SE origin the Wrapper runs at, not one in the document", () => {
+      const document = environmentDocument({ operatorOrigins: [OPERATOR] });
+      expect(validateEnvironmentConfig(document, OPERATOR).ok).toBe(false);
+      expect(validateEnvironmentConfig(document, SE_ORIGIN).ok).toBe(true);
+    });
   });
 
   it("reports every issue at once", () => {

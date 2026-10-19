@@ -13,6 +13,7 @@ import {
   endpoints,
   environmentDocument,
   localDocument,
+  SE_ORIGIN,
   SOURCE,
 } from "./fixtures/environment.ts";
 import { flush } from "./fixtures/flush.ts";
@@ -65,6 +66,11 @@ const booted = (answers: Answer[], online = true) => {
     fetch,
     configUrl: URL_OF_DOCUMENT,
     logger: createLogger(record => records.push(record)),
+    window: {
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      origin: SE_ORIGIN,
+    },
     connectivity: {
       onLine: () => isOnline,
       subscribe: listener => {
@@ -222,6 +228,7 @@ describe("loadEnvironmentConfig", () => {
     const timers = manualTimers();
     const pending = loadEnvironmentConfig({
       url: URL_OF_DOCUMENT,
+      ownOrigin: SE_ORIGIN,
       timers,
       timeoutMs: 15_000,
       fetch: (_url, init) =>

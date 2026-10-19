@@ -53,6 +53,8 @@ export type ConfigLoadResult =
 export type ConfigLoadOptions = {
   readonly fetch: ConfigFetch;
   readonly url: string;
+  /** The Wrapper's own origin, the SE origin (the disjoint-origins rule). */
+  readonly ownOrigin: string;
   readonly timers: Timers;
   readonly timeoutMs?: number;
 };
@@ -90,7 +92,7 @@ export const loadEnvironmentConfig = async (
         ? { kind: "network" }
         : { kind: "unreadable", status: response.status };
     }
-    const result = validateEnvironmentConfig(document);
+    const result = validateEnvironmentConfig(document, options.ownOrigin);
     return result.ok
       ? { kind: "ok", config: result.config }
       : { kind: "invalid", issues: result.issues };

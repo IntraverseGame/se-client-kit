@@ -1,52 +1,70 @@
-// W-49's fail-closed minimum: a page that is not framed is unchanged; a framed
-// one is allowed only when `location.ancestorOrigins` exists and every entry
-// is on `operatorOrigins`; a masked entry, an unlisted one, an empty list, or
-// no list at all (a browser without `location.ancestorOrigins`) refuses.
+// T-9a, 6: the framing decision (W-49a). A page that is not framed is a
+// standalone launch with no handshake; a nested one is refused on every path;
+// where `location.ancestorOrigins` exists, a framed page goes on to the
+// handshake only with exactly one entry, on `operatorOrigins`; where it is
+// missing, the handshake decides.
 
 import { describe, expect, it } from "vitest";
 
-import { checkEmbedding, embeddingOf } from "./embedding.ts";
+import {
+  checkEmbedding,
+  type EmbeddingContext,
+  embeddingOf,
+} from "./embedding.ts";
 
 const OPERATOR = "https://operator.example";
 const OTHER = "https://evil.example";
 
-describe("checkEmbedding (W-49's minimum)", () => {
-  it("allows a page that is not framed, whatever the list", () => {
-    expect(
-      checkEmbedding({ framed: false, ancestorOrigins: undefined }, []),
-    ).toEqual({ ok: true });
+const framed = (
+  ancestorOrigins?: readonly string[],
+  nested = false,
+): EmbeddingContext => ({ framed: true, nested, ancestorOrigins });
+
+describe("checkEmbedding (W-49a)", () => {
+  it("a page that is not framed needs no handshake, whatever the list", () => {
+    for (const operatorOrigins of [[], [OPERATOR]]) {
+      expect(
+        checkEmbedding(
+          { framed: false, nested: false, ancestorOrigins: [] },
+          operatorOrigins,
+        ),
+      ).toEqual({ ok: true, handshake: false });
+    }
   });
 
-  it("allows a frame whose every ancestor is listed", () => {
-    expect(
-      checkEmbedding({ framed: true, ancestorOrigins: [OPERATOR, OPERATOR] }, [
-        OPERATOR,
-      ]),
-    ).toEqual({ ok: true });
+  it("a frame with one listed ancestor goes on to the handshake", () => {
+    expect(checkEmbedding(framed([OPERATOR]), [OPERATOR])).toEqual({
+      ok: true,
+      handshake: true,
+    });
   });
 
-  it.each([
-    ["an unlisted ancestor", [OTHER], "ancestor-not-allowed"],
-    ["one unlisted among listed", [OPERATOR, OTHER], "ancestor-not-allowed"],
-    ["a masked ancestor", ["null"], "ancestor-masked"],
-    ["a masked one among listed", [OPERATOR, "null"], "ancestor-masked"],
-    ["an empty list", [], "ancestors-unknown"],
-  ])("refuses %s", (_what, ancestorOrigins, reason) => {
-    expect(
-      checkEmbedding({ framed: true, ancestorOrigins }, [OPERATOR]),
-    ).toEqual({ ok: false, reason });
+  it("a frame without location.ancestorOrigins goes on to the handshake", () => {
+    expect(checkEmbedding(framed(), [OPERATOR])).toEqual({
+      ok: true,
+      handshake: true,
+    });
   });
 
-  it("refuses a frame in a browser without `location.ancestorOrigins`: no handshake yet", () => {
-    expect(
-      checkEmbedding({ framed: true, ancestorOrigins: undefined }, [OPERATOR]),
-    ).toEqual({ ok: false, reason: "ancestors-unknown" });
+  it.each<[string, readonly string[] | undefined, boolean, string]>([
+    ["an unlisted ancestor", [OTHER], false, "ancestor-not-allowed"],
+    ["a masked ancestor", ["null"], false, "ancestor-masked"],
+    ["an empty list", [], false, "ancestors-unknown"],
+    ["two listed ancestors", [OPERATOR, OPERATOR], false, "nested"],
+    ["a masked one among two", [OPERATOR, "null"], false, "nested"],
+    ["parent !== top, with the list", [OPERATOR], true, "nested"],
+    ["parent !== top, without the list", undefined, true, "nested"],
+  ])("refuses %s", (_what, ancestorOrigins, nested, reason) => {
+    expect(checkEmbedding(framed(ancestorOrigins, nested), [OPERATOR])).toEqual(
+      { ok: false, reason },
+    );
   });
 
-  it("refuses every frame when no operator is listed", () => {
-    expect(
-      checkEmbedding({ framed: true, ancestorOrigins: [OPERATOR] }, []),
-    ).toEqual({ ok: false, reason: "ancestor-not-allowed" });
+  it("refuses every frame with the list when no operator is listed", () => {
+    expect(checkEmbedding(framed([OPERATOR]), [])).toEqual({
+      ok: false,
+      reason: "ancestor-not-allowed",
+    });
   });
 });
 
@@ -54,24 +72,30 @@ describe("embeddingOf", () => {
   it("reads a top-level page", () => {
     const self = {};
     expect(
-      embeddingOf({ parent: self, self, location: { ancestorOrigins: [] } }),
-    ).toEqual({ framed: false, ancestorOrigins: [] });
+      embeddingOf({
+        parent: self,
+        self,
+        top: self,
+        location: { ancestorOrigins: [] },
+      }),
+    ).toEqual({ framed: false, nested: false, ancestorOrigins: [] });
   });
 
-  it("reads a frame and its ancestors", () => {
+  it("reads a direct frame and its ancestor", () => {
+    const parent = {};
     expect(
       embeddingOf({
-        parent: {},
+        parent,
         self: {},
+        top: parent,
         location: { ancestorOrigins: [OPERATOR] },
       }),
-    ).toEqual({ framed: true, ancestorOrigins: [OPERATOR] });
+    ).toEqual({ framed: true, nested: false, ancestorOrigins: [OPERATOR] });
   });
 
-  it("reads a frame where the platform has no ancestorOrigins", () => {
-    expect(embeddingOf({ parent: {}, self: {}, location: {} })).toEqual({
-      framed: true,
-      ancestorOrigins: undefined,
-    });
+  it("reads a nested frame", () => {
+    expect(
+      embeddingOf({ parent: {}, self: {}, top: {}, location: {} }),
+    ).toEqual({ framed: true, nested: true, ancestorOrigins: undefined });
   });
 });

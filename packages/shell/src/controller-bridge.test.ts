@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import type { Environment } from "./chain-config.ts";
 import { createControllerBridge } from "./controller-bridge.ts";
 import { CONTROLLER_SCHEMA } from "./controller-protocol.ts";
 import {
@@ -47,10 +48,15 @@ const NOT_ORIGINS = [
 const mountWith = (
   gameOrigin: string,
   ownOrigin: string = SE_ORIGIN,
+  environment: Environment = "production",
 ): ReturnType<typeof createControllerBridge> =>
   createControllerBridge(
-    createFakeGame({ gameOrigin, gameOrigins: [gameOrigin], ownOrigin })
-      .options,
+    createFakeGame({
+      gameOrigin,
+      gameOrigins: [gameOrigin],
+      ownOrigin,
+      environment,
+    }).options,
   );
 
 describe("mounting the game (W-37)", () => {
@@ -99,7 +105,7 @@ describe("mounting the game (W-37)", () => {
     }
   });
 
-  it("accepts well-formed origins, loopback http included", () => {
+  it("accepts well-formed origins, loopback http included (local)", () => {
     for (const gameOrigin of [
       "https://game.example.net:8443",
       "https://a.b-c.example",
@@ -109,8 +115,49 @@ describe("mounting the game (W-37)", () => {
       "http://[::1]:5174",
       "http://localhost",
     ]) {
-      expect(mountWith(gameOrigin, "http://localhost:5173").ok).toBe(true);
+      expect(mountWith(gameOrigin, "http://localhost:5173", "local").ok).toBe(
+        true,
+      );
     }
+  });
+
+  it("refuses a game origin that shares the Wrapper's comparison key (ADR-007)", () => {
+    for (const [gameOrigin, ownOrigin] of [
+      ["https://game.example.com", "https://play.example.com"],
+      ["https://example.com", "https://play.example.com"],
+      ["https://games.play.example.com:8443", "https://play.example.com"],
+      ["https://a.co.uk", "https://b.co.uk"],
+    ] as const) {
+      for (const environment of ["production", "preview", "local"] as const) {
+        expect(mountWith(gameOrigin, ownOrigin, environment)).toEqual({
+          ok: false,
+          refusal: "same-site",
+        });
+      }
+    }
+  });
+
+  it("exempts two loopback hosts in local only, and refuses them elsewhere", () => {
+    const pair = ["http://localhost:5174", "http://localhost:5173"] as const;
+    expect(mountWith(...pair, "local").ok).toBe(true);
+    for (const environment of ["preview", "production"] as const) {
+      expect(mountWith(...pair, environment)).toEqual({
+        ok: false,
+        refusal: "same-site",
+      });
+    }
+  });
+
+  it("refuses a same-site game origin without listening, even when listed", () => {
+    const game = createFakeGame({
+      gameOrigin: "https://game.example.com",
+      gameOrigins: ["https://game.example.com"],
+    });
+    expect(createControllerBridge(game.options)).toEqual({
+      ok: false,
+      refusal: "same-site",
+    });
+    expect(game.listening()).toBe(false);
   });
 });
 

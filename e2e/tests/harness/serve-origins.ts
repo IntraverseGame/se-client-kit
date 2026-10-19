@@ -1,5 +1,6 @@
 // Everything the suite serves: the Wrapper's release bundle, the test pages,
-// and the reference game's build at their static origins (the game at D, so a
+// the fake operator's pages (at a listed and an unlisted origin), and the
+// reference game's build at their static origins (the game at D, so a
 // Wrapper session mounts it), and the Wrapper's environment configuration
 // document (which the SuperEngine side serves in a real environment). A test
 // that serves another game at D registers its route after these, so it wins.
@@ -12,9 +13,12 @@ import {
 } from "./environment-config.ts";
 import {
   GAME_ORIGIN,
+  OPERATOR_ORIGIN,
+  OPERATOR_PAGES,
   PAGES_ORIGIN,
   REFERENCE_GAME_DIST,
   TEST_PAGES,
+  UNLISTED_ORIGIN,
   WRAPPER_DIST,
   WRAPPER_ORIGIN,
 } from "./origins.ts";
@@ -26,6 +30,8 @@ export const serveOrigins = async (
 ): Promise<void> => {
   await serveDirectory(context, WRAPPER_ORIGIN, WRAPPER_DIST);
   await serveDirectory(context, PAGES_ORIGIN, TEST_PAGES);
+  await serveDirectory(context, OPERATOR_ORIGIN, OPERATOR_PAGES);
+  await serveDirectory(context, UNLISTED_ORIGIN, OPERATOR_PAGES);
   await serveDirectory(context, GAME_ORIGIN, REFERENCE_GAME_DIST);
   await serveEnvironmentConfig(context, environmentConfig(playApiBaseUrl));
 };

@@ -21,6 +21,7 @@ import {
 import {
   endpoints,
   environmentDocument,
+  SE_ORIGIN,
   SOURCE,
 } from "./fixtures/environment.ts";
 
@@ -35,7 +36,10 @@ const directives = (policy: string): Map<string, string> =>
 const configOf = (
   overrides: Readonly<Record<string, unknown>>,
 ): EnvironmentConfig => {
-  const result = validateEnvironmentConfig(environmentDocument(overrides));
+  const result = validateEnvironmentConfig(
+    environmentDocument(overrides),
+    SE_ORIGIN,
+  );
   if (!result.ok) throw new Error("fixture document refused");
   return result.config;
 };

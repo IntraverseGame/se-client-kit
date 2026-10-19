@@ -22,10 +22,12 @@ shows "still resolving — contact support" with a "check again" control when it
 does not, and a neutral "round ended" when the round ended with no result. A
 round that ended shows its result with the next bet beside it. The game iframe
 is mounted only once the game's origin comes from the session, which the Play
-API does not serve yet. Framed by another page, it opens a session only when the
-browser can show that every framing page is a listed operator; the operator
-handshake is not built yet, so where the browser cannot show it (a browser
-without `location.ancestorOrigins`), a framed Wrapper opens no session.
+API does not serve yet. Embedded by an operator page, it opens a session only
+when it is embedded directly by a listed operator origin and the operator page
+has completed the `se.operator/1` handshake; until then it redeems nothing and
+signs nothing, and with no handshake within 10 s it shows that the game cannot
+start. It then tells the operator page the height its content needs, and offers
+the operator's lobby and deposit as the player's own links, only between rounds.
 
 ## What it guarantees
 
@@ -33,6 +35,9 @@ without `location.ancestorOrigins`), a framed Wrapper opens no session.
   (`@intraverse/se-client-shell`). The page and the game never receive a secret.
 - The game runs in a sandboxed iframe and talks to the Wrapper only through the
   controller protocol `se.controller/1`.
+- The page that embeds the Wrapper can only unlock it, through the operator
+  protocol `se.operator/1`: it receives `welcome` and content heights, never a
+  secret, an id, or an amount.
 - The Wrapper renders only a Snapshot that has been validated.
 - The Wrapper writes nothing to `localStorage`, cookies, or any persistent
   storage unless its specification says so; the key is never persisted.
@@ -82,13 +87,15 @@ below a small minimum size are outside it.
 ## For game developers and integrators
 
 A game receives its state from the Wrapper and sends its choices back through
-the controller protocol. See the Wrapper specification for the protocol and for
-how an operator embeds the Wrapper.
+the controller protocol. See the Wrapper specification for the protocol, and its
+operator guidance for how an operator page embeds the Wrapper.
 
 ## More
 
 - [The Wrapper specification](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper.md)
 - [The game iframe and the controller boundary](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper/the-game-iframe-and-the-controller-boundary.md)
+- [Operator embedding](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper/operator-embedding.md),
+  with the operator guidance
 - [The action key and what may be stored](https://github.com/IntraverseGame/se-client-kit/blob/main/specs/wrapper/the-action-key-and-what-may-be-stored.md)
 
 Contributing: see

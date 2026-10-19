@@ -471,16 +471,23 @@ development-only, so it may import the test-only entry of `contracts`.
   one stdout line). A release Firefox (159) moves it without the blur, checked
   by hand. T-14 asserts the full W-46 rule in every project: the result heading
   focused, the game's heading not focused, and the game's document without
-  focus. T-9a's W-49 minimum runs in all three: framed by an unlisted page the
-  Wrapper refuses to start, and framed by a listed page it opens the session.
-  Every project's browser has `location.ancestorOrigins`, Firefox's included
-  (the first Firefox run, 2026-10-18), and that is asserted; the Wrapper's path
-  without the list is a component test. The handshake's cases (T-9a,
-  [the test plan](../wrapper/operator-embedding.md#the-test-plan-for-t-9a)) come
-  with #42, which adds a fake operator page on a third test origin (with a lobby
-  and a deposit page), an unlisted fourth origin, and a way to serve the bundle
-  with and without the `frame-ancestors` header; its Firefox and WebKit cases
-  run in the Firefox and WebKit projects.
+  focus. T-9a's e2e cases
+  ([the test plan](../wrapper/operator-embedding.md#the-test-plan-for-t-9a)) run
+  in all three, against a fake operator page (`e2e/tests/operator`,
+  `harness/operator-page.ts`) on a third test origin
+  (`https://casino.e2e-operator.test`, with a lobby and a deposit page) and on
+  an unlisted fourth (`https://pages.e2e-unlisted.test`); the bundle is served
+  without the `frame-ancestors` header by default, and with it where a case asks
+  (`serveWithFrameAncestors`); a Snapshot answer may carry the operator's
+  `context.links` (`links`). Every project's browser has
+  `location.ancestorOrigins`, Firefox's included (the first Firefox run,
+  2026-10-18), and that is asserted; the Wrapper's path without the list is a
+  component test. With `referrerpolicy="no-referrer"` on the operator's iframe,
+  Playwright 1.64.0's Firefox build masks the entry (`"null"`) and the Wrapper
+  refuses; its WebKit build, and an installed Google Chrome 155 run as the
+  Chromium project through the opt-in `SE_E2E_BROWSER_CHANNEL=chrome`, keep it
+  (recorded 2026-10-19; Playwright's own Chromium build is recorded by CI's
+  Chromium job, which the test annotates).
 - **Locally**, `pnpm exec playwright install chromium` (in `e2e/`) installs the
   browser once; `pnpm test:e2e` runs the `chromium` project unless
   `SE_E2E_PROJECT` names another (`firefox`, `webkit`, after installing that
