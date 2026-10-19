@@ -16,6 +16,27 @@
       "sha256": "16b2a8e79453126fd6e01faaf2ab1c4d89b95ac6322341799ca532f17f282458"
     },
     {
+      "path": "src/vectors/kernel/v1/derive.json",
+      "source": "se-backend",
+      "sourceName": "kernel/public/v1/derive",
+      "sourceCommit": "ad36bc4b307825092d4107a997ffa4da2cf7e523",
+      "sha256": "2d964fcb8a07d713b1dc98526f954a1b7d726c0544b163cd7dbd7c560fe8c3d8"
+    },
+    {
+      "path": "src/vectors/kernel/v1/seed.json",
+      "source": "se-backend",
+      "sourceName": "kernel/public/v1/seed",
+      "sourceCommit": "ad36bc4b307825092d4107a997ffa4da2cf7e523",
+      "sha256": "9d664886091c48eae0e677e92f7780d4097b897d11043b2d32b42f0733e4f362"
+    },
+    {
+      "path": "src/vectors/kernel/v1/steps-derive.json",
+      "source": "se-backend",
+      "sourceName": "kernel/public/v1/steps-derive",
+      "sourceCommit": "ad36bc4b307825092d4107a997ffa4da2cf7e523",
+      "sha256": "f18593ad52717a7349b3d446b3f12ede0f7252e825d5bc676edb598b1ff05dfa"
+    },
+    {
       "path": "src/vectors/signing.json",
       "source": "se-contracts",
       "sourceName": "test/vectors/signing.json",

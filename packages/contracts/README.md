@@ -34,9 +34,10 @@ or calling the Play API (use `@intraverse/se-client-play-client`).
 - `@intraverse/se-client-contracts/testing`: golden test vectors used by this
   kit's own tests: the signing vectors and the Snapshot vectors (valid, invalid,
   signature, the canonical `typedData` bytes of signed actions, and signed
-  actions made by an independent signer). It is not part of the public API, and
-  the published package will not contain it: vectors never ship in a bundle or a
-  tarball.
+  actions made by an independent signer), and the public vectors of the
+  SuperEngine fairness kernel, kernelVersion 1. It is not part of the public
+  API, and the published package will not contain it: vectors never ship in a
+  bundle or a tarball.
 
 ## Guarantees and constraints
 

@@ -1,0 +1,134 @@
+{
+  "set": "kernel/public/v1/seed",
+  "kernelVersion": 1,
+  "spec": "SuperEngine fairness kernel, kernelVersion 1: Seed and SeedHash",
+  "description": "Seed(blockValue, secret) = SHA-256(blockValue || secret) and SeedHash(seed) = SHA-256(seed); both inputs 32 bytes",
+  "vectors": [
+    {
+      "vector": "kernel/public/v1/seed/reference",
+      "description": "The reference block value and secret; its seed is the reference seed of the steps-derive and derive sets",
+      "input": {
+        "blockValue": "e3b9d93baea441f5c5c3682720d88336fe41481161704cdf044c3ad1a1853ba9",
+        "secret": "08ea0974ed5b01788fd4a27ad22918be158df16c9b60097f3c7dbcc7b0dcb42a"
+      },
+      "expected": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "seedHash": "49897f561949fb45801dea9c52fb026ce4c898766e8e7855565f9fda2514b2b7"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/seed/zeros",
+      "description": "All-zero block value and secret",
+      "input": {
+        "blockValue": "0000000000000000000000000000000000000000000000000000000000000000",
+        "secret": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expected": {
+        "seed": "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b",
+        "seedHash": "e2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf9"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/seed/ones",
+      "description": "All-0xff block value and secret",
+      "input": {
+        "blockValue": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "secret": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "expected": {
+        "seed": "8667e718294e9e0df1d30600ba3eeb201f764aad2dad72748643e4a285e1d1f7",
+        "seedHash": "deedbcecde05c2b4e238519c936535b753cb1b5fe2d1a049d169389c795ae490"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/seed/swapped",
+      "description": "The reference inputs swapped: the order matters",
+      "input": {
+        "blockValue": "08ea0974ed5b01788fd4a27ad22918be158df16c9b60097f3c7dbcc7b0dcb42a",
+        "secret": "e3b9d93baea441f5c5c3682720d88336fe41481161704cdf044c3ad1a1853ba9"
+      },
+      "expected": {
+        "seed": "77fd2146063909568fedf43d4e2fa6bf05b5c308dc8a8716de21fc8a0c627531",
+        "seedHash": "83c77c7a8f6dbd6e68946fa8c4737dc89086251e64f66aa3da4ca558f46b0391"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/seed/other",
+      "description": "Another block value and secret",
+      "input": {
+        "blockValue": "bba4d4d467af4e693ca04cf0b9f6552e6d8cd399f7fbe96fe294af8431ff5253",
+        "secret": "bfd4aeba4a9f4193f8dc9de48e29a44ea94d0ea8ae31402b047d01f4f24ebcb2"
+      },
+      "expected": {
+        "seed": "507753da0877001dbea9d3f8a7501aefe71e685f64ce2f7a1a874c8a5e09c29d",
+        "seedHash": "83540399cdfa250d370541d3229d323e8efe97cd35366f1ca5e27e7ae553dd9f"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/seed/error-block-value-short",
+      "description": "A 31-byte block value",
+      "input": {
+        "blockValue": "e3b9d93baea441f5c5c3682720d88336fe41481161704cdf044c3ad1a1853b",
+        "secret": "08ea0974ed5b01788fd4a27ad22918be158df16c9b60097f3c7dbcc7b0dcb42a"
+      },
+      "expected": {
+        "error": "block-value-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/seed/error-block-value-long",
+      "description": "A 33-byte block value",
+      "input": {
+        "blockValue": "e3b9d93baea441f5c5c3682720d88336fe41481161704cdf044c3ad1a1853ba900",
+        "secret": "08ea0974ed5b01788fd4a27ad22918be158df16c9b60097f3c7dbcc7b0dcb42a"
+      },
+      "expected": {
+        "error": "block-value-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/seed/error-block-value-empty",
+      "description": "An empty block value",
+      "input": {
+        "blockValue": "",
+        "secret": "08ea0974ed5b01788fd4a27ad22918be158df16c9b60097f3c7dbcc7b0dcb42a"
+      },
+      "expected": {
+        "error": "block-value-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/seed/error-secret-short",
+      "description": "A 31-byte secret",
+      "input": {
+        "blockValue": "e3b9d93baea441f5c5c3682720d88336fe41481161704cdf044c3ad1a1853ba9",
+        "secret": "08ea0974ed5b01788fd4a27ad22918be158df16c9b60097f3c7dbcc7b0dcb4"
+      },
+      "expected": {
+        "error": "secret-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/seed/error-secret-long",
+      "description": "A 33-byte secret",
+      "input": {
+        "blockValue": "e3b9d93baea441f5c5c3682720d88336fe41481161704cdf044c3ad1a1853ba9",
+        "secret": "08ea0974ed5b01788fd4a27ad22918be158df16c9b60097f3c7dbcc7b0dcb42a00"
+      },
+      "expected": {
+        "error": "secret-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/seed/error-both",
+      "description": "Both wrong: the block value is checked first",
+      "input": {
+        "blockValue": "e3",
+        "secret": "08"
+      },
+      "expected": {
+        "error": "block-value-length"
+      }
+    }
+  ]
+}

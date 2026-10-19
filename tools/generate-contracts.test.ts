@@ -204,14 +204,16 @@ const withVectors = (run: (packageDir: string) => void): void => {
   try {
     const vectors = join(packageDir, "src", "vectors");
     for (const [folder, file] of [
-      ["valid", "a.json"],
-      ["invalid", "b.json"],
-      ["signature", "c.json"],
-      ["typed-data", "d-e.json"],
-      ["signed-action", "f-g.json"],
+      ["snapshot/valid", "a.json"],
+      ["snapshot/invalid", "b.json"],
+      ["snapshot/signature", "c.json"],
+      ["snapshot/typed-data", "d-e.json"],
+      ["snapshot/signed-action", "f-g.json"],
+      ["kernel/v1", "h-i.json"],
+      ["kernel/v1", "j.json"],
     ] as const) {
-      mkdirSync(join(vectors, "snapshot", folder), { recursive: true });
-      writeFileSync(join(vectors, "snapshot", folder, file), "{}\n");
+      mkdirSync(join(vectors, folder), { recursive: true });
+      writeFileSync(join(vectors, folder, file), "{}\n");
     }
     writeFileSync(join(vectors, "signing.json"), "{}\n");
     run(packageDir);
@@ -251,6 +253,25 @@ describe("catalogSource", () => {
       expect(source).toContain('  valid: {\n    "a": vector0,\n  },');
       expect(source).toContain('  invalid: {\n    "b": vector1,\n  },');
       expect(source).toContain('  signature: {\n    "c": vector2,\n  },');
+    });
+  });
+
+  it("exports the kernel/v1/ folder as kernelVectors.v1, apart from the Snapshot vectors", () => {
+    withVectors(packageDir => {
+      const source = catalogSource(packageDir);
+      expect(source).toContain(
+        'import vector5 from "./kernel/v1/h-i.json" with { type: "json" };',
+      );
+      expect(source).toContain(
+        'import vector6 from "./kernel/v1/j.json" with { type: "json" };',
+      );
+      expect(source).toContain(
+        'export const kernelVectors: KernelVectors = {\n  v1: {\n    "h-i": vector5,\n    "j": vector6,\n  },\n};',
+      );
+      expect(source).toContain("  readonly v1: VectorSet;");
+      const snapshot = /export const snapshotVectors[^;]*;/u.exec(source)?.[0];
+      expect(snapshot).toBeDefined();
+      expect(snapshot).not.toContain("vector5");
     });
   });
 });

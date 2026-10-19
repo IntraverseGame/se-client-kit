@@ -74,4 +74,27 @@ export const GROUPS: readonly Group[] = [
     sourceName: "test/vectors/signing.json",
     vectors: true,
   },
+  // The SuperEngine fairness kernel, kernelVersion 1: its public vector sets,
+  // each recorded under its set id (the file's own `set` field).
+  {
+    id: "kernel-vectors-seed",
+    kind: "file",
+    destination: "src/vectors/kernel/v1/seed.json",
+    sourceName: "kernel/public/v1/seed",
+    vectors: true,
+  },
+  {
+    id: "kernel-vectors-steps-derive",
+    kind: "file",
+    destination: "src/vectors/kernel/v1/steps-derive.json",
+    sourceName: "kernel/public/v1/steps-derive",
+    vectors: true,
+  },
+  {
+    id: "kernel-vectors-derive",
+    kind: "file",
+    destination: "src/vectors/kernel/v1/derive.json",
+    sourceName: "kernel/public/v1/derive",
+    vectors: true,
+  },
 ];

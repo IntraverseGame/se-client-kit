@@ -55,6 +55,24 @@ export const SOURCES: Readonly<Record<string, GroupSource>> = {
     ref: "main",
     path: "v/signing.json",
   },
+  "kernel-vectors-seed": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "k/seed.json",
+  },
+  "kernel-vectors-steps-derive": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "k/steps-derive.json",
+  },
+  "kernel-vectors-derive": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "k/derive.json",
+  },
 };
 
 export type MemorySource = {
@@ -75,6 +93,9 @@ export const memorySource = (): MemorySource => {
     ["s/signed-action/f.json", '{"f":7}\n'],
     ["p/play.yaml", "openapi: 3.0.3\n"],
     ["v/signing.json", '{"s":3}\n'],
+    ["k/seed.json", '{"k":8}\n'],
+    ["k/steps-derive.json", '{"k":9}\n'],
+    ["k/derive.json", '{"k":10}\n'],
   ]);
   const source: MemorySource = {
     files,

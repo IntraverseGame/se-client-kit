@@ -129,6 +129,9 @@ import vector122 from "./snapshot/typed-data/coinflip-cancel.json" with { type: 
 import vector123 from "./snapshot/typed-data/coinflip-pick.json" with { type: "json" };
 import vector124 from "./snapshot/typed-data/pick-multi-path.json" with { type: "json" };
 import vector125 from "./snapshot/signed-action/coinflip-cancel.json" with { type: "json" };
+import vector126 from "./kernel/v1/derive.json" with { type: "json" };
+import vector127 from "./kernel/v1/seed.json" with { type: "json" };
+import vector128 from "./kernel/v1/steps-derive.json" with { type: "json" };
 import signing from "./signing.json" with { type: "json" };
 
 /** Every vector is data of unknown shape: a consumer validates what it reads. */
@@ -146,6 +149,11 @@ export type SnapshotVectors = {
    * hashes, and the signature, from a public test key.
    */
   readonly signedAction: VectorSet;
+};
+
+export type KernelVectors = {
+  /** The SuperEngine fairness kernel, kernelVersion 1: its public sets, by file name. */
+  readonly v1: VectorSet;
 };
 
 export const signingVectors: unknown = signing;
@@ -286,5 +294,13 @@ export const snapshotVectors: SnapshotVectors = {
   },
   signedAction: {
     "coinflip-cancel": vector125,
+  },
+};
+
+export const kernelVectors: KernelVectors = {
+  v1: {
+    "derive": vector126,
+    "seed": vector127,
+    "steps-derive": vector128,
   },
 };

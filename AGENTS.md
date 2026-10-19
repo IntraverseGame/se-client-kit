@@ -179,9 +179,11 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   tool needs a recorded decision too. Dependency lifecycle scripts are off by
   default; only an explicit allow-list may run one.
 - **Contracts are documents, never code.** The Play API document, the Snapshot
-  schema and vectors, and the signing vectors are copied into the `contracts`
-  package, not imported from another repository. Each copy is pinned in a lock
-  file with its source commit and a content hash. No git submodules.
+  schema and vectors, the signing vectors, and the public vector bundle of the
+  SuperEngine fairness kernel, kernelVersion 1 (its sets `kernel/public/v1/*`)
+  are copied into the `contracts` package, not imported from another repository.
+  Each copy is pinned in a lock file with its source commit and a content hash.
+  No git submodules.
 - **Vectors are append-only.** A released version's vector files are never
   edited; a vendored vector file records the source commit it came from.
 - Never write to `localStorage`, cookies, or any persistent storage from the
@@ -221,7 +223,9 @@ add, in any file, commit, issue, pull request, log, or agent output:
   identifiers;
 - unpublished backend internals: only the player-facing contracts (the Play API
   document at `/play/v1`, the Snapshot schema bundle, the signed-action
-  specification, and the signing vectors) are shared, and only as copies;
+  specification, the signing vectors, and the public vector bundle of the
+  SuperEngine fairness kernel, kernelVersion 1, its sets `kernel/public/v1/*`)
+  are shared, and only as copies;
 - personal data, or the names, emails, or handles of people unless they are
   already public as maintainers or authors;
 - unreleased security findings (use [SECURITY.md](./SECURITY.md)).
