@@ -60,7 +60,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   | `active`, a move or cash-out not confirmed | "your move hasn't been confirmed" (or "your cash-out hasn't been confirmed"), "if it never arrives, the round ends by its time limit", the round id, and "check again" in place of the round; the game stays shown, waiting (W-16)                                                                                          | "check again" (a read only); no pick, no cash-out                           |
   | `resolving`                                | the game with inputs disabled, "resolving"                                                                                                                                                                                                                                                                                  | none                                                                        |
   | `won`                                      | the result, the payout as `formatted`, the round id and verify link (W-39)                                                                                                                                                                                                                                                  | the next bet: the bet selector and start, from this Snapshot's `bet` (W-40) |
-  | `lost`                                     | the result, the round id and verify link                                                                                                                                                                                                                                                                                    | the next bet: the bet selector and start, from this Snapshot's `bet` (W-40) |
+  | `lost`                                     | the result, the payout as `formatted` when `payout.value` is above 0, the round id and verify link                                                                                                                                                                                                                          | the next bet: the bet selector and start, from this Snapshot's `bet` (W-40) |
   | `canceled`                                 | "round canceled, your bet was returned", the round id and verify link, and with `closeReason: "expired"` the words "the time limit ended this round". `canceled` is final, also after the shell's own cancel; until the cancel is answered the round is `resolving` and the cancel `settling` or `check-later` (W-25, W-33) | the next bet: the bet selector and start, from this Snapshot's `bet` (W-40) |
   | typed error                                | per [error and degraded states](../wrapper.md#error-and-degraded-states)                                                                                                                                                                                                                                                    | per code                                                                    |
 
@@ -76,7 +76,18 @@ Part of the [Wrapper spec](../wrapper.md), section
   heading takes it when the player's own action ended the round, and the bet
   selector and the start button follow it in the tab order.
 
-  <!-- TODO(Snapshot contract): `won` shows "the payout as `formatted`". Since se-backend f8cc92b, `se.snapshot/1` carries a server-computed `payout` (`Amount`, with `formatted`) on `won` and `lost`, and forbids it on every other status. The Wrapper does not show it yet: human review (2026-10-19) put the display in a pull request of its own. `bankedAmount` is reserved for partial cash-out, is not served, and is not used. Until that pull request the Wrapper shows no amount on `won`, and it never computes one from `currentMultiplier` or anything else (W-34). -->
+  **The payout.** Since se-backend `f8cc92b`, `se.snapshot/1` carries `payout`,
+  an `Amount` the server computes that says what the finished round credits the
+  player: the schema allows it on `won` and `lost` only, `0` included, and
+  forbids it on every other status. The Wrapper shows it beside the result as
+  "Payout" with its `formatted`, before the balance: on `won` whenever it is
+  present, and on `lost` only when `payout.value` is above 0, compared as a
+  `bigint` (W-34; `valid/steps-lost-expired-payout` has one,
+  `valid/coinflip-lost-payout-zero` none). It shows the same after the shell's
+  own cancel, beside that closure's note (W-33). An absent `payout` shows
+  nothing, with no error. The Wrapper never computes an amount from
+  `currentMultiplier` or anything else (W-34). `bankedAmount` is reserved for
+  partial cash-out, is not served, and is not used.
 
   How the Wrapper reads the shell's checks for this table (the round the shell
   holds, W-26): an `active` round is shown as "preparing the round", with the

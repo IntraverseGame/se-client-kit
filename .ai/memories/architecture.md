@@ -241,10 +241,11 @@ structure below.
 - The Snapshot's `payout` (synced from the backend's f8cc92b) is an optional
   server-computed `Amount` on `won` and `lost` only. The generator emits it as
   `Amount1`, a structural copy of `Amount` that, like `Snapshot1`, is not
-  exported (`tools/contracts-public-types.test.ts`). The Wrapper does not show
-  it yet (the `TODO(Snapshot contract)` under W-31 in
-  `specs/wrapper/rendering-from-the-snapshot.md`: the display is a pull
-  request of its own) and never computes a payout (W-34).
+  exported (`tools/contracts-public-types.test.ts`). `snapshot`'s per-status
+  types (`narrowing.ts`) carry `payout?: never` on idle, starting, active,
+  resolving, and canceled. The Wrapper shows it (W-31, `shownPayout` in
+  `round-view.ts`): "Payout" with its `formatted` on `won`, and on `lost` only
+  when `value` > 0 as a `bigint`; absent shows nothing; never computed (W-34).
 - The fairness kernel's public vector sets (the SuperEngine fairness kernel,
   kernelVersion 1: `kernel/public/v1/seed`, `steps-derive`, `derive`) are
   vendored as data only, under `vectors/kernel/v1/`, each locked under its set

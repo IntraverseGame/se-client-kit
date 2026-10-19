@@ -143,9 +143,11 @@ Rules:
    multiplier it survived as `currentMultiplier`
    (`valid/steps-lost-expired-payout`); every other `lost` round has `payout` 0.
    The kit takes it as the schema gives it: the shell does not forward it to the
-   game (W-38), and the Wrapper does not show it yet (the
-   `TODO(Snapshot contract)` under W-31 in
+   game (W-38), and the Wrapper shows it beside a `won` result, and beside a
+   `lost` one when it is above 0 (W-31 in
    [Rendering from the Snapshot](../wrapper/rendering-from-the-snapshot.md)).
+   The `snapshot` package's per-status types say `payout?: never` on every other
+   status, as the schema does.
 
    **One pre-release exception** (decided with
    [OQ-7](../wrapper.md#decided-questions); nothing had shipped against the old
