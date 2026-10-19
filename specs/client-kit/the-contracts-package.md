@@ -140,10 +140,14 @@ logic packages read it and never write to it.
      included. The Wrapper's config has no other plugin pipeline; a new one must
      add the guard too. The guard is off only under Vitest, which loads the
      config with `command: "serve"`, because component tests may use the
-     vectors; it cannot be turned off for a build by mode or by environment
-     (`vite build --mode test` and a build with `VITEST` set are refused). The
-     Vite API with `configFile: false` bypasses `vite.config.ts` on purpose, and
-     the guard's tests use it. Real Vite builds over fixtures prove each case
+     vectors; it cannot be turned off for a build by mode or by environment (a
+     build with `VITEST` set, or in any mode but `production`, `--mode test`
+     included, is refused; so is a build with `NODE_ENV` set to anything but
+     `production`, or with `VITE_USER_NODE_ENV` set, and the build reads no env
+     files, which keeps the release artifact one build with one digest, see
+     [supply chain](./supply-chain.md); `build-refusals.test.ts`). The Vite API
+     with `configFile: false` bypasses `vite.config.ts` on purpose, and the
+     guard's tests use it. Real Vite builds over fixtures prove each case
      (`apps/wrapper/src/test-only-entry-guard.test.ts` and
      `apps/wrapper/src/test-only-entry-guard-paths.test.ts`), and a performance
      test keeps the source check linear

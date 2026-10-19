@@ -70,7 +70,9 @@ import { normalizePath, textForms } from "./guard-text.ts";
 // Matching is case-insensitive, for case-insensitive file systems.
 //
 // The guard cannot be turned off for a build by mode or by environment:
-// vite.config.ts refuses `--mode test` and `VITEST` for `command: "build"`. The
+// vite.config.ts refuses `VITEST` and any mode but `production` for `command:
+// "build"` (and, to keep the release artifact a production build, a
+// `NODE_ENV` other than `production`, and env files). The
 // Vite API with `configFile: false` bypasses vite.config.ts on purpose (the
 // guard's own tests use it); the release build goes through the config file.
 //

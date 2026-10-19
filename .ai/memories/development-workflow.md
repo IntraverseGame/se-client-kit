@@ -151,7 +151,14 @@ Several agents and people work in one clone at once. Rules:
   no `dist/`, `import/no-cycle` silently skipped cross-package edges. The two
   Vite builds declare `NODE_ENV` as `external` `env` (a development build
   otherwise shares the production one's cache key); the tsdown builds do not
-  read it. A script that reads another package's `dist/` needs the build edge;
+  read it. The Wrapper's `vite.config.ts` refuses a build in any mode but
+  `production`, with `VITEST` set, with `NODE_ENV` other than unset, empty,
+  or `production`, or with `VITE_USER_NODE_ENV` set (Vite applies it after the
+  config loads, when `NODE_ENV` was unset), and reads no env files
+  (`envDir: false`). Vitest sets
+  `NODE_ENV=test`, so a test that loads the config for a build unsets it first
+  (`asReleaseBuild` in `apps/wrapper/src/fixtures/release-build.ts`; the
+  refusals are `build-refusals.test.ts`). A script that reads another package's `dist/` needs the build edge;
   `tools/wireit-edges.test.ts` holds the edges and the declarations, and its
   scan of `process.env["X"]` relies on `noPropertyAccessFromIndexSignature`.
   If a result looks stale, `pnpm clean:cache`.

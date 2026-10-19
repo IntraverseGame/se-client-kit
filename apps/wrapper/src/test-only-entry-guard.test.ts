@@ -2,30 +2,21 @@
 import { join } from "node:path";
 
 import { createServer, loadConfigFromFile, type UserConfig } from "vite";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { testOnlyEntryGuard } from "../test-only-entry-guard.ts";
 import { useGuardScratch, VECTOR } from "./fixtures/guard-scratch.ts";
+import { asReleaseBuild, loadBuildConfig } from "./fixtures/release-build.ts";
 
 // Proof that the Vite resolve guard fails a real Vite build (and the dev
 // server) when the module graph reaches the contracts test-only entry or a
 // vector. Each case runs the actual Vite API over a scratch project. Without the
 // guard Vite inlines the vector data and drops the specifier, which is why a
 // text scan of the finished bundle cannot catch this. The path and literal forms
-// are in test-only-entry-guard-paths.test.ts.
+// are in test-only-entry-guard-paths.test.ts; the build's refusals (mode,
+// VITEST, NODE_ENV, env files) are in build-refusals.test.ts.
 
 const { bundle, root } = useGuardScratch();
-
-/** Run `action` with VITEST unset, as in a release build, then restore it. */
-const withoutVitestEnv = async <T>(action: () => Promise<T>): Promise<T> => {
-  const saved = process.env["VITEST"];
-  delete process.env["VITEST"];
-  try {
-    return await action();
-  } finally {
-    process.env["VITEST"] = saved ?? "";
-  }
-};
 
 const pluginNamesOf = (config: UserConfig | undefined): unknown[] =>
   (config?.plugins ?? []).map(plugin =>
@@ -73,36 +64,8 @@ describe("the Wrapper's test-only-entry resolve guard", () => {
     ).rejects.toThrow(/test-only entry/u);
   });
 
-  it("refuses to build the Wrapper in mode test at all", async () => {
-    await expect(
-      loadConfigFromFile(
-        { command: "build", mode: "test" },
-        join(import.meta.dirname, "..", "vite.config.ts"),
-      ),
-    ).rejects.toThrow(/never built in mode test/u);
-  });
-
-  it("refuses to build the Wrapper with VITEST set (it would switch the guard off)", async () => {
-    vi.stubEnv("VITEST", "1");
-    try {
-      await expect(
-        loadConfigFromFile(
-          { command: "build", mode: "production" },
-          join(import.meta.dirname, "..", "vite.config.ts"),
-        ),
-      ).rejects.toThrow(/never built with VITEST set/u);
-    } finally {
-      vi.unstubAllEnvs();
-    }
-  });
-
   it("loads the config for a build without VITEST, with the guard", async () => {
-    const loaded = await withoutVitestEnv(() =>
-      loadConfigFromFile(
-        { command: "build", mode: "production" },
-        join(import.meta.dirname, "..", "vite.config.ts"),
-      ),
-    );
+    const loaded = await asReleaseBuild(loadBuildConfig);
     // The guard, then the release integrity step (release-integrity.ts).
     expect(pluginNamesOf(loaded?.config)).toEqual([
       "se-client-test-only-entry-guard",
@@ -111,12 +74,7 @@ describe("the Wrapper's test-only-entry resolve guard", () => {
   });
 
   it("puts the guard in the worker pipeline of a build config too", async () => {
-    const loaded = await withoutVitestEnv(() =>
-      loadConfigFromFile(
-        { command: "build", mode: "production" },
-        join(import.meta.dirname, "..", "vite.config.ts"),
-      ),
-    );
+    const loaded = await asReleaseBuild(loadBuildConfig);
     expect(workerPluginsOf(loaded?.config)).toHaveLength(1);
   });
 
