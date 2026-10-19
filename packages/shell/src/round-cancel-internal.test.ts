@@ -1,8 +1,8 @@
-// T-4b (W-25): the shell's own defensive reading of a 500 `INTERNAL` marked
-// `retryable: false` to the required cancel (decided in human review,
-// 2026-10-19): the Play API document does not describe it for the cancel, so
-// it is no proof of a refusal and the cancel may be stored. As after a 503
-// marked `retryable: false`, the reads decide: a failed read leaves the cancel
+// T-4b (W-25): a 500 `INTERNAL` marked `retryable: false` to the required
+// cancel (decided in human review, 2026-10-19). The Play API document (since
+// se-backend 65504f5) says that after a lost response, `UNAVAILABLE`, or
+// `INTERNAL` the cancel may already have been taken, so it is no proof of a
+// refusal. As after a 503 marked `retryable: false`, the reads decide: a failed read leaves the cancel
 // `settling`, which keeps reading and ends in `check-later` while the round
 // stays `resolving`. Nothing is resent. A 400 `INVALID_ARGUMENT`, and a 500
 // with another code, stay refusals.

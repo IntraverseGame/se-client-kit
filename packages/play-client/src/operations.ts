@@ -245,16 +245,17 @@ export const cashOutRound = (
 /**
  * Passes a signed cancel (`cancelRound`, W-25). It is never repeated: a cancel
  * is not answered from a log as a repeated move is (once the engine took it,
- * the same cancel again is `FAILED_PRECONDITION`), so after a lost response or
- * a retryable problem the caller reads `getSnapshot` before it sends a cancel
- * again. Answers the round's Snapshot as `unknown`: `canceled` (final),
- * `resolving` while the engine has not answered the cancel yet, `active` with a
- * move played when that move won the race, or, when the engine had already
- * closed the round, that closure with no error (`won` or `lost` with its
- * `payout`, or `canceled` with `closeReason: "expired"`), never a cancel
- * honored; a later read keeps showing the round once it has ended. A cancel of
- * a round that is not `active` (one still `resolving` included) is
- * `FAILED_PRECONDITION`.
+ * the same cancel again is `FAILED_PRECONDITION`), so after a lost response,
+ * `UNAVAILABLE`, or `INTERNAL` (the cancel may already have been taken) the
+ * caller reads `getSnapshot` before it sends a cancel again. Answers the
+ * round's Snapshot as `unknown`: `canceled` (final), `resolving` while the
+ * engine has not answered the cancel yet, `active` with a move played when that
+ * move won the race, or, when the engine had already closed the round, that
+ * closure with no error (`won` or `lost` with its `payout`, or `canceled` with
+ * `closeReason: "expired"`), never a cancel honored; a later read keeps showing
+ * the round once it has ended (a round the engine cannot settle on its own
+ * stays `resolving` until resolved manually). A cancel of a round that is not
+ * `active` (one still `resolving` included) is `FAILED_PRECONDITION`.
  */
 export const cancelRound = (
   transport: Transport,

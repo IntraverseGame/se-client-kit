@@ -93,8 +93,12 @@ export type paths = {
      *
      * A cancel is not answered from a log as a repeated move is: once the
      * engine took it, the same cancel again is `FAILED_PRECONDITION`. After
-     * a lost response or `UNAVAILABLE`, read `GET /play/v1/snapshot` before
-     * sending it again.
+     * a lost response, `UNAVAILABLE` or `INTERNAL`, the cancel may already
+     * have been taken: read `GET /play/v1/snapshot` before sending it again.
+     * A round can stay `resolving` until it is resolved manually, when the
+     * engine cannot settle it on its own (a closure it cannot read, or a
+     * state it must not settle by itself); the Snapshot then keeps showing
+     * `resolving` until the round ends.
      */
     post: operations["cancelRound"];
   };
@@ -647,8 +651,12 @@ export type operations = {
    *
    * A cancel is not answered from a log as a repeated move is: once the
    * engine took it, the same cancel again is `FAILED_PRECONDITION`. After
-   * a lost response or `UNAVAILABLE`, read `GET /play/v1/snapshot` before
-   * sending it again.
+   * a lost response, `UNAVAILABLE` or `INTERNAL`, the cancel may already
+   * have been taken: read `GET /play/v1/snapshot` before sending it again.
+   * A round can stay `resolving` until it is resolved manually, when the
+   * engine cannot settle it on its own (a closure it cannot read, or a
+   * state it must not settle by itself); the Snapshot then keeps showing
+   * `resolving` until the round ends.
    */
   cancelRound: {
     requestBody: {

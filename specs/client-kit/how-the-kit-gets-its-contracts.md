@@ -114,9 +114,21 @@ Rules:
    shows both as they are. The shell's cancel already reads `won`, `lost`, and
    `canceled` as the round's result (`sent`, W-25), and a round that stays
    `resolving` ends in `check-later`; the Wrapper never shows such a closure as
-   canceled by the player (W-33). Separately, and not from this document, the
-   shell reads a 500 `INTERNAL` to the cancel defensively, as it reads a 503: no
-   proof of a refusal, so the reads go on (W-25).
+   canceled by the player (W-33).
+
+   **A cancel that may have been taken, and a round resolved manually** (the
+   Play API document's `cancelRound` description, synced from se-backend
+   `65504f5`; no schema, route, vector, field, or status changed): after a lost
+   response, `UNAVAILABLE`, or `INTERNAL`, the cancel may already have been
+   taken, so read `GET /play/v1/snapshot` before sending it again. A round the
+   engine cannot settle on its own stays `resolving` until it is resolved
+   manually, and the Snapshot keeps showing `resolving` until the round ends.
+   The shell reads a 503 and a 500 `INTERNAL` to the cancel as possibly stored:
+   it reads only and never sends the cancel again after either (an `active` read
+   gives `not-taken`), more conservative than the document, which allows a
+   resend after the read (decided in human review, 2026-10-19; W-25). A round
+   that stays `resolving` ends in `check-later` ("still resolving — contact
+   support").
 
    **The payout** (the Snapshot schema, the Play API document, and the `payout`
    vectors, synced from se-backend `f8cc92b`): an additive change, a new

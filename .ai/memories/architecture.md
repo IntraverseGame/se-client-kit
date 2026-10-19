@@ -129,11 +129,16 @@ structure below.
   `payout`, or `canceled` with `closeReason: "expired"`, the cancel never
   honored; the shell reads it as `sent`). The Wrapper shows such a `canceled`
   `expired` as "This round failed verification." (not "and was canceled"),
-  and such a `won`/`lost` with "…; it closed before the cancel arrived." The
-  shell's own defensive reading, not the contract's: a 500 `INTERNAL` to the
-  cancel (which the Play API document does not describe for it) is "may be
-  stored" like a 503 (`mayBeStored` in `round-request.ts`), so a failed read
-  after it keeps settling; a 400, or a 500 with another code, is a refusal. Cancel refusals go to the evidence.
+  and such a `won`/`lost` with "…; it closed before the cancel arrived." A 500
+  `INTERNAL` to the cancel is "may be stored" like a 503 (`mayBeStored` in
+  `round-request.ts`; the Play API document since 65504f5: after a lost
+  response, `UNAVAILABLE`, or `INTERNAL` the cancel may already have been
+  taken), so a failed read after it keeps settling. After either, the shell
+  reads only and never resends the cancel (an `active` read is `not-taken`),
+  more conservative than the document, which allows a resend after the read
+  (human review, 2026-10-19). A 400, or a 500 with another code, is a
+  refusal. A round the engine cannot settle on its own stays
+  `resolving` until resolved manually (65504f5): `check-later`. Cancel refusals go to the evidence.
   No new round while `in-flight`, `settling`, or `check-later`; `ended` does
   not block one. The Snapshot read keeps answering the session's ended round
   until the next start (726f0a2), so the Wrapper offers the next bet (bet

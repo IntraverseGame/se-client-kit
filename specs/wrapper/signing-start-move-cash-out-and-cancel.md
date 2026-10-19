@@ -98,20 +98,24 @@ Part of the [Wrapper spec](../wrapper.md), section
   a 503 may come with the cancel stored: after it, a failed read is settling and
   the counted reads decide, an `active` read gives `not-taken`, and a `canceled`
   read gives `sent` (decided in human review, 2026-10-18). A 500 `INTERNAL`
-  marked `retryable: false` is read the same way, as the kit's own defensive
-  reading: the Play API document does not describe that answer for the cancel,
-  so it is no proof of a refusal, and the shell treats the cancel as possibly
-  stored; a failed read after it is settling too, and while the round stays
-  `resolving` the counted reads end in `check-later` (decided in human review,
-  2026-10-19). A 500 with another code is not. A 400 `INVALID_ARGUMENT` stays a
-  refusal. A resend that is also lost is followed by another Snapshot read and
-  never by a third send; when that read shows the round `active` with no move
-  again, the cancel may be stored, so it is settling with that read as read 1
-  (decided by human review, 2026-10-18), and the counted reads decide. The
-  cancel is encoded by `signing`'s `PlayerCancel` (W-20). Its independent
-  signer's vector (`signed-action/coinflip-cancel`) is vendored in `contracts`,
-  and the kit replays it (in `signing` and in the shell's round flow) before the
-  shell signs a cancel.
+  marked `retryable: false` is read the same way: the Play API document (since
+  se-backend `65504f5`) says that after a lost response, `UNAVAILABLE`, or
+  `INTERNAL` the cancel may already have been taken, and to read the Snapshot
+  before sending it again. So a failed read after it is settling too, and while
+  the round stays `resolving` the counted reads end in `check-later`. After a
+  503 marked `retryable: false` or a 500 `INTERNAL`, the kit reads but never
+  sends the cancel again: an `active` read gives `not-taken`. That is more
+  conservative than the document, which allows a resend after the read (decided
+  in human review, 2026-10-19). A 500 with another code is not read as possibly
+  stored. A 400 `INVALID_ARGUMENT` stays a refusal. A resend that is also lost
+  is followed by another Snapshot read and never by a third send; when that read
+  shows the round `active` with no move again, the cancel may be stored, so it
+  is settling with that read as read 1 (decided by human review, 2026-10-18),
+  and the counted reads decide. The cancel is encoded by `signing`'s
+  `PlayerCancel` (W-20). Its independent signer's vector
+  (`signed-action/coinflip-cancel`) is vendored in `contracts`, and the kit
+  replays it (in `signing` and in the shell's round flow) before the shell signs
+  a cancel.
 
   **After the shell's own cancel: `resolving` settles, `canceled` is final.**
   This follows the Snapshot contract `se.snapshot/1` as vendored from the
@@ -195,13 +199,16 @@ Part of the [Wrapper spec](../wrapper.md), section
     `retryable: false`) and a read of `active` with no move is the same cancel
     sent again, once (above).
   - After **30** counted reads without one that settles it, the cancel is
-    **`check-later`**: the round stays `resolving` with no end. (Since `b47b286`
-    the Play API document says a round that had already closed before the cancel
-    arrived settles by that closure.) The Wrapper shows "still resolving —
-    contact support" with the round id and the verify link, and no result, no
-    "your bet was returned", and no final display; the fast poll stops. A "check
-    again" read the player asks for, and a slow background read every 30 s
-    (W-35), each read once under the same rules and may still settle it.
+    **`check-later`**: the round stays `resolving` with no end. The Play API
+    document says a round that had already closed before the cancel arrived
+    settles by that closure (since se-backend `b47b286`), and that a round the
+    engine cannot settle on its own stays `resolving` until it is resolved
+    manually, the Snapshot showing `resolving` until the round ends (since
+    `65504f5`). The Wrapper shows "still resolving — contact support" with the
+    round id and the verify link, and no result, no "your bet was returned", and
+    no final display; the fast poll stops. A "check again" read the player asks
+    for, and a slow background read every 30 s (W-35), each read once under the
+    same rules and may still settle it.
   - While the cancel is `in-flight`, `settling`, or `check-later`, the shell
     MUST NOT start a new round for the session (the round is not over), whatever
     the session last read (an `idle` or another round's read included). `ended`
