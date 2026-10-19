@@ -475,8 +475,19 @@ are in brackets.
   with a fresh idempotency key, the bet (validated as an `AmountRequest`), and
   the action key's address; a page without the signer lock is `lock-not-held`
   before anything is sent, and an answer that is not a valid Snapshot of a round
-  is `snapshot-rejected`. It signs nothing. The round's flow then reads every
-  validated Snapshot of its round (`observe`, or `refresh` through
+  is `snapshot-rejected`. It signs nothing. A start whose round may exist
+  (`startMayBeStored`: no response, a 503 `UNAVAILABLE` whatever its
+  `retryable`, a bare 503, or a 500 `INTERNAL`) is sent once more, right away,
+  with the same key and body (the Play API document since se-backend `075b850`:
+  after a lost response, `UNAVAILABLE`, or `INTERNAL` the round may already have
+  been started, and the same key and body answer it; a bare 503 is the kit's own
+  reading of a lost response); the resend's answer is read as a first answer is,
+  and its failure is thrown as a first failure is; the shell never sends it a
+  third time (the transport's own repeats aside). The lock is checked again
+  before the resend: a page that lost it sends nothing more (`lock-not-held`),
+  nor does an ended session (`session-ended`). Any other failure is thrown with
+  one send (W-22; decided in human review, 2026-10-19). The round's flow then
+  reads every validated Snapshot of its round (`observe`, or `refresh` through
   `getSnapshot`) into the round's verdict, runs the injected tip check once
   (with the first Snapshot that carries `proofs.randomnessProof`, unless the
   verdict has already failed; a rejected tip check leaves the verdict
@@ -521,7 +532,10 @@ are in brackets.
     an unknown outcome (`lost`, `isUnknownOutcome`: no response, or a 503 not
     marked `retryable: false` after the transport's own retries, a 503 with no
     problem body included; a 503 marked `retryable: false` is not lost, as W-42
-    reads `retryable`, and is never resent) until a send of it is answered. When
+    reads `retryable`, and is never resent, nor is a 500 `INTERNAL`, though the
+    Play API document since se-backend `075b850` says resending the same request
+    after either is safe: the kit stays more conservative and the reads decide;
+    decided in human review, 2026-10-19) until a send of it is answered. When
     the flow then observes a read of the round, the newest it has read by
     `version` (a late, older read decides nothing), that shows it `active` at
     the step before that action (`step = sequence - 1`), with the action still
@@ -794,38 +808,47 @@ are in brackets.
   API transport, a round issued for the session's own key (with three steps
   where a cash-out is needed), a stand-in tip decision, and the canonical
   encoder wrapped to record what it got: the start sends the key and the bet and
-  signs nothing; a move is signed at the next sequence with the canonical text
-  and path, and its body carries the encoder's bytes; a second pick for a step
-  already signed (pending, in flight, or shown again by an older Snapshot) is
-  refused; a W-16 resend sends the same body; a 400 `INVALID_ARGUMENT` and a 409
-  `STALE_ACTION` each adopt and continue from the next sequence, or put the
-  round out of sync, or stay held when the read fails; a failed check signs
-  nothing, not even a cancel; with `T_0` settled and only the tip check failed,
-  only the cancel is signed, once; after a 400 or a 422 it is never sent again;
-  after a lost send (no answer, or a 503 not marked `retryable: false`) the same
-  bytes are sent again once when the read shows the round still `active` with no
-  move, never when it shows a move, another status, a re-issue, or no Snapshot,
-  and never a third time; a `resolving` answer (or a `resolving` read after any
-  failed call, the golden `valid/coinflip-resolving-cancel` included) is
-  `settling`: a repeated `resolving` read keeps it so, with the phase not
-  `closed`; another round, a failed read, and a read sent before the answer
-  settle nothing (the round is held from signing on, the resend's flight
-  included); after a lost cancel, an active read, and a 422 to the resend (the
-  round resolving), a `resolving` read is `settling` with no third send; after a
-  lost response, a 400, or a 422 an `idle` read is `ended`; after a lost
-  response an `active` read with a move, and after a 400 or a 422 an `active`
-  read, is `not-taken`, with the refusal in the evidence; after a lost send or a
-  422 a failed read is `settling` (read 1, no resend), and a counted `active`,
-  `canceled`, or `idle` read then gives `not-taken`, `sent`, or `ended`, while
-  after a 400 a failed read leaves `refused`; two unknown outcomes and an
-  `active` read with no move, and an unknown outcome and a re-issued `active`
-  read with no move, are `settling` with nothing more sent, decided by the next
-  counted read (`active`, `canceled`, `idle`, `resolving`) and counting toward
-  the 30; the read after a failure, a failed one included, counts toward the 30;
-  the refusal in the evidence is exactly its status, code, and `requestId`, with
-  no `detail` or body field in the printed evidence; two counted reads at once
-  send one; a `resolving` read is read in; `idle` settles it as `ended` (also
-  from `check-later`); `canceled` (with or without a `closeReason`), `won`, and
+  signs nothing; a start with no response, a 503 `UNAVAILABLE` (either
+  `retryable`), a bare 503, or a 500 `INTERNAL` is sent once more with the same
+  body and key and its answer is the round (an ended one held as a first answer
+  is), a failed resend is thrown with no third send, a page that lost the lock
+  before the resend sends nothing more, and any other failure (a 500 of another
+  code, a 400, a 409, a 422, a voided start's 503) is thrown with one send
+  (`round-start-resend.test.ts`); through the session, a `ROUND_ACTIVE` to the
+  resend shows that round, and a session that ended before the resend sends
+  nothing more (`play-session-play.test.ts`); a move is signed at the next
+  sequence with the canonical text and path, and its body carries the encoder's
+  bytes; a second pick for a step already signed (pending, in flight, or shown
+  again by an older Snapshot) is refused; a W-16 resend sends the same body; a
+  400 `INVALID_ARGUMENT` and a 409 `STALE_ACTION` each adopt and continue from
+  the next sequence, or put the round out of sync, or stay held when the read
+  fails; a failed check signs nothing, not even a cancel; with `T_0` settled and
+  only the tip check failed, only the cancel is signed, once; after a 400 or a
+  422 it is never sent again; after a lost send (no answer, or a 503 not marked
+  `retryable: false`) the same bytes are sent again once when the read shows the
+  round still `active` with no move, never when it shows a move, another status,
+  a re-issue, or no Snapshot, and never a third time; a `resolving` answer (or a
+  `resolving` read after any failed call, the golden
+  `valid/coinflip-resolving-cancel` included) is `settling`: a repeated
+  `resolving` read keeps it so, with the phase not `closed`; another round, a
+  failed read, and a read sent before the answer settle nothing (the round is
+  held from signing on, the resend's flight included); after a lost cancel, an
+  active read, and a 422 to the resend (the round resolving), a `resolving` read
+  is `settling` with no third send; after a lost response, a 400, or a 422 an
+  `idle` read is `ended`; after a lost response an `active` read with a move,
+  and after a 400 or a 422 an `active` read, is `not-taken`, with the refusal in
+  the evidence; after a lost send or a 422 a failed read is `settling` (read 1,
+  no resend), and a counted `active`, `canceled`, or `idle` read then gives
+  `not-taken`, `sent`, or `ended`, while after a 400 a failed read leaves
+  `refused`; two unknown outcomes and an `active` read with no move, and an
+  unknown outcome and a re-issued `active` read with no move, are `settling`
+  with nothing more sent, decided by the next counted read (`active`,
+  `canceled`, `idle`, `resolving`) and counting toward the 30; the read after a
+  failure, a failed one included, counts toward the 30; the refusal in the
+  evidence is exactly its status, code, and `requestId`, with no `detail` or
+  body field in the printed evidence; two counted reads at once send one; a
+  `resolving` read is read in; `idle` settles it as `ended` (also from
+  `check-later`); `canceled` (with or without a `closeReason`), `won`, and
   `lost` settle it as the result, and `active` (with no move or one, as a read
   or as the answer) as `not-taken`; Snapshots observed from elsewhere are held
   back before the tracking; 30 reads give `check-later`, where `checkAgain`

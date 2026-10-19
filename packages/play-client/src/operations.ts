@@ -211,7 +211,10 @@ const snapshotCall = async (
 /**
  * Starts a round (`startRound`, W-16). The body carries the intent's
  * `idempotencyKey`; a lost response or a retryable problem is repeated with the
- * same bytes. Answers the round's Snapshot as `unknown`.
+ * same bytes. After a lost response, `UNAVAILABLE`, or `INTERNAL` the round may
+ * already have been started, and the same key and body answer it (the caller
+ * decides whether to send them again). Answers the round's Snapshot as
+ * `unknown`.
  */
 export const startRound = (
   transport: Transport,
@@ -221,8 +224,11 @@ export const startRound = (
   snapshotCall(transport, "startRound", options, "idempotent", body);
 
 /**
- * Passes a signed move (`continueRound`), repeated as `startRound` is. Answers
- * the round's Snapshot as `unknown`.
+ * Passes a signed move (`continueRound`), repeated as `startRound` is. After a
+ * lost response, `UNAVAILABLE`, or `INTERNAL` the move may already have been
+ * taken, and the same request (key and signed action) answers the round (the
+ * caller decides whether to send it again). Answers the round's Snapshot as
+ * `unknown`.
  */
 export const continueRound = (
   transport: Transport,
@@ -232,8 +238,8 @@ export const continueRound = (
   snapshotCall(transport, "continueRound", options, "idempotent", body);
 
 /**
- * Passes a signed cash-out (`cashOutRound`), repeated as `startRound` is.
- * Answers the round's Snapshot as `unknown`.
+ * Passes a signed cash-out (`cashOutRound`), repeated as `startRound` is, with
+ * the rules of `continueRound`. Answers the round's Snapshot as `unknown`.
  */
 export const cashOutRound = (
   transport: Transport,

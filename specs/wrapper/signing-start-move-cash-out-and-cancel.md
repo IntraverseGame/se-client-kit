@@ -38,7 +38,32 @@ Part of the [Wrapper spec](../wrapper.md), section
   is read as: the shell generates the key and presents its address in the
   `start` call (its `actionKey` field), and the round's `CreateRoundAuth` then
   commits to that address ([OQ-5](../wrapper.md#decided-questions)). The `start`
-  response is the round's Snapshot.
+  response is the round's Snapshot. **A start whose round may exist is sent once
+  more** (decided in human review, 2026-10-19): when the `start`, after the
+  transport's own repeats, got no response, a 503 `UNAVAILABLE` (whatever its
+  `retryable`), a 503 with no problem body, or a 500 `INTERNAL`, the shell sends
+  it again right away, once, with the same `idempotencyKey` and the same body
+  (W-36). The signer lock is checked again before the resend, as before the
+  first send: a page that lost it sends nothing more (`lock-not-held`), and a
+  session that ended sends nothing more either. The Play API document (since
+  se-backend `075b850`) says that after a lost response, `UNAVAILABLE`, or
+  `INTERNAL` the round may already have been started, that the same key and body
+  answer it (even when it has ended), so sending them again is safe, and that a
+  resend may fail the same way, with `GET /play/v1/snapshot` showing the round
+  either way. A 503 with no problem body is the kit's own reading of a lost
+  response. Without the resend the round could exist while the shell holds
+  nothing, and the player's next start (a new key) would be answered
+  `ROUND_ACTIVE` with a round the shell cannot sign in. The resend's answer is
+  read as a first answer is (the round it answers, an ended one included, is the
+  round the shell holds), and a failure of the resend is handled as a first
+  failure is (a `ROUND_ACTIVE` answer shows that round, which the shell does not
+  hold, W-42); the shell never sends the start a third time (the transport's own
+  repeats aside: `start` is a call it repeats with the same bytes). Nothing else
+  earns the resend: a 500 with another code, a 400, a 409 (`ROUND_ACTIVE` and
+  `CONFLICT` included), a 422, an answer that is not a Snapshot of a round, or a
+  start voided before any money moved (a 503 of another code, such as
+  `FUNDING_UNCONFIRMED` or `ENTROPY_UNAVAILABLE`), which the document says to
+  retry with a new key: that is the player's next start, never the shell's.
 - **W-23.** **Move.** The game sends a validated pick request (W-38); the shell
   checks it is legal in the Snapshot it holds (the step exists, the option is in
   range, the status is `active`), builds the canonical action, signs
