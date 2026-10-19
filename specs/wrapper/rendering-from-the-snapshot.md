@@ -26,8 +26,8 @@ Part of the [Wrapper spec](../wrapper.md), section
   neither an error nor newer state, and a later read shows the current state.
   Where a poll runs, a drop delays a newer balance or status by one read; where
   none runs (an action's answer to an `active` round, or the start's answer from
-  an ended round), it is shown only by the next read the Wrapper makes.
-  <!-- TODO(version drops): a fix(wrapper) re-read after a Snapshot dropped for a lower `version` makes sure that next read comes where no poll runs; until it lands, nothing guarantees it. -->
+  an ended round), the Wrapper reads the Snapshot again until a read is taken
+  (W-35's re-read after a drop), so the state it shows catches up.
 - **W-30.** The Wrapper MUST declare its capabilities when the session starts:
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
   six of R3 and `canceled`, which the cancel path needs).
@@ -194,6 +194,22 @@ Part of the [Wrapper spec](../wrapper.md), section
   its answer calls for (an `idle` one calls for none). A final state (W-44: the
   session ended, another tab) is kept: that read's answer never replaces one,
   and the session's end that answers it is shown.
+
+  **Re-read after a drop.** When the Wrapper drops a Snapshot because its
+  `version` is lower than the one shown (W-29), from an action's answer, a read
+  it made, or a poll, and no poll runs, it reads the Snapshot again through the
+  session's `read`: up to 4 reads at the backoff above (500 ms, 1 s, 2 s, 2 s),
+  then one every 30 s (the background rate), until a read is not dropped for a
+  lower `version`. It stops on the first such read (taken, at an equal
+  `version`, a typed error, a rejected answer, or the session's end), and as
+  soon as a poll runs, a typed error or a blocking state shows, or the session
+  ended. An equal `version` never starts it. It leaves alone the reads of the
+  shell's cancel (`settling`, `check-later`) and the one read after `ended`. A
+  read with no response waits the slow rate (W-43) and counts. A re-read is a
+  read only, never a send or a signature; its answer is applied as a poll's (it
+  moves no focus, W-46), and it shows no notice. The game gets the read the
+  Wrapper takes, as it gets every Snapshot the session shows.
+
 - **W-36.** Idempotency. Each player intent (start, a move, cash-out, cancel)
   gets one `idempotencyKey` (`crypto.randomUUID()`), reused for every retry of
   that intent and never for another.

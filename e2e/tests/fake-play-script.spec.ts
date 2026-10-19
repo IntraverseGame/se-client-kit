@@ -2,8 +2,10 @@
 // call that never answers, the record of calls it had no answer for, the
 // refusal of a script the vendored document does not allow, an answer's check
 // of the request body (`expect`), a problem it writes itself (`own-problem`),
-// and the one `invalid/` answer (`invalid-snapshot`).
+// a `valid/` Snapshot at another `version` (`snapshot-version`), and the one
+// `invalid/` answer (`invalid-snapshot`).
 
+import { allowedVersionIn } from "./harness/fake-play-wire.ts";
 import { expect, test } from "./harness/fixtures.ts";
 import { PAGES_ORIGIN } from "./harness/origins.ts";
 import {
@@ -14,9 +16,18 @@ import {
   redeemOutcome,
 } from "./harness/play-calls.ts";
 import { pickCheck, ROUND } from "./harness/round-vector.ts";
-import { invalidVector, typedDataBase64 } from "./harness/vectors.ts";
+import {
+  invalidVector,
+  typedDataBase64,
+  validVector,
+} from "./harness/vectors.ts";
 
 test.use({ playApiBaseUrl: `${PAGES_ORIGIN}/play/v1` });
+
+/** A schema whose `version` definition is `version`. */
+const schemaWith = (
+  version: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, unknown>> => ({ properties: { version } });
 
 test.beforeEach(async ({ page }) => {
   await page.goto(`${PAGES_ORIGIN}/blank.html`);
@@ -161,5 +172,53 @@ test.describe("the fake Play API's script", () => {
         vector: "coinflip-idle",
       });
     }).toThrow(/no invalid\/ Snapshot vector/u);
+  });
+
+  test("serves a valid/ Snapshot at another version, and only a version the schema allows", async ({
+    page,
+    fakePlayApi,
+  }) => {
+    const token = await openSession(page, fakePlayApi);
+    fakePlayApi.answer("getSnapshot", {
+      kind: "snapshot-version",
+      vector: "coinflip-active",
+      version: 1,
+    });
+    const answered = await call(page, "/play/v1/snapshot", {
+      method: "GET",
+      token,
+    });
+    expect(answered.status).toBe(200);
+    // Only `version` differs from the vendored vector.
+    expect(answered.body).toEqual({
+      ...validVector("coinflip-active", "Snapshot").input,
+      version: 1,
+    });
+    for (const version of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => {
+        fakePlayApi.answer("getSnapshot", {
+          kind: "snapshot-version",
+          vector: "coinflip-active",
+          version,
+        });
+      }).toThrow(/not one the Snapshot schema allows/u);
+    }
+  });
+
+  test("allows a version override only under a version definition it fully checks", () => {
+    const checked = { description: "d", type: "integer", minimum: 0 };
+    expect(allowedVersionIn(schemaWith(checked), 0)).toBe(true);
+    expect(allowedVersionIn(schemaWith(checked), -1)).toBe(false);
+    // Any other keyword is one the check does not apply: refused.
+    for (const extra of [{ maximum: 9 }, { multipleOf: 2 }, { const: 1 }]) {
+      expect(allowedVersionIn(schemaWith({ ...checked, ...extra }), 1)).toBe(
+        false,
+      );
+    }
+    expect(
+      allowedVersionIn(schemaWith({ type: "number", minimum: 0 }), 1),
+    ).toBe(false);
+    expect(allowedVersionIn(schemaWith({ type: "integer" }), 1)).toBe(false);
+    expect(allowedVersionIn({}, 1)).toBe(false);
   });
 });

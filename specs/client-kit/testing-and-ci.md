@@ -431,9 +431,14 @@ development-only, so it may import the test-only entry of `contracts`.
   check (`harness/fake-rpc.ts`, which can fail it on purpose); and the fake Play
   API checks the start's `actionKey` and the move's and cancel's bytes against
   the vectors (an answer's `expect`), and can answer a code no vector holds
-  (`own-problem`) and, for W-28 only, an `invalid/` Snapshot. The harness's own
-  checks have their tests (`round-harness.spec.ts`). A multi-step game and
-  W-49's handshake are declared with `test.fixme` in
+  (`own-problem`), a `valid/` Snapshot at another `version` (`snapshot-version`,
+  for W-29's drop: only `version` is replaced, and the value is checked against
+  the vendored schema's `version`, an integer at or above its minimum, before
+  the answer is queued, so the body stays one the schema accepts; a `version`
+  definition with any keyword but `description`, `type`, and `minimum` allows no
+  override, fail closed), and, for W-28 only, an `invalid/` Snapshot. The
+  harness's own checks have their tests (`round-harness.spec.ts`). A multi-step
+  game and W-49's handshake are declared with `test.fixme` in
   `e2e/tests/pending.spec.ts`, reported as skipped, never as passed. Every spec
   file runs in all three projects except the proofs of the blocks (above):
   `hermetic-workers.spec.ts` in Chromium only, and `hermetic-proxy.spec.ts` and

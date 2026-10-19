@@ -5,14 +5,13 @@
 // It answers from the vendored contract only:
 // - routes, listed statuses, and request bodies come from the Play API document
 //   (play-api-document.ts, held to the generated types);
-// - every Snapshot and every scripted problem is a `valid/` Snapshot vector
-//   (vectors.ts), checked to be of the definition the answer needs, and a
-//   problem is sent with its own `status`, which must be one the operation
-//   lists;
-// - the bodies the fake writes itself (the redeem and refresh responses, the
-//   problems of a missing token or a malformed body, and a scripted
-//   `own-problem` for a code no vector holds, with a listed status) are typed
-//   by the document's response types;
+// - every Snapshot and every scripted problem is a `valid/` vector (vectors.ts)
+//   of the definition the answer needs (`snapshot-version` replaces only its
+//   `version`, checked against the schema); a problem keeps its own `status`,
+//   which the operation must list;
+// - the bodies the fake writes itself (redeem and refresh responses, problems
+//   of a missing token or a malformed body, an `own-problem` for a code no
+//   vector holds, with a listed status) are typed by the document's types;
 // - the one exception is `invalid-snapshot`, an `invalid/` vector served on
 //   purpose for W-28's rejected Snapshot.
 //
@@ -41,6 +40,7 @@ import {
   opaque,
   ownProblem,
   routeOf,
+  snapshotBody,
   type Answer,
   type ProblemBody,
 } from "./fake-play-wire.ts";
@@ -120,8 +120,9 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
 
   const play = async (route: Route, answer: Answer): Promise<void> => {
     switch (answer.kind) {
-      case "snapshot": {
-        await json(route, 200, validVector(answer.vector, "Snapshot").input);
+      case "snapshot":
+      case "snapshot-version": {
+        await json(route, 200, snapshotBody(answer));
         return;
       }
       case "problem": {

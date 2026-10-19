@@ -5,7 +5,11 @@
 
 import { createHash } from "node:crypto";
 
-import type { ErrorCode, PlayProblem } from "@intraverse/se-client-contracts";
+import {
+  type ErrorCode,
+  type PlayProblem,
+  snapshotSchema,
+} from "@intraverse/se-client-contracts";
 
 import {
   PLAY_OPERATIONS,
@@ -57,6 +61,20 @@ type AnswerKind<Id extends PlayOperationId> =
           /** 200 with the `valid/` Snapshot vector of this name. */
           readonly kind: "snapshot";
           readonly vector: string;
+        }
+      : never)
+  | (Id extends SnapshotOperationId
+      ? {
+          /**
+           * 200 with the `valid/` Snapshot vector of this name, its `version`
+           * replaced by `version` and nothing else changed: a later read that
+           * carries a lower `version` than the one last shown (W-29). The value
+           * is checked against the vendored schema's `version` before the
+           * answer is queued, so the body stays one the schema accepts.
+           */
+          readonly kind: "snapshot-version";
+          readonly vector: string;
+          readonly version: number;
         }
       : never)
   | {
@@ -113,10 +131,67 @@ export const bearerOf = (
 ): string | undefined =>
   authorization === undefined ? undefined : BEARER.exec(authorization)?.[1];
 
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** The only keywords a `version` definition may have for an override. */
+const VERSION_KEYWORDS: ReadonlySet<string> = new Set([
+  "description",
+  "type",
+  "minimum",
+]);
+
+/**
+ * Whether `version` is a value `schema` allows for a Snapshot's `version`: an
+ * `integer` at or above its `minimum`. Fails closed: a `version` definition of
+ * another shape, or with any keyword but `description`, `type`, and `minimum`
+ * (one this check does not apply), allows no override.
+ */
+export const allowedVersionIn = (
+  schema: Readonly<Record<string, unknown>>,
+  version: number,
+): boolean => {
+  const properties = schema["properties"];
+  const definition = isRecord(properties) ? properties["version"] : undefined;
+  if (!isRecord(definition) || definition["type"] !== "integer") return false;
+  if (Object.keys(definition).some(key => !VERSION_KEYWORDS.has(key))) {
+    return false;
+  }
+  const minimum = definition["minimum"];
+  return (
+    typeof minimum === "number" &&
+    Number.isSafeInteger(version) &&
+    version >= minimum
+  );
+};
+
+/** `allowedVersionIn` the vendored `se.snapshot/1` schema. */
+export const allowedVersion = (version: number): boolean =>
+  allowedVersionIn(snapshotSchema, version);
+
+/** The body of a Snapshot answer: the vector, or it at another `version`. */
+export const snapshotBody = (
+  answer: Extract<Answer, { readonly kind: "snapshot" | "snapshot-version" }>,
+): Readonly<Record<string, unknown>> => {
+  const { input } = validVector(answer.vector, "Snapshot");
+  return answer.kind === "snapshot"
+    ? input
+    : { ...input, version: answer.version };
+};
+
 /** Checks a scripted answer against the document before it is queued. */
 export const checkAnswer = (id: PlayOperationId, answer: Answer): void => {
   if (answer.kind === "snapshot") {
     validVector(answer.vector, "Snapshot");
+    return;
+  }
+  if (answer.kind === "snapshot-version") {
+    validVector(answer.vector, "Snapshot");
+    if (!allowedVersion(answer.version)) {
+      throw new Error(
+        `version ${String(answer.version)} for "${answer.vector}" is not one the Snapshot schema allows`,
+      );
+    }
     return;
   }
   if (answer.kind === "invalid-snapshot") {

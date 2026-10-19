@@ -4,7 +4,8 @@
 // round's move or cash-out is not confirmed (W-16, in the background). It
 // reads the Snapshot only through the read port the session hands it, which
 // returns a validated Snapshot or typed error (W-28); it never sees a key or a
-// token.
+// token. A Snapshot dropped for a lower `version` (W-29) where no poll runs is
+// read again (snapshot-reread.ts).
 //
 // The session (session-wiring.ts) supplies `readSnapshot` and the start,
 // cash-out, and "check again" intents through `connect`; its reads carry the
@@ -12,13 +13,11 @@
 // (`session-ended`, `other-tab`, `unsupported-browser`) arrive through `block`.
 
 import type { EnvironmentConfig } from "./environment-config.ts";
+import { followed } from "./poll-follow.ts";
 import { createView } from "./render.ts";
-import type {
-  CancelState,
-  RoundProgress,
-  SnapshotRead,
-} from "./round-input.ts";
+import type { SnapshotRead } from "./round-input.ts";
 import { createSnapshotPoller, type PollConfig } from "./snapshot-poller.ts";
+import { createSnapshotReread, droppedLower } from "./snapshot-reread.ts";
 import type { Timers } from "./timers.ts";
 import type { ChangeCause, Intents, ViewOptions } from "./view-options.ts";
 import {
@@ -27,7 +26,6 @@ import {
   type BlockingState,
   clearProblem,
   initialState,
-  isFinal,
   leaveEndedRound,
   type WrapperState,
 } from "./wrapper-state.ts";
@@ -72,39 +70,6 @@ export type WrapperApp = {
   readonly dispose: () => void;
 };
 
-/**
- * What the poller follows: the shown round, the shell's cancel of it, and
- * whether its move or cash-out is not confirmed (W-16).
- */
-type Followed = {
-  readonly round: RoundProgress | undefined;
-  readonly cancel?: CancelState;
-  readonly unconfirmed?: boolean;
-};
-
-const NOTHING: Followed = Object.freeze({ round: undefined });
-
-/**
- * The round the poller follows, or none when nothing may be polled. While the
- * shell's cancel of the round is `settling` or `check-later`, its reads go on
- * through the round's own failed state, a typed error, or a rejected read, none
- * of which the player could retry (W-35: no cancel left unread); only a final
- * state stops them.
- */
-const followed = (state: WrapperState): Followed => {
-  const cancel = state.check?.cancel;
-  if (cancel === "settling" || cancel === "check-later") {
-    return isFinal(state) ? NOTHING : { round: state.snapshot, cancel };
-  }
-  return state.blocking === undefined && state.problem === undefined
-    ? {
-        round: state.snapshot,
-        ...(cancel === undefined ? {} : { cancel }),
-        unconfirmed: state.check?.unconfirmed !== undefined,
-      }
-    : NOTHING;
-};
-
 export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
   let state: WrapperState = {
     ...initialState,
@@ -119,8 +84,8 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
   // goes once a Snapshot of another round is shown.
   let startedFrom: string | undefined;
 
-  // `apply`, `view`, and `poller` refer to each other; each is called only
-  // after all three exist.
+  // `apply`, `view`, `poller`, and `reread` refer to each other; each is
+  // called only after all of them exist.
   const apply = (next: WrapperState, cause: ChangeCause): void => {
     if (next === state) {
       return;
@@ -138,6 +103,8 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     view.update(state, cause);
     const { round, cancel, unconfirmed } = followed(state);
     poller.follow(round, cancel, unconfirmed);
+    // A re-read stops the moment one may no longer run (W-35): no timer stays.
+    if (!mayReread()) reread.stop();
     const ended =
       state.check?.cancel === "ended" ? state.snapshot?.roundId : undefined;
     if (ended !== undefined && ended !== endedReadFor) {
@@ -169,6 +136,13 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     }
   };
 
+  /** Applies a read; a Snapshot dropped for a lower `version` is read again. */
+  const take = (read: SnapshotRead, cause: ChangeCause): void => {
+    const lower = droppedLower(state, read);
+    apply(acceptRead(state, read), cause);
+    if (lower) reread.dropped();
+  };
+
   const readOnce = async (cause: ChangeCause): Promise<void> => {
     const port = readSnapshot;
     if (port === undefined) {
@@ -180,7 +154,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     } catch {
       read = { kind: "network" };
     }
-    apply(acceptRead(state, read), cause);
+    take(read, cause);
   };
 
   /** "Try again" (W-42): the Snapshot is read again, as the player asked. */
@@ -223,11 +197,35 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
         : readSnapshot(),
     timers: options.timers,
     onRead: (read: SnapshotRead): void => {
-      apply(acceptRead(state, read), "poll");
+      take(read, "poll");
     },
     onSlow: (): void => {
       apply({ ...state, slow: true }, "poll");
     },
+    ...(options.pollConfig === undefined ? {} : { config: options.pollConfig }),
+  });
+
+  // Only where no poll runs, no typed error or blocking state shows, and the
+  // shell's cancel does not read the round itself (W-35).
+  const mayReread = (): boolean =>
+    readSnapshot !== undefined &&
+    !poller.running() &&
+    followed(state).round !== undefined &&
+    state.check?.cancel !== "settling" &&
+    state.check?.cancel !== "check-later";
+
+  const reread = createSnapshotReread({
+    read: (): Promise<SnapshotRead> =>
+      readSnapshot === undefined
+        ? Promise.resolve({ kind: "network" })
+        : readSnapshot(),
+    timers: options.timers,
+    onRead: (read: SnapshotRead): boolean => {
+      const lower = droppedLower(state, read);
+      apply(acceptRead(state, read), "poll");
+      return lower;
+    },
+    mayRead: mayReread,
     ...(options.pollConfig === undefined ? {} : { config: options.pollConfig }),
   });
 
@@ -278,7 +276,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
       void readOnce("poll");
     },
     accept: (read: SnapshotRead, cause: ChangeCause): void => {
-      apply(acceptRead(state, read), cause);
+      take(read, cause);
     },
     block: (blocking: BlockingState, cause: ChangeCause = "poll"): void => {
       apply(block(state, blocking), cause);
@@ -290,6 +288,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     state: (): WrapperState => state,
     dispose: (): void => {
       poller.stop();
+      reread.stop();
       unsubscribe?.();
     },
   });
