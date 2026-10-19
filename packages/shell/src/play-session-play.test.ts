@@ -1,14 +1,16 @@
 // The open session's use cases: it reads with the play token, starts a round
 // with the key's address and shows it ready once checked, shows a
-// `ROUND_ACTIVE` round it does not hold, mounts the game with its pick use
-// case, ends on a session-ending answer, and prints no secret; and the one
-// round-over check (W-35, W-39). Scripted Play API, manual clock, fake locks.
+// `ROUND_ACTIVE` round it does not hold (also as the answer to the start's one
+// resend, W-22), sends no resend once the session ended (W-22), mounts the game
+// with its pick use case, ends on a session-ending answer, and prints no secret;
+// and the one round-over check (W-35, W-39). Scripted Play API, manual clock,
+// fake locks.
 
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 import { describe, expect, it } from "vitest";
 
 import { createFakeGame, HELLO, mountOf } from "./fixtures/fake-game.ts";
-import { ok, problem } from "./fixtures/fake-play.ts";
+import { lost, ok, problem } from "./fixtures/fake-play.ts";
 import {
   actionKeyOf,
   CODE,
@@ -76,6 +78,49 @@ describe("the open session", () => {
       kind: "problem",
       problem: { code: "ROUND_ACTIVE" },
     });
+    expect(session.round()).toBeUndefined();
+  });
+
+  it("a ROUND_ACTIVE answer to the start's one resend shows the open round, which it does not hold (W-22)", async () => {
+    const opened = await open();
+    const session = sessionOf(opened);
+    const game = createFakeGame({ gameOrigin: GAME, gameOrigins: [GAME] });
+    expect(session.mountGame(mountOf(game)).ok).toBe(true);
+    game.send(HELLO);
+    const body = vectorInput("valid", "problem-round-active") as {
+      readonly snapshot: { readonly roundId: string };
+    };
+    opened.play.answer("startRound", lost, problem409(body));
+    const read = await session.start(ROUND_REQUEST.bet);
+    expect(read).toMatchObject({
+      kind: "problem",
+      problem: { code: "ROUND_ACTIVE" },
+    });
+    const [start, resend] = opened.play.sent("startRound");
+    expect(resend?.body).toEqual(start?.body);
+    expect(opened.play.sent("startRound")).toHaveLength(2);
+    expect(session.round()).toBeUndefined();
+    expect(game.posted.at(-1)?.message).toMatchObject({
+      type: "snapshot",
+      snapshot: { roundId: body.snapshot.roundId },
+    });
+  });
+
+  it("a session that ended before the start's one resend sends nothing more, and the start answers ended (W-22)", async () => {
+    const opened = await open();
+    const session = sessionOf(opened);
+    opened.play.answer(
+      "startRound",
+      request => {
+        session.end();
+        return lost(request);
+      },
+      ok(issued.snapshot),
+    );
+    expect(await session.start(ROUND_REQUEST.bet)).toEqual({
+      kind: "session-ended",
+    });
+    expect(opened.play.sent("startRound")).toHaveLength(1);
     expect(session.round()).toBeUndefined();
   });
 

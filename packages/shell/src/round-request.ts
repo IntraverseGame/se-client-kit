@@ -97,6 +97,25 @@ export const mayBeStored = (error: unknown): boolean =>
   (error.problem.status === 503 ||
     (error.problem.status === 500 && error.problem.code === "INTERNAL"));
 
+/**
+ * For the start, a failure after which the round may exist, so the same key and
+ * body are sent once more, and never a third time, the transport's own repeats
+ * aside (W-22, W-36; decided in human review, 2026-10-19): no response, a 503
+ * `UNAVAILABLE` whatever its `retryable`, a bare 503, or a 500 `INTERNAL`. The
+ * Play API document says the same key and body answer the stored round, even
+ * when it has ended, and neither a 503 nor a 500 `INTERNAL` proves nothing was
+ * stored. A start voided before any money moved (a 503 of another code, such as
+ * `FUNDING_UNCONFIRMED`) is retried with a new key, as the document says, and
+ * only by the player; a 500 with another code, a 400, a 409 (`ROUND_ACTIVE`
+ * included), and a 422 are not resent either.
+ */
+export const startMayBeStored = (error: unknown): boolean =>
+  error instanceof NetworkError ||
+  (error instanceof ProtocolError && error.status === 503) ||
+  (error instanceof ProblemError &&
+    ((error.problem.status === 503 && error.problem.code === "UNAVAILABLE") ||
+      (error.problem.status === 500 && error.problem.code === "INTERNAL")));
+
 /** A problem that refuses the call for good (not retryable). */
 export const isRefusal = (error: unknown): boolean =>
   error instanceof ProblemError && !error.problem.retryable;

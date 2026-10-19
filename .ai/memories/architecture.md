@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-19 (Play API document b47b286: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request, 726f0a2: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-19 (start resend pull request: `startMayBeStored`, W-22's one resend of a start whose round may exist; Play API document b47b286: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request, 726f0a2: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -170,7 +170,16 @@ structure below.
   also after a re-issue (unlike the cancel). The once-only state is the
   delivery's (`resendOnce`), shared with the manual `resend`: never a third
   send. `isUnknownOutcome` is the one definition of a lost send for every
-  action, the cancel included. The backend recognises a repeat by its signed
+  action, the cancel included. The start is not a signed action and has its own
+  one resend (`startMayBeStored` in `round-request.ts`, used by
+  `round-start.ts`; W-22, human review, 2026-10-19): no answer, a 503
+  `UNAVAILABLE` whatever its `retryable`, a bare 503, or a 500 `INTERNAL`
+  resends the same key and body right away, once (never a third time, the
+  transport's own repeats aside), after checking the lock again (`address`:
+  `lock-not-held` or `session-ended`, nothing sent); a voided start's 503
+  (`FUNDING_UNCONFIRMED`, ...) and every other failure are thrown with one
+  send. Keep `isUnknownOutcome` and `mayBeStored` as they are for the move,
+  cash-out, and cancel. The backend recognises a repeat by its signed
   action (sequence and bytes) in the round's action log, not by the key (still
   sent, not stored yet). Only the newest read by `version` triggers the resend.
   A read that caused the resend answers with the resend's answer
