@@ -19,8 +19,11 @@ spec, and a behavior change updates its spec in the same pull request
   [`rfcs/`](../rfcs/). Unknowns are `<!-- TODO -->` markers, never invented.
 - Contracts owned by the backend (the Play API at `/play/v1`, the Snapshot
   schema bundle, the signed-action specification, the signing vectors) are
-  referred to by name and used as copies pinned in a lock file. They are not
-  redefined here, and no private source is linked.
+  referred to by name. The Play API document, the Snapshot schema bundle, the
+  signing vectors, and the public vector bundle of the SuperEngine fairness
+  kernel are used as copies pinned in a lock file; the signed-action
+  specification is not copied, and its vectors are. They are not redefined here,
+  and no private source is linked.
 - Public: no secrets, internal hostnames, or personal data.
 
 ## Index

@@ -79,8 +79,10 @@ owns.
 - **The Wrapper consumes** (contracts, never backend code):
   - the Play API, `/play/v1`, as its OpenAPI document;
   - the Snapshot schema `se.snapshot/1` and its golden vectors;
-  - the signed-action spec and the signing vectors; (the three above all arrive
-    as vendored data in the kit's `contracts` package, never as backend code);
+  - the signed-action spec, followed by name, and its vectors (the signing
+    vectors and the `signed-action/` Snapshot vector); (the Play API document,
+    the Snapshot schema and vectors, and these vectors arrive as vendored data
+    in the kit's `contracts` package, never as backend code);
   - public JSON-RPC endpoints, for the tip check (a local or preview environment
     may use its own node, W-26a);
   - one environment configuration document ([Configuration](#configuration));
