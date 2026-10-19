@@ -559,20 +559,27 @@ are in brackets.
     and that read decides (below): after a 400 nothing more is sent, and a read
     that decides nothing leaves the cancel `refused`; after a lost send
     (`isUnknownOutcome`, the one definition for every action: no answer, or a
-    503 not marked `retryable: false`, a bare 503 included; a 503 marked
-    `retryable: false` earns no resend but, like a 422, is no refusal: a failed
-    read after it is settling; decided in human review, 2026-10-18), when the
-    read (a fresh, successful one) shows the round `active`, at `step` 0, and
-    not re-issued, the same signed bytes are sent again, once (decided by human
-    review, 2026-10-17). A resend that is also lost is followed by another read
-    and never a third send; a 422 to it is read and never answered with another
-    send. Nothing else is resent. The state is `unavailable` when the cancel is
-    not sent: when the signed cancel does not match its typed data nothing is
-    sent, the transcript state is `failed`, and `lastError()` is
-    `invalid-input`. Not resending after a re-issue is the shell's own reading
-    of W-26 ("sign nothing more"), the conservative side. The state is also
-    `unavailable` when signing throws a `ShellError` (the signer lock lost:
-    `lock-not-held`), with nothing sent.
+    503 not marked `retryable: false`, a bare 503 included), when the read (a
+    fresh, successful one) shows the round `active`, at `step` 0, and not
+    re-issued, the same signed bytes are sent again, once (decided by human
+    review, 2026-10-17). A 503 marked `retryable: false` earns no resend but,
+    like a 422, is no refusal: a failed read after it is settling (decided in
+    human review, 2026-10-18). A 500 `INTERNAL` marked `retryable: false` is
+    read the same way (`mayBeStored`), and earns no resend either: the Play API
+    document since se-backend `65504f5` says that after a lost response,
+    `UNAVAILABLE`, or `INTERNAL` the cancel may already have been taken, and
+    allows a resend after the read, but after a 503 marked `retryable: false` or
+    a 500 `INTERNAL` the kit reads and never sends the cancel again (an `active`
+    read gives `not-taken`), more conservative than the document (decided in
+    human review, 2026-10-19). A 500 with another code stays a refusal. A resend
+    that is also lost is followed by another read and never a third send; a 422
+    to it is read and never answered with another send. Nothing else is resent.
+    The state is `unavailable` when the cancel is not sent: when the signed
+    cancel does not match its typed data nothing is sent, the transcript state
+    is `failed`, and `lastError()` is `invalid-input`. Not resending after a
+    re-issue is the shell's own reading of W-26 ("sign nothing more"), the
+    conservative side. The state is also `unavailable` when signing throws a
+    `ShellError` (the signer lock lost: `lock-not-held`), with nothing sent.
   - **Settling the cancel (W-25, W-35; the Snapshot contract `se.snapshot/1` as
     vendored from the backend's b27afc5, whose meaning changed: `canceled` is
     final, and a cancel the engine has not answered shows `resolving`; decided
@@ -602,27 +609,28 @@ are in brackets.
     failed read settle nothing. Only after an unknown outcome and a read of
     `active` with no move (not re-issued) is the same cancel sent again, once.
     After an unknown outcome (a lost send, or an answer that is not this round's
-    Snapshot) or a 422, a read that fails or shows another round puts the cancel
-    in `settling` as read 1, with no resend: a later `active` read with no move
-    is `not-taken`, not a resend (decided by human review, 2026-10-18). After an
-    unknown outcome, a read of `active` with no move does the same (read 1,
-    nothing sent) whenever no resend is allowed: after the resend (a second
-    unknown outcome, no third send) or when the read shows a re-issue. After a
-    400 such a read leaves the cancel `refused` (the round is back to `active`
-    per the contract). There is no `unconfirmed` state: every failed call ends
-    `settling`, or decided by its read (`sent`, `ended`, `not-taken`), or
-    `refused` after a 400; so no state leaves a cancel that may be stored with
-    nothing reading the round (`settling` is read by the poll, `check-later` by
-    `checkAgain`). Every problem a cancel call is answered with is kept in the
-    evidence (`cancelRefusals`: status, code, `requestId`). An answer that is
-    not a Snapshot of this round is an unknown outcome (`snapshot-rejected`,
-    then a read). A failed read counts. After `SETTLING_READS` (30) reads
-    without one that settles it, the state is `check-later` ("still resolving —
-    contact support": today a round that had already closed before the cancel
-    arrived stays `resolving` for a person to resolve): the fast poll stops, and
-    each `checkAgain` (the "check again" control, or the Wrapper's 30 s
-    background read) reads once under the same rules. The shell reads no clock;
-    the Wrapper owns the timing. While the state is `in-flight`, `settling`, or
+    Snapshot), a 422, a 503, or a 500 `INTERNAL`, a read that fails or shows
+    another round puts the cancel in `settling` as read 1, with no resend: a
+    later `active` read with no move is `not-taken`, not a resend (decided by
+    human review, 2026-10-18). After an unknown outcome, a read of `active` with
+    no move does the same (read 1, nothing sent) whenever no resend is allowed:
+    after the resend (a second unknown outcome, no third send) or when the read
+    shows a re-issue. After a 400 such a read leaves the cancel `refused` (the
+    round is back to `active` per the contract). There is no `unconfirmed`
+    state: every failed call ends `settling`, or decided by its read (`sent`,
+    `ended`, `not-taken`), or `refused` after a 400; so no state leaves a cancel
+    that may be stored with nothing reading the round (`settling` is read by the
+    poll, `check-later` by `checkAgain`). Every problem a cancel call is
+    answered with is kept in the evidence (`cancelRefusals`: status, code,
+    `requestId`). An answer that is not a Snapshot of this round is an unknown
+    outcome (`snapshot-rejected`, then a read). A failed read counts. After
+    `SETTLING_READS` (30) reads without one that settles it, the state is
+    `check-later` ("still resolving — contact support": a round the engine
+    cannot settle on its own stays `resolving` until it is resolved manually, as
+    the Play API document says since `65504f5`): the fast poll stops, and each
+    `checkAgain` (the "check again" control, or the Wrapper's 30 s background
+    read) reads once under the same rules. The shell reads no clock; the Wrapper
+    owns the timing. While the state is `in-flight`, `settling`, or
     `check-later`, the round is not over and no new round may start for the
     session (the guard of a new round reads the flow's `cancel()`); `ended` does
     not block one. An `active` answer is `not-taken`, as an `active` read is. A

@@ -5,8 +5,10 @@
 // or `active` (the cancel did not take). Since the Play API document of
 // 726f0a2 a re-read keeps showing the round once it has ended, with its
 // result, and `idle` never follows `active` (a round is voided only while
-// `starting`). It changes only with a vendored change of the Snapshot
-// contract.
+// `starting`). Since b47b286 a cancel that arrives after the round had closed
+// settles by that closure (`won`, `lost`, or `canceled` with `closeReason:
+// "expired"`), never honored. It changes only with a vendored change of the
+// Snapshot contract.
 
 import { ProblemError } from "@intraverse/se-client-play-client";
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
@@ -30,7 +32,9 @@ export type CancelState =
   /**
    * Signed and sent; the answer, or a read that settled the cancel, was the
    * round's result (`canceled`, with or without a `closeReason`, `won`, or
-   * `lost`).
+   * `lost`). `won`, `lost`, and `canceled` with `closeReason: "expired"` also
+   * come when the round had closed before the cancel arrived: the cancel was
+   * never honored.
    */
   | "sent"
   /**
@@ -58,8 +62,9 @@ export type CancelState =
   | "check-later"
   /**
    * Refused for good (a 400, or another problem that is not retryable but a
-   * 422), and the read after it decided nothing (it failed, or showed another
-   * round): the round is back to `active` per the contract, and nothing is
+   * 422, a 503, or a 500 `INTERNAL`, which the shell reads as possibly stored),
+   * and the read after it decided nothing (it failed, or showed another round):
+   * after a 400 the round is back to `active` per the contract, and nothing is
    * resent. Every other failed call ends `settling` or decided by its read, so
    * no state leaves a cancel that may be stored with nothing reading it.
    */

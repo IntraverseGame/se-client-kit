@@ -191,8 +191,9 @@ paths:
         its refund on the way. `canceled` is final: the status never changes
         again. When the engine has not answered the cancel yet, the answer is
         `resolving` (no pick, no reveal): read `GET /play/v1/snapshot` again.
-        It shows `resolving` until the engine answers, then `canceled`, or
-        `active` when a move was applied first or the cancel was refused; the
+        It shows `resolving` until the engine answers, then `canceled`,
+        `active` when a move was applied first or the cancel was refused, or
+        the round's result when the engine had already closed it (below); the
         round stays the session's last round after it has ended (see
         `GET /play/v1/snapshot`). Only an `active` round with no move played
         can be canceled. The API passes the cancel through unread: only the
@@ -204,12 +205,22 @@ paths:
         wrong signer, `sequence` or `previous`) is `INVALID_ARGUMENT` and
         leaves the round `active`, so a corrected cancel may follow. When a
         move was accepted while the cancel was on its way, the answer is the
-        round's Snapshot with that move played, and nothing is refunded.
+        round's Snapshot with that move played, and nothing is refunded. When
+        the engine had already closed the round before the cancel arrived (a
+        final move whose answer was lost, or the time limit), the round ends
+        as the engine closed it, never as canceled by the player: the answer
+        is the round's Snapshot, `won` or `lost` with its `payout`, or
+        `canceled` with `closeReason: "expired"` (the bet refunded). None is
+        an error.
 
         A cancel is not answered from a log as a repeated move is: once the
         engine took it, the same cancel again is `FAILED_PRECONDITION`. After
-        a lost response or `UNAVAILABLE`, read `GET /play/v1/snapshot` before
-        sending it again.
+        a lost response, `UNAVAILABLE` or `INTERNAL`, the cancel may already
+        have been taken: read `GET /play/v1/snapshot` before sending it again.
+        A round can stay `resolving` until it is resolved manually, when the
+        engine cannot settle it on its own (a closure it cannot read, or a
+        state it must not settle by itself); the Snapshot then keeps showing
+        `resolving` until the round ends.
       tags: [rounds]
       requestBody:
         required: true
@@ -240,7 +251,9 @@ paths:
         and none has ended since the last `rounds:start`: the session has no
         round yet, or its last round was voided or refused. The answer of
         that `rounds:start` carries the void or refusal reason; this read
-        never repeats it. Reading does not reset the session's idle timeout.
+        never repeats it. The round and `bet.balance` are read separately, so
+        `bet.balance` may be newer than the round; the next read shows both
+        as they are. Reading does not reset the session's idle timeout.
       tags: [rounds]
       responses:
         "200":

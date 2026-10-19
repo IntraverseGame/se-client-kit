@@ -95,7 +95,13 @@ Part of the [Wrapper spec](../wrapper.md), section
   action (W-46), until a read settles the round.
 
 - **W-32.** `won` is final. The Wrapper MUST NOT show or wait for the operator
-  credit. The balance it shows is the Snapshot's `bet.balance.formatted`.
+  credit. The balance it shows is the Snapshot's `bet.balance.formatted`. The
+  Snapshot read gets the round and `bet.balance` separately (the Play API
+  document since se-backend `b47b286`), so a read's `bet.balance` may be newer
+  than its round, and the next read shows both as they are; the Wrapper shows
+  each read's balance as it comes and computes none. Every read carries a new
+  `version`, never an earlier read's (the backend, 2026-10-19), so a read with a
+  newer balance is never dropped as an equal `version` (W-29).
 - **W-33.** `closeReason: "expired"` is shown next to the status and is not a
   status. A `canceled` Snapshot is final, with or without `closeReason`, also
   when it answers the shell's own cancel or settles it (W-25, the Snapshot
@@ -131,12 +137,23 @@ Part of the [Wrapper spec](../wrapper.md), section
     read, which never follows `active` (W-25): a defensive fallback;
   - `not-taken`: "this round failed verification" (W-26), the round open until
     its expiry rule closes it, whether the answer or a read showed `active`;
-  - `sent` with `canceled` (the shell's own cancel took): "round canceled" with
-    "this round failed verification and was canceled" (W-26) in place of "your
-    bet was returned"; `sent` with `won` or `lost` shows that result as usual.
+  - `sent` with `canceled`: "round canceled" with "this round failed
+    verification and was canceled" (W-26) in place of "your bet was returned".
+    When the time limit had closed the round before the cancel arrived
+    (`closeReason: "expired"`, the cancel never honored; se-backend `b47b286`),
+    it reads "this round failed verification" instead, followed by "the time
+    limit ended this round", never "and was canceled";
+  - `sent` with `won` or `lost` (a round that closed by play although the shell
+    had sent the required cancel, which was never honored; se-backend
+    `b47b286`): the result, with "this round failed verification; it closed
+    before the cancel arrived", the round id and the verify link (W-39), and the
+    next bet beside it (W-31). A result with no cancel of the shell's gets no
+    such line. (Both decided in human review, 2026-10-19.)
 
   The copy (English): "Still resolving — contact support", "Check again", "Round
-  ended", and "This round failed verification and was canceled."
+  ended", "This round failed verification and was canceled.", "This round failed
+  verification.", and "This round failed verification; it closed before the
+  cancel arrived."
 
 - **W-34.** Money: the Wrapper MUST read `Amount.value` as a string and use
   `BigInt` for any comparison (for example the bet against the balance), and

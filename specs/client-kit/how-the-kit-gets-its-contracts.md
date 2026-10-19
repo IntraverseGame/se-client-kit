@@ -100,6 +100,36 @@ Rules:
    an ended round's result, from that Snapshot's `bet` (W-31 in
    [Rendering from the Snapshot](../wrapper/rendering-from-the-snapshot.md)).
 
+   **A cancel that loses to the round's closure** (the Play API document's
+   `cancelRound` and `getSnapshot` descriptions, synced from se-backend
+   `b47b286`; no schema, vector, field, or status changed): when the engine had
+   already closed the round before the cancel arrived (a final move whose answer
+   was lost, or the time limit), the round ends as the engine closed it and the
+   cancel is never honored. `rounds:cancel` answers the round's Snapshot with no
+   error: `won` or `lost` with its `payout`, or `canceled` with
+   `closeReason: "expired"` (the bet refunded). When the engine has not answered
+   the cancel yet, the answer is `resolving`, and a later read shows the round's
+   result. The Snapshot read now says that the round and `bet.balance` are read
+   separately, so `bet.balance` may be newer than the round, and the next read
+   shows both as they are. The shell's cancel already reads `won`, `lost`, and
+   `canceled` as the round's result (`sent`, W-25), and a round that stays
+   `resolving` ends in `check-later`; the Wrapper never shows such a closure as
+   canceled by the player (W-33).
+
+   **A cancel that may have been taken, and a round resolved manually** (the
+   Play API document's `cancelRound` description, synced from se-backend
+   `65504f5`; no schema, route, vector, field, or status changed): after a lost
+   response, `UNAVAILABLE`, or `INTERNAL`, the cancel may already have been
+   taken, so read `GET /play/v1/snapshot` before sending it again. A round the
+   engine cannot settle on its own stays `resolving` until it is resolved
+   manually, and the Snapshot keeps showing `resolving` until the round ends.
+   The shell reads a 503 and a 500 `INTERNAL` to the cancel as possibly stored:
+   it reads only and never sends the cancel again after either (an `active` read
+   gives `not-taken`), more conservative than the document, which allows a
+   resend after the read (decided in human review, 2026-10-19; W-25). A round
+   that stays `resolving` ends in `check-later` ("still resolving — contact
+   support").
+
    **The payout** (the Snapshot schema, the Play API document, and the `payout`
    vectors, synced from se-backend `f8cc92b`): an additive change, a new
    optional top-level `payout`, an `Amount` computed by the server and never

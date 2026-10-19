@@ -85,11 +85,17 @@ export const isUnknownOutcome = (error: unknown): boolean =>
   (error instanceof ProtocolError && error.status === 503);
 
 /**
- * A 503 problem, whatever its `retryable`: for the cancel, never proof of a
- * refusal (it may come with the cancel stored; human review, 2026-10-18).
+ * For the cancel, a problem that is never proof of a refusal, whatever its
+ * `retryable`, so the reads decide: a 503 (`UNAVAILABLE`; human review,
+ * 2026-10-18) or a 500 `INTERNAL` (human review, 2026-10-19). The Play API
+ * document (since se-backend 65504f5) says that after a lost response,
+ * `UNAVAILABLE`, or `INTERNAL` the cancel may already have been taken. A 500
+ * with another code is not.
  */
-export const isUnavailable = (error: unknown): boolean =>
-  error instanceof ProblemError && error.problem.status === 503;
+export const mayBeStored = (error: unknown): boolean =>
+  error instanceof ProblemError &&
+  (error.problem.status === 503 ||
+    (error.problem.status === 500 && error.problem.code === "INTERNAL"));
 
 /** A problem that refuses the call for good (not retryable). */
 export const isRefusal = (error: unknown): boolean =>

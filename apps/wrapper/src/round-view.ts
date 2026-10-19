@@ -141,14 +141,24 @@ export const roundView = (
     case "won":
     case "lost":
     case "canceled": {
+      // After the shell's required cancel (W-26, W-33; decided in human
+      // review, 2026-10-19): `canceled` is the round failed verification and
+      // canceled, or, when the time limit had closed it first (`closeReason:
+      // "expired"`, the cancel never honored), only failed verification, with
+      // the time limit's line below; `won` or `lost` is a round that closed by
+      // play before the cancel arrived, so its result shows with that note.
+      const afterCancel = check?.cancel === "sent";
       if (snapshot.status === "canceled") {
-        // The shell's required cancel took (W-26): the round failed
-        // verification and was canceled.
-        const detail =
-          check?.cancel === "sent"
-            ? m["detail.canceledUnverified"]
-            : m["detail.canceled"];
+        const unverified =
+          snapshot.closeReason === "expired"
+            ? m["detail.unverified"]
+            : m["detail.canceledUnverified"];
+        const detail = afterCancel ? unverified : m["detail.canceled"];
         children.push(el("p", { class: "se-detail" }, [detail]));
+      } else if (afterCancel) {
+        children.push(
+          el("p", { class: "se-detail" }, [m["detail.closedBeforeCancel"]]),
+        );
       }
       children.push(
         field(el, m["label.balance"], snapshot.bet.balance.formatted),
