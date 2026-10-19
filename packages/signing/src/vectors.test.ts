@@ -32,6 +32,7 @@ import {
   CREATE_ROUND_AUTH,
   MARK_READY_AUTH,
   PLAYER_ACTION,
+  PLAYER_CANCEL,
   PLAYER_CASH_OUT,
   RECORD_DRAW_AUTH,
 } from "./types.ts";
@@ -42,6 +43,7 @@ const engine = engineSigner();
 const STRUCTS = {
   PlayerAction: PLAYER_ACTION,
   PlayerCashOut: PLAYER_CASH_OUT,
+  PlayerCancel: PLAYER_CANCEL,
   CreateRoundAuth: CREATE_ROUND_AUTH,
   MarkReadyAuth: MARK_READY_AUTH,
   CloseRoundAuth: CLOSE_ROUND_AUTH,

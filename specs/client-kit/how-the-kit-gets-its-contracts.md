@@ -47,8 +47,9 @@ Rules:
    named by `--sources`, kept outside this repository. Vectors are append-only:
    the script refuses to change or remove a locked vector unless it is given
    `--allow-vector-change`, which is legitimate only before the first release.
-   It was used once, for the pre-release exception of rule 4. Generated files
-   are rewritten by `tools/generate-contracts.ts --write`.
+   It was used twice: for the pre-release exception of rule 4, and for the
+   signing vectors of contracts release 1.0.0 (their `_comment` changed).
+   Generated files are rewritten by `tools/generate-contracts.ts --write`.
 2. **Verify offline.** The `contracts` job recomputes each copied file's SHA-256
    and fails when it differs from the lock, and fails when the generated types
    in `contracts` differ from a regeneration of the committed documents.
@@ -148,6 +149,24 @@ Rules:
    [Rendering from the Snapshot](../wrapper/rendering-from-the-snapshot.md)).
    The `snapshot` package's per-status types say `payout?: never` on every other
    status, as the schema does.
+
+   **The signing vectors of contracts release 1.0.0**
+   (`test/vectors/signing.json`, synced from the contracts repository at release
+   `1.0.0`, commit `2f060eb`; the lock records `b9c1556`, the last commit that
+   touched the file; contracts pull request 8): an additive change that puts the
+   registry's player cancel in the vectors. The file adds a `PlayerCancel` entry
+   in `types` (type hash `0xacaf7a5a…9ce6`, the one the kit already encodes),
+   `payoutTerms` (six named terms with their hashes), and `closes` (nine full
+   rounds, ending in `closed`, or in `canceled` for the player's cancel). Every
+   older field is unchanged; the file's bytes changed with its `_comment`, so
+   the sync used `--allow-vector-change`. That is allowed only before the first
+   release (`AGENTS.md`: a released version's vector files are never edited),
+   and nothing has been released yet (all packages `0.0.0`, no tags). It is not
+   the OQ-7 exception below. The registry now reverts a payout above `uint128`
+   (`PayoutOverflow`) instead of saturating it; the kit computes no payout, so
+   no kit code changes. The `signing` tests replay what the kit can encode
+   (`close-vectors.test.ts`; the [cryptography spec](./the-cryptography.md) says
+   which parts) and skip `payoutTerms` hashes, for which the kit has no encoder.
 
    **One pre-release exception** (decided with
    [OQ-7](../wrapper.md#decided-questions); nothing had shipped against the old
