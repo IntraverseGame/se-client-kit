@@ -179,19 +179,34 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   t15-unconfirmed. On CI (`CI` set) `playwright.config.ts` also sets
   `globalTimeout` to 10 minutes (a normal `test:e2e` step takes at most about
   92 s, build included; the job's own timeout is 20 minutes); a local run has
-  none. Tracing stays off
-  (the key's bytes are an init-script argument; the round fixture fails a
-  traced test). In
-  T-15 offline, read the attempts from `network.sent(id)` (the context's
+  none. Tracing stays off (the key's bytes are an init-script argument; the
+  round fixture fails a traced test). In T-15 offline, read the attempts from `network.sent(id)` (the context's
   `request` event), not from `fakePlayApi.served`: Chromium and WebKit route
   an offline request (recorded, then aborted), Playwright's Firefox fails it
   with `NS_ERROR_OFFLINE` before any route (`OFFLINE_ROUTED`, proven in
-  `network.spec.ts`); assert only that the first call after `goOnline`
-  is a `getSnapshot`, not what is sent after it: the one resend of a move the
-  read shows not applied is a pending row until the resend change lands (W-16,
-  decided in human review 2026-10-18); the test already answers any later
-  move (`answerEvery`, checked with `pickCheck`), so the resend will not trip
-  the fake's teardown.
+  `network.spec.ts`). The first call after `goOnline` is a `getSnapshot`;
+  W-16's one resend after it is `t15-resend-lost.spec.ts`: script every move
+  the fake may take after the read (`answer` for the resend, checked to be
+  the first attempt's body field for field, then `answerEvery` with a check
+  that refuses anything more, so a third send fails the fake's teardown), and
+  count a send's attempts from `network.sent`: a lost send is the transport's
+  attempts (as many offline as online), so a lost resend doubles the count.
+  `network.sent` sees a request before the fake's route records it (the
+  route's record waits on a round trip), and Chromium fails an offline request
+  before the fake records it: read `fakePlayApi.served` only after the answer
+  it records shows on the page, and poll a count that includes offline
+  requests (`expect.poll`), as `t15-resend-lost.spec.ts` does. `goOnline`
+  sets the browser online, then restores the fake: the reconnect read can hit
+  the still-cut fake, fail, and be repeated by the transport, so the record
+  may show two `getSnapshot` before the resend (WebKit on CI, reproduced by
+  delaying the restore 200 ms). Assert "reads only, at least one, then the
+  one resend", never an exact list of reads.
+  The resend's answer is what the Wrapper and the game show (test 1 asserts
+  "You won" in both). A resend lost too leads to the not-confirmed state, whose
+  later reads ("check again", the 30 s background read) send no move:
+  `t15-unconfirmed.spec.ts`. The Wrapper calls no `resend`, so the player's own
+  resend sharing the one resend is the shell's unit test
+  (`round-resend-lost.test.ts`).
   After a move in the game, the focus is on the Wrapper's result heading: the
   reference game moves focus only while its own document has focus (#73);
   `t14-every-state.spec.ts` waits for the game's own result heading before

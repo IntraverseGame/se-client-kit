@@ -4,8 +4,8 @@
 // attempt of the move (the transport's retries) is the same signed bytes and
 // key and fails, the connection-problem state shows, and the round is kept;
 // when the connection returns, the Snapshot is read first. What is sent after
-// that read (the one resend of a move it shows not applied, W-16) is a pending
-// row (pending.spec.ts). The connection-problem state passes the
+// that read (the one resend of a move it shows not applied, W-16) is
+// t15-resend-lost.spec.ts. The connection-problem state passes the
 // accessibility audit. The Wrapper's timers (the transport's retries, the
 // polls) run on the page's clock. The offline attempts are read from what the
 // page sent (the harness's `sent`), which sees them in every project; the fake
@@ -96,11 +96,10 @@ test.describe("T-15: offline during a signed action", () => {
     expect(routed.length > 0).toBe(OFFLINE_ROUTED[browserName]);
     for (const attempt of routed) expect(attempt).toEqual(attempts[0]);
     expect(await auditAccessibility(page)).toEqual([]);
-    // Any move sent after the read (the one resend, W-16, once the resend
-    // change lands) is answered with the round as the read shows it, and must
-    // be the first attempt's body, field for field: the same typedData,
-    // signature, idempotencyKey, and round. Nothing here asserts whether it is
-    // sent.
+    // Any move sent after the read (the one resend, W-16) is answered with the
+    // round as the read shows it, and must be the first attempt's body, field
+    // for field: the same typedData, signature, idempotencyKey, and round.
+    // Whether it is sent, and how often, is t15-resend-lost.spec.ts.
     const [first] = attempts;
     fakePlayApi.answerEvery("continueRound", {
       kind: "snapshot",

@@ -41,22 +41,30 @@ const MAX_TICKS = 40;
 
 /**
  * Moves the page's clock 2 s at a time, each tick waiting for the read it
- * starts, until the cancel is `check-later` ("still resolving").
+ * starts, until the cancel is `check-later` ("still resolving"). The last
+ * read's answer can still be on its way to the screen when a tick starts, and
+ * `check-later` makes no read for 30 s, so a tick also ends when that text
+ * shows.
  */
 const untilCheckLater = async (
   page: Page,
   fake: FakePlayApi,
 ): Promise<void> => {
+  const checkLater = page.getByText(TEXT.checkLater);
   for (let tick = 0; tick < MAX_TICKS; tick += 1) {
     // oxlint-disable-next-line no-await-in-loop -- each tick lets one read run
-    if ((await page.getByText(TEXT.checkLater).count()) > 0) return;
+    if ((await checkLater.count()) > 0) return;
     const reads = servedFor(fake, "getSnapshot").length;
     // oxlint-disable-next-line no-await-in-loop -- one tick at a time
     await page.clock.runFor(2_000);
     // oxlint-disable-next-line no-await-in-loop -- the tick's read arrives
     await expect
-      .poll(() => servedFor(fake, "getSnapshot").length)
-      .toBeGreaterThan(reads);
+      .poll(
+        async () =>
+          servedFor(fake, "getSnapshot").length > reads ||
+          (await checkLater.count()) > 0,
+      )
+      .toBe(true);
   }
 };
 

@@ -401,7 +401,10 @@ development-only, so it may import the test-only entry of `contracts`.
   request (`NS_ERROR_OFFLINE`) before any route sees it, so the fake records
   none there, while Chromium and WebKit route it (`OFFLINE_ROUTED`, which a test
   in `network.spec.ts` asserts per project, printing one stdout line); the
-  `request` event sees it in every project.
+  `request` event sees it in every project. `goOnline` turns the browser online
+  before it restores the fake, so the page's first request after it can still
+  reach a cut fake and fail once, and the transport repeats it (seen in WebKit
+  on CI): assert at least one read before an action, not exactly one.
 - **What runs today**: the harness's own tests; a smoke run on the Wrapper's
   bundle opened with no launch code (it loads and accepts the served
   configuration with no outside request, error, or warning, passes the audit,
@@ -418,31 +421,30 @@ development-only, so it may import the test-only entry of `contracts`.
   vectors can drive: T-13, T-14a, T-17, T-18, the game's mount at the redeem
   answer's D (`game-mount.spec.ts`), and parts of T-15 and T-16 (their own spec
   files; [wrapper.md, Test plan](../wrapper.md#test-plan) lists which). The rows
-  that need a round W-26 passes (T-10, T-11, T-14, T-15's signed action, T-16's
-  round errors, T-19) run on the vendored Coin Flip round
-  (`harness/round-play.ts`): the seeded random source gives the Wrapper's key
-  draw the `signed-action/coinflip-cancel` vector's test key, read from
-  `contracts`' test-only entry at run time and never copied into a file, so the
-  round's vendored `CreateRoundAuth` is the session's; a round configuration
+  that need a round W-26 passes (T-10, T-11, T-14, T-15's signed action and its
+  resend of a move lost offline, T-16's round errors, T-19) run on the vendored
+  Coin Flip round (`harness/round-play.ts`): the seeded random source gives the
+  Wrapper's key draw the `signed-action/coinflip-cancel` vector's test key, read
+  from `contracts`' test-only entry at run time and never copied into a file, so
+  the round's vendored `CreateRoundAuth` is the session's; a round configuration
   pins its signer, domain, and entropy source; fake RPC endpoints answer the tip
   check (`harness/fake-rpc.ts`, which can fail it on purpose); and the fake Play
   API checks the start's `actionKey` and the move's and cancel's bytes against
   the vectors (an answer's `expect`), and can answer a code no vector holds
   (`own-problem`) and, for W-28 only, an `invalid/` Snapshot. The harness's own
-  checks have their tests (`round-harness.spec.ts`). A multi-step game, the
-  shell's resend of a move lost offline (T-15: the resend change, W-16, decided
-  in human review 2026-10-18), and W-49's handshake are declared with
-  `test.fixme` in `e2e/tests/pending.spec.ts`, reported as skipped, never as
-  passed. Every spec file runs in all three projects except the proofs of the
-  blocks (above): `hermetic-workers.spec.ts` in Chromium only, and
-  `hermetic-proxy.spec.ts` and `hermetic-webrtc.spec.ts` in Firefox and WebKit
-  only, each skipped elsewhere with its reason. One browser behavior differs per
-  project and is proven as such, since the Wrapper works around it: a parent's
-  `focus()` while its frame has the focus (W-46's move from the game frame to
-  the result or error heading) moves the focus in Chromium and WebKit, and
-  leaves it in the frame in Playwright's Firefox build, whose frames run in
-  their parent's process (`fission.webContentIsolationStrategy` 0); with the
-  frame element blurred first, as the Wrapper does, it moves in every project
+  checks have their tests (`round-harness.spec.ts`). A multi-step game and
+  W-49's handshake are declared with `test.fixme` in
+  `e2e/tests/pending.spec.ts`, reported as skipped, never as passed. Every spec
+  file runs in all three projects except the proofs of the blocks (above):
+  `hermetic-workers.spec.ts` in Chromium only, and `hermetic-proxy.spec.ts` and
+  `hermetic-webrtc.spec.ts` in Firefox and WebKit only, each skipped elsewhere
+  with its reason. One browser behavior differs per project and is proven as
+  such, since the Wrapper works around it: a parent's `focus()` while its frame
+  has the focus (W-46's move from the game frame to the result or error heading)
+  moves the focus in Chromium and WebKit, and leaves it in the frame in
+  Playwright's Firefox build, whose frames run in their parent's process
+  (`fission.webContentIsolationStrategy` 0); with the frame element blurred
+  first, as the Wrapper does, it moves in every project
   (`focus-from-frame.spec.ts`, `FOCUS_FROM_FRAME` in `harness/frame-focus.ts`,
   one stdout line). A release Firefox (159) moves it without the blur, checked
   by hand. T-14 asserts the full W-46 rule in every project: the result heading
