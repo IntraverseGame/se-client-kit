@@ -188,7 +188,6 @@ export const createView = (
         showRound ? (state.check ?? null) : null,
         options.intents.start !== undefined,
         options.intents.cashOut !== undefined,
-        options.intents.newRound !== undefined,
         state.check?.cancel === "check-later",
         options.intents.checkAgain !== undefined,
         cancelEnded,

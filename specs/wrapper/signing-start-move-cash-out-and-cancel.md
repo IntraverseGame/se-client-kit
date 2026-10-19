@@ -113,9 +113,14 @@ Part of the [Wrapper spec](../wrapper.md), section
   `canceled`, which is final and never changes again (also while the refund is
   pending), or `active` (the cancel did not take). A re-read can still show
   `resolving`. A cancel resent while the round is `resolving` is a 422
-  `FAILED_PRECONDITION`, after which the client reads the Snapshot. Until the
-  contract's planned read of the last round ships, a re-read after the round
-  ended shows `idle`. (Decided by human review, 2026-10-18.)
+  `FAILED_PRECONDITION`, after which the client reads the Snapshot. Since the
+  Play API document of se-backend `726f0a2`, a re-read after the round ended
+  keeps showing it (`canceled`, or `won` or `lost` with its `payout`) until the
+  next `rounds:start`. `idle` never follows `active` (the backend, 2026-10-19):
+  a round is voided only while it is `starting`, and a round that reached
+  `active` leaves it only by play, by its expiry (`canceled` with
+  `closeReason: "expired"`), or by the player's cancel. (Decided by human
+  review, 2026-10-18; the read of the last round restated from `726f0a2`.)
 
   - From the moment the cancel is signed until it settles (its call, a resend,
     and the read after a failed call included), every Snapshot of the round that
@@ -141,11 +146,12 @@ Part of the [Wrapper spec](../wrapper.md), section
     - `active`, at any step, is **`not-taken`** ("the cancel did not take"): the
       cancel path ends, nothing is resent, the round shows "this round failed
       verification" (W-26) and ends by its expiry rule;
-    - `idle` is **`ended`**: the round ended. The Wrapper shows a neutral "round
-      ended", with no win, loss, refund, or bet-returned amount and no result
-      claim; the balance updates through the normal path (W-32). A new round may
-      start.
-      <!-- TODO(Snapshot contract): planned by the backend: the read keeps showing the ended round (and `idle` with no error means "no round yet", a voided or rejected round `idle` with its typed error); when a vendored contract version states it, show the round's real result instead of "round ended". -->
+    - `idle` is **`ended`**: the round ended with no result to claim. Since
+      `726f0a2` this is not expected (an ended round is read with its result,
+      and `idle` never follows `active`); the shell keeps it as a defensive
+      fallback. The Wrapper shows a neutral "round ended", with no win, loss,
+      refund, or bet-returned amount and no result claim, and the next bet
+      beside it (W-31); the balance updates through the normal path (W-32).
     - `resolving` settles nothing and is read into the round (W-35 polls it);
       another round's Snapshot and a failed read settle nothing.
   - After an unknown outcome (a lost send: no answer, or a 503 not marked

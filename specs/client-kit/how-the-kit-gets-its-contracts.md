@@ -75,13 +75,30 @@ Rules:
    again. A cancel the engine has not answered yet is answered, and read back,
    as `resolving`, with no pick, no reveal, and no `closeReason`, on the
    `readyHash` the cancel was signed on. A later read shows the cancel's
-   outcome: `canceled`, `active` again (a move was applied first, or the engine
-   refused the cancel), or `idle` once the round has ended. A cancel of a round
-   that is not `active`, one still `resolving` included, is a 422
-   `FAILED_PRECONDITION`. The schema already allowed all of these, so no field
-   or status was added. The document also describes, as planned and not yet
-   served, a Snapshot read that keeps showing the session's most recent round
-   after it ended; the kit relies on nothing planned.
+   outcome: `canceled`, or `active` again (a move was applied first, or the
+   engine refused the cancel); since `726f0a2` (below) a read after the round
+   ended keeps showing it. A cancel of a round that is not `active`, one still
+   `resolving` included, is a 422 `FAILED_PRECONDITION`. The schema already
+   allowed all of these, so no field or status was added.
+
+   **The last round on the Snapshot read** (the Play API document's
+   `getSnapshot` and `cancelRound` descriptions, synced from se-backend
+   `726f0a2`; no schema, vector, field, or status changed):
+   `GET /play/v1/snapshot` answers the session's most recent round, ended rounds
+   included, until the next `rounds:start` creates another: an open round, or a
+   `won`, `lost`, or `canceled` one with its result (and on `won` and `lost` its
+   `payout`). `idle` means that no round is in progress and none has ended since
+   the last `rounds:start`: the session has no round yet, or its last round was
+   voided or refused. The answer of that `rounds:start` carries the void or
+   refusal reason, and the read never repeats it. After a cancel answered
+   `resolving`, a read shows `resolving` until the engine answers, then
+   `canceled` or `active`, and the round stays the session's last round once it
+   has ended. Before `726f0a2` a read after a round ended showed `idle`. The
+   shell's cancel already reads `canceled`, `won`, and `lost` as the round's
+   result and keeps `idle` as `ended`, a defensive fallback: the backend says
+   `idle` never follows `active` (W-25). The Wrapper offers the next bet beside
+   an ended round's result, from that Snapshot's `bet` (W-31 in
+   [Rendering from the Snapshot](../wrapper/rendering-from-the-snapshot.md)).
 
    **The payout** (the Snapshot schema, the Play API document, and the `payout`
    vectors, synced from se-backend `f8cc92b`): an additive change, a new

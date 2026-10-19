@@ -169,3 +169,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   verify page spec's.
 - **W-40.** The round id and the link MUST stay visible until the player starts
   another round, and a new round MUST NOT replace them before the player acts.
+  The next bet is offered beside them (W-31). They go once the Snapshot of the
+  round the player started from them is shown; a start that is refused (a typed
+  error) or not answered yet keeps them, and so does a Snapshot of another round
+  that the player did not start from them.

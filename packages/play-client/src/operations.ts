@@ -249,8 +249,9 @@ export const cashOutRound = (
  * a retryable problem the caller reads `getSnapshot` before it sends a cancel
  * again. Answers the round's Snapshot as `unknown`: `canceled` (final),
  * `resolving` while the engine has not answered the cancel yet, or `active`
- * with a move played when that move won the race. A cancel of a round that is
- * not `active` (one still `resolving` included) is `FAILED_PRECONDITION`.
+ * with a move played when that move won the race; a later read keeps showing
+ * the round once it has ended. A cancel of a round that is not `active` (one
+ * still `resolving` included) is `FAILED_PRECONDITION`.
  */
 export const cancelRound = (
   transport: Transport,
@@ -260,9 +261,11 @@ export const cancelRound = (
   snapshotCall(transport, "cancelRound", options, "never", body);
 
 /**
- * Reads the session's Snapshot (`getSnapshot`): its open round, or `idle`. A
- * read is repeated on a lost response or a retryable problem. Answers the
- * Snapshot as `unknown`.
+ * Reads the session's Snapshot (`getSnapshot`): its most recent round, an ended
+ * one included, until the next `startRound` creates another; or `idle` when no
+ * round has ended since the last start (none yet, or the last one was voided or
+ * refused). A read is repeated on a lost response or a retryable problem.
+ * Answers the Snapshot as `unknown`.
  */
 export const getSnapshot = (
   transport: Transport,

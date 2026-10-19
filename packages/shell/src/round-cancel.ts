@@ -14,12 +14,12 @@
 // it settles, only the reads this module sends (`read`, the first one at once)
 // may settle it: `canceled` (with or without a `closeReason`), `won`, and
 // `lost` are final (`sent`); `active` means it did not take (`not-taken`);
-// `idle` ends it (`ended`, a neutral "round ended" with no result claim, until
-// the contract's planned read of the last round). `resolving` is read into the
-// round and settles nothing; another round's Snapshot and a failed read settle
-// nothing. After `SETTLING_READS` reads without a settling one, the state is
-// `check-later`, where each `read` still follows the same rules. The rules
-// change only with a vendored change of the Snapshot contract.
+// `idle` ends it (`ended`, a neutral "round ended": not expected since 726f0a2,
+// where `idle` never follows `active`; kept as a defensive fallback).
+// `resolving` is read into the round and settles nothing; another round's
+// Snapshot and a failed read settle nothing. After `SETTLING_READS` reads
+// without a settling one, the state is `check-later`, where each `read` still
+// follows the same rules. Only a vendored Snapshot contract changes them.
 
 import { cancelRound, ProblemError } from "@intraverse/se-client-play-client";
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
@@ -151,8 +151,8 @@ export const createRoundCancel = (
     snapshot: ValidSnapshot | undefined,
   ): Promise<"ended" | "not-taken" | "sent" | "unsettled" | "none"> => {
     if (snapshot === undefined) return "none";
-    // The round is no longer the session's open round: it ended. The Snapshot
-    // contract plans a read of the last round that will show its real result.
+    // Not expected since 726f0a2 (`idle` never follows `active`): a defensive
+    // fallback, a round ended with no result to claim.
     if (snapshot.status === "idle") return "ended";
     if (!ofRound(snapshot)) return "none";
     if (isResult(snapshot, roundId)) {

@@ -5,13 +5,12 @@ import type { ShownAmount } from "./round-input.ts";
 
 /**
  * What the player can ask for. A control is shown only when its intent is
- * wired: the start, cash-out, and new-round intents come from the session.
+ * wired: the start, cash-out, and "check again" intents come from the session.
  */
 export type Intents = {
   readonly start?: (bet: ShownAmount) => void;
   /** Cashes out the round, on the player's request only (W-24). */
   readonly cashOut?: () => void;
-  readonly newRound?: () => void;
   /**
    * "Check again" (W-33, W-35): one read of a round whose cancel is
    * `check-later`, or whose move or cash-out is not confirmed (W-16), which may

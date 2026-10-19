@@ -7,7 +7,7 @@
 // token.
 //
 // The session (session-wiring.ts) supplies `readSnapshot` and the start,
-// cash-out, and new-round intents through `connect`; its reads carry the
+// cash-out, and "check again" intents through `connect`; its reads carry the
 // shell's checks of the round (W-19, W-26), and the states it decides at open
 // (`session-ended`, `other-tab`, `unsupported-browser`) arrive through `block`.
 
@@ -28,7 +28,7 @@ import {
   clearProblem,
   initialState,
   isFinal,
-  startNewRound,
+  leaveEndedRound,
   type WrapperState,
 } from "./wrapper-state.ts";
 
@@ -49,14 +49,8 @@ export type WrapperAppOptions = {
   readonly pollConfig?: PollConfig;
 };
 
-/**
- * The player intents the session wires in (start, cash-out, new round, and
- * "check again").
- */
-export type RoundIntents = Pick<
-  Intents,
-  "start" | "cashOut" | "newRound" | "checkAgain"
->;
+/** The player intents the session wires in (start, cash-out, "check again"). */
+export type RoundIntents = Pick<Intents, "start" | "cashOut" | "checkAgain">;
 
 export type WrapperApp = {
   /** Applies a validated environment configuration (W-26a, W-39). */
@@ -70,11 +64,6 @@ export type WrapperApp = {
   readonly accept: (read: SnapshotRead, cause: ChangeCause) => void;
   /** Shows a blocking state (W-44). */
   readonly block: (state: BlockingState, cause?: ChangeCause) => void;
-  /**
-   * The player starts another round: the ended round's panel goes (W-40), and
-   * the Snapshot is read again.
-   */
-  readonly newRound: () => void;
   /** The game's `hello` did not declare what the Wrapper sends (W-38). */
   readonly gameIncompatible: () => void;
   /** Where the game iframe is mounted (W-37); see `View.gameHost`. */
@@ -126,6 +115,9 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
   let roundIntents: RoundIntents = {};
   // The round whose `ended` cancel was followed by its one read (W-33).
   let endedReadFor: string | undefined;
+  // The ended round the player started another round from (W-40): its panel
+  // goes once a Snapshot of another round is shown.
+  let startedFrom: string | undefined;
 
   // `apply`, `view`, and `poller` refer to each other; each is called only
   // after all three exist.
@@ -134,6 +126,15 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
       return;
     }
     state = next;
+    const shownRound = state.snapshot?.roundId;
+    if (
+      startedFrom !== undefined &&
+      shownRound !== undefined &&
+      shownRound !== startedFrom
+    ) {
+      state = leaveEndedRound(state, startedFrom);
+      startedFrom = undefined;
+    }
     view.update(state, cause);
     const { round, cancel, unconfirmed } = followed(state);
     poller.follow(round, cancel, unconfirmed);
@@ -262,7 +263,17 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
       readonly intents?: RoundIntents;
     }): void => {
       readSnapshot = session.readSnapshot;
-      roundIntents = session.intents ?? {};
+      const { start, ...others } = session.intents ?? {};
+      roundIntents =
+        start === undefined
+          ? others
+          : {
+              ...others,
+              start: bet => {
+                startedFrom = state.endedRound?.roundId;
+                start(bet);
+              },
+            };
       view.update(state, "poll");
       void readOnce("poll");
     },
@@ -271,10 +282,6 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     },
     block: (blocking: BlockingState, cause: ChangeCause = "poll"): void => {
       apply(block(state, blocking), cause);
-    },
-    newRound: (): void => {
-      apply(startNewRound(state), "player");
-      void readOnce("player");
     },
     gameIncompatible: (): void => {
       apply({ ...state, gameIncompatible: true }, "poll");

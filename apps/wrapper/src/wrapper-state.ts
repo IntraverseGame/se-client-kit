@@ -280,18 +280,19 @@ export const block = (
 ): WrapperState => (isFinal(state) ? state : { ...state, blocking });
 
 /**
- * The player starts another round: the ended round's panel goes (W-40), and so
- * do the previous round's error and round-scoped state.
+ * The player started another round from the ended round `from` (W-40): once a
+ * Snapshot of another round is shown, `from`'s panel goes. Until then (a start
+ * refused, or not answered yet) it stays with its result.
  */
-export const startNewRound = (state: WrapperState): WrapperState => {
-  const next = without(
-    without(without(state, "endedRound"), "problem"),
-    "refused",
-  );
-  return next.blocking !== undefined && ROUND_STATES.has(next.blocking)
-    ? without(next, "blocking")
-    : next;
-};
+export const leaveEndedRound = (
+  state: WrapperState,
+  from: string,
+): WrapperState =>
+  state.endedRound?.roundId === from &&
+  state.snapshot?.roundId !== undefined &&
+  state.snapshot.roundId !== from
+    ? without(state, "endedRound")
+    : state;
 
 /** The player asks to try again: the error goes until the next answer. */
 export const clearProblem = (state: WrapperState): WrapperState =>

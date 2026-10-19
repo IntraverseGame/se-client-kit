@@ -19,12 +19,13 @@ starts a round, shows it ready only once the shell's checks passed, and offers a
 cash-out when the shell does. When the shell cancels a round that failed
 verification, the Wrapper keeps reading the round until the cancel settles,
 shows "still resolving — contact support" with a "check again" control when it
-does not, and a neutral "round ended" when the round ended with no result. The
-game iframe is mounted only once the game's origin comes from the session, which
-the Play API does not serve yet. Framed by another page, it opens a session only
-when the browser can show that every framing page is a listed operator; the
-operator handshake is not built yet, so where the browser cannot show it (a
-browser without `location.ancestorOrigins`), a framed Wrapper opens no session.
+does not, and a neutral "round ended" when the round ended with no result. A
+round that ended shows its result with the next bet beside it. The game iframe
+is mounted only once the game's origin comes from the session, which the Play
+API does not serve yet. Framed by another page, it opens a session only when the
+browser can show that every framing page is a listed operator; the operator
+handshake is not built yet, so where the browser cannot show it (a browser
+without `location.ancestorOrigins`), a framed Wrapper opens no session.
 
 ## What it guarantees
 

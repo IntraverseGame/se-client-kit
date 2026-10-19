@@ -119,9 +119,10 @@ test.describe("T-14: keyboard-only play", () => {
     await page.keyboard.press("Space");
     await focusStaysOnResult(page);
     // No keyboard trap: Tab reaches the Wrapper's own controls.
-    const newRound = page.getByRole("button", { name: TEXT.newRound });
-    await tabTo(page, newRound);
-    expect(await showsFocus(newRound)).toBe(true);
+    // The next bet's start control, beside the result (W-31).
+    const next = page.getByRole("button", { name: TEXT.start });
+    await tabTo(page, next);
+    expect(await showsFocus(next)).toBe(true);
   });
 });
 

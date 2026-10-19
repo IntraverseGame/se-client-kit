@@ -2,9 +2,11 @@
 // reads after the shell's own cancel, per the Snapshot contract `se.snapshot/1`
 // as vendored from the backend's b27afc5: a cancel the backend has not
 // answered shows `resolving`; then the round shows `canceled`, which is final,
-// or `active` (the cancel did not take); a re-read after the round ended shows
-// `idle` until the contract's planned read of the last round. It changes only
-// with a vendored change of the Snapshot contract.
+// or `active` (the cancel did not take). Since the Play API document of
+// 726f0a2 a re-read keeps showing the round once it has ended, with its
+// result, and `idle` never follows `active` (a round is voided only while
+// `starting`). It changes only with a vendored change of the Snapshot
+// contract.
 
 import { ProblemError } from "@intraverse/se-client-play-client";
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";

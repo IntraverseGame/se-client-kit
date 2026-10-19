@@ -12,7 +12,7 @@ import {
   block,
   clearProblem,
   initialState,
-  startNewRound,
+  leaveEndedRound,
   type WrapperState,
 } from "./wrapper-state.ts";
 
@@ -52,7 +52,26 @@ describe("acceptSnapshot (W-29)", () => {
       withFields(snapshotVector("coinflip-idle"), { version: won.version + 1 }),
     );
     expect(later.endedRound).toEqual(ended.endedRound);
-    expect(startNewRound(later).endedRound).toBeUndefined();
+  });
+
+  it("drops the ended round once a Snapshot of the round started from it shows (W-40)", () => {
+    const from = String(won.roundId);
+    const ended = acceptSnapshot(withRound(), won);
+    // A start refused, or not answered yet: the ended round still shows.
+    expect(leaveEndedRound(ended, from)).toBe(ended);
+    const next = acceptSnapshot(
+      ended,
+      withFields(snapshotVector("coinflip-starting"), {
+        version: won.version + 1,
+        roundId: "01927c5e-8b3a-7f21-9c4d-000000000009",
+      }),
+    );
+    expect(next.endedRound).toEqual(ended.endedRound);
+    expect(leaveEndedRound(next, from).endedRound).toBeUndefined();
+    // Only the round the player started from goes.
+    expect(leaveEndedRound(next, "01927c5e-8b3a-7f21-9c4d-00000000000a")).toBe(
+      next,
+    );
   });
 });
 
@@ -101,7 +120,7 @@ describe("blocking states (W-44)", () => {
   );
 
   it.each(["verification-failed", "out-of-sync"] as const)(
-    "%s holds until the round ends or another starts",
+    "%s holds until the round ends",
     roundState => {
       const state = block(withRound(), roundState);
       const resolving = withFields(snapshotVector("coinflip-resolving"), {
@@ -109,7 +128,6 @@ describe("blocking states (W-44)", () => {
       });
       expect(acceptSnapshot(state, resolving).blocking).toBe(roundState);
       expect(acceptSnapshot(state, won).blocking).toBeUndefined();
-      expect(startNewRound(state).blocking).toBeUndefined();
     },
   );
 

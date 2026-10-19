@@ -39,7 +39,7 @@ describe("while the cancel settles (W-25, W-35)", () => {
     expect(await readsOver(ui, 4_000)).toBeGreaterThanOrEqual(3);
     expect(alertText(ui.host)).toContain(m["state.verificationFailed"]);
     expect(allText(ui.host)).not.toContain(m["detail.canceled"]);
-    expect(buttonNamed(ui.host, m["action.newRound"])).toBeUndefined();
+    expect(buttonNamed(ui.host, m["action.start"])).toBeUndefined();
     expect(gameShown(ui)).toBe(false);
   });
 
@@ -87,7 +87,7 @@ describe("while the cancel settles (W-25, W-35)", () => {
     expect(allText(ui.host)).toContain(m["detail.canceledUnverified"]);
     expect(allText(ui.host)).not.toContain(m["detail.canceled"]);
     expect(alertText(ui.host)).toBe("");
-    expect(buttonNamed(ui.host, m["action.newRound"])).toBeDefined();
+    expect(buttonNamed(ui.host, m["action.start"])).toBeDefined();
     expect(await readsOver(ui, 10_000)).toBe(0);
   });
 
@@ -110,7 +110,7 @@ describe("check-later (W-33, W-35)", () => {
     expect(allText(ui.host)).toContain(activeId);
     expect(linkNamed(ui.host, m["action.verify"])).toBeDefined();
     expect(buttonNamed(ui.host, m["action.checkAgain"])).toBeDefined();
-    expect(buttonNamed(ui.host, m["action.newRound"])).toBeUndefined();
+    expect(buttonNamed(ui.host, m["action.start"])).toBeUndefined();
     expect(allText(ui.host)).not.toContain(m["detail.canceled"]);
     expect(gameShown(ui)).toBe(false);
   });

@@ -69,9 +69,9 @@ export type paths = {
      * its refund on the way. `canceled` is final: the status never changes
      * again. When the engine has not answered the cancel yet, the answer is
      * `resolving` (no pick, no reveal): read `GET /play/v1/snapshot` again.
-     * It shows `resolving` until the engine answers, `active` when a move
-     * was applied first or the cancel was refused, and `idle` once the round
-     * has ended (planned: the round's final status, see
+     * It shows `resolving` until the engine answers, then `canceled`, or
+     * `active` when a move was applied first or the cancel was refused; the
+     * round stays the session's last round after it has ended (see
      * `GET /play/v1/snapshot`). Only an `active` round with no move played
      * can be canceled. The API passes the cancel through unread: only the
      * engine verifies it.
@@ -94,13 +94,14 @@ export type paths = {
   "/play/v1/snapshot": {
     /**
      * Read the Snapshot
-     * @description Answers the session's Snapshot: its open round, or `idle` when none is
-     * open. A round that has ended is not shown again: its Snapshot was the
-     * answer of the call that ended it. Planned: the session's most recent
-     * round, ended rounds included, until the next `rounds:start`; `idle`
-     * with no error then means the session has no round yet, and with a
-     * typed error a voided or rejected round. Reading does not reset the
-     * session's idle timeout.
+     * @description Answers the session's Snapshot of its most recent round, ended rounds
+     * included, until the next `rounds:start` creates another: an open
+     * round, or a `won`, `lost` or `canceled` one with its result (and on
+     * `won` and `lost` its `payout`). `idle` means no round is in progress
+     * and none has ended since the last `rounds:start`: the session has no
+     * round yet, or its last round was voided or refused. The answer of
+     * that `rounds:start` carries the void or refusal reason; this read
+     * never repeats it. Reading does not reset the session's idle timeout.
      */
     get: operations["getSnapshot"];
   };
@@ -613,9 +614,9 @@ export type operations = {
    * its refund on the way. `canceled` is final: the status never changes
    * again. When the engine has not answered the cancel yet, the answer is
    * `resolving` (no pick, no reveal): read `GET /play/v1/snapshot` again.
-   * It shows `resolving` until the engine answers, `active` when a move
-   * was applied first or the cancel was refused, and `idle` once the round
-   * has ended (planned: the round's final status, see
+   * It shows `resolving` until the engine answers, then `canceled`, or
+   * `active` when a move was applied first or the cancel was refused; the
+   * round stays the session's last round after it has ended (see
    * `GET /play/v1/snapshot`). Only an `active` round with no move played
    * can be canceled. The API passes the cancel through unread: only the
    * engine verifies it.
@@ -656,13 +657,14 @@ export type operations = {
   };
   /**
    * Read the Snapshot
-   * @description Answers the session's Snapshot: its open round, or `idle` when none is
-   * open. A round that has ended is not shown again: its Snapshot was the
-   * answer of the call that ended it. Planned: the session's most recent
-   * round, ended rounds included, until the next `rounds:start`; `idle`
-   * with no error then means the session has no round yet, and with a
-   * typed error a voided or rejected round. Reading does not reset the
-   * session's idle timeout.
+   * @description Answers the session's Snapshot of its most recent round, ended rounds
+   * included, until the next `rounds:start` creates another: an open
+   * round, or a `won`, `lost` or `canceled` one with its result (and on
+   * `won` and `lost` its `payout`). `idle` means no round is in progress
+   * and none has ended since the last `rounds:start`: the session has no
+   * round yet, or its last round was voided or refused. The answer of
+   * that `rounds:start` carries the void or refusal reason; this read
+   * never repeats it. Reading does not reset the session's idle timeout.
    */
   getSnapshot: {
     responses: {

@@ -29,7 +29,6 @@ export type MessageKey =
   | "label.roundId"
   | "label.requestId"
   | "action.start"
-  | "action.newRound"
   | "action.cashOut"
   | "action.copyRoundId"
   | "action.retry"
@@ -108,7 +107,6 @@ const EN: Messages = {
   "label.roundId": "Round ID",
   "label.requestId": "Reference",
   "action.start": "Start round",
-  "action.newRound": "New round",
   "action.cashOut": "Cash out",
   "action.copyRoundId": "Copy round ID",
   "action.retry": "Try again",
