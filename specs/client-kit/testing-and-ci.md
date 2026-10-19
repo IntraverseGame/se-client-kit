@@ -137,10 +137,15 @@ outputs restored from the cache.
   no `dist/` passed without following those imports: `import/no-cycle` silently
   skipped every edge into another package. The two Vite builds (the Wrapper's
   and the reference game's) declare `NODE_ENV` as `external` `env`, since
-  `NODE_ENV=development vite build` makes a development build; the tsdown builds
-  do not read it. `tools/wireit-edges.test.ts` holds these edges and
-  declarations. `pnpm audit` is a plain CI step, never cached, because its
-  result depends on the advisory database and not on repository files.
+  `NODE_ENV=development vite build` makes a development build, and the Wrapper's
+  build refuses any `NODE_ENV` but unset or `production`, any mode but
+  `production`, a set `VITE_USER_NODE_ENV`, and env files
+  (`apps/wrapper/src/build-refusals.test.ts` proves each in both directions,
+  with a planted `.env` and a `VITE_USER_NODE_ENV` in the environment, each
+  beside its control); the tsdown builds do not read it.
+  `tools/wireit-edges.test.ts` holds these edges and declarations. `pnpm audit`
+  is a plain CI step, never cached, because its result depends on the advisory
+  database and not on repository files.
 - **Every input is listed.** A script lists every file its command reads: the
   sources of a workspace as `src/**` (all file types: JSON schemas and vectors,
   CSS, SVG, assets), `public/**` for a Vite app, its top-level `*.ts`

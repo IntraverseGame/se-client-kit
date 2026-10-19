@@ -120,6 +120,15 @@ the attack surface a player cannot see. The rules:
   (`tools/release-dry-run.ts`) builds it in two scratch copies of different
   paths and time zones and fails unless the digests are equal; it also requires
   the five `pnpm pack` tarballs of both copies to be byte-identical. The
+  Wrapper's `vite.config.ts` makes the release artifact only ever the production
+  build (decided in human review, 2026-10-19): it refuses a build in any mode
+  but `production` (Vite's build default), with `VITEST` set, or with `NODE_ENV`
+  set to anything but `production` (unset and empty count as unset, since Vite
+  sets them to `production` for a build), or with `VITE_USER_NODE_ENV` set to
+  any non-empty value, and it reads no env files (`envDir: false`). A
+  `NODE_ENV=development` in the environment, a `VITE_USER_NODE_ENV` in the
+  environment (Vite applies it after the config loads, when `NODE_ENV` was not
+  set), or a `NODE_ENV` in an env file would each make a development build. The
   packages (tsdown) are too: building the same sources twice from a clean state,
   in two different directories, gave byte-identical `dist/` trees (JavaScript,
   its source maps, and declarations; chunk names are content hashes).
