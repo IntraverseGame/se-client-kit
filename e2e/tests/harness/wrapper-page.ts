@@ -28,6 +28,7 @@ export const TEXT = {
   chainNotIndependent: "Chain check not independent (development)",
   configuration: "The game cannot start",
   won: "You won",
+  payout: "Payout",
   lost: "You lost",
   canceled: "Round canceled",
   canceledUnverified: "This round failed verification and was canceled.",

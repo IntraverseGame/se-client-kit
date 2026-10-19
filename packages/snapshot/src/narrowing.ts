@@ -28,6 +28,12 @@ type NotClosed = { closeReason?: never };
 
 type InRound = { roundId: RoundId };
 
+/**
+ * `payout` is what a finished round credits: the schema allows it on `won` and
+ * `lost` only, so every other status carries none.
+ */
+type NoPayout = { payout?: never };
+
 /** From `active` on, a round carries its proofs. */
 type WithProofs = { proofs: FairnessContext };
 
@@ -41,21 +47,25 @@ type Revealed = {
 /** No round in front of the player, so no round-scoped field. */
 export type IdleSnapshot = Snapshot &
   BeforePlay &
-  NotClosed & { status: "idle"; roundId?: never; proofs?: never };
+  NotClosed &
+  NoPayout & { status: "idle"; roundId?: never; proofs?: never };
 
 /** The round is being prepared; proofs fill in by phase, so they are optional. */
 export type StartingSnapshot = Snapshot &
   BeforePlay &
   NotClosed &
+  NoPayout &
   InRound & { status: "starting" };
 
 export type ActiveSnapshot = Snapshot &
   NotClosed &
+  NoPayout &
   InRound &
   WithProofs & { status: "active" };
 
 export type ResolvingSnapshot = Snapshot &
   NotClosed &
+  NoPayout &
   InRound &
   WithProofs & { status: "resolving" };
 
@@ -63,7 +73,9 @@ export type WonSnapshot = Snapshot & InRound & Revealed & { status: "won" };
 
 export type LostSnapshot = Snapshot & InRound & Revealed & { status: "lost" };
 
+/** A canceled round's bet is returned, not paid: it carries no `payout`. */
 export type CanceledSnapshot = Snapshot &
+  NoPayout &
   InRound &
   WithProofs & { status: "canceled" };
 

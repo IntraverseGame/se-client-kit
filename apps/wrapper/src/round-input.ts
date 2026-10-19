@@ -129,6 +129,12 @@ export type SnapshotInput = {
   };
   /** For display only, never for money (W-34). */
   readonly currentMultiplier?: number;
+  /**
+   * What the finished round credits, computed by the server: on `won` and
+   * `lost` only (the schema forbids it on every other status), `0` when nothing
+   * is credited, and optional (W-31, W-34).
+   */
+  readonly payout?: ShownAmount;
 };
 
 /** A typed Play API error, validated (`PlayProblem`). */

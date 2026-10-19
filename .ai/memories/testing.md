@@ -418,6 +418,13 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   tests T-10 to T-12), which runs from the backend-owned job and is never part
   of `pnpm check`.
 - Assert on typed error `code`s, not messages; on money as strings or `bigint`.
+- The payout display (W-31) is tested over the `valid/` vectors that carry
+  one (`apps/wrapper/src/payout.test.ts`, and the cancel closures in
+  `cancel-closure.test.ts`); read the amount from the vector, never write it
+  down. T-10 answers the move with `coinflip-won-payout` (identical to
+  `coinflip-won` but for `payout`) and asserts "Payout" with its `formatted`.
+  The field-access test's allow-list (`render-snapshots.test.ts`) includes
+  `payout`.
 - Never weaken a vector assertion to go green.
 - A test never prints or snapshots a key or token.
 

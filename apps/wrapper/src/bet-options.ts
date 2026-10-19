@@ -28,7 +28,7 @@ type BetContext = {
 const BASE_UNITS = /^(?:0|[1-9][0-9]{0,77})$/u;
 
 /** The amount in base units, or `undefined` when it is not a base-units string. */
-const unitsOf = (amount: ShownAmount): bigint | undefined =>
+export const unitsOf = (amount: ShownAmount): bigint | undefined =>
   BASE_UNITS.test(amount.value) ? BigInt(amount.value) : undefined;
 
 const sameCurrency = (a: ShownAmount, b: ShownAmount): boolean =>

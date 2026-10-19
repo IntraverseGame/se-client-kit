@@ -40,6 +40,13 @@ const closedRead = (name: string): SessionRead =>
 
 const EXPIRED = "coinflip-canceled-expired-no-action";
 
+/** "Payout" and the vector `name`'s own `payout.formatted`. */
+const payoutLine = (name: string): string => {
+  const { payout } = validSnapshot(name);
+  if (payout === undefined) throw new TypeError(`${name} carries no payout`);
+  return `${m["label.payout"]} ${payout.formatted}`;
+};
+
 /** The UI after the shell's cancel was sent, its round read as `read`. */
 const afterSentCancel = async (read: SessionRead): Promise<Wired> => {
   const ui = await onCancel("settling");
@@ -83,6 +90,27 @@ describe("after the shell's cancel was sent (W-33)", () => {
       expect(alertText(ui.host)).toBe("");
     },
   );
+});
+
+describe("the payout of a closure after the shell's cancel (W-31, W-33)", () => {
+  it("shows a won closure's payout beside its note", async () => {
+    const ui = await afterSentCancel(closedRead("coinflip-won-payout"));
+    expect(statusHeading(ui.host)).toBe(m["status.won"]);
+    expect(allText(ui.host)).toContain(m["detail.closedBeforeCancel"]);
+    expect(allText(ui.host)).toContain(payoutLine("coinflip-won-payout"));
+  });
+
+  it("shows a lost closure's payout only when it credits something", async () => {
+    const zero = await afterSentCancel(closedRead("coinflip-lost-payout-zero"));
+    expect(allText(zero.host)).toContain(m["detail.closedBeforeCancel"]);
+    expect(allText(zero.host)).not.toContain(m["label.payout"]);
+    const credited = await afterSentCancel(
+      closedRead("steps-lost-expired-payout"),
+    );
+    expect(allText(credited.host)).toContain(
+      payoutLine("steps-lost-expired-payout"),
+    );
+  });
 });
 
 describe("a round that ended with no cancel of the shell's", () => {

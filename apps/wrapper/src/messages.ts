@@ -27,6 +27,7 @@ export type MessageKey =
   | "label.bet"
   | "label.betUnavailable"
   | "label.multiplier"
+  | "label.payout"
   | "label.game"
   | "label.roundId"
   | "label.requestId"
@@ -108,6 +109,7 @@ const EN: Messages = {
   "label.bet": "Bet",
   "label.betUnavailable": "above your balance",
   "label.multiplier": "Multiplier",
+  "label.payout": "Payout",
   "label.game": "Game",
   "label.roundId": "Round ID",
   "label.requestId": "Reference",

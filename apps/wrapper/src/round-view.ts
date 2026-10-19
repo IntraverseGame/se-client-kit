@@ -8,10 +8,11 @@
 // the round failed verification and canceled (W-26). A move or cash-out not
 // confirmed (W-16) shows its own state in place of the `active` round. Money
 // is the Snapshot's `formatted`; a choice compares `value` as a `bigint`
-// (bet-options.ts). No payout is shown on `won` yet: the Snapshot carries
-// `payout` now, and its display comes in a pull request of its own
-// (TODO(Snapshot contract) in the rendering spec); none is ever computed.
+// (bet-options.ts). A `won` round shows its `payout` as `formatted`, and a
+// `lost` one only when `payout.value` is above 0 (compared as a `bigint`); an
+// absent `payout` shows nothing. None is ever computed (W-31, W-34).
 
+import { unitsOf } from "./bet-options.ts";
 import { betSelector } from "./bet-selector.ts";
 import { endedView } from "./cancel-views.ts";
 import {
@@ -27,6 +28,7 @@ import type { Localized, MessageKey } from "./messages.ts";
 import {
   type RoundCheck,
   roundEnded,
+  type ShownAmount,
   type SnapshotInput,
 } from "./round-input.ts";
 import { unconfirmedView } from "./unconfirmed-view.ts";
@@ -46,6 +48,24 @@ export const ICON_LABEL: Readonly<Record<IconName, MessageKey>> = {
   error: "icon.error",
   info: "icon.info",
   progress: "icon.progress",
+};
+
+/**
+ * The payout a result shows (W-31): a `won` round's, and a `lost` round's only
+ * when it credits something (`value` above 0, compared as a `bigint`, W-34).
+ * None on any other status, none when the Snapshot carries none, and none when
+ * `value` is not a base-units string (the validator rules that out; the guard
+ * keeps a bad value from throwing, as `bet-options.ts` does).
+ */
+export const shownPayout = (
+  snapshot: SnapshotInput,
+): ShownAmount | undefined => {
+  const { payout, status } = snapshot;
+  if (payout === undefined) return undefined;
+  const units = unitsOf(payout);
+  if (units === undefined) return undefined;
+  if (status === "won") return payout;
+  return status === "lost" && units > 0n ? payout : undefined;
 };
 
 const formatMultiplier = (language: string, multiplier: number): string =>
@@ -159,6 +179,10 @@ export const roundView = (
         children.push(
           el("p", { class: "se-detail" }, [m["detail.closedBeforeCancel"]]),
         );
+      }
+      const payout = shownPayout(snapshot);
+      if (payout !== undefined) {
+        children.push(field(el, m["label.payout"], payout.formatted));
       }
       children.push(
         field(el, m["label.balance"], snapshot.bet.balance.formatted),

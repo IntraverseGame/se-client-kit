@@ -1,6 +1,7 @@
 import {
   type Hash32,
   type RoundId,
+  type Snapshot,
   snapshotSchema,
   type StepConfig,
 } from "@intraverse/se-client-contracts";
@@ -33,16 +34,19 @@ const describeStatus = (snapshot: ValidSnapshot): string => {
     case "idle": {
       expectTypeOf(snapshot.roundId).toEqualTypeOf<undefined>();
       expectTypeOf(snapshot.proofs).toEqualTypeOf<undefined>();
+      expectTypeOf(snapshot.payout).toEqualTypeOf<undefined>();
       return "idle";
     }
     case "starting": {
       expectTypeOf(snapshot.roundId).toEqualTypeOf<RoundId>();
       expectTypeOf(snapshot.step).toEqualTypeOf<undefined>();
+      expectTypeOf(snapshot.payout).toEqualTypeOf<undefined>();
       return `starting ${snapshot.roundId}`;
     }
     case "active":
     case "resolving": {
       expectTypeOf(snapshot.closeReason).toEqualTypeOf<undefined>();
+      expectTypeOf(snapshot.payout).toEqualTypeOf<undefined>();
       return `${snapshot.status} ${snapshot.proofs.randomnessProof.roundSecretHash}`;
     }
     case "won":
@@ -50,9 +54,12 @@ const describeStatus = (snapshot: ValidSnapshot): string => {
       expectTypeOf(
         snapshot.proofs.randomnessProof.roundSecret,
       ).toEqualTypeOf<Hash32>();
+      // The schema allows `payout` here (optional, so it may be absent).
+      expectTypeOf(snapshot.payout).toEqualTypeOf<Snapshot["payout"]>();
       return `${snapshot.status} ${snapshot.proofs.randomnessProof.roundSecret}`;
     }
     case "canceled": {
+      expectTypeOf(snapshot.payout).toEqualTypeOf<undefined>();
       return `canceled ${snapshot.roundId}`;
     }
     default: {
