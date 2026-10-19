@@ -54,7 +54,11 @@ defaults.
   (`playToken`), its deadline (`tokenExpiresAt`), and the session's hard end
   (`sessionExpiresAt`, which no token outlives), both RFC 3339 `date-time`. A
   rejected code is a `401` (`UNAUTHENTICATED`); a `503` to a redeem carries
-  `retryable: false`, and is not repeated either.
+  `retryable: false`, and is not repeated either. Every launch opens a new
+  session, whose first Snapshot read is `idle` (no round yet): a session never
+  sees an earlier session's rounds (the backend, 2026-10-19), so a relaunch
+  after a reload never shows an earlier round's result as new. The read keeps
+  answering the session's most recent round once it has ended (W-31).
 - **W-3.** The play token MUST live only in a JavaScript variable inside the
   shell, for the lifetime of the page. It MUST NOT be written to any storage
   (`localStorage`, `sessionStorage`, IndexedDB, Cache Storage, cookies, the

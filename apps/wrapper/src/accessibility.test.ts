@@ -220,7 +220,7 @@ describe("labels in the session's language (W-48)", () => {
     const ui = mount();
     ui.app.connect({
       readSnapshot: () => Promise.resolve({ kind: "network" }),
-      intents: { start: () => {}, newRound: () => {} },
+      intents: { start: () => {} },
     });
     for (const name of ["coinflip-idle", "coinflip-won"]) {
       ui.app.accept(

@@ -117,9 +117,7 @@ test.describe("T-19: the required cancel", () => {
     });
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: TEXT.newRound }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: TEXT.start })).toBeVisible();
     await Promise.all(
       [TEXT.won, TEXT.lost, TEXT.canceled].map(claim =>
         expect(page.getByText(claim)).toHaveCount(0),
@@ -172,9 +170,7 @@ test.describe("T-19: the required cancel", () => {
     await expect(statusHeading(page)).toHaveText(TEXT.checkLater);
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
-    await expect(page.getByRole("button", { name: TEXT.newRound })).toHaveCount(
-      0,
-    );
+    await expect(page.getByRole("button", { name: TEXT.start })).toHaveCount(0);
     expect(await auditAccessibility(page)).toEqual([]);
     // A round still resolving after the cancel had closed before it arrived:
     // "check again" finds its result (`lost`, a later version than the

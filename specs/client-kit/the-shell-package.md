@@ -628,8 +628,11 @@ are in brackets.
     not block one. An `active` answer is `not-taken`, as an `active` read is. A
     final answer (`canceled`, `won`, `lost`) is read into the round at once: the
     round's result, with no error and no extra read. The shell changes these
-    rules only through a vendored change of the Snapshot contract.
-    <!-- TODO(Snapshot contract): the planned read of the last round will show the ended round's real result (and `idle` with no error will mean "no round yet"); read it then instead of `ended`'s neutral display. -->
+    rules only through a vendored change of the Snapshot contract. Since the
+    Play API document of se-backend `726f0a2` a read after the round ended keeps
+    showing it with its result (a final read, `sent`), so `ended` comes only
+    from an `idle` read, which the backend says never follows `active` (a round
+    is voided only while `starting`): `ended` is kept as a defensive fallback.
   - **Re-issue (W-26).** A re-issued verdict calls `reissue`: picks and the
     cash-out are `not_active`, and `resend` still sends a move or a cash-out
     already signed.

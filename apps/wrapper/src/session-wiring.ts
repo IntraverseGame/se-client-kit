@@ -175,9 +175,9 @@ const mountGame = (
 
 /**
  * Connects an open session to the UI: its read port (polled per W-35, also the
- * background read of a cancel in `check-later`), the start, cash-out,
- * new-round, and "check again" intents, the answers of the game's picks, and
- * the session's end (W-7). Then mounts the game.
+ * background read of a cancel in `check-later`), the start, cash-out, and
+ * "check again" intents, the answers of the game's picks, and the session's end
+ * (W-7). Then mounts the game.
  */
 export const wireSession = (
   options: SessionWiringOptions,
@@ -230,9 +230,6 @@ export const wireSession = (
       },
       cashOut: (): void => {
         run(() => session.cashOut());
-      },
-      newRound: (): void => {
-        app.newRound();
       },
       checkAgain: (): void => {
         run(() => session.checkAgain());

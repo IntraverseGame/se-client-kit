@@ -39,7 +39,6 @@ export const TEXT = {
   chainUnverified: "Could not verify the chain",
   outOfSync: "This round is out of sync",
   rejected: "The game state could not be read",
-  newRound: "New round",
   verify: "Verify this round",
 } as const;
 

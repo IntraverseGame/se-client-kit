@@ -3,6 +3,7 @@
 // check later, "still resolving — contact support" with "check again". Neither
 // shows a win, a loss, a refund, or "your bet was returned".
 
+import { betSelector } from "./bet-selector.ts";
 import {
   button,
   type Builder,
@@ -18,8 +19,9 @@ import type { Intents } from "./view-options.ts";
 /**
  * The round the shell's cancel ended (W-25, W-33): a neutral "round ended", the
  * balance (of `snapshot`: the round's last one, then the read that followed),
- * and a new round. The round id and the verify link show in the ended round's
- * panel. The heading keeps the focus across that read.
+ * and the next bet, from that Snapshot's `bet` (W-31). The round id and the
+ * verify link show in the ended round's panel. The heading keeps the focus
+ * across that read.
  */
 export const endedView = (
   el: Builder,
@@ -28,7 +30,6 @@ export const endedView = (
   snapshot: SnapshotInput,
   intents: Intents,
 ): Child[] => {
-  const { newRound } = intents;
   const title = heading(
     el,
     doc,
@@ -42,8 +43,7 @@ export const endedView = (
   return [
     title,
     field(el, m["label.balance"], snapshot.bet.balance.formatted),
-    newRound !== undefined &&
-      button(el, m["action.newRound"], "new-round", newRound),
+    betSelector(el, m, snapshot, intents),
   ];
 };
 
@@ -51,7 +51,7 @@ export const endedView = (
  * The cancel left to check later (W-33, W-35): "still resolving — contact
  * support" and "check again", in the status section; the round's failed
  * verification, its round id, and the verify link show in the alert panel. No
- * result and no new round.
+ * result and no bet selector.
  */
 export const checkLaterView = (
   el: Builder,

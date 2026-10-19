@@ -19,7 +19,15 @@ Part of the [Wrapper spec](../wrapper.md), section
   object of `se.snapshot/1` is closed (the allow-list), so a new field or status
   reaches the Wrapper only with a kit that has synced the new schema. The
   Wrapper also ignores a Snapshot whose `version` equals the last accepted one
-  (it carries nothing new).
+  (it carries nothing new). **Interim limit.** Until the backend's per-session
+  counter lands, `version` is not yet the monotonic counter the Play API
+  document and the Snapshot schema describe: a later read can carry a lower
+  `version` than the one last shown. The Wrapper drops it as above: it is
+  neither an error nor newer state, and a later read shows the current state.
+  Where a poll runs, a drop delays a newer balance or status by one read; where
+  none runs (an action's answer to an `active` round, or the start's answer from
+  an ended round), it is shown only by the next read the Wrapper makes.
+  <!-- TODO(version drops): a fix(wrapper) re-read after a Snapshot dropped for a lower `version` makes sure that next read comes where no poll runs; until it lands, nothing guarantees it. -->
 - **W-30.** The Wrapper MUST declare its capabilities when the session starts:
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
   six of R3 and `canceled`, which the cancel path needs).
@@ -44,17 +52,29 @@ Part of the [Wrapper spec](../wrapper.md), section
   <!-- TODO(Play API): vendor the Play API document once it carries the optional `capabilities` object of the `sessions:redeem` request (specified at b6e1e48, not built), then send W-30's declaration in it. -->
 - **W-31.** Statuses. The Wrapper MUST handle each as follows:
 
-  | `status`                                   | The Wrapper shows                                                                                                                                                                                                                                                                                                           | Input                                                      |
-  | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-  | `idle`                                     | the bet selector (`bet.suggestedBets`, defaulting to `bet.defaultBet`, within `minBet` and `maxBet`) and the start button, the balance. A typed error from the call that led here (a void) shows beside it                                                                                                                  | start enabled                                              |
-  | `starting`                                 | "preparing the round"; the game is not shown as ready; the shell is verifying (W-26)                                                                                                                                                                                                                                        | none; cancel is not offered                                |
-  | `active`                                   | the game, ready, only after W-26 passed; the multiplier; cash-out when allowed                                                                                                                                                                                                                                              | game picks, cash-out, cancel (if the game offers it, W-25) |
-  | `active`, a move or cash-out not confirmed | "your move hasn't been confirmed" (or "your cash-out hasn't been confirmed"), "if it never arrives, the round ends by its time limit", the round id, and "check again" in place of the round; the game stays shown, waiting (W-16)                                                                                          | "check again" (a read only); no pick, no cash-out          |
-  | `resolving`                                | the game with inputs disabled, "resolving"                                                                                                                                                                                                                                                                                  | none                                                       |
-  | `won`                                      | the result, the payout as `formatted`, the round id and verify link (W-39)                                                                                                                                                                                                                                                  | a new round                                                |
-  | `lost`                                     | the result, the round id and verify link                                                                                                                                                                                                                                                                                    | a new round                                                |
-  | `canceled`                                 | "round canceled, your bet was returned", the round id and verify link, and with `closeReason: "expired"` the words "the time limit ended this round". `canceled` is final, also after the shell's own cancel; until the cancel is answered the round is `resolving` and the cancel `settling` or `check-later` (W-25, W-33) | a new round                                                |
-  | typed error                                | per [error and degraded states](../wrapper.md#error-and-degraded-states)                                                                                                                                                                                                                                                    | per code                                                   |
+  | `status`                                   | The Wrapper shows                                                                                                                                                                                                                                                                                                           | Input                                                                       |
+  | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+  | `idle`                                     | the bet selector (`bet.suggestedBets`, defaulting to `bet.defaultBet`, within `minBet` and `maxBet`) and the start button, the balance. A typed error from the call that led here (a void) shows beside it                                                                                                                  | start enabled                                                               |
+  | `starting`                                 | "preparing the round"; the game is not shown as ready; the shell is verifying (W-26)                                                                                                                                                                                                                                        | none; cancel is not offered                                                 |
+  | `active`                                   | the game, ready, only after W-26 passed; the multiplier; cash-out when allowed                                                                                                                                                                                                                                              | game picks, cash-out, cancel (if the game offers it, W-25)                  |
+  | `active`, a move or cash-out not confirmed | "your move hasn't been confirmed" (or "your cash-out hasn't been confirmed"), "if it never arrives, the round ends by its time limit", the round id, and "check again" in place of the round; the game stays shown, waiting (W-16)                                                                                          | "check again" (a read only); no pick, no cash-out                           |
+  | `resolving`                                | the game with inputs disabled, "resolving"                                                                                                                                                                                                                                                                                  | none                                                                        |
+  | `won`                                      | the result, the payout as `formatted`, the round id and verify link (W-39)                                                                                                                                                                                                                                                  | the next bet: the bet selector and start, from this Snapshot's `bet` (W-40) |
+  | `lost`                                     | the result, the round id and verify link                                                                                                                                                                                                                                                                                    | the next bet: the bet selector and start, from this Snapshot's `bet` (W-40) |
+  | `canceled`                                 | "round canceled, your bet was returned", the round id and verify link, and with `closeReason: "expired"` the words "the time limit ended this round". `canceled` is final, also after the shell's own cancel; until the cancel is answered the round is `resolving` and the cancel `settling` or `check-later` (W-25, W-33) | the next bet: the bet selector and start, from this Snapshot's `bet` (W-40) |
+  | typed error                                | per [error and degraded states](../wrapper.md#error-and-degraded-states)                                                                                                                                                                                                                                                    | per code                                                                    |
+
+  A round that is over (`won`, `lost`, `canceled`, and the shell's cancel
+  `ended`, W-33) shows its result, the round id, and the verify link with the
+  next bet beside them: the bet selector and the start button of the `idle` row,
+  drawn from that Snapshot's own `bet` (`suggestedBets`, `defaultBet`, `minBet`,
+  `maxBet`, the balance). There is no separate "new round" step: since
+  se-backend `726f0a2` the Snapshot read keeps answering the ended round until
+  the next `rounds:start`, so the next bet is offered from it, never from an
+  `idle` read the Wrapper waits for and never from a mode of the UI's own. The
+  result stays until the player starts (W-40). Focus follows W-46: the result
+  heading takes it when the player's own action ended the round, and the bet
+  selector and the start button follow it in the tab order.
 
   <!-- TODO(Snapshot contract): `won` shows "the payout as `formatted`". Since se-backend f8cc92b, `se.snapshot/1` carries a server-computed `payout` (`Amount`, with `formatted`) on `won` and `lost`, and forbids it on every other status. The Wrapper does not show it yet: human review (2026-10-19) put the display in a pull request of its own. `bankedAmount` is reserved for partial cash-out, is not served, and is not used. Until that pull request the Wrapper shows no amount on `won`, and it never computes one from `currentMultiplier` or anything else (W-34). -->
 
@@ -89,24 +109,26 @@ Part of the [Wrapper spec](../wrapper.md), section
   - `in-flight` and `settling`: the round as it was before the cancel (for the
     required cancel, "this round failed verification", W-26), with inputs
     disabled while a `resolving` read shows it, and no result, no "your bet was
-    returned", and no new-round control;
+    returned", and no bet selector;
   - `check-later`: "still resolving — contact support" (the status heading,
     announced politely), with the round id and the verify link (W-39) and a
     "check again" control, beside the round's "this round failed verification"
     (the alert panel, W-26), and still no result, no "your bet was returned",
-    and no new-round control;
+    and no bet selector;
   - `ended`: a neutral "round ended" (the status heading) with the round id and
     the verify link, no win, loss, refund, or bet-returned amount, and no result
-    claim; a new round may start, and the round's failed verification lifts, as
-    it does once a round is over. The read that settled the cancel `ended` is
-    not read into the round (W-25), so the Wrapper then reads the Snapshot once
-    (W-35) and shows that read's balance (W-32), still under "round ended" while
-    it shows `idle`, until the player starts a new round; the read also gives
-    the game the current Snapshot, so it no longer shows the round as live. If
-    that read gets no response, a typed error, or a rejected answer, it is
-    dropped: the balance of the round's last Snapshot stays, with no error state
-    (decided by human review, 2026-10-18);
-    <!-- TODO(Snapshot contract): the planned read of the last round shows its real result; show it then instead of "round ended". -->
+    claim; the next bet is offered beside it (W-31), and the round's failed
+    verification lifts, as it does once a round is over. The read that settled
+    the cancel `ended` is not read into the round (W-25), so the Wrapper then
+    reads the Snapshot once (W-35) and shows that read's balance (W-32), still
+    under "round ended" while it shows `idle`, until the player starts the next
+    round; the read also gives the game the current Snapshot, so it no longer
+    shows the round as live. If that read gets no response, a typed error, or a
+    rejected answer, it is dropped: the balance of the round's last Snapshot
+    stays, with no error state (decided by human review, 2026-10-18). Since
+    `726f0a2` a read after the cancel shows the round's real result (`canceled`,
+    `won`, or `lost`, the cancel `sent`), so `ended` comes only from an `idle`
+    read, which never follows `active` (W-25): a defensive fallback;
   - `not-taken`: "this round failed verification" (W-26), the round open until
     its expiry rule closes it, whether the answer or a read showed `active`;
   - `sent` with `canceled` (the shell's own cancel took): "round canceled" with

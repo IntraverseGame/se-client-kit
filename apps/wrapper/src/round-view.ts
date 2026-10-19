@@ -1,18 +1,18 @@
 // The round as its status gives it (W-31 to W-34): the bet selector when
-// `idle`, the preparing and resolving notes, the multiplier, the cash-out
-// control when the shell offers it, the result, and `closeReason` beside the
-// status. An `active` round is shown as ready only once the shell's checks
-// passed (W-26); until then it reads as being checked. After the shell's own
-// cancel (W-25, W-33), `ended` is a neutral "round ended" with no result
-// claim, and a `canceled` result is the round failed verification and canceled
-// (W-26). A move or cash-out not confirmed (W-16) shows its own state in place
-// of the `active` round. Money is the
-// Snapshot's `formatted`; a choice compares `value` as a `bigint`
+// `idle` and beside the result of a round that is over, the preparing and
+// resolving notes, the multiplier, the cash-out control when the shell offers
+// it, the result, and `closeReason` beside the status. An `active` round is
+// shown as ready only once the shell's checks passed (W-26); until then it
+// reads as being checked. After the shell's own cancel (W-25, W-33), `ended`
+// is a neutral "round ended" with no result claim, and a `canceled` result is
+// the round failed verification and canceled (W-26). A move or cash-out not
+// confirmed (W-16) shows its own state in place of the `active` round. Money
+// is the Snapshot's `formatted`; a choice compares `value` as a `bigint`
 // (bet-options.ts). No payout is shown on `won` yet: the Snapshot carries
 // `payout` now, and its display comes in a pull request of its own
 // (TODO(Snapshot contract) in the rendering spec); none is ever computed.
 
-import { betChoice } from "./bet-options.ts";
+import { betSelector } from "./bet-selector.ts";
 import { endedView } from "./cancel-views.ts";
 import {
   button,
@@ -23,7 +23,7 @@ import {
   STATUS_HEADING_ID,
 } from "./dom.ts";
 import type { IconName } from "./icons.ts";
-import type { Localized, MessageKey, Messages } from "./messages.ts";
+import type { Localized, MessageKey } from "./messages.ts";
 import {
   type RoundCheck,
   roundEnded,
@@ -50,57 +50,6 @@ export const ICON_LABEL: Readonly<Record<IconName, MessageKey>> = {
 
 const formatMultiplier = (language: string, multiplier: number): string =>
   `×${new Intl.NumberFormat(language, { maximumFractionDigits: 4 }).format(multiplier)}`;
-
-/** The bet selector and the start control (`idle`, W-31). */
-const betSelector = (
-  el: Builder,
-  m: Messages,
-  snapshot: SnapshotInput,
-  intents: Intents,
-): HTMLElement => {
-  const choice = betChoice(snapshot.bet);
-  let selected = choice.selected;
-  const radios = choice.options.map((option, index) => {
-    const input = el("input", {
-      type: "radio",
-      name: "se-bet",
-      value: String(index),
-      "data-focus-key": `bet-${index}`,
-    });
-    input.checked = index === selected;
-    input.disabled = !option.affordable;
-    input.addEventListener("change", () => {
-      selected = index;
-    });
-    return el("label", { class: "se-choice" }, [
-      input,
-      " ",
-      option.amount.formatted,
-      !option.affordable &&
-        el("span", { class: "se-choice__note" }, [
-          ` (${m["label.betUnavailable"]})`,
-        ]),
-    ]);
-  });
-  const start = intents.start;
-  return el("form", { class: "se-bet" }, [
-    el("fieldset", {}, [el("legend", {}, [m["label.bet"]]), ...radios]),
-    start !== undefined &&
-      button(
-        el,
-        m["action.start"],
-        "start",
-        () => {
-          const option =
-            selected === undefined ? undefined : choice.options[selected];
-          if (option !== undefined) {
-            start(option.amount);
-          }
-        },
-        selected === undefined,
-      ),
-  ]);
-};
 
 /** The round as its status gives it (W-31 to W-34). */
 export const roundView = (
@@ -215,9 +164,11 @@ export const roundView = (
       el("p", { class: "se-detail se-detail--close" }, [m["detail.expired"]]),
     );
   }
-  const newRound = intents.newRound;
-  if (roundEnded(snapshot, check?.cancel) && newRound !== undefined) {
-    children.push(button(el, m["action.newRound"], "new-round", newRound));
+  // A round that is over offers the next bet beside its result, from its own
+  // Snapshot's `bet` (W-31, W-40): the read keeps showing the ended round until
+  // the next start.
+  if (roundEnded(snapshot, check?.cancel)) {
+    children.push(betSelector(el, m, snapshot, intents));
   }
   return children;
 };

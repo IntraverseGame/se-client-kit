@@ -1,10 +1,10 @@
 // The shell's required cancel in the Wrapper once it settled (W-25, W-33,
-// W-35): a neutral "round ended" with the round id, the verify link, and a new
-// round once it is `ended`, then exactly one read for the current balance (a
-// failed one keeps the round's balance, with no error state); no poll once it
-// is `ended`, `not-taken`, or `sent`; and whether the round is over with the
-// cancel. The session is a scripted stand-in (fixtures/fake-session.ts); the
-// clock is the manual one.
+// W-35): a neutral "round ended" with the round id, the verify link, and the
+// next bet (W-31) once it is `ended`, then exactly one read for the current
+// balance (a failed one keeps the round's balance, with no error state); no
+// poll once it is `ended`, `not-taken`, or `sent`; and whether the round is
+// over with the cancel. The session is a scripted stand-in
+// (fixtures/fake-session.ts); the clock is the manual one.
 
 import type { SessionRead, ValidSnapshot } from "@intraverse/se-client-shell";
 import { describe, expect, it } from "vitest";
@@ -32,13 +32,16 @@ import { roundEnded } from "./round-input.ts";
 const m = messagesFor("en").messages;
 
 describe("ended (W-25, W-33)", () => {
-  it("shows a neutral round ended with the round id and the verify link, and a new round", async () => {
+  it("shows a neutral round ended with the round id, the verify link, and the next bet", async () => {
     const ui = await onCancel("ended");
     expect(statusHeading(ui.host)).toBe(m["status.ended"]);
     expect(alertText(ui.host)).toBe("");
     expect(allText(ui.host)).toContain(activeId);
     expect(linkNamed(ui.host, m["action.verify"])).toBeDefined();
-    expect(buttonNamed(ui.host, m["action.newRound"])).toBeDefined();
+    expect(buttonNamed(ui.host, m["action.start"])).toBeDefined();
+    expect(
+      ui.host.querySelectorAll('.se-status input[type="radio"]').length,
+    ).toBeGreaterThan(0);
     for (const claim of [
       m["status.won"],
       m["status.lost"],
@@ -70,7 +73,7 @@ describe("ended (W-25, W-33)", () => {
     expect(await readsOver(ui, 10_000)).toBe(0);
   });
 
-  it("reads once after ended and shows that read's balance, until the player starts a new round", async () => {
+  it("reads once after ended and shows that read's balance, with the next bet", async () => {
     const idle = validSnapshot("coinflip-idle");
     const current = "42.00 TEST";
     expect(active.bet.balance.formatted).not.toBe(current);
@@ -95,8 +98,9 @@ describe("ended (W-25, W-33)", () => {
     expect(allText(ui.host)).not.toContain(active.bet.balance.formatted);
     expect(allText(ui.host)).toContain(activeId);
     expect(await readsOver(ui, 60_000)).toBe(0);
-    buttonNamed(ui.host, m["action.newRound"])?.click();
-    expect(statusHeading(ui.host)).toBe(m["status.idle"]);
+    // Still "round ended", with the bet selector of that read's `bet`.
+    expect(statusHeading(ui.host)).toBe(m["status.ended"]);
+    expect(buttonNamed(ui.host, m["action.start"])).toBeDefined();
   });
 
   it.each<[string, SessionRead]>([
@@ -141,20 +145,19 @@ describe("ended (W-25, W-33)", () => {
     expect(allText(ui.host)).toContain(m["state.sessionEnded"]);
   });
 
-  it("lets the player start a new round", async () => {
+  it("lets the player start the next round from round ended", async () => {
     const ui = await onCancel("ended");
-    ui.fake.reads.length = 0;
-    ui.fake.reads.push({
-      kind: "snapshot",
-      snapshot: {
-        ...validSnapshot("coinflip-idle"),
-        version: active.version + 5,
-      } as ValidSnapshot,
-    });
-    buttonNamed(ui.host, m["action.newRound"])?.click();
+    const starting = {
+      ...validSnapshot("coinflip-starting"),
+      version: active.version + 5,
+      roundId: "01927c5e-8b3a-7f21-9c4d-000000000004",
+    } as ValidSnapshot;
+    ui.fake.answerStart({ kind: "snapshot", snapshot: starting });
+    buttonNamed(ui.host, m["action.start"])?.click();
     await ui.settle();
-    expect(statusHeading(ui.host)).toBe(m["status.idle"]);
-    expect(buttonNamed(ui.host, m["action.start"])).toBeDefined();
+    expect(ui.fake.starts).toHaveLength(1);
+    expect(statusHeading(ui.host)).toBe(m["status.starting"]);
+    expect(allText(ui.host)).not.toContain(activeId);
   });
 });
 

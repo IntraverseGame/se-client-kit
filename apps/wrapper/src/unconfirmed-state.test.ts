@@ -63,7 +63,7 @@ describe("a move or cash-out not confirmed (W-16)", () => {
     expect(allText(ui.host)).toContain(activeId);
     expect(buttonNamed(ui.host, m["action.checkAgain"])).toBeDefined();
     expect(buttonNamed(ui.host, m["action.cashOut"])).toBeUndefined();
-    expect(buttonNamed(ui.host, m["action.newRound"])).toBeUndefined();
+    expect(buttonNamed(ui.host, m["action.start"])).toBeUndefined();
     expect(allText(ui.host)).not.toContain(m["status.active"]);
     expect(gameShown(ui)).toBe(true);
   });

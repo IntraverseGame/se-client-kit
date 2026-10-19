@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-19 (fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-19 (Snapshot last-round read pull request, 726f0a2: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -122,10 +122,21 @@ structure below.
   before the tracking), and only the flow's own counted reads (`refresh`,
   `checkAgain`, one at a time) settle it: `canceled`, `won`, `lost` give `sent`,
   `active` (also as the answer, or after a 400/422) gives `not-taken`, `idle`
-  gives `ended` (neutral "round ended"); after 30 reads it is `check-later`
+  gives `ended` (neutral "round ended"; since 726f0a2 not expected, as `idle`
+  never follows `active`: a defensive fallback); after 30 reads it is `check-later`
   ("still resolving — contact support"). Cancel refusals go to the evidence.
   No new round while `in-flight`, `settling`, or `check-later`; `ended` does
-  not block one. The rules change only with a vendored contract change
+  not block one. The Snapshot read keeps answering the session's ended round
+  until the next start (726f0a2), so the Wrapper offers the next bet (bet
+  selector and start, from that Snapshot's `bet`) beside a round's result, with
+  no separate "new round" step; the ended round's id and verify link go once
+  the round the player started from them shows (W-31, W-40). Until the
+  backend's per-session counter lands, a later read can carry a lower
+  `version` than the one last shown; the Wrapper drops it (W-29). Where a poll
+  runs, the next read shows the state; where none runs (an action's answer to
+  an `active` round, the start's answer from an ended round), no next read is
+  guaranteed until the re-read fix (`TODO(version drops)` under W-29). The
+  rules change only with a vendored contract change
   (W-25, W-35). The session folds them in (`session-reads.ts`): the round
   guard keys on the cancel state first (whatever the session read), a read
   from elsewhere is replaced by the round's latest Snapshot for the UI, and not

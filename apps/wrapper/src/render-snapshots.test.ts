@@ -1,24 +1,14 @@
 // T-6 (component): every `valid/` Snapshot renders without error and in the
 // state W-31's status table gives, with no read of a field the UI does not
 // list; `closeReason` is shown beside the status (W-33); `won` shows no
-// credit wait (W-32); after a round ends the round id and the verify link are
-// shown, the link opens with `noopener noreferrer`, and both stay until the
-// player acts (W-39, W-40). Money is the Snapshot's `formatted` (W-34, W-48).
+// credit wait (W-32); the round id, the verify link, and the next bet after a
+// round ends are ended-round.test.ts's (W-39, W-40). Money is the Snapshot's
+// `formatted` (W-34, W-48).
 
 import { describe, expect, it } from "vitest";
 
-import {
-  allText,
-  buttonNamed,
-  linkNamed,
-  mount,
-  statusHeading,
-} from "./fixtures/app.ts";
-import {
-  SNAPSHOT_VECTORS,
-  snapshotVector,
-  withFields,
-} from "./fixtures/vectors.ts";
+import { allText, buttonNamed, mount, statusHeading } from "./fixtures/app.ts";
+import { SNAPSHOT_VECTORS, snapshotVector } from "./fixtures/vectors.ts";
 import { messagesFor } from "./messages.ts";
 import type { RoundStatus, SnapshotInput } from "./round-input.ts";
 
@@ -181,72 +171,6 @@ describe("status details (W-31 to W-33)", () => {
     radios[1]?.click();
     buttonNamed(ui.host, m["action.start"])?.click();
     expect(started).toEqual(["500 EUR"]);
-  });
-});
-
-describe("the round id and the verify link (W-39, W-40)", () => {
-  it.each(["coinflip-won", "coinflip-lost", "coinflip-canceled"])(
-    "%s shows the round id, a copy control, and the verify link",
-    async name => {
-      const snapshot = snapshotVector(name);
-      const ui = rendered(snapshot);
-      expect(ui.host.querySelector(".se-round-id")?.textContent).toBe(
-        snapshot.roundId,
-      );
-      const link = linkNamed(ui.host, m["action.verify"]);
-      expect(link?.getAttribute("href")).toBe(
-        `https://verify.example/rounds/${snapshot.roundId}`,
-      );
-      expect(link?.getAttribute("target")).toBe("_blank");
-      expect(link?.getAttribute("rel")).toBe("noopener noreferrer");
-      buttonNamed(ui.host, m["action.copyRoundId"])?.click();
-      await ui.settle();
-      expect(ui.copied).toEqual([snapshot.roundId]);
-    },
-  );
-
-  it.each(["coinflip-idle", "coinflip-starting", "coinflip-active"])(
-    "%s shows no round id panel before a round ended",
-    name => {
-      const ui = rendered(snapshotVector(name));
-      expect(ui.host.querySelector(".se-ended")?.childElementCount).toBe(0);
-    },
-  );
-
-  it("keeps them while later Snapshots arrive, until the player acts", () => {
-    const won = snapshotVector("coinflip-won");
-    const ui = rendered(won);
-    const idle = withFields(snapshotVector("coinflip-idle"), {
-      version: won.version + 1,
-    });
-    ui.app.accept({ kind: "snapshot", snapshot: idle }, "poll");
-    expect(statusHeading(ui.host)).toBe(m["status.idle"]);
-    expect(ui.host.querySelector(".se-round-id")?.textContent).toBe(
-      won.roundId,
-    );
-    const next = withFields(snapshotVector("coinflip-starting"), {
-      version: won.version + 2,
-      roundId: "01927c5e-8b3a-7f21-9c4d-000000000002",
-    });
-    ui.app.accept({ kind: "snapshot", snapshot: next }, "poll");
-    expect(ui.host.querySelector(".se-round-id")?.textContent).toBe(
-      won.roundId,
-    );
-    ui.app.newRound();
-    expect(ui.host.querySelector(".se-round-id")).toBeNull();
-  });
-
-  it("shows the new round's id once that round ends", () => {
-    const won = snapshotVector("coinflip-won");
-    const ui = rendered(won);
-    ui.app.newRound();
-    const roundId = "01927c5e-8b3a-7f21-9c4d-000000000003";
-    const lost = withFields(snapshotVector("coinflip-lost"), {
-      version: won.version + 3,
-      roundId,
-    });
-    ui.app.accept({ kind: "snapshot", snapshot: lost }, "poll");
-    expect(ui.host.querySelector(".se-round-id")?.textContent).toBe(roundId);
   });
 });
 
