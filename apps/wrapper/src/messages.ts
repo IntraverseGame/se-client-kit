@@ -19,6 +19,8 @@ export type MessageKey =
   | "detail.resolving"
   | "detail.canceled"
   | "detail.canceledUnverified"
+  | "detail.unverified"
+  | "detail.closedBeforeCancel"
   | "detail.expired"
   | "detail.verifying"
   | "label.balance"
@@ -97,6 +99,9 @@ const EN: Messages = {
   "detail.canceled": "Round canceled, your bet was returned.",
   "detail.canceledUnverified":
     "This round failed verification and was canceled.",
+  "detail.unverified": "This round failed verification.",
+  "detail.closedBeforeCancel":
+    "This round failed verification; it closed before the cancel arrived.",
   "detail.expired": "The time limit ended this round.",
   "detail.verifying": "The round is being checked before you play.",
   "label.balance": "Balance",

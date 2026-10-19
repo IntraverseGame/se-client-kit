@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-19 (re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request, 726f0a2: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-19 (Play API document b47b286: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request, 726f0a2: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -124,7 +124,16 @@ structure below.
   `active` (also as the answer, or after a 400/422) gives `not-taken`, `idle`
   gives `ended` (neutral "round ended"; since 726f0a2 not expected, as `idle`
   never follows `active`: a defensive fallback); after 30 reads it is `check-later`
-  ("still resolving — contact support"). Cancel refusals go to the evidence.
+  ("still resolving — contact support"). Since b47b286 a cancel that arrives
+  after the round had closed settles by that closure (`won`/`lost` with its
+  `payout`, or `canceled` with `closeReason: "expired"`, the cancel never
+  honored; the shell reads it as `sent`). The Wrapper shows such a `canceled`
+  `expired` as "This round failed verification." (not "and was canceled"),
+  and such a `won`/`lost` with "…; it closed before the cancel arrived." The
+  shell's own defensive reading, not the contract's: a 500 `INTERNAL` to the
+  cancel (which the Play API document does not describe for it) is "may be
+  stored" like a 503 (`mayBeStored` in `round-request.ts`), so a failed read
+  after it keeps settling; a 400, or a 500 with another code, is a refusal. Cancel refusals go to the evidence.
   No new round while `in-flight`, `settling`, or `check-later`; `ended` does
   not block one. The Snapshot read keeps answering the session's ended round
   until the next start (726f0a2), so the Wrapper offers the next bet (bet

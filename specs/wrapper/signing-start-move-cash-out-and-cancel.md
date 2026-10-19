@@ -62,22 +62,25 @@ Part of the [Wrapper spec](../wrapper.md), section
   request shape of `continue` and `cashOut` (`idempotencyKey`, `roundId`, the
   signed `PlayerCancel` as `typedData` in base64, and `signature`), and it
   answers the round's Snapshot: `resolving` while the engine has not answered
-  the cancel, `canceled` once it accepted it, or `active` with a move played
-  when a move was accepted while the cancel was on its way (then nothing is
-  refunded; the shell reads it as `not-taken`). Only a config round that is
-  `active` with no move applied can be canceled: a cancel after a move, or of a
-  round that is not `active`, is a 422 `FAILED_PRECONDITION`; a cancel the
-  engine refuses (a wrong signer, sequence, or `previous`) is a 400
-  `INVALID_ARGUMENT` and leaves the round `active`, as the Play API document
-  states. The kit declines that document's "a corrected cancel may follow": the
-  shell MUST NEVER sign a second cancel at `(round, 1)` (W-15; decided by human
-  review, 2026-10-17): after a refused cancel, a 400 included, it reads the
-  Snapshot and signs nothing at that sequence again, so the round ends by its
-  expiry rule unless the Snapshot shows the cancel applied (`canceled`). A
-  cancel is not answered from a log as a repeated move is (a cancel sent again
-  after it was accepted, or while the round is `resolving`, is answered 422
-  `FAILED_PRECONDITION`, and a 503 `UNAVAILABLE` may come with the cancel
-  already stored): after a lost send (no answer, or a 503 not marked
+  the cancel, `canceled` once it accepted it, `active` with a move played when a
+  move was accepted while the cancel was on its way (then nothing is refunded;
+  the shell reads it as `not-taken`), or, when the engine had already closed the
+  round before the cancel arrived, that closure with no error (`won` or `lost`
+  with its `payout`, or `canceled` with `closeReason: "expired"`): the cancel is
+  never honored, and the shell reads it as the round's result (`sent`). Only a
+  config round that is `active` with no move applied can be canceled: a cancel
+  after a move, or of a round that is not `active`, is a 422
+  `FAILED_PRECONDITION`; a cancel the engine refuses (a wrong signer, sequence,
+  or `previous`) is a 400 `INVALID_ARGUMENT` and leaves the round `active`, as
+  the Play API document states. The kit declines that document's "a corrected
+  cancel may follow": the shell MUST NEVER sign a second cancel at `(round, 1)`
+  (W-15; decided by human review, 2026-10-17): after a refused cancel, a 400
+  included, it reads the Snapshot and signs nothing at that sequence again, so
+  the round ends by its expiry rule unless the Snapshot shows the cancel applied
+  (`canceled`). A cancel is not answered from a log as a repeated move is (a
+  cancel sent again after it was accepted, or while the round is `resolving`, is
+  answered 422 `FAILED_PRECONDITION`, and a 503 `UNAVAILABLE` may come with the
+  cancel already stored): after a lost send (no answer, or a 503 not marked
   `retryable: false`, a bare 503 included: W-16's one definition, decided in
   human review, 2026-10-18), the shell MUST read the Snapshot
   (`GET /play/v1/snapshot`) before it sends the same signed cancel again, and
@@ -94,15 +97,21 @@ Part of the [Wrapper spec](../wrapper.md), section
   `retryable: false` earns no resend (W-42) but is no proof of a refusal, since
   a 503 may come with the cancel stored: after it, a failed read is settling and
   the counted reads decide, an `active` read gives `not-taken`, and a `canceled`
-  read gives `sent` (decided in human review, 2026-10-18). A resend that is also
-  lost is followed by another Snapshot read and never by a third send; when that
-  read shows the round `active` with no move again, the cancel may be stored, so
-  it is settling with that read as read 1 (decided by human review, 2026-10-18),
-  and the counted reads decide. The cancel is encoded by `signing`'s
-  `PlayerCancel` (W-20). Its independent signer's vector
-  (`signed-action/coinflip-cancel`) is vendored in `contracts`, and the kit
-  replays it (in `signing` and in the shell's round flow) before the shell signs
-  a cancel.
+  read gives `sent` (decided in human review, 2026-10-18). A 500 `INTERNAL`
+  marked `retryable: false` is read the same way, as the kit's own defensive
+  reading: the Play API document does not describe that answer for the cancel,
+  so it is no proof of a refusal, and the shell treats the cancel as possibly
+  stored; a failed read after it is settling too, and while the round stays
+  `resolving` the counted reads end in `check-later` (decided in human review,
+  2026-10-19). A 500 with another code is not. A 400 `INVALID_ARGUMENT` stays a
+  refusal. A resend that is also lost is followed by another Snapshot read and
+  never by a third send; when that read shows the round `active` with no move
+  again, the cancel may be stored, so it is settling with that read as read 1
+  (decided by human review, 2026-10-18), and the counted reads decide. The
+  cancel is encoded by `signing`'s `PlayerCancel` (W-20). Its independent
+  signer's vector (`signed-action/coinflip-cancel`) is vendored in `contracts`,
+  and the kit replays it (in `signing` and in the shell's round flow) before the
+  shell signs a cancel.
 
   **After the shell's own cancel: `resolving` settles, `canceled` is final.**
   This follows the Snapshot contract `se.snapshot/1` as vendored from the
@@ -119,8 +128,13 @@ Part of the [Wrapper spec](../wrapper.md), section
   next `rounds:start`. `idle` never follows `active` (the backend, 2026-10-19):
   a round is voided only while it is `starting`, and a round that reached
   `active` leaves it only by play, by its expiry (`canceled` with
-  `closeReason: "expired"`), or by the player's cancel. (Decided by human
-  review, 2026-10-18; the read of the last round restated from `726f0a2`.)
+  `closeReason: "expired"`), or by the player's cancel. Since the Play API
+  document of se-backend `b47b286`, a cancel that arrives after the engine had
+  closed the round settles by that closure: the answer, or a later read after
+  `resolving`, is `won` or `lost` with its `payout`, or `canceled` with
+  `closeReason: "expired"` (the bet refunded), and the cancel is never honored.
+  (Decided by human review, 2026-10-18; the read of the last round restated from
+  `726f0a2`, the cancel that loses to a closure from `b47b286`.)
 
   - From the moment the cancel is signed until it settles (its call, a resend,
     and the read after a failed call included), every Snapshot of the round that
@@ -141,8 +155,9 @@ Part of the [Wrapper spec](../wrapper.md), section
     one included:
     - `canceled` (with or without a `closeReason`), `won`, and `lost` are final:
       the round's result, read into the round, with no error (`won`, `lost`, and
-      `canceled` with `closeReason: "expired"` are planned outcomes, for a round
-      that had already closed before the cancel arrived);
+      `canceled` with `closeReason: "expired"` also come, since `b47b286`, for a
+      round that had already closed before the cancel arrived: the cancel was
+      never honored);
     - `active`, at any step, is **`not-taken`** ("the cancel did not take"): the
       cancel path ends, nothing is resent, the round shows "this round failed
       verification" (W-26) and ends by its expiry rule;
@@ -155,20 +170,20 @@ Part of the [Wrapper spec](../wrapper.md), section
     - `resolving` settles nothing and is read into the round (W-35 polls it);
       another round's Snapshot and a failed read settle nothing.
   - After an unknown outcome (a lost send: no answer, or a 503 not marked
-    `retryable: false`), a 503 marked `retryable: false`, or a 422, a read that
-    also fails (or shows another round) puts the cancel in `settling` too, as
-    read 1, with no resend; so does, after an unknown outcome, a read of
-    `active` with no move whenever no resend is allowed: after the resend's
-    outcome was unknown too, or when the read shows the round's
-    `CreateRoundAuth` re-issued (decided by human review, 2026-10-18; after a
-    422 or an answer for another round, an `active` read stays `not-taken`); the
-    counted reads then decide. After a 400 a failed read changes nothing: the
-    round is back to `active` per the contract, and the cancel stays `refused`.
-    So every path ends in a state that is either final (`sent`, `ended`),
-    decided with no cancel stored (`not-taken`, `refused`, `unavailable`), or
-    read again (`settling` by the poll, `check-later` by "check again" and the
-    30 s background read); none leaves a cancel that may be stored with nothing
-    reading the round.
+    `retryable: false`), a 503 marked `retryable: false`, a 500 `INTERNAL`, or a
+    422, a read that also fails (or shows another round) puts the cancel in
+    `settling` too, as read 1, with no resend; so does, after an unknown
+    outcome, a read of `active` with no move whenever no resend is allowed:
+    after the resend's outcome was unknown too, or when the read shows the
+    round's `CreateRoundAuth` re-issued (decided by human review, 2026-10-18;
+    after a 422 or an answer for another round, an `active` read stays
+    `not-taken`); the counted reads then decide. After a 400 a failed read
+    changes nothing: the round is back to `active` per the contract, and the
+    cancel stays `refused`. So every path ends in a state that is either final
+    (`sent`, `ended`), decided with no cancel stored (`not-taken`, `refused`,
+    `unavailable`), or read again (`settling` by the poll, `check-later` by
+    "check again" and the 30 s background read); none leaves a cancel that may
+    be stored with nothing reading the round.
   - After a failed call, the read that follows decides the same way: `idle` is
     `ended`, a final status is the result, and `active` is `not-taken`, after a
     refusal too: a 400 refused the cancel for good (a wrong signer, `sequence`,
@@ -180,10 +195,9 @@ Part of the [Wrapper spec](../wrapper.md), section
     `retryable: false`) and a read of `active` with no move is the same cancel
     sent again, once (above).
   - After **30** counted reads without one that settles it, the cancel is
-    **`check-later`**: today a round that stays `resolving` with no end is one
-    that had already closed before the cancel arrived (a lost answer to the
-    final action, or an expiry), left for a person to resolve until the
-    backend's planned outcomes ship. The Wrapper shows "still resolving —
+    **`check-later`**: the round stays `resolving` with no end. (Since `b47b286`
+    the Play API document says a round that had already closed before the cancel
+    arrived settles by that closure.) The Wrapper shows "still resolving —
     contact support" with the round id and the verify link, and no result, no
     "your bet was returned", and no final display; the fast poll stops. A "check
     again" read the player asks for, and a slow background read every 30 s

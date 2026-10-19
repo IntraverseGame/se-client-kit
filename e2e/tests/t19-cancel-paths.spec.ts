@@ -7,8 +7,12 @@
 // `idle` (a neutral "round ended", with one more read), `active` (it did not
 // take; the round stays failed), or 30 reads of `resolving` ("still resolving
 // — contact support", then a "check again" that finds the result of a round
-// that had closed before the cancel arrived). Every state passes the
-// accessibility audit. The Wrapper's timers run on the page's clock; the
+// that had closed before the cancel arrived). A round that had closed before
+// the cancel arrived (se-backend b47b286) is never shown as canceled by the
+// player: `canceled` with `closeReason: "expired"` reads "this round failed
+// verification" and the time limit's line, and `won` or `lost` its result with
+// "this round failed verification; it closed before the cancel arrived". Every
+// state passes the accessibility audit. The Wrapper's timers run on the page's clock; the
 // `check-later` test moves it 2 s at a time and counts the reads.
 
 import type { Page } from "@playwright/test";
@@ -111,6 +115,44 @@ test.describe("T-19: the required cancel", () => {
     expect(await auditAccessibility(page)).toEqual([]);
   });
 
+  test("a canceled read the time limit closed: failed verification, never canceled by the player", async ({
+    page,
+    fakePlayApi,
+    fakeRpc,
+  }) => {
+    fakeRpc.behave("p2", "other-hash");
+    scriptCancel(fakePlayApi, [
+      snapshotAnswer("coinflip-canceled-expired-no-action"),
+    ]);
+    await launchAndStart(page, fakePlayApi);
+    await expect(statusHeading(page)).toHaveText(TEXT.canceled, {
+      timeout: 15_000,
+    });
+    await expect(page.getByText(TEXT.unverified)).toBeVisible();
+    await expect(page.getByText(TEXT.expired)).toBeVisible();
+    await expect(page.getByText(TEXT.canceledUnverified)).toHaveCount(0);
+    await expect(page.getByText(ROUND.roundId)).toBeVisible();
+    expect(await auditAccessibility(page)).toEqual([]);
+  });
+
+  test("a won read: the result, closed before the cancel arrived", async ({
+    page,
+    fakePlayApi,
+    fakeRpc,
+  }) => {
+    fakeRpc.behave("p2", "other-hash");
+    scriptCancel(fakePlayApi, [snapshotAnswer("coinflip-won")]);
+    await launchAndStart(page, fakePlayApi);
+    await expect(statusHeading(page)).toHaveText(TEXT.won, {
+      timeout: 15_000,
+    });
+    await expect(page.getByText(TEXT.closedBeforeCancel)).toBeVisible();
+    await expect(page.getByText(ROUND.roundId)).toBeVisible();
+    await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
+    await expect(page.getByRole("button", { name: TEXT.start })).toBeVisible();
+    expect(await auditAccessibility(page)).toEqual([]);
+  });
+
   test("an idle read: a neutral round ended, after one more read", async ({
     page,
     fakePlayApi,
@@ -186,5 +228,7 @@ test.describe("T-19: the required cancel", () => {
     fakePlayApi.answer("getSnapshot", snapshotAnswer("coinflip-lost"));
     await page.getByRole("button", { name: TEXT.checkAgain }).click();
     await expect(statusHeading(page)).toHaveText(TEXT.lost);
+    await expect(page.getByText(TEXT.closedBeforeCancel)).toBeVisible();
+    expect(await auditAccessibility(page)).toEqual([]);
   });
 });

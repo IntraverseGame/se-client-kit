@@ -31,6 +31,10 @@ export const TEXT = {
   lost: "You lost",
   canceled: "Round canceled",
   canceledUnverified: "This round failed verification and was canceled.",
+  unverified: "This round failed verification.",
+  closedBeforeCancel:
+    "This round failed verification; it closed before the cancel arrived.",
+  expired: "The time limit ended this round.",
   ended: "Round ended",
   checkLater: "Still resolving — contact support",
   moveUnconfirmed: "Your move hasn't been confirmed",

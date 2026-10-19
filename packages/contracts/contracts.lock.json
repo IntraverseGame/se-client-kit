@@ -5,8 +5,8 @@
       "path": "src/schemas/play.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "play/v1 OpenAPI document",
-      "sourceCommit": "726f0a27de1d689a2557f6206004a28a7def6279",
-      "sha256": "e5a8ad0bb924f9760207270a048ec416c95b37a8b5484f27cfae9e360b95ee4a"
+      "sourceCommit": "b47b2866e329a3c990400d22ea194170382a5f87",
+      "sha256": "68b162fe6f751f6fa7e1b202f06d2131669e3f6cf64987dd0ac0688ce1cc9e87"
     },
     {
       "path": "src/schemas/se.snapshot.v1.schema.json",
