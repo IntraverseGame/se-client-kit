@@ -36,7 +36,9 @@
         ".env.*",
         "../../tools/check-kit-dist.ts",
         "../../tools/kit-dist.ts",
-        "../../tools/kit-dist-fs.ts"
+        "../../tools/kit-dist-fs.ts",
+        "../../tools/test-only-entry-guard.ts",
+        "../../tools/guard-text.ts"
       ],
       "output": [
         "dist/**"
@@ -46,7 +48,8 @@
         "pnpm-lock.yaml"
       ],
       "dependencies": [
-        "../../packages/shell:build"
+        "../../packages/shell:build",
+        "../verify:build"
       ]
     },
     "typecheck": {
@@ -60,7 +63,9 @@
         "../../tsconfig.base.json",
         "../../tools/check-kit-dist.ts",
         "../../tools/kit-dist.ts",
-        "../../tools/kit-dist-fs.ts"
+        "../../tools/kit-dist-fs.ts",
+        "../../tools/test-only-entry-guard.ts",
+        "../../tools/guard-text.ts"
       ],
       "output": [],
       "packageLocks": [
@@ -87,7 +92,9 @@
         ".env.*",
         "../../tools/check-kit-dist.ts",
         "../../tools/kit-dist.ts",
-        "../../tools/kit-dist-fs.ts"
+        "../../tools/kit-dist-fs.ts",
+        "../../tools/test-only-entry-guard.ts",
+        "../../tools/guard-text.ts"
       ],
       "output": [],
       "packageLocks": [

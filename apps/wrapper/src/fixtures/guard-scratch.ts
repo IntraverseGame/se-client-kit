@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { build, type Rollup } from "vite";
 import { afterAll, beforeAll } from "vitest";
 
-import { testOnlyEntryGuard } from "../../test-only-entry-guard.ts";
+import { testOnlyEntryGuard } from "../../../../tools/test-only-entry-guard.ts";
 import { writeAssetFixtures } from "./guard-assets.ts";
 import { writeWorkerFixtures } from "./guard-workers.ts";
 

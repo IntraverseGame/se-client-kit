@@ -15,6 +15,8 @@ import {
   MANIFEST_FILE,
   PAGE,
   TAG,
+  VERIFY_DIR,
+  VERIFY_PAGE,
 } from "./release-files.ts";
 
 const fail = (what: string): never => {
@@ -26,10 +28,11 @@ const fail = (what: string): never => {
 /**
  * The output allow-list, compared in lower case: what the Wrapper's build emits
  * and nothing else. A script or stylesheet must also be loaded by an SRI tag of
- * the page; `.json` is the manifest and the headers file only; the page is the
- * one HTML file, written exactly `index.html`. Any other type (another HTML
- * spelling, `.svg`, which can hold a script, `.cjs`, an image, a font) is
- * refused; a type the Wrapper needs is added here explicitly.
+ * the page; `.json` is the manifest and the headers file only; the HTML files
+ * are the Wrapper's page, written exactly `index.html`, and the verify page,
+ * written exactly `verify/index.html`. Any other type (another HTML spelling,
+ * `.svg`, which can hold a script, `.cjs`, an image, a font) is refused; a type
+ * the Wrapper needs is added here explicitly.
  */
 const LOADED_BY_THE_PAGE: ReadonlySet<string> = new Set([".js", ".css"]);
 const DATA_FILES: ReadonlySet<string> = new Set([MANIFEST_FILE, HEADERS_FILE]);
@@ -42,7 +45,7 @@ const extensionOf = (file: string): string => {
 
 /** Refuses a file whose type the release output does not allow. */
 const checkType = (file: string, named: ReadonlySet<string>): void => {
-  if (file === PAGE) {
+  if (file === PAGE || file === VERIFY_PAGE) {
     return;
   }
   const extension = extensionOf(file);
@@ -58,8 +61,40 @@ const checkType = (file: string, named: ReadonlySet<string>): void => {
     return;
   }
   fail(
-    `has ${file}, whose type is not on the output allow-list (.js and .css loaded by the page, ${MANIFEST_FILE}, ${HEADERS_FILE}, and ${PAGE})`,
+    `has ${file}, whose type is not on the output allow-list (.js and .css loaded by a page, ${MANIFEST_FILE}, ${HEADERS_FILE}, ${PAGE}, and ${VERIFY_PAGE})`,
   );
+};
+
+export type VerifyOutputOptions = {
+  /** The output must hold the verify page (`verify/index.html`). */
+  readonly requireVerify?: boolean;
+};
+
+/**
+ * Adds to `named` the files a page loads by a tag that carries `integrity` (by
+ * path relative to `base`). A reference not under `scope`, or under `excluded`
+ * when given, fails the build.
+ */
+const addLoaded = (
+  named: Set<string>,
+  page: Uint8Array,
+  base: string,
+  scope: string,
+  excluded?: string,
+): void => {
+  for (const match of new TextDecoder().decode(page).matchAll(TAG)) {
+    const attributes = attributesOf(match[2] ?? "");
+    const reference = attributes.get("src") ?? attributes.get("href");
+    if (reference !== undefined && attributes.has("integrity")) {
+      if (!reference.startsWith(scope)) {
+        fail(`has a page that loads ${reference}, outside ${scope}`);
+      }
+      if (excluded !== undefined && reference.startsWith(excluded)) {
+        fail(`has a page that loads ${reference}, inside ${excluded}`);
+      }
+      named.add(reference.slice(base.length));
+    }
+  }
 };
 
 /**
@@ -71,26 +106,29 @@ const checkType = (file: string, named: ReadonlySet<string>): void => {
 export const verifyOutput = async (
   files: ReadonlyMap<string, Uint8Array>,
   base: string,
+  options: VerifyOutputOptions = {},
 ): Promise<void> => {
-  const manifestBytes = files.get(MANIFEST_FILE);
-  if (manifestBytes === undefined) fail(`has no ${MANIFEST_FILE}`);
+  const manifestBytes =
+    files.get(MANIFEST_FILE) ?? fail(`has no ${MANIFEST_FILE}`);
   const manifest = JSON.parse(new TextDecoder().decode(manifestBytes)) as {
     readonly files?: Readonly<Record<string, string>>;
   };
   const listed = manifest.files ?? {};
-  const page = files.get(PAGE);
-  if (page === undefined) fail(`has no ${PAGE}`);
+  const page = files.get(PAGE) ?? fail(`has no ${PAGE}`);
   const named = new Set<string>();
-  for (const match of new TextDecoder().decode(page).matchAll(TAG)) {
-    const attributes = attributesOf(match[2] ?? "");
-    const reference = attributes.get("src") ?? attributes.get("href");
-    if (
-      reference !== undefined &&
-      reference.startsWith(base) &&
-      attributes.has("integrity")
-    ) {
-      named.add(reference.slice(base.length));
-    }
+  // The Wrapper's page loads nothing of the verify page's: each page's files
+  // are its own.
+  addLoaded(named, page, base, base, `${base}${VERIFY_DIR}/`);
+  const verifyPage = files.get(VERIFY_PAGE);
+  const hasVerifyFiles = [...files.keys()].some(file =>
+    file.startsWith(`${VERIFY_DIR}/`),
+  );
+  if (verifyPage === undefined && (hasVerifyFiles || options.requireVerify)) {
+    fail(`has no ${VERIFY_PAGE}`);
+  }
+  if (verifyPage !== undefined) {
+    // The verify page loads only what is under its own directory.
+    addLoaded(named, verifyPage, base, `${base}${VERIFY_DIR}/`);
   }
   for (const file of files.keys()) {
     checkType(file, named);

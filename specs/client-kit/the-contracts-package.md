@@ -107,10 +107,11 @@ logic packages read it and never write to it.
 - **Vectors never reach a browser bundle.** Three checks, all required:
   1. a lint rule (an import restriction) fails any import of the test-only entry
      from a file that is not a test file or a test helper;
-  2. the build fails when a vector would reach an output. **The Wrapper** is
-     covered by a Vite plugin (`apps/wrapper/test-only-entry-guard.ts`) that
-     fails the build, and the dev server's module requests, the moment a module
-     in the graph, direct or transitive, (a) is the package specifier
+  2. the build fails when a vector would reach an output. **The Wrapper** and
+     the verify page (`apps/verify`) are covered by a Vite plugin
+     (`tools/test-only-entry-guard.ts`, shared by both builds) that fails the
+     build, and the dev server's module requests, the moment a module in the
+     graph, direct or transitive, (a) is the package specifier
      `@intraverse/se-client-contracts/testing`, (b) resolves to or loads a path
      under `contracts/{dist,src}/{testing,vectors}` (case-insensitive: a
      relative import, a `?raw` or `?url` import, the imports `import.meta.glob`

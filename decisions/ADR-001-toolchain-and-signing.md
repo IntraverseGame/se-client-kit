@@ -85,6 +85,12 @@ dependencies only. Its build refuses every bare import (a kit package or any
 other package) in its production module graph, so neither tool, nor any other
 package, ships in the game.
 
+Amendment note (2026-10-20, verify page build pull request): **Vite** also
+builds the verify page (`apps/verify`), a third app, and the repository root
+takes `vite` as a development dependency for the test-only-entry guard shared
+from `tools/` by the Wrapper's and the verify page's builds. No dependency is
+added: `vite` is already on the development list, at the pinned version.
+
 ## Context
 
 `se-client-kit` is the public home of everything the player's browser runs in

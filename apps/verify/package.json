@@ -5,20 +5,71 @@
   "description": "The verify page: a SuperEngine round recomputed in the browser from its public evidence.",
   "type": "module",
   "scripts": {
+    "build": "wireit",
     "typecheck": "wireit",
     "test": "wireit"
   },
   "wireit": {
-    "typecheck": {
-      "command": "tsx ../../tools/check-kit-dist.ts typecheck && tsc -p tsconfig.json",
+    "build": {
+      "command": "tsx ../../tools/check-kit-dist.ts build && vite build",
+      "env": {
+        "NODE_ENV": {
+          "external": true
+        }
+      },
       "files": [
+        "index.html",
+        "public/**",
         "src/**",
+        "!src/**/*.test.ts",
+        "*.ts",
         "package.json",
         "tsconfig.json",
         "../../tsconfig.base.json",
+        "postcss.config.*",
+        ".postcssrc",
+        ".postcssrc.*",
+        "../../package.json",
+        "../../pnpm-workspace.yaml",
+        ".env",
+        ".env.*",
         "../../tools/check-kit-dist.ts",
         "../../tools/kit-dist.ts",
-        "../../tools/kit-dist-fs.ts"
+        "../../tools/kit-dist-fs.ts",
+        "../../tools/test-only-entry-guard.ts",
+        "../../tools/guard-text.ts"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "clean": "if-file-deleted",
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ],
+      "dependencies": [
+        "../../packages/signing:build",
+        "../../packages/contracts:build"
+      ]
+    },
+    "typecheck": {
+      "command": "tsx ../../tools/check-kit-dist.ts typecheck && tsc -p tsconfig.json",
+      "files": [
+        "index.html",
+        "public/**",
+        "src/**",
+        "*.ts",
+        "package.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json",
+        "../../package.json",
+        "../../pnpm-workspace.yaml",
+        ".env",
+        ".env.*",
+        "../../tools/check-kit-dist.ts",
+        "../../tools/kit-dist.ts",
+        "../../tools/kit-dist-fs.ts",
+        "../../tools/test-only-entry-guard.ts",
+        "../../tools/guard-text.ts"
       ],
       "output": [],
       "packageLocks": [
@@ -32,14 +83,22 @@
     "test": {
       "command": "tsx ../../tools/check-kit-dist.ts test && vitest run",
       "files": [
+        "index.html",
+        "public/**",
         "src/**",
         "*.ts",
         "package.json",
         "tsconfig.json",
         "../../tsconfig.base.json",
+        "../../package.json",
+        "../../pnpm-workspace.yaml",
+        ".env",
+        ".env.*",
         "../../tools/check-kit-dist.ts",
         "../../tools/kit-dist.ts",
-        "../../tools/kit-dist-fs.ts"
+        "../../tools/kit-dist-fs.ts",
+        "../../tools/test-only-entry-guard.ts",
+        "../../tools/guard-text.ts"
       ],
       "output": [],
       "packageLocks": [
@@ -55,6 +114,7 @@
     "@intraverse/se-client-signing": "workspace:*"
   },
   "devDependencies": {
-    "@intraverse/se-client-contracts": "workspace:*"
+    "@intraverse/se-client-contracts": "workspace:*",
+    "vite": "8.3.4"
   }
 }

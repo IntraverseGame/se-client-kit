@@ -31,7 +31,7 @@ import { gunzipSync } from "node:zlib";
 
 import type { Vector } from "./build-output-canary.ts";
 import { findTarballProblems, PUBLISHED_PACKAGES } from "./package-tarball.ts";
-import { type WrapperSizeReport, wrapperSizeReport } from "./size-budget.ts";
+import { type ReleaseSizeReport, releaseSizeReport } from "./size-budget.ts";
 import { readTar } from "./tar.ts";
 import { type WrapperArtifact, wrapperArtifact } from "./wrapper-artifact.ts";
 
@@ -273,11 +273,14 @@ export const buildWrapperArtifact = (root: string): WrapperArtifact =>
     readWrapperOutput(root),
   );
 
-/** `root`'s built Wrapper held to its size budget (tools/size-budget.ts). */
-export const checkWrapperSize = (root: string): WrapperSizeReport => {
+/**
+ * `root`'s built Wrapper and verify page held to their size budgets
+ * (tools/size-budget.ts).
+ */
+export const checkReleaseSize = (root: string): ReleaseSizeReport => {
   const built =
     lstatSync(join(root, "apps", "wrapper", "dist"), {
       throwIfNoEntry: false,
     })?.isDirectory() === true;
-  return wrapperSizeReport(built ? readWrapperOutput(root) : undefined);
+  return releaseSizeReport(built ? readWrapperOutput(root) : undefined);
 };

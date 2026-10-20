@@ -18,7 +18,7 @@ const withExtraScript = (files: ReadonlyMap<string, Uint8Array>): Uint8Array =>
   );
 
 import { HEADERS_FILE, MANIFEST_FILE } from "../release-files.ts";
-import { releaseHeaders } from "../release-headers.ts";
+import { headersFile } from "../release-headers.ts";
 import {
   bundleOf,
   CSS,
@@ -44,9 +44,7 @@ describe("the release integrity step", () => {
 
   it("writes the headers file and a manifest of every other file", async () => {
     const bundle = await run(bundleOf());
-    expect(JSON.parse(sourceOf(bundle, HEADERS_FILE))).toEqual(
-      releaseHeaders(),
-    );
+    expect(JSON.parse(sourceOf(bundle, HEADERS_FILE))).toEqual(headersFile());
     const manifest = JSON.parse(sourceOf(bundle, MANIFEST_FILE)) as {
       algorithm: string;
       files: Record<string, string>;

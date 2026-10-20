@@ -4,6 +4,9 @@
 export const HEADERS_FILE = "headers.json";
 export const MANIFEST_FILE = "integrity-manifest.json";
 export const PAGE = "index.html";
+/** The verify page (specs/verify-page.md, V-16): the second HTML file. */
+export const VERIFY_DIR = "verify";
+export const VERIFY_PAGE = `${VERIFY_DIR}/index.html`;
 
 export const digest = async (bytes: Uint8Array): Promise<Uint8Array> =>
   new Uint8Array(

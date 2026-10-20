@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { testOnlyEntryGuard } from "../test-only-entry-guard.ts";
+import { testOnlyEntryGuard } from "../../../tools/test-only-entry-guard.ts";
 
 // The guard reads every module's source. It must stay fast on hostile input
 // (an unterminated quote followed by many escaped quotes took about 15 seconds

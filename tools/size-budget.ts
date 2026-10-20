@@ -1,4 +1,4 @@
-// The size budget of the Wrapper's release output
+// The size budget of the Wrapper's release output and of the verify page in it
 // (specs/client-kit/testing-and-ci.md, the `build` job;
 // runbook/client-kit-release.md, Verify before and after). The measuring and
 // the judging are pure functions, unit-tested in tools/size-budget.test.ts;
@@ -20,7 +20,11 @@ export type Budget = {
   readonly limit: number;
 };
 
-/** Every file of the release output, uncompressed: what the artifact holds. */
+/**
+ * Every file of the release output but the verify page's, uncompressed. The
+ * verify page's files, under `verify/`, are measured on their own (D-3 of
+ * specs/verify-page.md) and do not count here.
+ */
 export const WRAPPER_OUTPUT = "wrapper output";
 /**
  * The page and the scripts and stylesheets it loads, each compressed on its own
@@ -38,12 +42,48 @@ export const WRAPPER_BUDGET: readonly Budget[] = [
   { name: WRAPPER_PAGE_GZIP, limit: 65_536 },
 ];
 
-const PAGE = "index.html";
-const LOADED_BY_THE_PAGE = /\.(?:js|css)$/iu;
+/** Every file under `verify/`, uncompressed. */
+export const VERIFY_OUTPUT = "verify output";
+/**
+ * `verify/index.html` and every `.js` and `.css` file under `verify/`, each
+ * gzipped at zlib's default level and summed.
+ */
+export const VERIFY_PAGE_GZIP = "verify page, gzip";
 
 /**
- * The measurements of the Wrapper's release output: `files` is every file of
- * `apps/wrapper/dist/`, by path relative to it with `/` separators.
+ * The verify page's budget, in bytes.
+ *
+ * TODO(first build): PROVISIONAL, not measured. The human sets both limits from
+ * the first build of the real verify page, about 25% over its measurement
+ * (specs/verify-page.md, V-16), and records the sizes in
+ * specs/client-kit/testing-and-ci.md. Until then they equal the Wrapper's. When
+ * the real limits are set, remove this TODO together with the test that looks
+ * for it in this file's text ("keeps its limits marked provisional" in
+ * tools/size-budget-verify.test.ts), a deliberately brittle source-string
+ * check.
+ */
+export const VERIFY_BUDGET: readonly Budget[] = [
+  { name: VERIFY_OUTPUT, limit: 204_800 },
+  { name: VERIFY_PAGE_GZIP, limit: 65_536 },
+];
+
+/** Both budgets: a release is held to every one of them. */
+export const RELEASE_BUDGET: readonly Budget[] = [
+  ...WRAPPER_BUDGET,
+  ...VERIFY_BUDGET,
+];
+
+const PAGE = "index.html";
+const VERIFY_PREFIX = "verify/";
+const VERIFY_PAGE = "verify/index.html";
+const LOADED_BY_THE_PAGE = /\.(?:js|css)$/iu;
+
+const gzipped = (bytes: Uint8Array): number => gzipSync(bytes).byteLength;
+
+/**
+ * The measurements of the Wrapper's own release output: `files` is every file
+ * of `apps/wrapper/dist/`, by path relative to it with `/` separators. The
+ * files under `verify/` are not counted.
  */
 export const measureWrapperOutput = (
   files: ReadonlyMap<string, Uint8Array>,
@@ -51,14 +91,32 @@ export const measureWrapperOutput = (
   let output = 0;
   let page = 0;
   for (const [path, bytes] of files) {
+    if (path.startsWith(VERIFY_PREFIX)) continue;
     output += bytes.byteLength;
-    if (path === PAGE || LOADED_BY_THE_PAGE.test(path)) {
-      page += gzipSync(bytes).byteLength;
-    }
+    if (path === PAGE || LOADED_BY_THE_PAGE.test(path)) page += gzipped(bytes);
   }
   return [
     { name: WRAPPER_OUTPUT, bytes: output },
     { name: WRAPPER_PAGE_GZIP, bytes: page },
+  ];
+};
+
+/** The measurements of the verify page: the files under `verify/` only. */
+export const measureVerifyOutput = (
+  files: ReadonlyMap<string, Uint8Array>,
+): Measurement[] => {
+  let output = 0;
+  let page = 0;
+  for (const [path, bytes] of files) {
+    if (!path.startsWith(VERIFY_PREFIX)) continue;
+    output += bytes.byteLength;
+    if (path === VERIFY_PAGE || LOADED_BY_THE_PAGE.test(path)) {
+      page += gzipped(bytes);
+    }
+  }
+  return [
+    { name: VERIFY_OUTPUT, bytes: output },
+    { name: VERIFY_PAGE_GZIP, bytes: page },
   ];
 };
 
@@ -139,7 +197,7 @@ export const sizeBudgetRows = (
  * release dry run's summary. A budget nothing measured shows `-`.
  */
 export const sizeBudgetTable = (rows: readonly BudgetRow[]): string[] => [
-  "| Wrapper size | Bytes | Budget | Left |",
+  "| Size | Bytes | Budget | Left |",
   "| --- | --- | --- | --- |",
   ...rows.map(({ name, limit, bytes }) =>
     bytes === null
@@ -148,33 +206,41 @@ export const sizeBudgetTable = (rows: readonly BudgetRow[]): string[] => [
   ),
 ];
 
-/** The Wrapper's size budget applied: the problems, the rows, the table. */
-export type WrapperSizeReport = {
+/** The release's size budget applied: the problems, the rows, the table. */
+export type ReleaseSizeReport = {
   readonly problems: string[];
   readonly rows: BudgetRow[];
   readonly table: string[];
 };
 
 /**
- * The Wrapper's release output `files` held to `WRAPPER_BUDGET`: the problems,
- * and each budget with its measurement, as rows (for a report) and as a
- * Markdown table (for a summary). An output without `index.html` is a problem.
- * No `files` (no built `apps/wrapper/dist/`) measures nothing, which is a
- * problem, never a pass.
+ * The release output `files` held to `RELEASE_BUDGET`: the problems, and each
+ * budget with its measurement, as rows (for a report) and as a Markdown table
+ * (for a summary). An output without `index.html` or without
+ * `verify/index.html` is a problem. No `files` (no built `apps/wrapper/dist/`)
+ * measures nothing, which is a problem, never a pass.
  */
-export const wrapperSizeReport = (
+export const releaseSizeReport = (
   files?: ReadonlyMap<string, Uint8Array>,
-): WrapperSizeReport => {
-  const sizes = files === undefined ? [] : measureWrapperOutput(files);
-  const rows = sizeBudgetRows(sizes, WRAPPER_BUDGET);
-  // An output without its page (an empty dist/ included) is not a release
-  // build, however small it is.
-  const page =
-    files === undefined || files.has(PAGE)
+): ReleaseSizeReport => {
+  const sizes =
+    files === undefined
       ? []
-      : [`the Wrapper output has no ${PAGE}, so it is not a release build`];
+      : [...measureWrapperOutput(files), ...measureVerifyOutput(files)];
+  const rows = sizeBudgetRows(sizes, RELEASE_BUDGET);
+  // An output without its pages (an empty dist/ included) is not a release
+  // build, however small it is.
+  const pages =
+    files === undefined
+      ? []
+      : [PAGE, VERIFY_PAGE]
+          .filter(page => !files.has(page))
+          .map(
+            page =>
+              `the Wrapper output has no ${page}, so it is not a release build`,
+          );
   return {
-    problems: [...page, ...sizeBudgetProblems(sizes, WRAPPER_BUDGET)],
+    problems: [...pages, ...sizeBudgetProblems(sizes, RELEASE_BUDGET)],
     rows,
     table: sizeBudgetTable(rows),
   };

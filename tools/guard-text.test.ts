@@ -3,11 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  decodeEntities,
-  decodePercent,
-  NAMED_ENTITIES,
-} from "../guard-text.ts";
+import { decodeEntities, decodePercent, NAMED_ENTITIES } from "./guard-text.ts";
 
 // The decoders behind the guard's check of CSS and HTML text.
 

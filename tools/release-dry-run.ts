@@ -21,7 +21,7 @@
 //   5. builds the Wrapper release artifact in each copy (the second with
 //      another time zone and locale) and requires the two digests to be equal,
 //      and the two copies' package tarballs to be byte-identical;
-//   6. holds the first copy's Wrapper to its size budget (tools/size-budget.ts);
+//   6. holds the first copy's Wrapper and verify page to their size budgets (tools/size-budget.ts);
 //   7. writes the artifact, its `.sha256`, the tarballs, and a report to
 //      `--out`, and prints the digests and the sizes against the budget.
 //
@@ -53,7 +53,7 @@ import { publishDryRun, storeDirectory } from "./release-pnpm.ts";
 import {
   buildWrapperArtifact,
   checkTarballs,
-  checkWrapperSize,
+  checkReleaseSize,
   copyTree,
   type PackedLibrary,
   packLibraries,
@@ -183,9 +183,9 @@ problems.push(
   ...loaded.problems,
   ...checkTarballs(first.packed, loaded.vectors),
 );
-console.log("[first] holding the Wrapper to its size budget");
-const wrapperSize = checkWrapperSize(first.directory);
-problems.push(...wrapperSize.problems);
+console.log("[first] holding the release to its size budgets");
+const releaseSize = checkReleaseSize(first.directory);
+problems.push(...releaseSize.problems);
 console.log("[first] importing the packed packages as a consumer");
 problems.push(
   ...checkResolution(first.directory, first.packed, join(out, "consumer"), env),
@@ -246,7 +246,7 @@ const report = {
     digest: first.wrapper.digest,
     rebuildDigest: second.wrapper.digest,
   },
-  sizeBudget: wrapperSize.rows,
+  sizeBudget: releaseSize.rows,
   problems,
 };
 writeFileSync(
@@ -281,7 +281,7 @@ const summary = [
   `- digest: ${first.wrapper.digest}`,
   `- rebuild: ${second.wrapper.digest}`,
   "",
-  ...wrapperSize.table,
+  ...releaseSize.table,
   "",
   problems.length === 0
     ? "No problems."

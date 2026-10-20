@@ -7,7 +7,7 @@
  * every reference of the HTML standard (entities.json, 2,231 of them) whose
  * expansion is made only of ASCII letters and digits and of `/ \ . % : ? # & _ -
  * ~` and tab or newline. Sixteen qualify; the test compares this table with the
- * list taken from the standard (src/fixtures/html-path-entities.json). The
+ * list taken from the standard (tools/fixtures/html-path-entities.json). The
  * legacy forms without a semicolon are `amp` and `AMP` only.
  */
 export const NAMED_ENTITIES: Readonly<Record<string, string>> = {

@@ -60,29 +60,32 @@ zoom.
 
 The release bundle has no inline script or style. Its page loads its script and
 stylesheet with Subresource Integrity and carries a Content Security Policy in a
-`<meta>` element. Beside the page, `headers.json` holds the recommended response
-headers (a strict `Content-Security-Policy`, `Referrer-Policy: no-referrer`, and
-a `Permissions-Policy`), with placeholders for the origins each environment
-configures, and `integrity-manifest.json` holds the SHA-256 of every other file.
-The build reads its output back and fails unless it holds only regular files (no
-symbolic link), exactly those the manifest lists, each with its hash, and only
-the allowed types: scripts and stylesheets the page loads with their integrity,
-the two JSON files above, and the one page, `index.html`. Any other type, such
-as another HTML file or an SVG, fails the build.
+`<meta>` element. It also carries the verify page under `verify/`, built on its
+own and held to the same rules, with its own policy. Beside the pages,
+`headers.json` holds the recommended response headers by path: `/*` for the
+Wrapper (a strict `Content-Security-Policy`, `Referrer-Policy: no-referrer`, and
+a `Permissions-Policy`) and `/verify/*` for the verify page, with placeholders
+for the origins each environment configures; `integrity-manifest.json` holds the
+SHA-256 of every other file. The build reads its output back and fails unless it
+holds only regular files (no symbolic link), exactly those the manifest lists,
+each with its hash, and only the allowed types: scripts and stylesheets a page
+loads with their integrity, the two JSON files above, and the two pages,
+`index.html` and `verify/index.html`. Any other type, such as another HTML file
+or an SVG, fails the build.
 
 ## Test data never ships
 
-The test vectors of the kit are not part of the Wrapper bundle. The release
-build refuses a bundle in which they could appear, and it also inspects the
-final files: a vector's content found in any emitted file, however it got there
-(including a file copied verbatim from a `public/` directory), fails the build.
-That inspection finds content that is present in one of its recognisable forms
-(the file itself, its JSON, escaped or base64 text, also with the trailing
-newline trimmed or with CRLF line breaks). It does not find data transformed so
-that none of those forms remains (a re-encoded or compressed copy, a
-line-wrapped base64, hex, or UTF-16 copy); a re-indented JSON copy is found only
-through the minified form, and only when the vector parses as JSON. Vectors
-below a small minimum size are outside it.
+The test vectors of the kit are not part of the Wrapper bundle or of the verify
+page in it. Both builds refuse a bundle in which they could appear, and it also
+inspects the final files: a vector's content found in any emitted file, however
+it got there (including a file copied verbatim from a `public/` directory),
+fails the build. That inspection finds content that is present in one of its
+recognisable forms (the file itself, its JSON, escaped or base64 text, also with
+the trailing newline trimmed or with CRLF line breaks). It does not find data
+transformed so that none of those forms remains (a re-encoded or compressed
+copy, a line-wrapped base64, hex, or UTF-16 copy); a re-indented JSON copy is
+found only through the minified form, and only when the vector parses as JSON.
+Vectors below a small minimum size are outside it.
 
 ## For game developers and integrators
 

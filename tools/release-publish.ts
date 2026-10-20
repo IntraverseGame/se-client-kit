@@ -8,7 +8,7 @@
 //      pending, while a library is still `private` or at 0.0.0, while the
 //      Wrapper build is not the one the dry run reported
 //      (`--expect-wrapper-digest`, required with `--publish`), or while the
-//      Wrapper is over its size budget (tools/size-budget.ts);
+//      Wrapper or the verify page in it is over its size budget (tools/size-budget.ts);
 //   3. publishes **the checked tarballs themselves** (`pnpm publish <tarball>`,
 //      with provenance, public access, and lifecycle scripts off), in
 //      dependency order. A version the registry already has is skipped only
@@ -41,7 +41,7 @@ import {
 import {
   buildWrapperArtifact,
   checkTarballs,
-  checkWrapperSize,
+  checkReleaseSize,
   packLibraries,
   prepareOut,
   readJson,
@@ -88,7 +88,7 @@ const problems = [
     expectedDigest: values["expect-wrapper-digest"],
     actualDigest: wrapper.digest,
   }),
-  ...checkWrapperSize(root).problems,
+  ...checkReleaseSize(root).problems,
   ...loaded.problems,
   ...checkTarballs(packed, loaded.vectors),
   ...checkResolution(root, packed, join(out, "consumer"), env),

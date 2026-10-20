@@ -6,13 +6,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   measureWrapperOutput,
+  RELEASE_BUDGET,
   sizeBudgetProblems,
   sizeBudgetRows,
   sizeBudgetTable,
+  VERIFY_OUTPUT,
+  VERIFY_PAGE_GZIP,
   WRAPPER_BUDGET,
   WRAPPER_OUTPUT,
   WRAPPER_PAGE_GZIP,
-  wrapperSizeReport,
+  releaseSizeReport,
 } from "./size-budget.ts";
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text);
@@ -143,11 +146,11 @@ describe("sizeBudgetProblems", () => {
     },
   );
 
-  it("holds the Wrapper's budget to positive limits with distinct names", () => {
+  it("holds the release's budget to positive limits with distinct names", () => {
     expect(
       sizeBudgetProblems(
-        WRAPPER_BUDGET.map(({ name }) => ({ name, bytes: 0 })),
-        WRAPPER_BUDGET,
+        RELEASE_BUDGET.map(({ name }) => ({ name, bytes: 0 })),
+        RELEASE_BUDGET,
       ),
     ).toEqual([]);
   });
@@ -167,7 +170,7 @@ describe("sizeBudgetTable", () => {
     expect(
       sizeBudgetTable(sizeBudgetRows([{ name: "a", bytes: 120 }], budgets)),
     ).toEqual([
-      "| Wrapper size | Bytes | Budget | Left |",
+      "| Size | Bytes | Budget | Left |",
       "| --- | --- | --- | --- |",
       "| a | 120 | 100 | -20 |",
       "| b | - | 10 | - |",
@@ -175,24 +178,30 @@ describe("sizeBudgetTable", () => {
   });
 });
 
-describe("wrapperSizeReport", () => {
+const HTML = bytes("<!doctype html>");
+const WRAPPER_PAGE: [string, Uint8Array] = ["index.html", HTML];
+const VERIFY_PAGE: [string, Uint8Array] = ["verify/index.html", HTML];
+const PAGES = [WRAPPER_PAGE, VERIFY_PAGE];
+
+describe("releaseSizeReport", () => {
   it("passes a small output and reports its rows and table", () => {
-    const report = wrapperSizeReport(
-      new Map([["index.html", bytes("<!doctype html>")]]),
-    );
+    const report = releaseSizeReport(new Map(PAGES));
     expect(report.problems).toEqual([]);
     expect(report.rows.map(row => row.name)).toEqual([
       WRAPPER_OUTPUT,
       WRAPPER_PAGE_GZIP,
+      VERIFY_OUTPUT,
+      VERIFY_PAGE_GZIP,
     ]);
     expect(report.table).toEqual(sizeBudgetTable(report.rows));
   });
 
   it("reports an output one byte over the uncompressed limit", () => {
-    const report = wrapperSizeReport(
+    const report = releaseSizeReport(
       new Map([
         ["index.html", new Uint8Array(1)],
         ["headers.json", new Uint8Array(204_800)],
+        VERIFY_PAGE,
       ]),
     );
     expect(report.problems).toEqual([
@@ -200,25 +209,39 @@ describe("wrapperSizeReport", () => {
     ]);
   });
 
-  it.each<[string, Map<string, Uint8Array>]>([
-    ["an empty output", new Map()],
-    ["an output without its page", new Map([["assets/a.js", bytes("1")]])],
-  ])("reports %s, however small", (_, files) => {
-    expect(wrapperSizeReport(files).problems).toEqual([
-      "the Wrapper output has no index.html, so it is not a release build",
-    ]);
+  it.each<[string, Map<string, Uint8Array>, string[]]>([
+    ["an empty output", new Map(), ["index.html", "verify/index.html"]],
+    [
+      "an output without its pages",
+      new Map([["assets/a.js", bytes("1")]]),
+      ["index.html", "verify/index.html"],
+    ],
+    [
+      "an output without the verify page",
+      new Map([WRAPPER_PAGE]),
+      ["verify/index.html"],
+    ],
+  ])("reports %s, however small", (_, files, missing) => {
+    expect(releaseSizeReport(files).problems).toEqual(
+      missing.map(
+        page =>
+          `the Wrapper output has no ${page}, so it is not a release build`,
+      ),
+    );
   });
 
   it("reports an output that is not built, never a pass", () => {
-    expect(wrapperSizeReport().problems).toEqual([
+    expect(releaseSizeReport().problems).toEqual([
       "wrapper output: not measured, so its size budget cannot pass",
       "wrapper page, gzip: not measured, so its size budget cannot pass",
+      "verify output: not measured, so its size budget cannot pass",
+      "verify page, gzip: not measured, so its size budget cannot pass",
     ]);
   });
 });
 
-describe("the Wrapper's budget in the spec", () => {
-  it("is the budget specs/client-kit/testing-and-ci.md states", () => {
+describe("the budgets in the spec", () => {
+  it("are the budgets specs/client-kit/testing-and-ci.md states", () => {
     const spec = readFileSync(
       join(
         import.meta.dirname,
@@ -229,7 +252,7 @@ describe("the Wrapper's budget in the spec", () => {
       ),
       "utf8",
     ).replaceAll(/\s+/gu, " ");
-    for (const { name, limit } of WRAPPER_BUDGET) {
+    for (const { name, limit } of RELEASE_BUDGET) {
       expect(spec).toContain(`${name}: ${String(limit)} bytes`);
     }
   });

@@ -1,7 +1,9 @@
+import { resolve } from "node:path";
+
 import { defineConfig } from "vitest/config";
 
+import { testOnlyEntryGuard } from "../../tools/test-only-entry-guard.ts";
 import { releaseIntegrity } from "./release-integrity.ts";
-import { testOnlyEntryGuard } from "./test-only-entry-guard.ts";
 
 // The component tests (Vitest) may use the contracts vectors, so the guard is
 // off there. That is decided by Vitest itself, which loads this file with
@@ -55,7 +57,16 @@ export default defineConfig(({ command, mode }) => {
   return {
     // The release integrity step (SRI, the headers file, the manifest) runs
     // in a build only.
-    plugins: underVitest ? [] : [testOnlyEntryGuard(), releaseIntegrity()],
+    plugins: underVitest
+      ? []
+      : [
+          testOnlyEntryGuard(),
+          // The verify page's own build goes into the release under `verify/`
+          // (specs/verify-page.md, V-16); this build depends on it.
+          releaseIntegrity({
+            verifyDist: resolve(import.meta.dirname, "../verify/dist"),
+          }),
+        ],
     // Vite bundles a worker with its own plugin pipeline, which does not inherit
     // `plugins`: the guard is added there too.
     worker: { plugins: () => (underVitest ? [] : [testOnlyEntryGuard()]) },
