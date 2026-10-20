@@ -2,8 +2,6 @@
 // files, under `verify/`, are measured apart from the Wrapper's and held to
 // their own limits.
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
 import { describe, expect, it } from "vitest";
@@ -69,19 +67,11 @@ describe("the verify page's budget", () => {
       new Map([
         ["index.html", html],
         ["verify/index.html", html],
-        ["verify/assets/a.js", new Uint8Array(204_800)],
+        ["verify/assets/a.js", new Uint8Array(150_000)],
       ]),
     );
     expect(report.problems).toEqual([
-      `verify output: ${String(204_800 + html.byteLength)} bytes, over its size budget of 204800 bytes by ${String(html.byteLength)}`,
+      `verify output: ${String(150_000 + html.byteLength)} bytes, over its size budget of 150000 bytes by ${String(html.byteLength)}`,
     ]);
-  });
-
-  it("keeps its limits marked provisional until the first build", () => {
-    const source = readFileSync(
-      join(import.meta.dirname, "size-budget.ts"),
-      "utf8",
-    );
-    expect(source).toContain("TODO(first build)");
   });
 });

@@ -156,11 +156,11 @@ describe("checkReleaseSize", () => {
     const root = withDist({
       "index.html": new Uint8Array(1),
       "verify/index.html": new Uint8Array(1),
-      "verify/assets/big.js": new Uint8Array(204_800),
+      "verify/assets/big.js": new Uint8Array(150_000),
     });
     try {
       expect(checkReleaseSize(root).problems).toEqual([
-        "verify output: 204801 bytes, over its size budget of 204800 bytes by 1",
+        "verify output: 150001 bytes, over its size budget of 150000 bytes by 1",
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });

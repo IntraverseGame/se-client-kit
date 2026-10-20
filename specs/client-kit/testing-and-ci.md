@@ -75,13 +75,12 @@ measured that day (161873 and 52650 bytes):
 **The verify page's budget** (V-16, D-3 of [the verify page](../verify-page.md))
 is held apart from the Wrapper's: the files under `verify/` do not count in the
 two measurements above, and have two of their own, checked by the same three
-places with the same rules. Their limits are PROVISIONAL, set equal to the
-Wrapper's until the human sets them from the first build of the real page, about
-25% over its measurement (`TODO(first build)` in `tools/size-budget.ts`). The
-first build of the real page measured 119788 and 39199 bytes, within them:
+places with the same rules. Their limits were set by the human on 2026-10-20
+from the first build of the real page, about 25% over its measurement of 119788
+and 39199 bytes:
 
-- verify output: 204800 bytes. Every file under `verify/`, uncompressed.
-- verify page, gzip: 65536 bytes. `verify/index.html` and every `.js` and `.css`
+- verify output: 150000 bytes. Every file under `verify/`, uncompressed.
+- verify page, gzip: 49152 bytes. `verify/index.html` and every `.js` and `.css`
   file under `verify/`, each compressed on its own with gzip at zlib's default
   level and summed.
 
