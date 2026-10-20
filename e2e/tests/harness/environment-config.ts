@@ -31,6 +31,7 @@ export const environmentConfig = (
   environment: "preview",
   playApiBaseUrl,
   verifyBaseUrl: "https://verify.e2e.test/",
+  verifyApiBaseUrl: "https://verify.e2e.test/verify/v1",
   runtimeSigner: "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
   registryDomain: {
     chainId: 31_337,

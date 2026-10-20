@@ -377,10 +377,10 @@ structure below.
   (`drawLimit`). Decided 2026-10-18: a new private app `apps/verify`
   that never imports `shell` and holds no credential; a quorum read of block
   N's hash through its own read-only JSON-RPC module (W-26a and W-26b's rules);
-  its own size budget; a future `verifyApiBaseUrl` configuration field (the
-  Wrapper's validator refuses it today; its acceptance ships before, or with,
-  any document that carries it). The field stays required (D-4): once the
-  Wrapper accepts it, the preview configuration is to set it to the Wrapper's
+  its own size budget; a required `verifyApiBaseUrl` configuration field (the
+  Wrapper's validator accepts and requires it, and does not use it; it ships
+  before, or with, any document that carries it). The field stays required
+  (D-4): the preview configuration is to set it to the Wrapper's
   origin plus `/verify/v1`, a
   same-origin read when the Wrapper is served from the backend's origin, as in
   preview (the edge keeps `/verify/v1/` on the backend and rewrites

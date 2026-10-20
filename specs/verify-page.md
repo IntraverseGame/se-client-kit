@@ -124,13 +124,15 @@ Out of scope:
   configuration is to set it to the Wrapper's origin plus `/verify/v1`, a
   same-origin read when the Wrapper is served from the backend's origin, as in
   preview (b6e1e48); otherwise the verify API is on another origin and needs the
-  backend's CORS decision first (V-2). The field will be part of the one
-  configuration schema from the verify page's build on: the Wrapper's validator
-  will accept it then and not use it ([wrapper.md](./wrapper.md#configuration)).
-  Today the Wrapper's validator refuses it as an unknown field, so **the
-  Wrapper's acceptance of the field ships before, or in the same release as, any
-  configuration document that carries it**; a document with the field served to
-  a Wrapper that refuses it would stop that Wrapper at boot.
+  backend's CORS decision first (V-2). The field is part of the one
+  configuration schema: the Wrapper's validator accepts it and does not use it
+  ([wrapper.md](./wrapper.md#configuration)), and refuses a document without it
+  (`invalid-verify-api-base`). Before this change the Wrapper refused it as an
+  unknown field, so **the Wrapper's acceptance of the field ships before, or in
+  the same release as, any configuration document that carries it**; and, the
+  field being required, the configuration document of every environment is
+  updated in that same release, since the Wrapper that accepts the field refuses
+  a document without it.
 
 ### The page's states (V-4 to V-11)
 
@@ -551,9 +553,9 @@ Decided by the human on 2026-10-18, each the recommended option.
   the Wrapper's 200 KiB (about 42 KiB was free), or raising the Wrapper's
   limits.
 - **D-4. A new configuration field, `verifyApiBaseUrl`**, ending with
-  `/verify/v1` (V-3), which the Wrapper's schema will accept too from the verify
-  page's build on (shipped before, or with, any document that carries it).
-  Rejected: deriving it from `playApiBaseUrl`.
+  `/verify/v1` (V-3), which the Wrapper's schema accepts too and requires
+  (built; shipped before, or with, any document that carries it, and with every
+  environment's document). Rejected: deriving it from `playApiBaseUrl`.
 
 Decided by the human on 2026-10-19, during the review of the kernel derivations:
 

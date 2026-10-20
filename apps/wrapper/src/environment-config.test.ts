@@ -284,12 +284,14 @@ describe("the Wrapper's fields", () => {
         environmentDocument({
           environment: "staging",
           verifyBaseUrl: undefined,
+          verifyApiBaseUrl: undefined,
           gameOrigins: undefined,
         }),
       ),
     ).toEqual([
       "invalid-environment",
       "invalid-verify-base",
+      "invalid-verify-api-base",
       "invalid-game-origins",
     ]);
   });

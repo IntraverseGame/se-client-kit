@@ -24,6 +24,7 @@ export const environmentDocument = (
   environment: "production",
   playApiBaseUrl: "https://se.example/play/v1",
   verifyBaseUrl: "https://verify.example/",
+  verifyApiBaseUrl: "https://se.example/verify/v1",
   runtimeSigner: "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
   registryDomain: {
     chainId: 31337,
@@ -46,6 +47,7 @@ export const localDocument = (
     environment: "local",
     playApiBaseUrl: "http://localhost:8080/play/v1",
     verifyBaseUrl: "http://localhost:8081/",
+    verifyApiBaseUrl: "http://localhost:8080/verify/v1",
     minRpcQuorum: 1,
     rpcEndpoints: {
       [SOURCE]: [{ provider: "anvil", url: "http://localhost:8545" }],

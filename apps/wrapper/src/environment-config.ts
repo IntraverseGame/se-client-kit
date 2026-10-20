@@ -40,6 +40,8 @@ export type EnvironmentConfigIssueCode =
   | "invalid-play-api-base"
   /** `verifyBaseUrl` is not an absolute URL. */
   | "invalid-verify-base"
+  /** `verifyApiBaseUrl` is not an absolute URL ending with `/verify/v1`. */
+  | "invalid-verify-api-base"
   /** `gameOrigins` is not a non-empty list of distinct origins. */
   | "invalid-game-origins"
   /** `operatorOrigins` is not a list of distinct origins. */
@@ -65,6 +67,7 @@ export const ENVIRONMENT_CONFIG_FIELDS: readonly string[] = Object.freeze([
   "environment",
   "playApiBaseUrl",
   "verifyBaseUrl",
+  "verifyApiBaseUrl",
   "runtimeSigner",
   "registryDomain",
   "rpcEndpoints",
@@ -76,6 +79,7 @@ export const ENVIRONMENT_CONFIG_FIELDS: readonly string[] = Object.freeze([
 ]);
 
 const PLAY_API_SUFFIX = "/play/v1";
+const VERIFY_API_SUFFIX = "/verify/v1";
 const LOOPBACK_HOSTS: ReadonlySet<string> = new Set([
   "localhost",
   "127.0.0.1",
@@ -124,6 +128,22 @@ const readPlayApiBase = (value: unknown): string | undefined => {
     typeof value === "string" &&
     url.href === value &&
     url.pathname.endsWith(PLAY_API_SUFFIX)
+    ? value
+    : undefined;
+};
+
+/**
+ * The verify API base (verify-page.md V-3, D-4): `playApiBaseUrl`'s rule with
+ * the `/verify/v1` suffix. Required, never derived or defaulted. The Wrapper
+ * validates it for the verify page, which reads the same document, and does not
+ * use it.
+ */
+const readVerifyApiBase = (value: unknown): string | undefined => {
+  const url = readUrl(value);
+  return url !== undefined &&
+    typeof value === "string" &&
+    url.href === value &&
+    url.pathname.endsWith(VERIFY_API_SUFFIX)
     ? value
     : undefined;
 };
@@ -201,6 +221,13 @@ export const validateEnvironmentConfig = (
   if (verifyBaseUrl === undefined) {
     issues.push({ code: "invalid-verify-base", field: "verifyBaseUrl" });
   }
+  const verifyApiBaseUrl = readVerifyApiBase(own(fields, "verifyApiBaseUrl"));
+  if (verifyApiBaseUrl === undefined) {
+    issues.push({
+      code: "invalid-verify-api-base",
+      field: "verifyApiBaseUrl",
+    });
+  }
   const gameOrigins = readOrigins(own(fields, "gameOrigins"), 1);
   if (gameOrigins === undefined) {
     issues.push({ code: "invalid-game-origins", field: "gameOrigins" });
@@ -215,6 +242,7 @@ export const validateEnvironmentConfig = (
     issues.length > 0 ||
     playApiBaseUrl === undefined ||
     verifyBaseUrl === undefined ||
+    verifyApiBaseUrl === undefined ||
     gameOrigins === undefined ||
     operatorOrigins === undefined
   ) {
