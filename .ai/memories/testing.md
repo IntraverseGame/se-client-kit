@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-20 (verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-20 (verify e2e fake pull request: the fake verify API, the canned rounds, VT-5's rows; verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -289,6 +289,17 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   hangs at `browser.newContext`, or a launch that times out before any test, is
   this; `test.slow()` or a longer timeout cannot fix it. Stand-ins for these
   tests: `harness/stand-in-starts.ts`.
+- **The verify page's e2e** uses `harness/verify-page.ts`'s `test` (the shared
+  fixtures plus `fakeVerifyApi`, `verifyRpc`, `verifyPage`): script a round id
+  with `fakeVerifyApi.answerEvery` / `answer` (queued, used once) from
+  `harness/verify-rounds.ts` (`matchingRound`, `tamperedRound(check)`,
+  `notEndedRound`, `unknownKernelRound`), open it with `verifyPage.open`, and
+  fail check 6 with `verifyRpc.behave`. The browser rows (`verify-page.spec.ts`)
+  run against `apps/wrapper/dist/verify/index.html` (the page, `#verify-root`)
+  and fail, with a message, if the bundle lacks it (they never skip). The
+  page's headings start with their icon's text, so match a name by what it
+  contains. A matching `won` or `lost` round
+  cannot be built from the vectors (see the spec).
 - **Contracts check:** CI recomputes the hash of every file in the `contracts` package
   against its lock file, and regenerates the types to fail on a diff.
 - **Build output:** `pnpm check:build-output` (after `pnpm build`) inspects every
