@@ -288,7 +288,7 @@ ADR-006 is accepted.
 
   Not decided: whether the Wrapper reads the balance again when the player comes
   back from a deposit in another tab (RFC-001 Q16, a follow-up).
-  <!-- TODO(RFC-001 Q16): the balance after a deposit in another tab; W-35 does not poll at `idle`, so the next start's answer is authoritative until this is decided. -->
+  <!-- TODO(RFC-001 Q16, #96): the balance after a deposit in another tab; W-35 does not poll at `idle`, so the next start's answer is authoritative until this is decided. -->
 
 ## What is logged
 
