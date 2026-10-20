@@ -69,6 +69,7 @@ describe("sync", () => {
       "src/schemas/se.snapshot.v1.schema.json",
       "src/vectors/kernel/v1/derive.json",
       "src/vectors/kernel/v1/seed.json",
+      "src/vectors/kernel/v1/shuffle-draw.json",
       "src/vectors/kernel/v1/steps-derive.json",
       "src/vectors/signing.json",
       "src/vectors/snapshot/invalid/b.json",
@@ -136,6 +137,10 @@ describe("sync", () => {
     ).toEqual([
       ["src/vectors/kernel/v1/derive.json", "kernel/public/v1/derive"],
       ["src/vectors/kernel/v1/seed.json", "kernel/public/v1/seed"],
+      [
+        "src/vectors/kernel/v1/shuffle-draw.json",
+        "kernel/public/v1/shuffle-draw",
+      ],
       [
         "src/vectors/kernel/v1/steps-derive.json",
         "kernel/public/v1/steps-derive",

@@ -84,6 +84,10 @@ const FIELD_OF: Readonly<Record<KernelErrorCode, string>> = {
   "seed-length": "seed",
   "n-out-of-range": "steps",
   "k-out-of-range": "steps",
+  // StepsDerive draws with the fixed label "steps-v1" and m = n - t, so only a
+  // step could cause these, and its own checks come first.
+  "label-invalid": "steps",
+  "m-out-of-range": "steps",
 };
 
 class NotHex extends Error {

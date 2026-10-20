@@ -97,4 +97,11 @@ export const GROUPS: readonly Group[] = [
     sourceName: "kernel/public/v1/derive",
     vectors: true,
   },
+  {
+    id: "kernel-vectors-shuffle-draw",
+    kind: "file",
+    destination: "src/vectors/kernel/v1/shuffle-draw.json",
+    sourceName: "kernel/public/v1/shuffle-draw",
+    vectors: true,
+  },
 ];

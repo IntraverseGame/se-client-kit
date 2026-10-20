@@ -1,0 +1,553 @@
+{
+  "set": "kernel/public/v1/shuffle-draw",
+  "kernelVersion": 1,
+  "spec": "SuperEngine fairness kernel, kernelVersion 1: ShuffleDraw",
+  "description": "ShuffleDraw(label, seed, j, t, m) = (u, ctr). Checks, in order: seed is 32 bytes (else seed-length); label is 1 to 32 bytes with no zero byte (else label-invalid); 1 <= m <= 2^64 - 1 (else m-out-of-range). Then limit = 2^256 - (2^256 mod m), and for ctr = 0, 1, 2, ...: x = uint256(keccak256(abi.encode(bytes32(label), seed, uint256(j), uint256(t), uint256(ctr)))), the hash of five 32-byte words in that order: the label's UTF-8 bytes zero-padded on the right, the seed, then j, t and ctr big-endian; keccak256 is Ethereum's Keccak-256, not NIST SHA3-256. The first x < limit gives u = x mod m and that ctr",
+  "vectors": [
+    {
+      "vector": "kernel/public/v1/shuffle-draw/board-3-3-4-row-0",
+      "description": "Cash or Crash row 0 of board [3, 3, 4], one loser, reference seed; j is 0-based",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "3"
+      },
+      "expected": {
+        "u": "2",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/board-3-3-4-row-1",
+      "description": "Cash or Crash row 1 of board [3, 3, 4], one loser, reference seed; j is 0-based",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "1",
+        "t": "0",
+        "m": "3"
+      },
+      "expected": {
+        "u": "0",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/board-3-3-4-row-2",
+      "description": "Cash or Crash row 2 of board [3, 3, 4], one loser, reference seed; j is 0-based",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "2",
+        "t": "0",
+        "m": "4"
+      },
+      "expected": {
+        "u": "1",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/n4-k2-t0",
+      "description": "n = 4, k = 2, draw t = 0 (m = 4), reference seed",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "4"
+      },
+      "expected": {
+        "u": "1",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/n4-k2-t1",
+      "description": "n = 4, k = 2, draw t = 1 (m = 3), reference seed",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "1",
+        "m": "3"
+      },
+      "expected": {
+        "u": "1",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/cosmetic-cash-or-crash",
+      "description": "Cosmetic placement: Cash or Crash row 1 survived with pick 0, place the loser among [1, 2]: j = 0, t = 0, m = 2, reference seed",
+      "input": {
+        "label": "cosmetic-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "2"
+      },
+      "expected": {
+        "u": "1",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/label-steps-m1000",
+      "description": "The label is part of the hash: steps-v1 with j = 0, t = 0, m = 1000, reference seed (compare label-cosmetic-m1000)",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "1000"
+      },
+      "expected": {
+        "u": "697",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/label-cosmetic-m1000",
+      "description": "The label is part of the hash: cosmetic-v1 with the same seed, j, t, m as label-steps-m1000 gives a different u",
+      "input": {
+        "label": "cosmetic-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "1000"
+      },
+      "expected": {
+        "u": "479",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/j1-t2",
+      "description": "j and t are separate words: j = 1, t = 2, m = 1000, reference seed (compare j2-t1)",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "1",
+        "t": "2",
+        "m": "1000"
+      },
+      "expected": {
+        "u": "263",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/j2-t1",
+      "description": "j and t are separate words: j = 2, t = 1 gives a different u than j1-t2",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "2",
+        "t": "1",
+        "m": "1000"
+      },
+      "expected": {
+        "u": "873",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/j-one-based-row-0",
+      "description": "A 1-based row index (j = 1 for row 0 of Cash or Crash [3, 3, 4]) gives 0, not 2: the wrong board [0, 1, 2]",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "1",
+        "t": "0",
+        "m": "3"
+      },
+      "expected": {
+        "u": "0",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/m1-0",
+      "description": "m = 1 always returns 0, accepted at ctr 0; seed = keccak256(\"shuffle m1 0\")",
+      "input": {
+        "label": "steps-v1",
+        "seed": "c27f2a3b9b0beafcd5ae59cdb184b7fcdd554fb49d71c85d3605b0fe190e95aa",
+        "j": "0",
+        "t": "0",
+        "m": "1"
+      },
+      "expected": {
+        "u": "0",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/m1-1",
+      "description": "m = 1 always returns 0, accepted at ctr 0; seed = keccak256(\"shuffle m1 1\")",
+      "input": {
+        "label": "steps-v1",
+        "seed": "c2cb36bb9492bf984879a9d6ba8f505b46e5adefe76859fce51825e520d3df76",
+        "j": "1",
+        "t": "0",
+        "m": "1"
+      },
+      "expected": {
+        "u": "0",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/m1-2",
+      "description": "m = 1 always returns 0, accepted at ctr 0; seed = keccak256(\"shuffle m1 2\")",
+      "input": {
+        "label": "steps-v1",
+        "seed": "8fdddee2fcfff9448be1ef1a604fc3de7ac4ec1411112e5f04d01de7281e21bf",
+        "j": "2",
+        "t": "0",
+        "m": "1"
+      },
+      "expected": {
+        "u": "0",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/m2-want0",
+      "description": "m = 2 returning 0; seed = keccak256(\"shuffle m2 want0 1\")",
+      "input": {
+        "label": "steps-v1",
+        "seed": "5b90b80630d7fe0003b30d837c73f1a9a1850a9aa0428aed5a171bae17c7da94",
+        "j": "0",
+        "t": "0",
+        "m": "2"
+      },
+      "expected": {
+        "u": "0",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/m2-want1",
+      "description": "m = 2 returning 1; seed = keccak256(\"shuffle m2 want1 0\")",
+      "input": {
+        "label": "steps-v1",
+        "seed": "a54a70e847a694b8feadaf77d6a826397b320200483b57e7d49731f7de07ce75",
+        "j": "0",
+        "t": "0",
+        "m": "2"
+      },
+      "expected": {
+        "u": "1",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/m-2pow32",
+      "description": "m = 2^32, reference seed",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "4294967296"
+      },
+      "expected": {
+        "u": "766006449",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/m-max",
+      "description": "m = 2^64 - 1, the largest m, reference seed",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "18446744073709551615"
+      },
+      "expected": {
+        "u": "406500203233278812",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/m-max-ff-seed",
+      "description": "m = 2^64 - 1 with the all-0xff seed",
+      "input": {
+        "label": "cosmetic-v1",
+        "seed": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "j": "0",
+        "t": "0",
+        "m": "18446744073709551615"
+      },
+      "expected": {
+        "u": "6182568145932216650",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/j-max",
+      "description": "j = 2^64 - 1 (the largest step index), t = 0, m = 100, reference seed",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "18446744073709551615",
+        "t": "0",
+        "m": "100"
+      },
+      "expected": {
+        "u": "58",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/t-max",
+      "description": "t = 2^64 - 1 (the largest draw index), j = 0, m = 100, reference seed",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "18446744073709551615",
+        "m": "100"
+      },
+      "expected": {
+        "u": "75",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/zero-seed",
+      "description": "All-zero seed, steps-v1, j = 0, t = 0, m = 100",
+      "input": {
+        "label": "steps-v1",
+        "seed": "0000000000000000000000000000000000000000000000000000000000000000",
+        "j": "0",
+        "t": "0",
+        "m": "100"
+      },
+      "expected": {
+        "u": "4",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/ff-seed",
+      "description": "All-0xff seed, steps-v1, j = 0, t = 0, m = 100",
+      "input": {
+        "label": "steps-v1",
+        "seed": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "j": "0",
+        "t": "0",
+        "m": "100"
+      },
+      "expected": {
+        "u": "15",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/zero-seed-cosmetic",
+      "description": "All-zero seed, cosmetic-v1, j = 3, t = 1, m = 7",
+      "input": {
+        "label": "cosmetic-v1",
+        "seed": "0000000000000000000000000000000000000000000000000000000000000000",
+        "j": "3",
+        "t": "1",
+        "m": "7"
+      },
+      "expected": {
+        "u": "4",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/label-generic",
+      "description": "Any 1..32-byte label without a zero byte is accepted: label \"other-v9\", reference seed, m = 100",
+      "input": {
+        "label": "other-v9",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "100"
+      },
+      "expected": {
+        "u": "23",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/label-32-bytes",
+      "description": "A 32-byte label fills the word with no padding: label of 32 'a', reference seed, m = 100",
+      "input": {
+        "label": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "100"
+      },
+      "expected": {
+        "u": "38",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/invalid-seed-short",
+      "description": "A 31-byte seed",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed",
+        "j": "0",
+        "t": "0",
+        "m": "3"
+      },
+      "expected": {
+        "error": "seed-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/invalid-seed-long",
+      "description": "A 33-byte seed",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed3900",
+        "j": "0",
+        "t": "0",
+        "m": "3"
+      },
+      "expected": {
+        "error": "seed-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/invalid-seed-empty",
+      "description": "An empty seed",
+      "input": {
+        "label": "steps-v1",
+        "seed": "",
+        "j": "0",
+        "t": "0",
+        "m": "3"
+      },
+      "expected": {
+        "error": "seed-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/invalid-label-empty",
+      "description": "An empty label",
+      "input": {
+        "label": "",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "3"
+      },
+      "expected": {
+        "error": "label-invalid"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/invalid-label-long",
+      "description": "A 33-byte label does not fit bytes32",
+      "input": {
+        "label": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "3"
+      },
+      "expected": {
+        "error": "label-invalid"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/invalid-label-zero-byte",
+      "description": "A label with a zero byte would collide with its zero-padded prefix",
+      "input": {
+        "label": "steps\u0000v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "3"
+      },
+      "expected": {
+        "error": "label-invalid"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/invalid-m-zero",
+      "description": "m = 0 is not a draw",
+      "input": {
+        "label": "steps-v1",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "0"
+      },
+      "expected": {
+        "error": "m-out-of-range"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/invalid-order-seed-before-label",
+      "description": "A bad seed and a bad label: the seed is checked first",
+      "input": {
+        "label": "",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed",
+        "j": "0",
+        "t": "0",
+        "m": "3"
+      },
+      "expected": {
+        "error": "seed-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/invalid-order-label-before-m",
+      "description": "A bad label and m = 0: the label is checked first",
+      "input": {
+        "label": "",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "0"
+      },
+      "expected": {
+        "error": "label-invalid"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/label-utf8-32-bytes",
+      "description": "UTF-8 label: 16 characters encode to 32 bytes; reference seed",
+      "input": {
+        "label": "éééééééééééééééé",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "37"
+      },
+      "expected": {
+        "u": "3",
+        "acceptedAtCtr": 0
+      }
+    },
+    {
+      "vector": "kernel/public/v1/shuffle-draw/invalid-label-utf8-33-bytes",
+      "description": "UTF-8 label: 17 characters encode to 33 bytes; reference seed",
+      "input": {
+        "label": "ééééééééééééééééa",
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "j": "0",
+        "t": "0",
+        "m": "37"
+      },
+      "expected": {
+        "error": "label-invalid"
+      }
+    }
+  ]
+}

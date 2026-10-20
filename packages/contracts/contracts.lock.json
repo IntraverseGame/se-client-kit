@@ -26,8 +26,15 @@
       "path": "src/vectors/kernel/v1/seed.json",
       "source": "se-backend",
       "sourceName": "kernel/public/v1/seed",
-      "sourceCommit": "ad36bc4b307825092d4107a997ffa4da2cf7e523",
-      "sha256": "9d664886091c48eae0e677e92f7780d4097b897d11043b2d32b42f0733e4f362"
+      "sourceCommit": "9294d22035e1a13b4d625f831473cfa6c3e313bd",
+      "sha256": "c69f583228c0d730d301903027f89ca04a0fcd669dfe9da019d2cbc1e58c33e6"
+    },
+    {
+      "path": "src/vectors/kernel/v1/shuffle-draw.json",
+      "source": "se-backend",
+      "sourceName": "kernel/public/v1/shuffle-draw",
+      "sourceCommit": "9294d22035e1a13b4d625f831473cfa6c3e313bd",
+      "sha256": "7dac3bd487a5ff91bbfeb068d0ac5e51d1418ab14c49622fdd634a399ed51308"
     },
     {
       "path": "src/vectors/kernel/v1/steps-derive.json",

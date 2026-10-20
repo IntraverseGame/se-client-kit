@@ -73,6 +73,12 @@ export const SOURCES: Readonly<Record<string, GroupSource>> = {
     ref: "main",
     path: "k/derive.json",
   },
+  "kernel-vectors-shuffle-draw": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "k/shuffle-draw.json",
+  },
 };
 
 export type MemorySource = {
@@ -96,6 +102,7 @@ export const memorySource = (): MemorySource => {
     ["k/seed.json", '{"k":8}\n'],
     ["k/steps-derive.json", '{"k":9}\n'],
     ["k/derive.json", '{"k":10}\n'],
+    ["k/shuffle-draw.json", '{"k":11}\n'],
   ]);
   const source: MemorySource = {
     files,

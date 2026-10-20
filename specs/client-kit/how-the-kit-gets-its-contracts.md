@@ -19,7 +19,7 @@ logic package.
 | The Play API `/play/v1` and the verify API read (OpenAPI documents)                    | `play-client`          | in `contracts`: the Play and verify documents only, never any other surface's document (today the Play document; the verify document is not published yet). Types are generated with a pinned `openapi-typescript` (a development dependency) into committed files in `contracts`; `play-client`'s hand-written thin `fetch` layer sits on them. CI regenerates and fails on a diff.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | The Snapshot schema `se.snapshot/1`, its golden vectors, and the published bundle      | `snapshot`             | in `contracts`: the schema, types (runtime entry), and the `valid/`, `invalid/`, `signature/`, `typed-data/`, and `signed-action/` vectors (test-only entry; a `signature/` vector is a valid Snapshot with the verdict of the shell's W-26 checks; a `typed-data/` vector is the fields of a signed action and its canonical `typedData` bytes, which `signing` replays; a `signed-action/` vector is one such action signed by an independent signer, Foundry `cast`, with its EIP-712 message, hashes, digest, public test key, and signature, and a test checks that its `typedData` and message are those of the `typed-data/` vector it names). <!-- TODO(Snapshot bundle): the backend specifies a content-hashed bundle (schema plus vectors) for TypeScript consumers; until it is published the kit copies the schema file and the vectors by the same procedure, with the same lock entry. --> |
 | The signing vectors (`test/vectors/signing.json`) and the signed-action spec's vectors | `signing`              | in `contracts`: the files, unchanged, on the test-only entry                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| The SuperEngine fairness kernel, kernelVersion 1: its public vector sets               | the verify page (VT-2) | in `contracts`: the sets `kernel/public/v1/seed` (Seed and SeedHash), `kernel/public/v1/steps-derive` (StepsDerive over ShuffleDraw), and `kernel/public/v1/derive` (the step losers along a path), one file each under `vectors/kernel/v1/`, unchanged, on the test-only entry (`kernelVectors.v1`), synced from se-backend `ad36bc4`. The verify page's unit tests (`apps/verify`) replay all three sets against its kernel derivations, and the kit holds no other kernel logic. The kernel has no vectors yet for ShuffleDraw alone, for Coin Flip's payouts, or for `roundSecretHash` ([verify page](../verify-page.md#what-the-page-recomputes-v-12-v-13)).                                                                                                                                                                                                                                         |
+| The SuperEngine fairness kernel, kernelVersion 1: its public vector sets               | the verify page (VT-2) | in `contracts`: the sets `kernel/public/v1/seed` (Seed and SeedHash), `kernel/public/v1/shuffle-draw` (ShuffleDraw alone, with the rule stated in its description), `kernel/public/v1/steps-derive` (StepsDerive over ShuffleDraw), and `kernel/public/v1/derive` (the step losers along a path), one file each under `vectors/kernel/v1/`, unchanged, on the test-only entry (`kernelVectors.v1`), synced from se-backend `9294d22`. The verify page's unit tests (`apps/verify`) replay all four sets against its kernel derivations, and the kit holds no other kernel logic. The kernel has no vectors yet for Coin Flip's payouts or for `roundSecretHash` ([verify page](../verify-page.md#what-the-page-recomputes-v-12-v-13)).                                                                                                                                                                    |
 | The environment configuration schema                                                   | the Wrapper            | owned by the kit (in `shell`), not copied and not in `contracts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 Rules:
@@ -40,16 +40,19 @@ Rules:
    `se.snapshot/1 vectors/typed-data/<file>`,
    `se.snapshot/1 vectors/signed-action/<file>`, `test/vectors/signing.json`,
    and the fairness kernel's set ids `kernel/public/v1/seed`,
-   `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`, each the
-   `set` its file names): a path inside a private repository is unpublished
-   backend layout and is never recorded, and a test fails on a name that is not
-   one of these. The local checkouts and the paths in them are given in a file
-   named by `--sources`, kept outside this repository. Vectors are append-only:
-   the script refuses to change or remove a locked vector unless it is given
-   `--allow-vector-change`, which is legitimate only before the first release.
-   It was used twice: for the pre-release exception of rule 4, and for the
-   signing vectors of contracts release 1.0.0 (their `_comment` changed).
-   Generated files are rewritten by `tools/generate-contracts.ts --write`.
+   `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`, and
+   `kernel/public/v1/derive`, each the `set` its file names): a path inside a
+   private repository is unpublished backend layout and is never recorded, and a
+   test fails on a name that is not one of these. The local checkouts and the
+   paths in them are given in a file named by `--sources`, kept outside this
+   repository. Vectors are append-only: the script refuses to change or remove a
+   locked vector unless it is given `--allow-vector-change`, which is legitimate
+   only before the first release. It was used three times: for the pre-release
+   exception of rule 4, for the signing vectors of contracts release 1.0.0
+   (their `_comment` changed), and for the kernel's `kernel/public/v1/seed` set
+   at se-backend `9294d22` (its reference vector's description now names the
+   `shuffle-draw` set; its inputs and expected values are unchanged). Generated
+   files are rewritten by `tools/generate-contracts.ts --write`.
 2. **Verify offline.** The `contracts` job recomputes each copied file's SHA-256
    and fails when it differs from the lock, and fails when the generated types
    in `contracts` differ from a regeneration of the committed documents.
@@ -218,10 +221,11 @@ Rules:
    The fairness kernel's vectors (kernelVersion 1) hold test inputs and expected
    values only: hex block values, round secrets, and seeds made for the vectors
    (all-zero, all-`0xff`, and `keccak256` of a short label among them), step
-   counts, and error names. Their descriptions name the kernel's public
-   functions (Seed, SeedHash, ShuffleDraw, StepsDerive) and the released game
-   Cash or Crash, and no path, host, person, or unreleased game. A `secret`
-   there is a vector's round secret, never a credential.
+   counts, ShuffleDraw labels (`steps-v1`, `cosmetic-v1`, and made-up ones), and
+   error names. Their descriptions name the kernel's public functions (Seed,
+   SeedHash, ShuffleDraw, StepsDerive) and the released game Cash or Crash, and
+   no path, host, person, or unreleased game. A `secret` there is a vector's
+   round secret, never a credential.
 
    Accepted (human review, 2026-10-16): the signing vectors' `_comment` fields
    name the contracts repository's test tooling. These are names, not contents;

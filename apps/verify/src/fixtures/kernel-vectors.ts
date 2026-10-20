@@ -41,7 +41,10 @@ export type KernelVector = {
   readonly expected: Json;
 };
 
-/** The vectors of one set, by the set's file name: `seed`, `steps-derive`. */
+/**
+ * The vectors of one set, by the set's file name: `seed`, `shuffle-draw`,
+ * `steps-derive`, `derive`.
+ */
 export const vectorsOf = (set: string): KernelVector[] => {
   const file = record(kernelVectors.v1[set], set);
   if (file["kernelVersion"] !== 1) throw new TypeError(`${set}: not kernel 1`);

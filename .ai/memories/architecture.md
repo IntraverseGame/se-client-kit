@@ -273,12 +273,14 @@ structure below.
   `round-view.ts`): "Payout" with its `formatted` on `won`, and on `lost` only
   when `value` > 0 as a `bigint`; absent shows nothing; never computed (W-34).
 - The fairness kernel's public vector sets (the SuperEngine fairness kernel,
-  kernelVersion 1: `kernel/public/v1/seed`, `steps-derive`, `derive`) are
+  kernelVersion 1: `kernel/public/v1/seed`, `shuffle-draw`, `steps-derive`,
+  `derive`) are
   vendored as data only, under `vectors/kernel/v1/`, each locked under its set
   id. The only kernel logic is the verify page's (`apps/verify`): Seed,
-  SeedHash, `roundSecretHash`, and StepsDerive over ShuffleDraw, keyed on the
-  kernel version (`kernels.ts`, version 1 only), with SHA-256 from Web Crypto
-  and the raw `keccak256` `signing` exports; its tests replay all three sets. The
+  SeedHash, `roundSecretHash`, ShuffleDraw (`shuffleDraw`, any label), and
+  StepsDerive over it, keyed on the kernel version (`kernels.ts`, version 1
+  only), with SHA-256 from Web Crypto and the raw `keccak256` `signing`
+  exports; its tests replay all four sets. The
   bundle's path in its source repository never appears here: it lives only in
   the sync's sources file, outside the repository.
 
@@ -371,17 +373,16 @@ structure below.
   with `tools/guard-text.ts`) is shared by both builds from `tools/`, so
   neither app imports the other. The rest waits for the verify API document
   (`TODO(verify API)`); the fairness kernel's public vectors are in
-  `contracts` (`kernelVectors.v1`, from se-backend `ad36bc4`), with none yet
-  for ShuffleDraw alone, Coin Flip's payouts, or `roundSecretHash`, which the
-  page checks against its definition.
+  `contracts` (`kernelVectors.v1`, 81 vectors in four sets, from se-backend
+  `9294d22`), with none yet for Coin Flip's payouts or `roundSecretHash`,
+  which the page checks against its definition.
   Its checks 5 and 7 follow the SuperEngine fairness kernel, kernelVersion 1
   (public; SHA-256 commitments and seed via Web Crypto, StepsDerive with the raw
-  `keccak256` that `signing` exports). ShuffleDraw's hashed words and rejection
-  rule are written in the kit's spec; no vendored document states them. The
-  hashed words are pinned by the vectors' draws; the rejection rule is the
-  kit's own, pinned by no vendored vector or document (every vector accepts at
-  counter 0), and held only by the kit's unit test of the limit
-  (`drawLimit`). Decided 2026-10-18: a new private app `apps/verify`
+  `keccak256` that `signing` exports). ShuffleDraw's input checks, hashed
+  words, limit `2^256 - (2^256 mod m)`, and counter rule are stated by the
+  vendored `kernel/public/v1/shuffle-draw` set's description; it has no
+  rejection vector (every vector accepts at counter 0), so the kit's unit
+  tests of the limit (`drawLimit`, `acceptDraw`) exercise a rejection. Decided 2026-10-18: a new private app `apps/verify`
   that never imports `shell` and holds no credential; a quorum read of block
   N's hash through its own read-only JSON-RPC module (W-26a and W-26b's rules);
   its own size budget; a required `verifyApiBaseUrl` configuration field (the
