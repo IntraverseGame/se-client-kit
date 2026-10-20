@@ -701,7 +701,7 @@ never reported anywhere.
 | VT-2  | unit                | each check of V-12 against the vendored vectors, each with a passing case and a case per failure: checks 1 to 4 against `created`, `ready`, and the `signature/` Snapshot vectors' `randomnessTarget` and signature verdicts; checks 5 and 7 (SHA-256, the seed, StepsDerive, Coin Flip's outcome) against the fairness kernel's public vectors (the SuperEngine fairness kernel, kernelVersion 1: `kernel/public/v1/seed`, `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`, read through the `contracts` test-only entry as `kernelVectors.v1`), and `roundSecretHash` against its definition until the kernel has a vector for it                                                                                       |
 | VT-3  | unit                | the body's validation: a body the verify API document's schema refuses is an API error, never a partial result; amounts read as `bigint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | VT-4  | component (jsdom)   | every state V-4 to V-11 (V-8's voided and refused included) and the configuration error renders its heading, text, and control, with no inline style; values from the body render as text. jsdom component tests; the axe scan is in the browser rows (VT-7), as for the Wrapper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended; a round of a kernel version the page does not know (V-8)                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended; a round of a kernel version the page does not know (V-8); the backend's recorded `won` and `lost` rounds match with checks 5 and 7 recomputed, and a tampered copy of each names check 5 or 7                                                                                                                                                                                                                                                                                                                      |
 | VT-6  | e2e, browser        | from the Wrapper: after a round ends, the verify link opens `<verifyBaseUrl>/rounds/{roundId}` in a new context and that page reaches V-6 or V-8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | VT-8  | e2e + build check   | the policy and SRI: the page loads with the `headers.json` policy and no violation, every script and stylesheet carries `integrity`, and no request leaves the configured origins (the harness's catch-all route records none)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -752,18 +752,32 @@ In `e2e/tests/harness/` (the suite's harness, never shipped):
   agree, disagree, and a silent endpoint) for check 6. The routes carry no
   response headers, so the policy and SRI are not proven here (VT-8).
 - `fake-verify-api.spec.ts` tests the fake, the canned rounds, and the RPC
-  answers as the page asks them (no page load); `verify-page.spec.ts` is VT-5.
-  The browser rows run against the Wrapper's release bundle, which holds the
-  page (`apps/wrapper/dist/verify/index.html` with `#verify-root`); a bundle
-  without it fails them with a message (they never skip).
+  answers as the page asks them, and `fake-recorded-rounds.spec.ts` the recorded
+  rounds (no page load); `verify-page.spec.ts` and
+  `verify-page-recorded.spec.ts` are VT-5. The browser rows run against the
+  Wrapper's release bundle, which holds the page
+  (`apps/wrapper/dist/verify/index.html` with `#verify-root`); a bundle without
+  it fails them with a message (they never skip).
 
-Not built here: a `won` or `lost` round that matches (checks 5 and 7
-recomputed), because `roundSecretHash` is signed into `newRound`, so a reveal
-that hashes to it needs a round the backend signed with that reveal; a check 7
-tamper apart from check 5 (it needs the same round); VT-6 (the Wrapper's verify
-link after a round ends), VT-7 (axe on every state, the voided and refused ones
-included, keyboard use, zoom), and VT-8 (the policy and SRI), which need the
-built page and its `headers.json`.
+- `recorded-rounds.ts` and `recorded-rounds/*.json`: two real Coin Flip rounds,
+  one `won` (payout 194) and one `lost`, that the backend recorded on its local
+  preview stack on 2026-10-20 (anvil, chain id 31337, block 335, ephemeral
+  development keys), each the verify API's response as recorded, never edited by
+  hand (the formatter ignores them; `recorded-rounds/README.md` says where they
+  come from). They are e2e fixtures, not `contracts` vectors. With their reveals
+  the page recomputes checks 5 and 7 and every check matches. The
+  `verifyRounds: "recorded"` option of `verify-page.ts` configures the page with
+  what the recordings carry (`commitment.adminSigner` as `runtimeSigner`, the
+  registry address and chain id, the entropy source and chain id; all in the
+  response, public) and has the fake RPC endpoints give block N the recorded
+  `entropy.value`, so check 6 agrees and check 7 runs over the recorded block
+  hash. A tampered copy changes one field: the replay's loser (check 7), or the
+  round secret (check 5). The payout amount is never recomputed (V-13), so a
+  payout tamper is not a check's failure.
+
+Not built here: VT-6 (the Wrapper's verify link after a round ends), VT-7 (axe
+on every state, the voided and refused ones included, keyboard use, zoom), and
+VT-8 (the policy and SRI), which need the built page and its `headers.json`.
 
 ## Decisions
 
