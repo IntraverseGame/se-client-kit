@@ -274,11 +274,28 @@ definition alone, and the payout is shown, not recomputed (V-13).
      the page shows a non-dismissable "chain check not independent
      (development)" indicator beside the check. The read is the page's own
      small, read-only JSON-RPC module, never `shell` (the tip check is not
-     public API, and the page holds no credential). **Until the quorum read is
-     built**, the page (one build for every environment, V-17) shows check 6 as
-     "not checked" with the API's `blockValue` beside it (V-13), and check 7
-     uses that value and says that its result rests on an unchecked block hash.
-     The quorum read lands before the first release.
+     public API, and the page holds no credential). **Built** (D-1):
+     `apps/verify/src/chain-read.ts` (`readBlockHashByQuorum`, with `fetch` and
+     the timers injected, and `resolveBlockValue` for the optional
+     `blockValue`). It asks every configured endpoint of the source; an endpoint
+     answers only with a 32-byte hash for block N itself, and an endpoint that
+     gave a block but no chain id, or a chain id but no valid hash for block N,
+     fails the read (W-26b: it cannot be shown to agree), so the failures are,
+     in order, `other-chain`, `too-few`, `no-chain-id`, `no-block`, and
+     `hash-mismatch` (completeness before content, as W-26b puts identity before
+     content); an endpoint that said nothing at all within the timeout only
+     counts toward `too-few`. A configuration the Wrapper refuses at boot
+     (`minRpcQuorum` below 1, below 2 in `production`, or more than the
+     endpoints) or an `entropyChainId` that is not a non-negative safe integer
+     is refused as `config` and nothing is asked. The page trusts the validated
+     configuration for provider independence (V-3); the module does not recheck
+     it. W-26b's second pass at `h_low` and its lag margin do not apply: check 6
+     reads one fixed block N, not a moving tip. **Until the page calls it**, the
+     page (one build for every environment, V-17) shows check 6 as "not checked"
+     with the API's `blockValue` beside it (V-13), and check 7 uses that value
+     and says that its result rests on an unchecked block hash. The quorum read
+     lands before the first release.
+     <!-- TODO(verify page): call `readBlockHashByQuorum` from the page's state machine once it exists, and show the answers and the degraded indicator; the evidence's `blockNumber` type waits for the verify API document. -->
   7. **Seed and outcome.** Under kernel version 1:
      - **The seed** is `SHA-256(blockValue || roundSecret)`: a 64-byte preimage,
        block N's 32-byte hash first, then the round secret's 32 bytes.
@@ -507,7 +524,7 @@ never reported anywhere.
 | Row   | Level               | What it proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ----- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | VT-1  | unit                | the round id: normalization, the schema's pattern (v7 only, canonical), the path parser for `/rounds/{id}` (empty, extra segments, encoded characters), and the URL the Wrapper builds (W-39); `verifyApiBaseUrl`'s rule, and the Wrapper's schema accepting it                                                                                                                                                                                                                                                                                                                                                                                    |
-| VT-1a | unit                | the chain read (check 6): a quorum that agrees passes; another chain id, too few answering, a timeout, and two hashes fail in W-26b's order; `blockValue` present and equal, present and different, absent; the one-endpoint degraded indicator                                                                                                                                                                                                                                                                                                                                                                                                    |
+| VT-1a | unit                | the chain read (check 6): a quorum that agrees passes; another chain id, too few answering, a timeout, an endpoint with a chain id but no block, and two hashes fail in W-26b's order, and a refused configuration (`config`) asks nothing; `fetch` is called unbound; `blockValue` present and equal, present and different, absent; the one-endpoint degraded indicator                                                                                                                                                                                                                                                                          |
 | VT-1b | unit                | the kernel version (V-12a): kernel 1 runs the derivations, an unknown one shows V-8 and runs none; a `canceled` round without reveals shows checks 5 and 7 as "not checked"                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | VT-2  | unit                | each check of V-12 against the vendored vectors, each with a passing case and a case per failure: checks 1 to 4 against `created`, `ready`, and the `signature/` Snapshot vectors' `randomnessTarget` and signature verdicts; checks 5 and 7 (SHA-256, the seed, StepsDerive, Coin Flip's outcome) against the fairness kernel's public vectors (the SuperEngine fairness kernel, kernelVersion 1: `kernel/public/v1/seed`, `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`, read through the `contracts` test-only entry as `kernelVectors.v1`), and `roundSecretHash` against its definition until the kernel has a vector for it |
 | VT-3  | unit                | the body's validation: a body the verify API document's schema refuses is an API error, never a partial result; amounts read as `bigint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -537,12 +554,14 @@ Decided by the human on 2026-10-18, each the recommended option.
 - **D-1. The page reads the chain for block N's hash, with a quorum** (V-12,
   check 6): at least `minRpcQuorum` of the configured `rpcEndpoints` must agree,
   under W-26a's and W-26b's rules, through a small read-only JSON-RPC module
-  that is not `shell`. A verify page that took the entropy from the API it
-  checks would recompute less than it claims. Until the read is built, the page
-  (the same build in every environment) shows check 6 as "not checked" and says
-  check 7 rests on an unchecked block hash; the quorum read lands before the
-  first release. Rejected: showing the API's value only, and a single endpoint
-  (one provider can lie).
+  that is not `shell` (provider independence is the validated configuration's
+  job, and no `h_low` pass or lag margin applies to the one fixed block N). A
+  verify page that took the entropy from the API it checks would recompute less
+  than it claims. Until the read is built, the page (the same build in every
+  environment) shows check 6 as "not checked" and says check 7 rests on an
+  unchecked block hash; the quorum read lands before the first release.
+  Rejected: showing the API's value only, and a single endpoint (one provider
+  can lie).
 - **D-2. A new private app, `apps/verify`** (V-15), never depending on `shell`:
   the rule that the shell is the only code that touches a credential is easiest
   to prove when the page cannot import it, and the page's policy stays its own.
