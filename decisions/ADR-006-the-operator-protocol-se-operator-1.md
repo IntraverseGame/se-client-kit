@@ -1,7 +1,7 @@
 # ADR-006 — The operator protocol `se.operator/1`: a separate protocol, operator first with record-then-check, and lobby and deposit as navigations
 
-- Status: proposed
-- Date: 2026-10-18
+- Status: accepted
+- Date: 2026-10-20 (proposed 2026-10-18; accepted by the human)
 - Relates to: [RFC-001](../rfcs/active/RFC-001-operator-launch-contract.md) (the
   operator launch contract; its decisions of 2026-10-18),
   [specs/wrapper/operator-embedding.md](../specs/wrapper/operator-embedding.md)
@@ -112,8 +112,8 @@ are in
 - An operator whose lobby is on another origin must list that origin, which also
   lets it frame the Wrapper.
 - This tightens the minimum shipped in #58 (a page framed through several listed
-  ancestors opens a session there today); the change lands with #42's
-  implementation.
+  ancestors opens a session there today); the change is built with the handshake
+  (#42, merged in #92).
 - **Exit criterion.** A change to the message set or a message's fields is
   `se.operator/2`, through a new ADR that supersedes this one.
 

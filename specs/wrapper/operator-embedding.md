@@ -25,7 +25,7 @@ channel (`operator-channel.ts`, `operator-protocol.ts`) holds the handshake and
 `message` listener (`message-dispatch.ts`), the gate that awaits the handshake
 before the session opens (`operator-gate.ts`), the height observer
 (`height-observer.ts`), and the lobby and deposit anchors (`operator-links.ts`).
-ADR-006 is still proposed: its acceptance is the human's call before the merge.
+ADR-006 is accepted.
 
 ## The rule
 
