@@ -14,10 +14,12 @@ the raw `keccak256` they take from `signing`; the quorum read of check 6; checks
 (V-3); the page's states, their view, and its accessibility (V-4 to V-14); the
 verify API read, built to an **assumed** response body confined to one module;
 the page's HTML and module entry (`index.html`, `src/main.ts`, mounting at
-`#verify-root`), and the build and release (V-15 to V-17). Not built: the e2e
-suites (VT-5 to VT-9). The response body waits for the verify API document, to
-come; what depends on it is marked `TODO(verify API)`. Its four design decisions
-were made by the human on 2026-10-18, and five more on the kernel derivations on
+`#verify-root`), and the build and release (V-15 to V-17); and the e2e fake of
+the verify API with VT-5's browser rows
+([The e2e fake](#the-e2e-fake-of-the-verify-api-built)). Not built: the e2e rows
+VT-6 to VT-9. The response body waits for the verify API document, to come; what
+depends on it is marked `TODO(verify API)`. Its four design decisions were made
+by the human on 2026-10-18, and five more on the kernel derivations on
 2026-10-19 ([Decisions](#decisions)).
 
 ## Purpose
@@ -611,7 +613,7 @@ never reported anywhere.
 | VT-2  | unit                | each check of V-12 against the vendored vectors, each with a passing case and a case per failure: checks 1 to 4 against `created`, `ready`, and the `signature/` Snapshot vectors' `randomnessTarget` and signature verdicts; checks 5 and 7 (SHA-256, the seed, StepsDerive, Coin Flip's outcome) against the fairness kernel's public vectors (the SuperEngine fairness kernel, kernelVersion 1: `kernel/public/v1/seed`, `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`, read through the `contracts` test-only entry as `kernelVectors.v1`), and `roundSecretHash` against its definition until the kernel has a vector for it                                                                                       |
 | VT-3  | unit                | the body's validation: a body the verify API document's schema refuses is an API error, never a partial result; amounts read as `bigint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | VT-4  | component (jsdom)   | every state V-4 to V-11 and the configuration error renders its heading, text, and control, with no inline style; values from the body render as text. jsdom component tests; the axe scan is in the browser rows (VT-7), as for the Wrapper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended; a round of a kernel version the page does not know (V-8)                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | VT-6  | e2e, browser        | from the Wrapper: after a round ends, the verify link opens `<verifyBaseUrl>/rounds/{roundId}` in a new context and that page reaches V-6 or V-8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | VT-8  | e2e + build check   | the policy and SRI: the page loads with the `headers.json` policy and no violation, every script and stylesheet carries `integrity`, and no request leaves the configured origins (the harness's catch-all route records none)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -628,6 +630,49 @@ harness's RPC routes answer the chain read (agreeing, disagreeing, and silent
 endpoints). It is hermetic like the rest of the harness: no real network, and a
 request to any other origin fails the test.
 <!-- TODO(verify API): the canned bodies follow the verify API document once it is vendored. -->
+
+### The e2e fake of the verify API: built
+
+In `e2e/tests/harness/` (the suite's harness, never shipped):
+
+- `fake-verify-api.ts`: a context route at the configured `verifyApiBaseUrl` (in
+  the suite the Wrapper's origin plus `/verify/v1`, a same-origin read as in
+  preview, so no CORS) answering `GET <base>/rounds/{roundId}` per round id:
+  `round` (200 with a JSON body), `not-found` (404, no body; also the answer for
+  an id with no script), `error` (a scripted status), `unreadable` (200, not
+  JSON), and `abort` (the request fails: unreachable). Answers can be queued
+  (used once, in order) before a standing one, so a retry can differ from the
+  first read. Any other method or path is recorded as unexpected and fails the
+  test.
+- `verify-rounds.ts`: the canned rounds, built at run time from the vendored
+  `valid/coinflip-active-ready-hash` vector (the round tests' round) through
+  `contracts`' test-only entry. The matching round is that vector as `canceled`
+  without reveals (checks 1 to 4 and 6 match, 5 and 7 "not checked"); the
+  not-ended round is the vector as it is (`active`); the unknown-kernel round
+  adds `kernelVersion: 2`; a tampered round changes one field per check (2:
+  `blockNumber`, 3: `prepareWindow`, 4: `readyHash`, 5: both reveals,
+  `roundSecret` and `seed`, neither hashing to its commitment, so the comparison
+  runs and does not stop at "a reveal is missing", 6: a `blockValue` that is not
+  block N's hash); a check 1 case serves the matching round under another round
+  id.
+- `verify-page.ts`: the page's harness: the bundle's `verify/index.html` served
+  for `/verify/` and `/verify/rounds/*` (V-2), the configuration document (the
+  round tests' pins, `verifyBaseUrl` the Wrapper's origin plus `/verify`), the
+  fake verify API, and the round tests' two fake RPC endpoints (`fake-rpc.ts`:
+  agree, disagree, and a silent endpoint) for check 6. The routes carry no
+  response headers, so the policy and SRI are not proven here (VT-8).
+- `fake-verify-api.spec.ts` tests the fake, the canned rounds, and the RPC
+  answers as the page asks them (no page load); `verify-page.spec.ts` is VT-5.
+  The browser rows run against the Wrapper's release bundle, which holds the
+  page (`apps/wrapper/dist/verify/index.html` with `#verify-root`); a bundle
+  without it fails them with a message (they never skip).
+
+Not built here: a `won` or `lost` round that matches (checks 5 and 7
+recomputed), because `roundSecretHash` is signed into `newRound`, so a reveal
+that hashes to it needs a round the backend signed with that reveal; a check 7
+tamper apart from check 5 (it needs the same round); VT-6 (the Wrapper's verify
+link after a round ends), VT-7 (axe on every state, keyboard use, zoom), and
+VT-8 (the policy and SRI), which need the built page and its `headers.json`.
 
 ## Decisions
 

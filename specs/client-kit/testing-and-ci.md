@@ -501,6 +501,19 @@ development-only, so it may import the test-only entry of `contracts`.
   Chromium project through the opt-in `SE_E2E_BROWSER_CHANNEL=chrome`, keep it
   (recorded 2026-10-19; Playwright's own Chromium build is recorded by CI's
   Chromium job, which the test annotates).
+- **The verify page's fake** (`harness/fake-verify-api.ts`, `verify-rounds.ts`,
+  `verify-page.ts`;
+  [the verify page](../verify-page.md#the-e2e-fake-of-the-verify-api-built)): a
+  route at the configured `verifyApiBaseUrl` (the Wrapper's origin plus
+  `/verify/v1`) answering a round, not found, a scripted error, an unreadable
+  body, or an abort; canned rounds built at run time from the vendored round
+  (matching, one tampered field per check, not ended, unknown kernel); the
+  host's rewrite of `/verify/rounds/*` to the bundle's `verify/index.html`; and
+  the round tests' fake RPC endpoints for check 6. Its own tests are
+  `fake-verify-api.spec.ts`; VT-5 is `verify-page.spec.ts`, which runs against
+  the bundle's page and fails, with a message, if the bundle lacks it (it never
+  skips). The catch-all route still refuses and records any other request
+  (VT-8's last clause).
 - **Locally**, `pnpm exec playwright install chromium` (in `e2e/`) installs the
   browser once; `pnpm test:e2e` runs the `chromium` project unless
   `SE_E2E_PROJECT` names another (`firefox`, `webkit`, after installing that
