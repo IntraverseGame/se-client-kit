@@ -451,10 +451,9 @@ version part, VT-2 for checks 5 and 7, and VT-10's source check) are:
   (`apps/wrapper/release-headers.ts`) fills their `{{verifyConnectOrigins}}`
   from a validated environment document. The size budget measures "verify
   output" and "verify page, gzip" apart from the Wrapper's
-  (`tools/size-budget.ts`); their limits are still the provisional ones, equal
-  to the Wrapper's; the first build of the real page measured 119788 bytes
-  (output) and 39199 bytes (gzip), both within them, and the human sets the
-  limits from it.
+  (`tools/size-budget.ts`); their limits are 150000 bytes (output) and 49152
+  bytes (gzip), set by the human on 2026-10-20 about 25 % over the first build's
+  119788 and 39199 bytes.
 
 The page around them is built too:
 
@@ -535,10 +534,10 @@ The page around them is built too:
   (`verify/index.html` and every `.js` and `.css` file under `verify/`, each
   gzipped at zlib's default level and summed), checked by
   `pnpm check:size-budget`, the release dry run, and the publish step, with the
-  same rules as the Wrapper's (a missing measurement fails). Their limits are
-  set by the human from the first build's measurement, about 25 % over it, as
-  for the Wrapper ([Testing and CI](./client-kit/testing-and-ci.md)).
-  <!-- TODO(first build): the two limits, in bytes, from the first build's measurement. -->
+  same rules as the Wrapper's (a missing measurement fails). Their limits
+  (150000 and 49152 bytes) were set by the human on 2026-10-20 from the first
+  build's measurement, about 25 % over it, as for the Wrapper
+  ([Testing and CI](./client-kit/testing-and-ci.md)).
 - **V-17. Same build for every environment.** Like the Wrapper, the page holds
   no environment value; it reads them from the configuration document (V-3).
 
