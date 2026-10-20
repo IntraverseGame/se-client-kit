@@ -111,13 +111,20 @@ describe("typed errors (W-42, T-16)", () => {
     "ENTROPY_UNAVAILABLE",
     "PREPARATION_TIMEOUT",
     "ROUND_VOIDED",
-    "UNAVAILABLE",
-  ])("%s, retryable, ends in its message and a try-again control", code => {
+  ])("%s, retryable, ends in its message and a back-to-start control", code => {
     const ui = idleWith(problem(code, true));
     expect(alertText(ui.host)).toContain(
-      m[`error.${code}` as "error.UNAVAILABLE"],
+      m[`error.${code}` as "error.ROUND_VOIDED"],
     );
+    expect(buttonNamed(ui.host, m["action.backToStart"])).toBeDefined();
+    expect(buttonNamed(ui.host, m["action.retry"])).toBeUndefined();
+  });
+
+  it("UNAVAILABLE, retryable, ends in its message and a try-again control", () => {
+    const ui = idleWith(problem("UNAVAILABLE", true));
+    expect(alertText(ui.host)).toContain(m["error.UNAVAILABLE"]);
     expect(buttonNamed(ui.host, m["action.retry"])).toBeDefined();
+    expect(buttonNamed(ui.host, m["action.backToStart"])).toBeUndefined();
   });
 
   it("UNAVAILABLE that says retryable: false offers no try again", () => {
@@ -149,6 +156,19 @@ describe("typed errors (W-42, T-16)", () => {
     });
     const before = ui.reads();
     buttonNamed(ui.host, m["action.retry"])?.click();
+    await ui.settle();
+    expect(ui.reads()).toBe(before + 1);
+    expect(alertText(ui.host)).toBe("");
+  });
+
+  it("back to start reads the Snapshot once, and clears the error", async () => {
+    const ui = idleWith(problem("ROUND_VOIDED", true));
+    ui.answers.push({
+      kind: "snapshot",
+      snapshot: snapshotVector("coinflip-idle"),
+    });
+    const before = ui.reads();
+    buttonNamed(ui.host, m["action.backToStart"])?.click();
     await ui.settle();
     expect(ui.reads()).toBe(before + 1);
     expect(alertText(ui.host)).toBe("");

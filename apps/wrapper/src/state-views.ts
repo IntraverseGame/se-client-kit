@@ -142,7 +142,21 @@ export type AlertContent = {
   readonly requestId?: string;
   readonly roundId?: string;
   readonly retry: boolean;
+  /** The control's text when it is not "Try again" (a voided start, W-42). */
+  readonly retryLabel?: MessageKey;
 };
+
+/**
+ * A start voided or refused before any money moved (W-42). Its control reads
+ * the Snapshot again, which answers `idle`, so the player starts a new round:
+ * it is not labelled as a retry of the start.
+ */
+const VOIDED_START_CODES: ReadonlySet<string> = new Set([
+  "FUNDING_UNCONFIRMED",
+  "ENTROPY_UNAVAILABLE",
+  "PREPARATION_TIMEOUT",
+  "ROUND_VOIDED",
+]);
 
 /** The texts of the states of one round (W-44). */
 const ROUND_STATE_TEXTS: Readonly<
@@ -218,6 +232,9 @@ export const alertContent = (
         ? {}
         : { requestId: problem.requestId }),
       retry: problem.retryable,
+      ...(VOIDED_START_CODES.has(problem.code)
+        ? { retryLabel: "action.backToStart" as const }
+        : {}),
     };
   }
   if (state.gameIncompatible === true) {
@@ -278,6 +295,6 @@ export const alertView = (
       : roundIdAndVerify(el, m, error.roundId, options, announce)),
     error.retry &&
       retry !== undefined &&
-      button(el, m["action.retry"], "retry", retry),
+      button(el, m[error.retryLabel ?? "action.retry"], "retry", retry),
   ];
 };

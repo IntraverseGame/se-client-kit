@@ -153,7 +153,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     take(read, cause);
   };
 
-  /** "Try again" (W-42): the Snapshot is read again, as the player asked. */
+  /** "Try again", "Back to start" (W-42): the Snapshot is read again. */
   const retry = (): void => {
     apply(clearProblem(state), "player");
     void readOnce("player");

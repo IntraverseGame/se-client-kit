@@ -35,6 +35,7 @@ export type MessageKey =
   | "action.cashOut"
   | "action.copyRoundId"
   | "action.retry"
+  | "action.backToStart"
   | "action.checkAgain"
   | "action.verify"
   | "action.lobby"
@@ -118,6 +119,7 @@ const EN: Messages = {
   "action.cashOut": "Cash out",
   "action.copyRoundId": "Copy round ID",
   "action.retry": "Try again",
+  "action.backToStart": "Back to start",
   "action.checkAgain": "Check again",
   "action.verify": "Verify this round",
   "action.lobby": "Back to the lobby",
