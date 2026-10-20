@@ -391,7 +391,8 @@ structure below.
   that never imports `shell` and holds no credential; a quorum read of block
   N's hash through its own read-only JSON-RPC module (W-26a and W-26b's rules);
   its own size budget; a required `verifyApiBaseUrl` configuration field (the
-  Wrapper's validator accepts and requires it, and does not use it; it ships
+  Wrapper's validator accepts and requires it, and does not use it at run time; the
+  validated document keeps it for `verifyContentSecurityPolicyFor`; it ships
   before, or with, any document that carries it). The field stays required
   (D-4): the preview configuration is to set it to the Wrapper's
   origin plus `/verify/v1`, a

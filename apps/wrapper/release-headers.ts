@@ -150,6 +150,11 @@ export const headersFile = (): Readonly<
 
 const originOf = (url: string): string => new URL(url).origin;
 
+const rpcOriginsOf = (config: EnvironmentConfig): string[] =>
+  Object.values(config.chain.sources).flatMap(source =>
+    source.endpoints.map(endpoint => originOf(endpoint.url)),
+  );
+
 const sourceList = (origins: Iterable<string>): string => {
   const unique = [...new Set(origins)].toSorted();
   return unique.length === 0 ? "'none'" : unique.join(" ");
@@ -157,13 +162,23 @@ const sourceList = (origins: Iterable<string>): string => {
 
 /** The header's policy for one environment's validated document. */
 export const contentSecurityPolicyFor = (config: EnvironmentConfig): string => {
-  const rpc = Object.values(config.chain.sources).flatMap(source =>
-    source.endpoints.map(endpoint => originOf(endpoint.url)),
-  );
   return CONTENT_SECURITY_POLICY_TEMPLATE.replace(
     CSP_PLACEHOLDERS.connect,
-    sourceList([originOf(config.playApiBaseUrl), ...rpc]),
+    sourceList([originOf(config.playApiBaseUrl), ...rpcOriginsOf(config)]),
   )
     .replace(CSP_PLACEHOLDERS.frame, sourceList(config.gameOrigins))
     .replace(CSP_PLACEHOLDERS.ancestors, sourceList(config.operatorOrigins));
 };
+
+/**
+ * The verify page's header policy for one environment's validated document: its
+ * `connect-src` names the verify API's origin and the configured RPC endpoints'
+ * (specs/verify-page.md, Security).
+ */
+export const verifyContentSecurityPolicyFor = (
+  config: EnvironmentConfig,
+): string =>
+  VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE.replace(
+    VERIFY_CSP_PLACEHOLDER,
+    sourceList([originOf(config.verifyApiBaseUrl), ...rpcOriginsOf(config)]),
+  );

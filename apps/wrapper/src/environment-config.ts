@@ -25,6 +25,11 @@ export type EnvironmentConfig = {
   readonly playApiBaseUrl: string;
   /** The verify page base (W-39). */
   readonly verifyBaseUrl: string;
+  /**
+   * The verify API base, ending with `/verify/v1`. The Wrapper does not call
+   * it; the verify page's policy names its origin (`release-headers.ts`).
+   */
+  readonly verifyApiBaseUrl: string;
   /** The allow-list of game origins D (W-37), at least one. */
   readonly gameOrigins: readonly string[];
   /** The allow-list of operator page origins A (W-49); may be empty. */
@@ -257,6 +262,7 @@ export const validateEnvironmentConfig = (
       chain: chain.config,
       playApiBaseUrl,
       verifyBaseUrl,
+      verifyApiBaseUrl,
       gameOrigins,
       operatorOrigins,
     }),

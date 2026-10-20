@@ -265,10 +265,12 @@ would need a looser policy:
   origins), `frame-src {{gameOrigins}}`, and
   `frame-ancestors {{operatorOrigins}}` (`'none'` when the list is empty).
   `contentSecurityPolicyFor` computes the filled policy for a validated
-  document. `Permissions-Policy` turns off camera, microphone, geolocation,
-  payment, USB, MIDI, display capture, credential `get`, and clipboard read
-  (clipboard write is not a recognised feature and is not listed); this list is
-  proposed for review;
+  document; `verifyContentSecurityPolicyFor` does the same for the verify page's
+  (its `connect-src` takes the origin of `verifyApiBaseUrl`, which the validated
+  document keeps, and the RPC endpoints' origins). `Permissions-Policy` turns
+  off camera, microphone, geolocation, payment, USB, MIDI, display capture,
+  credential `get`, and clipboard read (clipboard write is not a recognised
+  feature and is not listed); this list is proposed for review;
 - the verify page (`apps/verify`, built on its own) is copied into the output
   under `verify/` with the same rules: its own `<meta>` policy (the one above
   with `worker-src 'none'`), SRI on every script and stylesheet, which must lie
