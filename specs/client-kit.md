@@ -250,10 +250,17 @@ would need a looser policy:
 - `headers.json` holds the recommended headers by path pattern: `/*` for the
   Wrapper's, and `/verify/*` for the verify page's
   ([verify page](./verify-page.md), V-16 and Security), which replace the
-  Wrapper's for that path rather than add to them. The Wrapper's policy is
-  `default-src 'none'`, `'self'` for scripts, styles, images, and fonts,
-  `base-uri`, `form-action`, and `object-src` `'none'`, Trusted Types required,
-  and three placeholders the deploy side fills from the environment's document:
+  Wrapper's for that path rather than add to them. That holds only if the host
+  applies the most specific rule; a host that merges every matching rule (some
+  do) would send both policies, and the browser would enforce both: the
+  Wrapper's `connect-src` does not list the verify API's origin, so the page
+  could not reach a verify API on another origin. The hosting step therefore
+  excludes `/verify/*` from `/*`, or serves the Wrapper's rule only with headers
+  safe on every path, and checks the real response headers of a preview deploy.
+  No hosting step exists yet. The Wrapper's policy is `default-src 'none'`,
+  `'self'` for scripts, styles, images, and fonts, `base-uri`, `form-action`,
+  and `object-src` `'none'`, Trusted Types required, and three placeholders the
+  deploy side fills from the environment's document:
   `connect-src 'self' {{connectOrigins}}` (the Play API's and the RPC endpoints'
   origins), `frame-src {{gameOrigins}}`, and
   `frame-ancestors {{operatorOrigins}}` (`'none'` when the list is empty).

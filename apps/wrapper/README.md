@@ -65,13 +65,15 @@ own and held to the same rules, with its own policy. Beside the pages,
 `headers.json` holds the recommended response headers by path: `/*` for the
 Wrapper (a strict `Content-Security-Policy`, `Referrer-Policy: no-referrer`, and
 a `Permissions-Policy`) and `/verify/*` for the verify page, with placeholders
-for the origins each environment configures; `integrity-manifest.json` holds the
-SHA-256 of every other file. The build reads its output back and fails unless it
-holds only regular files (no symbolic link), exactly those the manifest lists,
-each with its hash, and only the allowed types: scripts and stylesheets a page
-loads with their integrity, the two JSON files above, and the two pages,
-`index.html` and `verify/index.html`. Any other type, such as another HTML file
-or an SVG, fails the build.
+for the origins each environment configures (a host must apply only the more
+specific rule on `/verify/*`; one that merges matching rules would send both
+policies); `integrity-manifest.json` holds the SHA-256 of every other file. The
+build reads its output back and fails unless it holds only regular files (no
+symbolic link), exactly those the manifest lists, each with its hash, and only
+the allowed types: scripts and stylesheets a page loads with their integrity,
+the two JSON files above, and the two pages, `index.html` and
+`verify/index.html`. Any other type, such as another HTML file or an SVG, fails
+the build.
 
 ## Test data never ships
 
