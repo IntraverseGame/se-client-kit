@@ -15,6 +15,7 @@ import {
   VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE,
   VERIFY_CSP_PLACEHOLDER,
   VERIFY_META_CONTENT_SECURITY_POLICY,
+  verifyContentSecurityPolicyFor,
   verifyHeaders,
   wrapperHeaders,
   headersFile,
@@ -120,6 +121,37 @@ describe("contentSecurityPolicyFor", () => {
       contentSecurityPolicyFor(configOf({ operatorOrigins: [] })),
     );
     expect(policy.get("frame-ancestors")).toBe("'none'");
+  });
+});
+
+describe("verifyContentSecurityPolicyFor", () => {
+  it("limits connect-src to the page's own origin, the verify API, and the RPCs", () => {
+    const policy = directives(
+      verifyContentSecurityPolicyFor(
+        configOf({ rpcEndpoints: { [SOURCE]: endpoints(2) } }),
+      ),
+    );
+    expect(policy.get("connect-src")).toBe(
+      "'self' https://rpc1.example https://rpc2.example https://se.example",
+    );
+  });
+
+  it("fills its one placeholder and keeps the rest of the template", () => {
+    const filled = verifyContentSecurityPolicyFor(configOf({}));
+    expect(filled).not.toContain("{{");
+    expect(filled.replace(/connect-src [^;]*/u, "")).toBe(
+      VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE.replace(/connect-src [^;]*/u, ""),
+    );
+  });
+
+  it("names the verify API's origin even when it differs from the Play API's", () => {
+    const policy = directives(
+      verifyContentSecurityPolicyFor(
+        configOf({ verifyApiBaseUrl: "https://verify-api.example/verify/v1" }),
+      ),
+    );
+    expect(policy.get("connect-src")).toContain("https://verify-api.example");
+    expect(policy.get("connect-src")).not.toContain("https://se.example");
   });
 });
 

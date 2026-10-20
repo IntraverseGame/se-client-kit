@@ -17,7 +17,7 @@ the page's HTML and module entry (`index.html`, `src/main.ts`, mounting at
 `#verify-root`), and the build and release (V-15 to V-17); and the e2e fake of
 the verify API with VT-5's browser rows
 ([The e2e fake](#the-e2e-fake-of-the-verify-api-built)). Not built: the e2e rows
-VT-6 to VT-9. The response body waits for the verify API document, to come; what
+VT-6 to VT-8. The response body waits for the verify API document, to come; what
 depends on it is marked `TODO(verify API)`. Its four design decisions were made
 by the human on 2026-10-18, and five more on the kernel derivations on
 2026-10-19 ([Decisions](#decisions)).
@@ -447,11 +447,14 @@ version part, VT-2 for checks 5 and 7, and VT-10's source check) are:
   (`release-sri.ts`, shared with the Wrapper's page), listing its files in the
   integrity manifest, and holding them to the output allow-list with
   `verify/index.html` as the second HTML file. `headers.json` holds the page's
-  headers under `/verify/*`. The size budget measures "verify output" and
-  "verify page, gzip" apart from the Wrapper's (`tools/size-budget.ts`); their
-  limits are still the provisional ones, equal to the Wrapper's; the first build
-  of the real page measured 119788 bytes (output) and 39199 bytes (gzip), both
-  within them, and the human sets the limits from it.
+  headers under `/verify/*`, and `verifyContentSecurityPolicyFor`
+  (`apps/wrapper/release-headers.ts`) fills their `{{verifyConnectOrigins}}`
+  from a validated environment document. The size budget measures "verify
+  output" and "verify page, gzip" apart from the Wrapper's
+  (`tools/size-budget.ts`); their limits are still the provisional ones, equal
+  to the Wrapper's; the first build of the real page measured 119788 bytes
+  (output) and 39199 bytes (gzip), both within them, and the human sets the
+  limits from it.
 
 The page around them is built too:
 
