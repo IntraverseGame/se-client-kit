@@ -1,0 +1,256 @@
+/*
+ * The verify page (V-14): WCAG 2.2 AA, as the Wrapper's own UI. Text contrast
+ * is at least 4.5:1 on both themes, sizes are in rem so the page reflows at
+ * 200 % zoom, every target is at least 44 by 44 CSS pixels (V-14 asks 24),
+ * focus is always visible, and motion stops under prefers-reduced-motion.
+ * Hashes and addresses are monospaced and wrap. No remote resource: the
+ * page's policy allows same-origin styles only.
+ */
+
+:root {
+  color-scheme: light dark;
+  --vp-bg: #ffffff;
+  --vp-fg: #1a1a1a;
+  --vp-muted: #4a4a4a;
+  --vp-border: #6b6b6b;
+  --vp-accent: #0b5cad;
+  --vp-accent-fg: #ffffff;
+  --vp-match: #136b2f;
+  --vp-mismatch: #a1261b;
+  --vp-error-bg: #fdecea;
+  --vp-focus: #0b5cad;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --vp-bg: #121212;
+    --vp-fg: #f2f2f2;
+    --vp-muted: #c4c4c4;
+    --vp-border: #9a9a9a;
+    --vp-accent: #8cc4ff;
+    --vp-accent-fg: #0a0a0a;
+    --vp-match: #7ddc97;
+    --vp-mismatch: #ff9c90;
+    --vp-error-bg: #2b1513;
+    --vp-focus: #8cc4ff;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--vp-bg);
+  color: var(--vp-fg);
+  font-family: system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+#verify-root {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.vp-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.25;
+}
+
+.vp-subheading {
+  margin: 1rem 0 0;
+  font-size: 1.25rem;
+}
+
+.vp-text,
+.vp-hint {
+  margin: 0 0 0.5rem;
+}
+
+.vp-hint {
+  color: var(--vp-muted);
+}
+
+.vp-alert {
+  padding: 0.75rem;
+  border: 0.125rem solid var(--vp-mismatch);
+  background: var(--vp-error-bg);
+}
+
+.vp-alert:empty {
+  display: none;
+}
+
+.vp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vp-label {
+  font-weight: 600;
+}
+
+.vp-input {
+  min-height: 2.75rem;
+  padding: 0.5rem;
+  border: 0.125rem solid var(--vp-border);
+  background: var(--vp-bg);
+  color: var(--vp-fg);
+  font-family: ui-monospace, monospace;
+  font-size: 1rem;
+}
+
+.vp-input[aria-invalid="true"] {
+  border-color: var(--vp-mismatch);
+}
+
+.vp-field-error {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  color: var(--vp-mismatch);
+}
+
+.vp-button,
+.vp-copy {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 0.125rem solid var(--vp-accent);
+  background: var(--vp-accent);
+  color: var(--vp-accent-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.vp-button {
+  align-self: flex-start;
+}
+
+.vp-copy {
+  border-color: var(--vp-border);
+  background: transparent;
+  color: var(--vp-fg);
+}
+
+.vp-rows {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0 0 0.5rem;
+}
+
+.vp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+}
+
+.vp-row__label {
+  color: var(--vp-muted);
+  font-weight: 600;
+}
+
+.vp-row__value {
+  min-width: 0;
+  margin: 0;
+}
+
+.vp-mono {
+  font-family: ui-monospace, monospace;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.vp-checks {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.vp-check {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 0.0625rem solid var(--vp-border);
+}
+
+.vp-check__title,
+.vp-comparison__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.vp-check--matches .vp-check__title,
+.vp-comparison--matches .vp-comparison__name {
+  color: var(--vp-match);
+}
+
+.vp-check--mismatch .vp-check__title,
+.vp-check--unverified .vp-check__title,
+.vp-comparison--mismatch .vp-comparison__name {
+  color: var(--vp-mismatch);
+}
+
+.vp-degraded {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+}
+
+.vp-icon {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+:focus-visible {
+  outline: 0.1875rem solid var(--vp-focus);
+  outline-offset: 0.125rem;
+}
+
+.vp-heading:focus {
+  outline: none;
+}
+
+.vp-heading:focus-visible {
+  outline: 0.1875rem solid var(--vp-focus);
+}
+
+.vp-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none;
+    transition: none;
+    scroll-behavior: auto;
+  }
+}

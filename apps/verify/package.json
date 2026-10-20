@@ -111,10 +111,10 @@
     }
   },
   "dependencies": {
+    "@intraverse/se-client-contracts": "workspace:*",
     "@intraverse/se-client-signing": "workspace:*"
   },
   "devDependencies": {
-    "@intraverse/se-client-contracts": "workspace:*",
     "vite": "8.3.4"
   }
 }
