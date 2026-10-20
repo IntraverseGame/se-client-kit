@@ -67,6 +67,7 @@ describe("sync", () => {
     expect(entries.map(entry => entry.path)).toEqual([
       "src/schemas/play.v1.openapi.yaml",
       "src/schemas/se.snapshot.v1.schema.json",
+      "src/schemas/verify.v1.openapi.yaml",
       "src/vectors/kernel/v1/derive.json",
       "src/vectors/kernel/v1/seed.json",
       "src/vectors/kernel/v1/shuffle-draw.json",

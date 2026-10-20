@@ -28,7 +28,7 @@ const undiciOf = (name: string): unknown => {
 /** The `undici` that `openapi-typescript` itself resolves. */
 const generatorUndici = (): unknown => undiciOf("openapi-typescript");
 
-describe("the Play API document's generator", () => {
+describe("the API documents' generator", () => {
   it("is openapi-typescript 6.7.6", () => {
     expect(versionOf(require.resolve("openapi-typescript/package.json"))).toBe(
       "6.7.6",
@@ -53,6 +53,14 @@ describe("the Play API document's generator", () => {
     const generated = await generateContractsFiles(packageDir);
     expect(generated.get("src/generated/play.ts")).toBe(
       readFileSync(join(packageDir, "src", "generated", "play.ts"), "utf8"),
+    );
+  });
+
+  it("regenerates the committed verify API types under it", async () => {
+    const packageDir = join(root, "packages", "contracts");
+    const generated = await generateContractsFiles(packageDir);
+    expect(generated.get("src/generated/verify.ts")).toBe(
+      readFileSync(join(packageDir, "src", "generated", "verify.ts"), "utf8"),
     );
   });
 });

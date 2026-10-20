@@ -1,5 +1,6 @@
 // The Play API client: one function per operation of the vendored Play API
-// document (`/play/v1`), on the request layer.
+// document (`/play/v1`), and the verify API's read (`/verify/v1`), on the
+// request layer.
 
 export type { RequestDescription } from "./errors.ts";
 export { newIntent, type Intent, type RandomUuid } from "./idempotency.ts";
@@ -71,6 +72,13 @@ export {
   type RefreshConfig,
   type TokenDeadline,
 } from "./token-schedule.ts";
+export {
+  VERIFY_ROUTES,
+  getRoundVerification,
+  verifyRoute,
+  type VerifyOperationId,
+  type VerifyRoute,
+} from "./verify-api.ts";
 export {
   DEFAULT_REQUEST_TIMEOUT_MS,
   bearerAuthorization,

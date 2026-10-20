@@ -1,7 +1,9 @@
 // Test-only: rounds built from the vendored Snapshot vectors (read through the
-// `contracts` test-only entry), parsed by the page's own verify API module so
-// the tests see exactly the evidence the page would, a configuration pinned to
-// a vector's values, and a fake JSON-RPC `fetch` for the chain read.
+// `contracts` test-only entry), written as the verify API's `RoundVerification`
+// body (`verifyBody`: the vectors hold the signed values, and no vendored
+// vector is a verify API body) and parsed by the page's own verify API module
+// so the tests see exactly the evidence the page would, a configuration pinned
+// to a vector's values, and a fake JSON-RPC `fetch` for the chain read.
 
 import { snapshotVectors } from "@intraverse/se-client-contracts/testing";
 
@@ -9,6 +11,7 @@ import type { ChainReadDeps } from "../chain-read.ts";
 import type { VerifyConfig } from "../environment-config.ts";
 import type { RoundEvidence } from "../round-evidence.ts";
 import { createVerifyApi } from "../verify-api.ts";
+import { asRecord, verifyBody } from "./verify-body.ts";
 
 type Json = Record<string, unknown>;
 
@@ -99,8 +102,8 @@ const idleClock = {
   },
 };
 
-/** The body parsed as the page's verify API module parses it. */
-export const evidenceOf = async (body: unknown): Promise<RoundEvidence> => {
+/** The page's verify API module's reading of a body. */
+export const evidenceOfBody = async (body: unknown): Promise<RoundEvidence> => {
   const api = createVerifyApi({
     fetch: (() =>
       Promise.resolve(
@@ -115,6 +118,10 @@ export const evidenceOf = async (body: unknown): Promise<RoundEvidence> => {
   }
   return result.evidence;
 };
+
+/** A Snapshot, written as the verify API's body and read as the page does. */
+export const evidenceOf = (snapshot: unknown): Promise<RoundEvidence> =>
+  evidenceOfBody(verifyBody(asRecord(snapshot)));
 
 /** What one fake endpoint answers: a block hash, or nothing. */
 export type EndpointReply = {

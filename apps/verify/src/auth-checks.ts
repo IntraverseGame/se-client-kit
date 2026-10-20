@@ -35,6 +35,7 @@ import { roundIdBytes32 } from "./round-id.ts";
 const DOMAIN_NAME = "SuperEngine";
 const DOMAIN_VERSION = "1";
 const NO_AUTH = "The round carries no createRoundAuth.";
+const NO_ENTROPY = "The round carries no entropy block yet.";
 
 const lower = (value: string | undefined): string | undefined =>
   value?.toLowerCase();
@@ -62,8 +63,20 @@ export const checkEntropyTarget = (
   evidence: RoundEvidence,
   config: VerifyConfig,
 ): CheckResult => {
-  const { source, blockNumber } = evidence.randomnessProof;
   const auth = evidence.createRoundAuth;
+  if (evidence.randomnessProof === undefined) {
+    return {
+      ...settled(2, [
+        compare(
+          "newRound.randomnessTarget",
+          undefined,
+          auth?.newRound.randomnessTarget,
+        ),
+      ]),
+      note: NO_ENTROPY,
+    };
+  }
+  const { source, blockNumber } = evidence.randomnessProof;
   const pinned = Object.hasOwn(config.sources, source)
     ? config.sources[source]
     : undefined;
@@ -213,7 +226,7 @@ export const checkSignature = (
         compare(
           "newRound.roundSecretHash",
           auth.newRound.roundSecretHash,
-          evidence.randomnessProof.roundSecretHash,
+          evidence.randomnessProof?.roundSecretHash,
         ),
       ],
       {

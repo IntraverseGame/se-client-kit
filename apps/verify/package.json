@@ -48,7 +48,8 @@
       ],
       "dependencies": [
         "../../packages/signing:build",
-        "../../packages/contracts:build"
+        "../../packages/contracts:build",
+        "../../packages/play-client:build"
       ]
     },
     "typecheck": {
@@ -77,7 +78,8 @@
       ],
       "dependencies": [
         "../../packages/signing:build",
-        "../../packages/contracts:build"
+        "../../packages/contracts:build",
+        "../../packages/play-client:build"
       ]
     },
     "test": {
@@ -106,12 +108,14 @@
       ],
       "dependencies": [
         "../../packages/signing:build",
-        "../../packages/contracts:build"
+        "../../packages/contracts:build",
+        "../../packages/play-client:build"
       ]
     }
   },
   "dependencies": {
     "@intraverse/se-client-contracts": "workspace:*",
+    "@intraverse/se-client-play-client": "workspace:*",
     "@intraverse/se-client-signing": "workspace:*"
   },
   "devDependencies": {

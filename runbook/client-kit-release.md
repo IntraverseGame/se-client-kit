@@ -123,8 +123,8 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
 1. Fetch the source repositories (`git fetch`) so the refs you name are current.
    The working trees do not matter: the sync reads committed files.
 2. Write a sources file **outside this repository** (it holds paths on your
-   machine). One entry per group: `play-api-document`, `snapshot-schema`,
-   `snapshot-vectors-valid`, `snapshot-vectors-invalid`,
+   machine). One entry per group: `play-api-document`, `verify-api-document`,
+   `snapshot-schema`, `snapshot-vectors-valid`, `snapshot-vectors-invalid`,
    `snapshot-vectors-signature`, `snapshot-vectors-typed-data`,
    `snapshot-vectors-signed-action`, `signing-vectors`, `kernel-vectors-seed`,
    `kernel-vectors-shuffle-draw`, `kernel-vectors-steps-derive`,

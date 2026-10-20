@@ -6,11 +6,8 @@ import type { CheckResult, Detail } from "./check-result.ts";
 import type { Child } from "./dom.ts";
 import type { Comparison } from "./fairness-checks.ts";
 import { MESSAGES as M } from "./messages.ts";
-import {
-  isOneStepTwoOptions,
-  type RoundEvidence,
-  type ZkProofEvidence,
-} from "./round-evidence.ts";
+import { notCheckedSection } from "./not-checked-view.ts";
+import { isOneStepTwoOptions } from "./round-evidence.ts";
 import type { RoundReport, Verdict } from "./verify-round.ts";
 import {
   iconOf,
@@ -84,84 +81,6 @@ const checksList = (
     checks.map(c => check(p, c)),
   ),
 ];
-
-const zkRows = (label: string, zk: ZkProofEvidence | undefined): Detail[] =>
-  zk === undefined
-    ? []
-    : [
-        { label, value: zk.status },
-        ...(zk.verifiedBy === undefined
-          ? []
-          : [
-              {
-                label: `${label}, ${M["notChecked.verifiedBy"]}`,
-                value: zk.verifiedBy,
-              },
-            ]),
-        ...(zk.proofLink === undefined
-          ? []
-          : [
-              {
-                label: `${label}, ${M["notChecked.proofLink"]}`,
-                value: zk.proofLink,
-              },
-            ]),
-      ];
-
-/** V-13: what the page shows and does not check. */
-const notCheckedRows = (evidence: RoundEvidence): Detail[] => {
-  const { randomnessProof, fairnessProof, createRoundAuth, record } = evidence;
-  const out: Detail[] = [];
-  if (createRoundAuth !== undefined) {
-    out.push({
-      label: M["notChecked.payoutTermsHash"],
-      value: createRoundAuth.newRound.payoutTermsHash,
-    });
-  }
-  if (createRoundAuth !== undefined) {
-    out.push({
-      label: M["notChecked.actionKey"],
-      value: createRoundAuth.newRound.actionKey,
-    });
-  }
-  if (randomnessProof.blockExplorerUrl !== undefined) {
-    out.push({
-      label: M["notChecked.blockExplorer"],
-      value: randomnessProof.blockExplorerUrl,
-    });
-  }
-  if (record !== undefined) {
-    out.push(
-      { label: M["notChecked.recordTx"], value: record.txHash },
-      { label: M["notChecked.recordChain"], value: String(record.chainId) },
-    );
-    if (record.explorerUrl !== undefined) {
-      out.push({
-        label: M["notChecked.recordExplorer"],
-        value: record.explorerUrl,
-      });
-    }
-  }
-  out.push(
-    ...zkRows(M["notChecked.randomnessZk"], randomnessProof.zkProof),
-    ...zkRows(M["notChecked.fairnessZk"], fairnessProof?.zkProof),
-  );
-  return out;
-};
-
-const notCheckedSection = (
-  p: Parts,
-  evidence: RoundEvidence,
-): readonly Child[] => {
-  const entries = notCheckedRows(evidence);
-  return entries.length === 0
-    ? []
-    : [
-        p.el("h2", { class: "vp-subheading" }, [M["notChecked.heading"]]),
-        paragraph(p, [M["notChecked.text"]]),
-        rows(p, entries),
-      ];
-};
 
 /** V-6: the round id, the shape, the result, and the payout (not checked). */
 const summary = (
@@ -265,6 +184,17 @@ export const reportView = (p: Parts, report: RoundReport): View => {
             body: [
               paragraph(p, [M["notEnded.text"]]),
               retryButton(p, "action.checkAgain"),
+              summary(p, report, false),
+              ...details,
+            ],
+          };
+        case "voided":
+        case "refused":
+          return {
+            heading: M[`${verdict.reason}.heading`],
+            icon: "info",
+            body: [
+              paragraph(p, [M[`${verdict.reason}.text`]]),
               summary(p, report, false),
               ...details,
             ],

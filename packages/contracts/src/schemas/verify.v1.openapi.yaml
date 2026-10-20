@@ -1,0 +1,440 @@
+openapi: 3.0.3
+info:
+  title: SuperEngine Verify API
+  version: 1.0.0
+  description: |
+    The public verify API, served under `/verify/v1`. Anyone can read a
+    round's public evidence and check its outcome: no credential is needed.
+    Design-first: this document is the contract. A breaking change creates
+    `/verify/v2`; `/verify/v1` never takes one.
+
+    **What it answers.** While a round is in play it shows only what is
+    already public: the commitments, the entropy block, and the round's
+    creation authorization. The secret, the seed and the signed actions are
+    shown once the round is closed. A closed round also carries the result
+    the SuperEngine fairness kernel recomputes from that evidence, and a list
+    of checks, each `passed`, `failed`, or `not_applicable` with a reason.
+    Everything a check reads is in the response, so a client can repeat each
+    check offline with the published kernel and its public vector sets.
+
+    **Caching and limits.** A closed round's answer does not change and is
+    cacheable; a round in play is not. Requests are rate limited per client:
+    past the limit the answer is `429` with `Retry-After`.
+
+    **Errors** are `application/problem+json` with a typed `code` and a
+    `retryable` hint. Branch on `code`, never on `title` or `detail`.
+
+    **Encodings.** Field names are lowerCamelCase. Byte strings are `0x` and
+    lowercase hex. Amounts are base-10 integer strings of base units with the
+    currency's `decimals`; parse them with an arbitrary-precision integer.
+servers:
+  - url: /
+security: []
+tags:
+  - name: rounds
+    description: A round's public evidence and its recomputation.
+paths:
+  /verify/v1/rounds/{roundId}:
+    get:
+      operationId: getRoundVerification
+      summary: Read and recompute a round
+      description: |
+        Answers the round's public evidence. Before the round is closed, only
+        its public record (`closed` is false, every check `not_applicable`).
+        Once closed: the revealed secret and seed, the entropy value, the
+        signed actions with the transcript hash, the result and payout the
+        kernel recomputes, and the checks. A voided round shows its
+        `voidReason` and its revealed secret.
+      tags: [rounds]
+      parameters:
+        - name: roundId
+          in: path
+          required: true
+          description: The round, a UUIDv7 in lowercase.
+          schema: { $ref: "#/components/schemas/RoundId" }
+      responses:
+        "200":
+          description: The round's evidence.
+          headers:
+            Cache-Control:
+              description: |
+                `public, max-age=3600` for a closed round; `no-cache` while
+                the round is in play.
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RoundVerification" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+components:
+  schemas:
+    RoundId:
+      type: string
+      description: A UUIDv7 in lowercase.
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      example: 01927c5e-8b3a-7f21-9c4d-5e6f7a8b9c0d
+    Hex32:
+      type: string
+      description: 32 bytes, `0x` and lowercase hex.
+      pattern: "^0x[0-9a-f]{64}$"
+    Address:
+      type: string
+      description: A 20-byte address, `0x` and lowercase hex.
+      pattern: "^0x[0-9a-f]{40}$"
+    Signature:
+      type: string
+      description: A 65-byte signature `r || s || v`, `0x` and lowercase hex.
+      pattern: "^0x[0-9a-f]{130}$"
+    HexBytes:
+      type: string
+      description: Bytes, `0x` and lowercase hex.
+      pattern: "^0x([0-9a-f]{2})*$"
+    Amount:
+      type: object
+      additionalProperties: false
+      required: [amount, currency, decimals]
+      properties:
+        amount:
+          type: string
+          description: A base-10 integer string of base units.
+          pattern: "^(0|[1-9][0-9]*)$"
+          maxLength: 78
+        currency:
+          type: string
+          example: EUR
+        decimals:
+          type: integer
+          minimum: 0
+          maximum: 77
+    RoundVerification:
+      type: object
+      additionalProperties: false
+      required: [roundId, status, closed, kernel, game, bet, shape, actions, checks]
+      properties:
+        roundId: { $ref: "#/components/schemas/RoundId" }
+        status:
+          type: string
+          enum: [idle, starting, active, won, lost, canceled, resolving]
+          description: |
+            The round's status as the game shows it. A voided round, or one
+            refused before any money moved, is `idle` with its `voidReason`
+            or `rejectCode`.
+        closeReason:
+          type: string
+          enum: [expired]
+          description: Set when the round closed by its time limit.
+        voidReason:
+          type: string
+          description: |
+            The void reason of a voided round, for example
+            `PREPARATION_DEADLINE`, `ENTROPY_TIMEOUT`, or `ROOT_LOST` (the
+            secret was lost and cannot be revealed).
+        rejectCode:
+          type: string
+          description: The code of a round refused before any money moved.
+        closed:
+          type: boolean
+          description: |
+            The round is closed: its reveal, its actions, the recomputation
+            and the checks are final.
+        kernel: { $ref: "#/components/schemas/Kernel" }
+        game: { $ref: "#/components/schemas/Game" }
+        shape:
+          type: array
+          description: The config shape chosen at the start; empty when the terms fix it.
+          items: { type: integer, minimum: 1, maximum: 25 }
+        bet: { $ref: "#/components/schemas/Amount" }
+        payout:
+          allOf: [{ $ref: "#/components/schemas/Amount" }]
+          description: What the round credits the player; set on `won` and `lost` only.
+        commitment: { $ref: "#/components/schemas/Commitment" }
+        entropy: { $ref: "#/components/schemas/Entropy" }
+        seedHash:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: SHA-256 of the seed, published when the round was released.
+        readyHash:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: |
+            `T_0 = keccak256(abi.encode(created, seedHash))`, where
+            `created = keccak256(newRound)`: the `previous` of the first
+            signed action.
+        reveal: { $ref: "#/components/schemas/Reveal" }
+        actions:
+          type: array
+          description: The accepted signed actions, in order; empty before the close.
+          items: { $ref: "#/components/schemas/SignedAction" }
+        transcriptHash:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: The struct hash of the last signed action, `T_last`.
+        recomputed: { $ref: "#/components/schemas/Recomputation" }
+        checks:
+          type: array
+          description: Every check, once, in this order.
+          items: { $ref: "#/components/schemas/Check" }
+    Kernel:
+      type: object
+      additionalProperties: false
+      required: [name, version, vectorSets]
+      properties:
+        name:
+          type: string
+          example: the SuperEngine fairness kernel
+        version:
+          type: integer
+          minimum: 1
+          description: The kernel version the round used.
+        vectorSets:
+          type: array
+          description: The public vector sets of this kernel version.
+          items: { type: string }
+          example: [kernel/public/v1/seed, kernel/public/v1/steps-derive, kernel/public/v1/derive]
+    Game:
+      type: object
+      additionalProperties: false
+      required: [gameCode, gameId, gameVersion, packageHash, terms]
+      properties:
+        gameCode: { type: string, example: coin-flip }
+        gameId: { type: integer, minimum: 0 }
+        gameVersion: { type: integer, minimum: 0 }
+        packageHash:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: SHA-256 of the game package.
+        terms: { $ref: "#/components/schemas/PayoutTerms" }
+    PayoutTerms:
+      type: object
+      additionalProperties: false
+      required: [nodes, houseEdgeWad, maxMultiplierMilli]
+      properties:
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/TermsNode" }
+        houseEdgeWad:
+          type: string
+          description: The house edge as a fraction of 10^18, a base-10 integer string.
+          pattern: "^(0|[1-9][0-9]*)$"
+        maxMultiplierMilli:
+          type: integer
+          minimum: 1
+          description: The cap of every multiplier, in thousandths.
+    TermsNode:
+      type: object
+      additionalProperties: false
+      required: [options, losers, next]
+      properties:
+        options: { type: integer, minimum: 1, maximum: 25 }
+        losers: { type: integer, minimum: 0, maximum: 24 }
+        next:
+          type: array
+          description: The nodes reachable after surviving this one; empty for a last node.
+          items: { type: integer, minimum: 0 }
+    Commitment:
+      type: object
+      additionalProperties: false
+      description: Set from the bind on.
+      properties:
+        roundSecretHash:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: SHA-256 of the round secret.
+        commitmentRef:
+          type: string
+          description: The reference of the confirmed commitment the release waited for.
+        createRoundAuth: { $ref: "#/components/schemas/CreateRoundAuth" }
+        registryChainId:
+          type: integer
+          description: The chain of the EIP-712 domain the authorization and the actions are signed under.
+        registryAddress:
+          allOf: [{ $ref: "#/components/schemas/Address" }]
+          description: The `verifyingContract` of that domain.
+        adminSigner:
+          allOf: [{ $ref: "#/components/schemas/Address" }]
+          description: The address that signed `createRoundAuth`.
+    CreateRoundAuth:
+      type: object
+      additionalProperties: false
+      required: [newRound, prepareWindow, expiryUnix, signature]
+      properties:
+        newRound:
+          allOf: [{ $ref: "#/components/schemas/HexBytes" }]
+          description: |
+            `abi.encode(NewRound)`, 352 bytes. It names the round secret's
+            hash, the randomness target, and the action key.
+        prepareWindow: { type: integer, minimum: 0 }
+        expiryUnix: { type: integer, format: int64, minimum: 0 }
+        signature: { $ref: "#/components/schemas/Signature" }
+    Entropy:
+      type: object
+      additionalProperties: false
+      description: The block the round's seed comes from. Set from the bind on.
+      properties:
+        source:
+          type: string
+          description: The entropy source's name.
+        chainId: { type: integer, format: int64, minimum: 0 }
+        block: { type: integer, format: int64, minimum: 0 }
+        value:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: The block's value; set once the round is closed with a seed.
+    Reveal:
+      type: object
+      additionalProperties: false
+      required: [roundSecret]
+      description: Published at the close. Absent when nothing was committed, and for `ROOT_LOST`.
+      properties:
+        roundSecret:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: The secret; `SHA-256(roundSecret)` is `roundSecretHash`.
+        seed:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: |
+            `SHA-256(entropy.value || roundSecret)`; absent for a round voided
+            before its release.
+        configuration:
+          allOf: [{ $ref: "#/components/schemas/HexBytes" }]
+          description: The kernel's encoding of the played configuration.
+    SignedAction:
+      type: object
+      additionalProperties: false
+      required: [sequence, kind, action, path, previous, signature]
+      properties:
+        sequence: { type: integer, minimum: 1 }
+        kind:
+          type: string
+          enum: [action, cash_out, cancel]
+          description: The EIP-712 type it was signed as (`PlayerAction`, `PlayerCashOut`, `PlayerCancel`).
+        action:
+          type: string
+          example: pick row 0 tile 1
+        path:
+          type: array
+          items: { type: integer, minimum: 0, maximum: 255 }
+        previous:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: The transcript head it was signed over.
+        signature: { $ref: "#/components/schemas/Signature" }
+    Recomputation:
+      type: object
+      additionalProperties: false
+      required: [kind, steps]
+      description: The kernel's replay of the round from its seed, its terms and its signed actions.
+      properties:
+        kind:
+          type: string
+          enum: [none, lost, won, cashed_out]
+          description: How the replay ended; `none` when the actions did not end the round.
+        payout:
+          allOf: [{ $ref: "#/components/schemas/Amount" }]
+          description: The recomputed payout; set when the replay or the expiry rule ended the round.
+        steps:
+          type: array
+          items: { $ref: "#/components/schemas/RecomputedStep" }
+    RecomputedStep:
+      type: object
+      additionalProperties: false
+      required: [node, option, losers, survived]
+      properties:
+        node: { type: integer, minimum: 0 }
+        option: { type: integer, minimum: 0 }
+        losers:
+          type: array
+          items: { type: integer, minimum: 0 }
+        survived: { type: boolean }
+    Check:
+      type: object
+      additionalProperties: false
+      required: [name, result]
+      properties:
+        name:
+          type: string
+          enum:
+            - secret_commitment
+            - randomness_target
+            - seed
+            - seed_commitment
+            - ready_hash
+            - transcript
+            - action_signatures
+            - configuration
+            - payout
+            - onchain_record
+            - proofs
+          description: |
+            `secret_commitment`: `SHA-256(roundSecret)` is `roundSecretHash`,
+            the hash `newRound` names. `randomness_target`: the entropy block
+            is the randomness target `newRound` names. `seed`: the seed is
+            `SHA-256(entropy.value || roundSecret)`. `seed_commitment`:
+            `SHA-256(seed)` is `seedHash`. `ready_hash`: `readyHash` is
+            `keccak256(abi.encode(keccak256(newRound), seedHash))`.
+            `transcript`: action n has sequence n and `previous` the struct
+            hash of action n-1 (`readyHash` for the first). `action_signatures`:
+            every action recovers to the action key `newRound` names.
+            `configuration` and `payout`: the kernel's replay gives the revealed
+            configuration and the settled payout. `onchain_record` and
+            `proofs` are not available yet.
+        result:
+          type: string
+          enum: [passed, failed, not_applicable]
+        detail:
+          type: string
+          description: Why the check did not pass, in words.
+    Problem:
+      type: object
+      description: RFC 9457 problem details with a typed `code` and a `retryable` hint.
+      required: [type, title, status, code, retryable]
+      properties:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+        requestId:
+          type: string
+        code:
+          type: string
+          description: |
+            `INVALID_ARGUMENT`, `NOT_FOUND`, `RATE_LIMITED`, `UNAVAILABLE`,
+            `INTERNAL`, and others added later. Treat an unknown code as
+            unspecific.
+          example: NOT_FOUND
+        retryable:
+          type: boolean
+  responses:
+    BadRequest:
+      description: The round id is not a UUIDv7 in lowercase (`INVALID_ARGUMENT`).
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    NotFound:
+      description: No such round (`NOT_FOUND`).
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    TooManyRequests:
+      description: The client sent too many requests (`RATE_LIMITED`). Wait for `Retry-After` seconds.
+      headers:
+        Retry-After:
+          description: Seconds to wait before the next request.
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    InternalError:
+      description: A server fault (`INTERNAL`).
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Unavailable:
+      description: A dependency is unavailable (`UNAVAILABLE`); retry later.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }

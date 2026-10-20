@@ -13,6 +13,12 @@ export const SOURCES: Readonly<Record<string, GroupSource>> = {
     ref: "main",
     path: "p/play.yaml",
   },
+  "verify-api-document": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "p/verify.yaml",
+  },
   "snapshot-schema": {
     name: "backend",
     repo: "r",
@@ -98,6 +104,7 @@ export const memorySource = (): MemorySource => {
     ["s/typed-data/e.json", '{"e":6}\n'],
     ["s/signed-action/f.json", '{"f":7}\n'],
     ["p/play.yaml", "openapi: 3.0.3\n"],
+    ["p/verify.yaml", "openapi: 3.0.3\n"],
     ["v/signing.json", '{"s":3}\n'],
     ["k/seed.json", '{"k":8}\n'],
     ["k/steps-derive.json", '{"k":9}\n'],

@@ -15,6 +15,15 @@ export type {
   operations as PlayApiOperations,
   paths as PlayApiPaths,
 } from "./generated/play.ts";
+// The verify API document's types (/verify/v1) are named the same way:
+// `VerifyApiPaths`, `VerifyApiOperations`, `VerifyApiComponents`, and
+// `VerifyApiOperationRoutes`.
+export type {
+  components as VerifyApiComponents,
+  operationRoutes as VerifyApiOperationRoutes,
+  operations as VerifyApiOperations,
+  paths as VerifyApiPaths,
+} from "./generated/verify.ts";
 export type {
   Address,
   Amount,

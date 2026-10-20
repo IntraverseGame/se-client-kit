@@ -18,6 +18,7 @@ import {
 } from "./fixtures/page.ts";
 import { failing, mount } from "./fixtures/render.ts";
 import { MESSAGES as M } from "./messages.ts";
+import type { RandomnessProofEvidence } from "./round-evidence.ts";
 import { FIELD_ID } from "./view-parts.ts";
 
 const FIELD = `#${FIELD_ID}`;
@@ -121,6 +122,24 @@ describe("the report (V-6 to V-8)", () => {
     expect(ui.text()).not.toContain(M["round.result"]);
   });
 
+  it.each(["voided", "refused"] as const)(
+    "V-8: a %s round says so, in plain words, with no check-again control",
+    reason => {
+      const ui = mount();
+      ui.show({
+        kind: "report",
+        report: report(
+          { kind: "not-recomputable", reason },
+          { evidence: evidence({ status: "idle", closure: reason }) },
+        ),
+      });
+      expect(ui.text()).toContain(M[`${reason}.heading`]);
+      expect(ui.text()).toContain(M[`${reason}.text`]);
+      expect(ui.text()).not.toContain(M["action.checkAgain"]);
+      expect(ui.text()).not.toContain(M["notEnded.heading"]);
+    },
+  );
+
   it("V-8: an unknown kernel version is named", () => {
     const ui = mount();
     ui.show({
@@ -141,6 +160,10 @@ describe("the report (V-6 to V-8)", () => {
         { kind: "not-recomputable", reason: "unsupported-shape" },
         {
           evidence: evidence({
+            terms: [
+              { options: 2, losers: 1, next: [1] },
+              { options: 2, losers: 1, next: [] },
+            ],
             steps: [
               { optionCount: 2, selectedIndex: 1, losingIndex: 0 },
               { optionCount: 2, selectedIndex: 0, losingIndex: 1 },
@@ -195,6 +218,7 @@ describe("shown, not checked (V-13)", () => {
   it("shows links and proofs from the API as text, labelled not checked", () => {
     const link = 'https://explorer.example/tx/1"><img src=x onerror=alert(1)>';
     const base = evidence();
+    const proof = base.randomnessProof as RandomnessProofEvidence;
     const ui = mount();
     ui.show({
       kind: "report",
@@ -203,7 +227,7 @@ describe("shown, not checked (V-13)", () => {
         {
           evidence: evidence({
             randomnessProof: {
-              ...base.randomnessProof,
+              ...proof,
               blockExplorerUrl: link,
               zkProof: {
                 status: "verified",
@@ -250,8 +274,6 @@ describe("shown, not checked (V-13)", () => {
               prepareWindow: 1,
               expiry: "2026-01-01T00:00:00Z",
               domain: {
-                name: "n",
-                version: "1",
                 chainId: 1,
                 verifyingContract: actionKey,
               },

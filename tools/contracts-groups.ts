@@ -26,6 +26,13 @@ export const GROUPS: readonly Group[] = [
     vectors: false,
   },
   {
+    id: "verify-api-document",
+    kind: "file",
+    destination: "src/schemas/verify.v1.openapi.yaml",
+    sourceName: "verify/v1 OpenAPI document",
+    vectors: false,
+  },
+  {
     id: "snapshot-schema",
     kind: "file",
     destination: "src/schemas/se.snapshot.v1.schema.json",

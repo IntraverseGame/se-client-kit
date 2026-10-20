@@ -87,6 +87,8 @@ export const evidence = (
   kernelVersion: 1,
   status: "won",
   payout: { formatted: "€1.94", value: 194n, unit: "EUR" },
+  shape: [],
+  terms: [{ options: 2, losers: 1, next: [] }],
   steps: [{ optionCount: 2, selectedIndex: 1, losingIndex: 0 }],
   randomnessProof: {
     source: "ethereum:block",

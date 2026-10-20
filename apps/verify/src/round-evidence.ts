@@ -1,7 +1,9 @@
 // The round's public evidence as the page works on it (V-6 to V-13): the
-// typed value `verify-api.ts` returns once a body validates. Nothing here
-// parses; the field names are the Snapshot's (assumed shape, TODO(verify API)).
-// Amounts are `bigint` (base units), never a `number`.
+// typed value `verify-api.ts` returns once a verify API body validates
+// (`RoundVerification` of the vendored verify API document). Nothing here
+// parses. The names are the page's own, kept from its checks; `verify-api.ts`
+// maps the document's fields to them. Amounts are `bigint` (base units), never
+// a `number`.
 
 export type RoundStatus =
   | "idle"
@@ -39,9 +41,8 @@ export type CreateRoundAuthEvidence = {
   readonly entropyChainId: number;
   readonly prepareWindow: number;
   readonly expiry: string;
+  /** The EIP-712 domain the authorization is claimed to be signed under. */
   readonly domain: {
-    readonly name: string;
-    readonly version: string;
     readonly chainId: number;
     readonly verifyingContract: string;
   };
@@ -49,6 +50,15 @@ export type CreateRoundAuthEvidence = {
   readonly signature: string;
 };
 
+/** One node of the game's payout terms: the shape the page tests (A-3). */
+export type TermsNodeEvidence = {
+  readonly options: number;
+  readonly losers: number;
+  /** The nodes reachable after surviving this one; empty for a last node. */
+  readonly next: readonly number[];
+};
+
+/** One step the round played: the node's options, the pick, and the loser. */
 export type StepEvidence = {
   readonly optionCount: number;
   readonly selectedIndex?: number | undefined;
@@ -56,7 +66,10 @@ export type StepEvidence = {
 };
 
 export type PayoutEvidence = {
-  /** Shown as given (V-6); never recomputed (V-13). */
+  /**
+   * The amount in the currency's units, written by this page from the base
+   * units and `decimals` (V-6); never recomputed (V-13).
+   */
   readonly formatted: string;
   /** Base units, read as `bigint` (never a `number`). */
   readonly value: bigint;
@@ -86,23 +99,51 @@ export type RecordEvidence = {
   readonly explorerUrl?: string | undefined;
 };
 
-/** The round's public evidence, by the Snapshot's names (assumed shape). */
+/** The round's public evidence, from the verify API's `RoundVerification`. */
 export type RoundEvidence = {
   readonly roundId: string;
+  /** `kernel.version`: the kernel version the round used (V-12a). */
   readonly kernelVersion: number;
   readonly status: RoundStatus;
   readonly closeReason?: string | undefined;
+  /**
+   * An `idle` round that will not be played: `voided` (it carries a
+   * `voidReason`) or `refused` (a `rejectCode`, refused before any money
+   * moved). The reason itself is not kept: the page does not show it.
+   */
+  readonly closure?: "voided" | "refused" | undefined;
   readonly payout?: PayoutEvidence | undefined;
+  /** `shape`: the config shape chosen at the start; empty when the terms fix it. */
+  readonly shape: readonly number[];
+  /** `game.terms.nodes`. */
+  readonly terms: readonly TermsNodeEvidence[];
+  /** The steps the kernel's replay played (`recomputed.steps`), by the API. */
   readonly steps: readonly StepEvidence[];
-  readonly randomnessProof: RandomnessProofEvidence;
+  /**
+   * The entropy block and the round-secret commitment; absent when the round is
+   * not bound to a block yet, or never was.
+   */
+  readonly randomnessProof?: RandomnessProofEvidence | undefined;
   readonly fairnessProof?: FairnessProofEvidence | undefined;
   readonly createRoundAuth?: CreateRoundAuthEvidence | undefined;
   readonly record?: RecordEvidence | undefined;
 };
 
 /**
- * A one-step, two-option config round: the only shape this page recomputes
- * (A-3, specs/verify-page.md). The shape is checked; no game is named.
+ * A one-step, two-option config round with one loser: the only shape this page
+ * recomputes (A-3, specs/verify-page.md). It reads the game's payout terms (one
+ * last node of two options of which one loses) and the config shape (empty, or
+ * the two options); no game is named.
  */
-export const isOneStepTwoOptions = (evidence: RoundEvidence): boolean =>
-  evidence.steps.length === 1 && evidence.steps[0]?.optionCount === 2;
+export const isOneStepTwoOptions = (evidence: RoundEvidence): boolean => {
+  const [node] = evidence.terms;
+  const [chosen] = evidence.shape;
+  return (
+    evidence.terms.length === 1 &&
+    node?.options === 2 &&
+    node.losers === 1 &&
+    node.next.length === 0 &&
+    (evidence.shape.length === 0 ||
+      (evidence.shape.length === 1 && chosen === 2))
+  );
+};

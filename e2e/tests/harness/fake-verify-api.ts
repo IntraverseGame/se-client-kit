@@ -4,10 +4,11 @@
 // browser process. A round id with no scripted answer gets the not-found
 // answer, like an unknown round.
 //
-// ASSUMPTION (A-1, TODO(verify API)): the verify API document is not vendored,
-// so the answers follow the page's assumed shape (`apps/verify/src/verify-api.ts`):
-// 200 with a JSON body, 404 for no such round (no body), any other status an
-// error. The fake is on the page's own origin in the suite (as in preview), so
+// The answers follow the vendored verify API document (`GET
+// /verify/v1/rounds/{roundId}`): 200 with a JSON body (the canned rounds,
+// `verify-rounds.ts`), 404 for no such round, any other status an error, each
+// with the document's `application/problem+json` body (the page branches on the
+// status only). The fake is on the page's own origin in the suite (as in preview), so
 // it sends no CORS headers. A call it does not know (another method, another
 // path) is recorded as unexpected, and the fixture fails the test. Nothing here
 // logs, and the fake holds no secret.
@@ -20,7 +21,7 @@ export type VerifyAnswer =
   | { readonly kind: "round"; readonly body: unknown }
   /** 404: no such round. */
   | { readonly kind: "not-found" }
-  /** Another non-2xx status (a scripted error), with no body. */
+  /** Another non-2xx status (a scripted error), with a `Problem` body. */
   | { readonly kind: "error"; readonly status: number }
   /** 200 with a body that is not JSON. */
   | { readonly kind: "unreadable" }
@@ -52,6 +53,34 @@ export type FakeVerifyApi = {
 
 const NO_STORE = { "cache-control": "no-store" } as const;
 
+/** The document's typed `code` of each error status it lists. */
+const PROBLEM_CODES: Readonly<Record<number, string>> = {
+  400: "INVALID_ARGUMENT",
+  404: "NOT_FOUND",
+  429: "RATE_LIMITED",
+  500: "INTERNAL",
+  503: "UNAVAILABLE",
+};
+
+/** An `application/problem+json` answer of the document's `Problem` shape. */
+const problem = async (route: Route, status: number): Promise<void> => {
+  await route.fulfill({
+    status,
+    headers: {
+      ...NO_STORE,
+      "content-type": "application/problem+json",
+      ...(status === 429 ? { "retry-after": "1" } : {}),
+    },
+    body: JSON.stringify({
+      type: "about:blank",
+      title: "Problem",
+      status,
+      code: PROBLEM_CODES[status] ?? "INTERNAL",
+      retryable: status === 429 || status === 503,
+    }),
+  });
+};
+
 const respond = async (route: Route, answer: VerifyAnswer): Promise<void> => {
   if (answer.kind === "round") {
     await route.fulfill({
@@ -60,9 +89,9 @@ const respond = async (route: Route, answer: VerifyAnswer): Promise<void> => {
       body: JSON.stringify(answer.body),
     });
   } else if (answer.kind === "not-found") {
-    await route.fulfill({ status: 404, headers: NO_STORE, body: "" });
+    await problem(route, 404);
   } else if (answer.kind === "error") {
-    await route.fulfill({ status: answer.status, headers: NO_STORE, body: "" });
+    await problem(route, answer.status);
   } else if (answer.kind === "unreadable") {
     await route.fulfill({
       status: 200,

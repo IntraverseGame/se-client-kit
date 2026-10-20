@@ -43,6 +43,14 @@ export const MESSAGES = {
   "notEnded.text":
     "The checks below are what could be checked so far. The rest waits for the round's end.",
 
+  "voided.heading": "This round was voided",
+  "voided.text":
+    "The round did not run to an end and was voided. It will not change, so there is nothing to wait for. The checks below are what could be checked.",
+
+  "refused.heading": "This round was refused",
+  "refused.text":
+    "The round was refused before any money moved. It will not change, so there is nothing to wait for. The checks below are what could be checked.",
+
   "unknownKernel.heading": "This round cannot be recomputed",
   "unknownKernel.text":
     "This page cannot recompute rounds of this kernel version. Nothing was derived for it. Kernel version:",
