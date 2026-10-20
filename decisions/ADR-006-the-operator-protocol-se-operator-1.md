@@ -117,7 +117,7 @@ are in
 - **Exit criterion.** A change to the message set or a message's fields is
   `se.operator/2`, through a new ADR that supersedes this one.
 
-## Open questions (for acceptance)
+## Open questions
 
 None for this decision. RFC-001's remaining open questions (Q4, a standalone
 launch; Q10, a technical control against a listed operator that disguises the

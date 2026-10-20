@@ -92,11 +92,11 @@ two labels, which a production setup does anyway.
 - **Exit criterion.** If a deployment needs D on a shared multi-label suffix, a
   new ADR revisits this one (for example, the vendored list).
 
-## Open questions (for acceptance)
+## Resolved questions
 
-1. **The refusal code's name** for the bridge (for example `same-site`). Built
-   with #42 as `same-site` (`ControllerMountRefusal`); confirmed by the human
-   with this decision's acceptance.
+1. **The refusal code's name** for the bridge. Resolved: built with #42 as
+   `same-site` (`ControllerMountRefusal`), and confirmed by the human with this
+   decision's acceptance.
 
 Decided by the human on 2026-10-18, and folded into the decision above: the
 loopback exemption applies only when the configuration's `environment` is
