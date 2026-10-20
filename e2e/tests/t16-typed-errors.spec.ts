@@ -1,7 +1,8 @@
 // T-16 (AC5, W-42, W-44): each typed error the fake can answer, as the answer
 // to a start, shows its message and `requestId` (a "try again" only when it is
-// retryable), and `ROUND_ACTIVE` resumes the open round; the degraded states
-// the fake can produce are each shown distinctly. Every state passes the
+// retryable, "Back to start" for a voided start), and `ROUND_ACTIVE` resumes
+// the open round; the degraded states the fake can produce are each shown
+// distinctly. Every state passes the
 // accessibility audit. The out-of-sync state, the session-ending codes in a
 // round, and a rejected Snapshot of the round are t16-round-errors.
 
@@ -40,9 +41,26 @@ const START_PROBLEMS: readonly (readonly [string, string])[] = [
 const fieldOf = (vector: string, key: string): unknown =>
   validVector(vector, "PlayProblem").input[key];
 
-/** A "try again" is offered only for a retryable problem (W-42). */
-const retryButtons = (vector: string): number =>
-  fieldOf(vector, "retryable") === true ? 1 : 0;
+/** A voided start's control is "Back to start", not "Try again" (W-42). */
+const VOIDED_START_VECTORS: ReadonlySet<string> = new Set([
+  "problem-entropy-unavailable",
+]);
+
+/** The retry control a problem shows, only for a retryable one (W-42). */
+const retryControl = (
+  vector: string,
+): {
+  readonly name: string;
+  readonly other: string;
+  readonly count: number;
+} => {
+  const voided = VOIDED_START_VECTORS.has(vector);
+  return {
+    name: voided ? "Back to start" : "Try again",
+    other: voided ? "Try again" : "Back to start",
+    count: fieldOf(vector, "retryable") === true ? 1 : 0,
+  };
+};
 
 test.describe("T-16: typed errors (W-42)", () => {
   for (const [vector, message] of START_PROBLEMS) {
@@ -64,9 +82,13 @@ test.describe("T-16: typed errors (W-42)", () => {
       await expect(alertPanel(page)).toContainText(
         String(fieldOf(vector, "requestId")),
       );
+      const control = retryControl(vector);
       await expect(
-        alertPanel(page).getByRole("button", { name: "Try again" }),
-      ).toHaveCount(retryButtons(vector));
+        alertPanel(page).getByRole("button", { name: control.name }),
+      ).toHaveCount(control.count);
+      await expect(
+        alertPanel(page).getByRole("button", { name: control.other }),
+      ).toHaveCount(0);
       expect(await auditAccessibility(page)).toEqual([]);
     });
   }
