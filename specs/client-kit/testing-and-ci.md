@@ -507,13 +507,15 @@ development-only, so it may import the test-only entry of `contracts`.
   `/verify/v1`) answering a round, not found, a scripted error, an unreadable
   body, or an abort (errors with the document's `Problem` body); canned rounds
   in the verify API document's shape, built at run time from the vendored round
-  (matching, one tampered field per check, not ended, unknown kernel); the
-  host's rewrite of `/verify/rounds/*` to the bundle's `verify/index.html`; and
-  the round tests' fake RPC endpoints for check 6. Its own tests are
-  `fake-verify-api.spec.ts`; VT-5 is `verify-page.spec.ts`, which runs against
-  the bundle's page and fails, with a message, if the bundle lacks it (it never
-  skips). The catch-all route still refuses and records any other request
-  (VT-8's last clause).
+  (matching, one tampered field per check, not ended, unknown kernel) and two
+  rounds the backend recorded (`recorded-rounds/`, a `won` and a `lost` one, so
+  checks 5 and 7 recompute and match, each with a tampered copy); the host's
+  rewrite of `/verify/rounds/*` to the bundle's `verify/index.html`; and the
+  round tests' fake RPC endpoints for check 6. Its own tests are
+  `fake-verify-api.spec.ts`; VT-5 is `verify-page.spec.ts` and
+  `verify-page-recorded.spec.ts`, which run against the bundle's page and fail,
+  with a message, if the bundle lacks it (they never skip). The catch-all route
+  still refuses and records any other request (VT-8's last clause).
 - **Locally**, `pnpm exec playwright install chromium` (in `e2e/`) installs the
   browser once; `pnpm test:e2e` runs the `chromium` project unless
   `SE_E2E_PROJECT` names another (`firefox`, `webkit`, after installing that

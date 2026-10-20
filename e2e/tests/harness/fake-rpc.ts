@@ -30,6 +30,12 @@ export type FakeRpcOptions = {
   readonly chainId: bigint;
   /** The round's `proofs.randomnessProof.blockNumber` (`N`). */
   readonly blockNumber: bigint;
+  /**
+   * The hash block `blockNumber` has on the agreeing chain, when it is a real
+   * one (a recorded round's `entropy.value`); the synthetic `blockHash` by
+   * default. Every other height, and the other chain, stay synthetic.
+   */
+  readonly blockNumberHash?: string;
   /** The origin the Wrapper calls from, for CORS. */
   readonly allowOrigin: string;
 };
@@ -71,7 +77,11 @@ export const rpcAnswer = (
   behavior: ProviderBehavior,
   method: string,
   params: unknown,
-  chain: { readonly chainId: bigint; readonly blockNumber: bigint },
+  chain: {
+    readonly chainId: bigint;
+    readonly blockNumber: bigint;
+    readonly blockNumberHash?: string | undefined;
+  },
 ): RpcAnswer | undefined => {
   if (behavior === "error") {
     return { error: { code: -32_000, message: "unavailable" } };
@@ -96,10 +106,16 @@ export const rpcAnswer = (
         : undefined;
   if (height === undefined) return undefined;
   const fork = behavior === "other-hash" ? "b" : "a";
+  const hash =
+    fork === "a" &&
+    height === chain.blockNumber &&
+    chain.blockNumberHash !== undefined
+      ? chain.blockNumberHash
+      : blockHash(height, fork);
   return {
     result: {
       number: quantity(height),
-      hash: blockHash(height, fork),
+      hash,
       parentHash: blockHash(height - 1n, fork),
     },
   };
@@ -143,6 +159,7 @@ export const createFakeRpc = (options: FakeRpcOptions): FakeRpc => {
           ? rpcAnswer(behaviors.get(provider) ?? "agree", method, params, {
               chainId: options.chainId,
               blockNumber: options.blockNumber,
+              blockNumberHash: options.blockNumberHash,
             })
           : undefined;
       if (answer === undefined) {
