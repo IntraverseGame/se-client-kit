@@ -19,10 +19,10 @@ import {
   VERIFY_PAGE,
 } from "./release-files.ts";
 
-const fail = (what: string): never => {
-  throw new Error(
-    `The Wrapper's release output ${what}; the build is refused.`,
-  );
+const WRAPPER_OUTPUT = "The Wrapper's release output";
+
+const fail = (what: string, subject = WRAPPER_OUTPUT): never => {
+  throw new Error(`${subject} ${what}; the build is refused.`);
 };
 
 /**
@@ -156,13 +156,18 @@ export const verifyOutput = async (
  * Every file under `directory`, by relative path with `/` separators. Only
  * regular files and directories are allowed: a symbolic link (to a file or a
  * directory; `isSymbolicLink()`), a socket, a FIFO, or a device refuses the
- * build, since its content would not be what was checked.
+ * build, since its content would not be what was checked. `subject` names the
+ * tree in a refusal (the verify build is read through here too).
  */
 export const readTree = async (
   directory: string,
+  subject = WRAPPER_OUTPUT,
 ): Promise<Map<string, Uint8Array>> => {
   if (!(await lstat(directory)).isDirectory()) {
-    fail("directory is not a directory (a symbolic link or another entry)");
+    fail(
+      "directory is not a directory (a symbolic link or another entry)",
+      subject,
+    );
   }
   const entries = await readdir(directory, {
     recursive: true,
@@ -173,10 +178,13 @@ export const readTree = async (
   for (const entry of entries) {
     const path = relativePath(join(entry.parentPath, entry.name));
     if (entry.isSymbolicLink()) {
-      fail(`has ${path}, a symbolic link (isSymbolicLink())`);
+      fail(`has ${path}, a symbolic link (isSymbolicLink())`, subject);
     }
     if (!entry.isFile() && !entry.isDirectory()) {
-      fail(`has ${path}, which is neither a regular file nor a directory`);
+      fail(
+        `has ${path}, which is neither a regular file nor a directory`,
+        subject,
+      );
     }
   }
   const files = new Map<string, Uint8Array>();

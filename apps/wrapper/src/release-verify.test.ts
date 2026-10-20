@@ -157,7 +157,7 @@ describe("the verify page in the release", () => {
     const dist = verifyDist();
     symlinkSync(join(dist, "index.html"), join(dist, "link.js"));
     await expect(verifyOutputFiles(dist, "/")).rejects.toThrow(
-      /symbolic link/u,
+      /^The verify build has link\.js, a symbolic link/u,
     );
   });
 

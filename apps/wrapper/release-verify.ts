@@ -48,7 +48,7 @@ export const verifyOutputFiles = async (
   if (entry?.isDirectory() !== true) {
     refuse(`has no build output at ${dist} (build apps/verify first)`);
   }
-  const files = await readTree(dist);
+  const files = await readTree(dist, "The verify build");
   const page = files.get("index.html");
   if (page === undefined) return refuse("build has no index.html");
   const html = await withIntegrity(
