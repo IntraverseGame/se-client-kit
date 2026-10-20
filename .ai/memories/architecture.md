@@ -210,7 +210,7 @@ structure below.
   Provisional session input: `bindMode` (the Wrapper wires `tip`). D is the
   redeem answer's `gameOrigin`, fixed at open; no session option gives it, so
   do not add one back (W-37). W-37's registrable-domain rule is the
-  last-two-labels comparison of ADR-007 (proposed; built: `serialized-origin.ts`,
+  last-two-labels comparison of ADR-007 (accepted; built: `serialized-origin.ts`,
   the bridge's `same-site` refusal): do not add a public suffix list. The bridge
   takes the configuration's `environment` from the session (the loopback
   exemption is `local` only); the UI's mount cannot pass it.
@@ -330,7 +330,7 @@ structure below.
   `src` set only after the bridge accepted D, with `?parentOrigin=`), into a
   game host `render.ts` builds once and never re-renders. `json-rpc.ts` is the
   tip check's transport. The operator contract
-  (`specs/wrapper/operator-embedding.md`, W-49a to W-49f; ADR-006, proposed)
+  (`specs/wrapper/operator-embedding.md`, W-49a to W-49f; ADR-006, accepted)
   is built: `message-dispatch.ts` is the page's one `message` listener,
   installed at boot before the configuration is read and routing by `source`
   (the parent to the shell's operator channel, the game frame to the bridge);

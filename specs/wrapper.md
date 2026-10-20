@@ -377,8 +377,8 @@ handshake, which gates the redeem, the start, and every signature; the lobby and
 deposit as navigations to the Snapshot's `context.links`, and the states that
 offer them; the refusal reasons; and T-9a's test plan. Decided in human review
 on 2026-10-18 (RFC-001,
-[ADR-006](../decisions/ADR-006-the-operator-protocol-se-operator-1.md), still
-proposed). Built (#42); it replaced the fail-closed minimum of 2026-10-17. See
+[ADR-006](../decisions/ADR-006-the-operator-protocol-se-operator-1.md),
+accepted). Built (#42); it replaced the fail-closed minimum of 2026-10-17. See
 [`wrapper/operator-embedding.md`](./wrapper/operator-embedding.md).
 
 ### Configuration

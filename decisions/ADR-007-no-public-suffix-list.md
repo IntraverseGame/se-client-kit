@@ -1,7 +1,7 @@
 # ADR-007 — W-37's registrable-domain rule without a public suffix list
 
-- Status: proposed
-- Date: 2026-10-18
+- Status: accepted
+- Date: 2026-10-20 (proposed 2026-10-18; accepted by the human)
 - Relates to:
   [W-37](../specs/wrapper/the-game-iframe-and-the-controller-boundary.md) (the
   game origin D), [ADR-001](./ADR-001-toolchain-and-signing.md) (the runtime
@@ -88,17 +88,15 @@ two labels, which a production setup does anyway.
   `https://wrapper.e2e.test` and `https://game.e2e-games.test`, whose keys
   differ.
 - The spec states the rule in W-37, and `TODO(W-37, registrable domain)` is
-  closed. The shell's bridge implements it with the operator handshake work
-  (#42).
+  closed. The shell's bridge implements it (#42, merged in #92).
 - **Exit criterion.** If a deployment needs D on a shared multi-label suffix, a
   new ADR revisits this one (for example, the vendored list).
 
-## Open questions (for acceptance)
+## Resolved questions
 
-1. **The refusal code's name** for the bridge (for example `same-site`). For the
-   implementer to propose with #42. Proposed and built with #42: `same-site`
-   (`ControllerMountRefusal`), for the human to confirm with this decision's
-   acceptance.
+1. **The refusal code's name** for the bridge. Resolved: built with #42 as
+   `same-site` (`ControllerMountRefusal`), and confirmed by the human with this
+   decision's acceptance.
 
 Decided by the human on 2026-10-18, and folded into the decision above: the
 loopback exemption applies only when the configuration's `environment` is
