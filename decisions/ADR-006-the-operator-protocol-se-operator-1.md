@@ -121,8 +121,9 @@ are in
 
 None for this decision. RFC-001's remaining open questions (Q4, a standalone
 launch; Q10, a technical control against a listed operator that disguises the
-Wrapper; Q16, the balance after a deposit in another tab) do not change the
-protocol.
+Wrapper) do not change the protocol. Q16, the balance after a deposit in another
+tab, was decided on 2026-10-20 (option A, a read when the page returns;
+specs/wrapper/operator-embedding.md) and does not change it either.
 
 ## References
 

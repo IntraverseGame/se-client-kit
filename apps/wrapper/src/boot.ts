@@ -21,6 +21,7 @@ import type {
   SessionOpening,
 } from "@intraverse/se-client-shell";
 
+import { watchBalance } from "./balance-refresh.ts";
 import type { Connectivity } from "./connectivity.ts";
 import type { EnvironmentConfig } from "./environment-config.ts";
 import {
@@ -51,6 +52,8 @@ export type BootOptions = {
   readonly configUrl: string;
   readonly logger: Logger;
   readonly connectivity?: Connectivity;
+  /** Calls back when the page is visible again (RFC-001 Q16). */
+  readonly returns?: (onReturn: () => void) => () => void;
   readonly copyText?: (text: string) => Promise<void>;
   /**
    * Opens the session for the accepted configuration (the shell's
@@ -101,6 +104,18 @@ export const boot = (options: BootOptions): Promise<BootResult> => {
       : { connectivity: options.connectivity }),
     ...(options.copyText === undefined ? {} : { copyText: options.copyText }),
   });
+  // The page visible again: one balance read where no poll runs. Its
+  // stop function is not kept: it lives as long as the page, since boot never
+  // disposes the app. A state that polls, errs, or is final reads none.
+  if (options.returns !== undefined) {
+    watchBalance({
+      timers: options.timers,
+      subscribe: options.returns,
+      state: app.state,
+      calling: app.calling,
+      read: app.readQuiet,
+    });
+  }
   // Installed before the document is read (W-49c's record, then check).
   const gate = createOperatorGate({
     window: options.window,

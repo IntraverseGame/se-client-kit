@@ -155,7 +155,10 @@ structure below.
   an `active` round, the start's answer from an ended round), the Wrapper
   re-reads (`snapshot-reread.ts`, W-35): 4 reads at the backoff, then one
   every 30 s, until one is not dropped for a lower `version`; reads only, no
-  notice, never in `settling` or `check-later`, nor after `ended`. The
+  notice, never in `settling` or `check-later`, nor after `ended`. At `idle`
+  and on a round's result, where nothing polls, the page becoming visible
+  again (not `focus`) reads once after a 1 s debounce (`balance-refresh.ts`, wired in
+  `boot.ts`; RFC-001 Q16): a quiet read (`readQuietly`) that drops a failure. The
   rules change only with a vendored contract change
   (W-25, W-35). The session folds them in (`session-reads.ts`): the round
   guard keys on the cancel state first (whatever the session read), a read

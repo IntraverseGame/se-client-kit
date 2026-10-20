@@ -30,6 +30,27 @@ export const droppedLower = (
   state.snapshot !== undefined &&
   read.snapshot.version < state.snapshot.version;
 
+/**
+ * A read nobody asked for (W-33, RFC-001 Q16): the session's read through
+ * `port`, if there is one. A Snapshot or the session's end goes to `accept`; a
+ * failed read (no response, a typed error, a rejected answer) is dropped, with
+ * no error state, and the last state stays. It only reads: it never sends or
+ * signs, and it is not repeated here.
+ */
+export const readQuietly = async (
+  port: (() => Promise<SnapshotRead>) | undefined,
+  accept: (read: SnapshotRead) => void,
+): Promise<void> => {
+  if (port === undefined) return;
+  let read: SnapshotRead;
+  try {
+    read = await port();
+  } catch {
+    return;
+  }
+  if (read.kind === "snapshot" || read.kind === "session-ended") accept(read);
+};
+
 /** The fast re-reads before the background rate (W-35's backoff). */
 export const FAST_REREADS = 4;
 

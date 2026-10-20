@@ -14,6 +14,7 @@ import {
   takeLaunchCode,
 } from "@intraverse/se-client-shell";
 
+import { visibilityReturns } from "./balance-refresh.ts";
 import { boot } from "./boot.ts";
 import { embeddingOf } from "./embedding.ts";
 import { observeHeight } from "./height-observer.ts";
@@ -62,6 +63,8 @@ if (host !== null) {
         };
       },
     },
+    // A tab visible again: one balance read (RFC-001 Q16).
+    returns: visibilityReturns(document),
     copyText: (text: string): Promise<void> =>
       navigator.clipboard.writeText(text),
     embedding: embeddingOf(globalThis.window),

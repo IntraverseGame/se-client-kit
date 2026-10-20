@@ -16,6 +16,6 @@ a spec.
   is decided.
 - Public: no secrets, internal hostnames, or personal data.
 
-| RFC                                              | Status | Proposal                                                                                                                                                      |
-| ------------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [RFC-001](./RFC-001-operator-launch-contract.md) | active | the operator launch handshake (`se.operator/1`), `resize`, lobby, deposit; mostly accepted 2026-10-18 (in the specs, ADR-006, ADR-007); Q4, Q10, and Q16 open |
+| RFC                                              | Status | Proposal                                                                                                                                                                         |
+| ------------------------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [RFC-001](./RFC-001-operator-launch-contract.md) | active | the operator launch handshake (`se.operator/1`), `resize`, lobby, deposit; mostly accepted 2026-10-18 (in the specs, ADR-006, ADR-007); Q4 and Q10 open (Q16 decided 2026-10-20) |

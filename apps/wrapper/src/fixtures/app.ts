@@ -2,6 +2,7 @@
 // Snapshot read port, a recording clipboard, and a switchable online state.
 // Every query helper reads the DOM as a player or assistive technology would.
 
+import { watchBalance } from "../balance-refresh.ts";
 import { validateEnvironmentConfig } from "../environment-config.ts";
 import type { LinkRules } from "../operator-links.ts";
 import type { SnapshotRead } from "../round-input.ts";
@@ -22,6 +23,8 @@ export type Mounted = {
   /** Connects the session's Snapshot read port, which answers from `answers`. */
   readonly connect: () => void;
   readonly setOnline: (online: boolean) => void;
+  /** The page is visible again (RFC-001 Q16). */
+  readonly pageReturns: () => void;
   /** Moves the clock and lets the reads it starts settle. */
   readonly step: (ms: number) => Promise<void>;
   readonly settle: () => Promise<void>;
@@ -53,6 +56,7 @@ export const mount = (
   let reads = 0;
   let online = true;
   const listeners = new Set<() => void>();
+  const returners = new Set<() => void>();
   const app = createWrapperApp({
     doc: globalThis.document,
     host,
@@ -69,6 +73,16 @@ export const mount = (
       return Promise.resolve();
     },
   });
+  const stopWatching = watchBalance({
+    timers,
+    subscribe: onReturn => {
+      returners.add(onReturn);
+      return () => returners.delete(onReturn);
+    },
+    state: app.state,
+    calling: app.calling,
+    read: app.readQuiet,
+  });
   const result = validateEnvironmentConfig(document, SE_ORIGIN);
   if (!result.ok) {
     throw new Error("fixture document refused");
@@ -76,7 +90,13 @@ export const mount = (
   app.configure(result.config);
   app.allowLinks(links);
   return {
-    app,
+    app: {
+      ...app,
+      dispose: () => {
+        stopWatching();
+        app.dispose();
+      },
+    },
     host,
     timers,
     answers,
@@ -85,6 +105,9 @@ export const mount = (
     setOnline: value => {
       online = value;
       for (const listener of listeners) listener();
+    },
+    pageReturns: () => {
+      for (const returner of returners) returner();
     },
     step: ms => stepTimers(timers, ms),
     settle: () => flush(),
