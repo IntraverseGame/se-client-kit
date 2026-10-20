@@ -516,8 +516,14 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   check (`verifyOutput`: manifest, hashes, the type allow-list, SRI-loaded
   scripts) on the files it would write; `src/read-tree.test.ts` runs
   `readTree` on a real temporary directory with symbolic links to a file and to
-  a directory (the one Wrapper test that writes to disk, under `tmpdir()`,
-  removed after each test). axe is not a component-test
+  a directory. Wrapper tests write their own files only under `tmpdir()` and
+  remove them: `read-tree` (per test), `release-verify` (a fake verify build in
+  each test that needs one, one with a symbolic link), `build-refusals` (planted
+  env files), and the test-only entry guard's scratch project
+  (`fixtures/guard-scratch.ts`, per file; its Vite build uses `write: false`).
+  Loading the real `vite.config.ts` (`build-refusals`, the guard) also makes
+  Vite write and delete a bundled config file under
+  `apps/wrapper/node_modules/.vite-temp/`. axe is not a component-test
   dependency: the axe scan of every state is the e2e suite's (T-14).
 - **Cache.** Tests are wireit scripts; a passing run is cached by its declared
   `files`. A test that reads a file outside the package's `files` (a vector, a
