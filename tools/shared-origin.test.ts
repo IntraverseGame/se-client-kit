@@ -68,4 +68,14 @@ describe("apps/verify", () => {
       ),
     ).toEqual([]);
   });
+
+  it("has an HTML page that mounts at #verify-root with no inline script or style", () => {
+    const html = readText(root, `${VERIFY}/index.html`);
+    expect(html).toContain('id="verify-root"');
+    expect(html).not.toMatch(/<style[\s>]/iu);
+    expect(html).not.toMatch(/\sstyle\s*=/iu);
+    expect(html).not.toMatch(/<script(?![^>]*\ssrc=)/iu);
+    // The release step adds the policy; the source has none of its own.
+    expect(html).not.toMatch(/content-security-policy/iu);
+  });
 });

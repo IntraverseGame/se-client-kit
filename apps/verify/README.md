@@ -4,17 +4,32 @@ The SuperEngine verify page: paste a round id and see the round recomputed in
 your browser from its public evidence, without taking the verification service's
 word for the result.
 
-**Status:** pre-release, and not a page yet. It is an application, not an npm
-package, and is never published on its own: it ships inside the Wrapper's
-release, under `verify/`. Until the page is built, what ships there is a
-placeholder that says so. Today it holds the recomputation that rests on the
-SuperEngine fairness kernel, kernelVersion 1. The page itself (reading a round,
-its states, its checks of the round's signature and of the entropy chain) is
-specified, not built yet.
+**Status:** pre-release. It is an application, not an npm package, and is never
+published on its own: it ships inside the Wrapper's release, under `verify/`. It
+holds the page's checks, its states (the form, checking, matched, mismatched,
+not recomputable, not found, and the service's errors), and their accessible
+view and its HTML page, built on the recomputation that rests on the SuperEngine
+fairness kernel, kernelVersion 1. It reads the verification service through an
+assumed answer format until that format is published.
 
-## What it recomputes today
+## What it recomputes
 
-For a Coin Flip round, under kernelVersion 1:
+For a round of one step with two options:
+
+- **Round id.** The round's `bytes32` id is the one you asked for.
+- **Entropy target.** The round was bound, before the block existed, to block N
+  of the entropy chain the page's configuration pins.
+- **The backend's signature.** The round's creation was signed by the configured
+  signer under the configured registry domain, over the same secret commitment
+  the round reveals.
+- **Ready evidence.** The ready hash binds the round to its seed commitment.
+- **Block N.** The page reads block N's hash from the configured chain endpoints
+  itself, and at least the configured quorum (`minRpcQuorum`) of them must
+  agree. A local or preview configuration may use one endpoint with a quorum of
+  1; the page then shows a "chain check not independent (development)" indicator
+  beside the check.
+
+And, under kernelVersion 1:
 
 - **Commitment and reveal.** `roundSecretHash` is the SHA-256 of the revealed
   round secret's 32 bytes, and `seedHash` is the SHA-256 of the revealed seed's

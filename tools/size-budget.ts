@@ -53,14 +53,14 @@ export const VERIFY_PAGE_GZIP = "verify page, gzip";
 /**
  * The verify page's budget, in bytes.
  *
- * TODO(first build): PROVISIONAL, not measured. The human sets both limits from
- * the first build of the real verify page, about 25% over its measurement
- * (specs/verify-page.md, V-16), and records the sizes in
- * specs/client-kit/testing-and-ci.md. Until then they equal the Wrapper's. When
- * the real limits are set, remove this TODO together with the test that looks
- * for it in this file's text ("keeps its limits marked provisional" in
- * tools/size-budget-verify.test.ts), a deliberately brittle source-string
- * check.
+ * TODO(first build): PROVISIONAL. The first build of the real page measured
+ * 119788 bytes and 39199 bytes gzip, both within them. The human sets both
+ * limits from that measurement, about 25% over it (specs/verify-page.md, V-16),
+ * and records the sizes in specs/client-kit/testing-and-ci.md. Until then they
+ * equal the Wrapper's. When the real limits are set, remove this TODO together
+ * with the test that looks for it in this file's text ("keeps its limits marked
+ * provisional" in tools/size-budget-verify.test.ts), a deliberately brittle
+ * source-string check.
  */
 export const VERIFY_BUDGET: readonly Budget[] = [
   { name: VERIFY_OUTPUT, limit: 204_800 },

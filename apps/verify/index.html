@@ -1,6 +1,4 @@
 <!doctype html>
-<!-- PLACEHOLDER (V-15): the release build's stand-in page. The verify page's
-     own HTML replaces this file and src/placeholder-entry.ts together. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -9,12 +7,17 @@
       content="width=device-width, initial-scale=1"
     />
     <title>SuperEngine verify</title>
+    <link
+      rel="stylesheet"
+      href="/src/styles.css"
+    />
   </head>
   <body>
-    <div id="app"></div>
+    <div id="verify-root"></div>
+    <noscript>The verify page needs JavaScript to recompute a round.</noscript>
     <script
       type="module"
-      src="/src/placeholder-entry.ts"
+      src="/src/main.ts"
     ></script>
   </body>
 </html>

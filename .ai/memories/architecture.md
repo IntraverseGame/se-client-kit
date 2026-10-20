@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-19 (operator launch contract pull request, #42: the shell's operator channel and `serialized-origin.ts`, the Wrapper's operator gate, dispatch, and links; verify kernel pull request: `apps/verify` with the kernel derivations of checks 5 and 7, `signing`'s raw `keccak256`; start resend pull request: `startMayBeStored`, W-22's one resend of a start whose round may exist; Play API document 075b850: a start, move, or cash-out may be stored after a lost response, `UNAVAILABLE`, or `INTERNAL`; Play API document b47b286: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request, 726f0a2: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs b6e1e48: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-20 (verify page states pull request: `apps/verify`'s states, view, checks 1 to 4 and 6, configuration read, and the assumed verify API read; operator launch contract pull request, #42: the shell's operator channel and `serialized-origin.ts`, the Wrapper's operator gate, dispatch, and links; verify kernel pull request: `apps/verify` with the kernel derivations of checks 5 and 7, `signing`'s raw `keccak256`; start resend pull request: `startMayBeStored`, W-22's one resend of a start whose round may exist; Play API document: a start, move, or cash-out may be stored after a lost response, `UNAVAILABLE`, or `INTERNAL`; Play API document: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -28,9 +28,10 @@ structure below.
   `play-client` ← `shell` ← `wrapper` (app); `signing` ← `shell`; `signing`'s and
   `snapshot`'s tests read vectors from `contracts`' test-only entry (read only by
   tests; the consumers are listed in `specs/client-kit.md`);
-  `signing` ← `verify` (app; never `shell`, and nothing imports it; it may
-  later take `contracts`' runtime entry, `play-client`, and `snapshot`; its
-  tests read the kernel vectors from the test-only entry);
+  `signing` and `contracts`' runtime entry ← `verify` (app; never `shell`, and
+  nothing imports it; it reads the Snapshot schema's patterns from the runtime
+  entry, and may later take `play-client` and `snapshot`; its tests read the
+  vectors from the test-only entry);
   `reference-game` depends on nothing but the controller protocol's types
   (`import type` from `@intraverse/se-client-shell/controller`, a `types`-only
   `exports` entry; a Vite guard fails its build on a runtime import of any package, kit or
@@ -362,20 +363,24 @@ structure below.
 ## Known open items
 
 - **The verify page** is the kit's (backend TPO, 2026-10-18), specified in
-  `specs/verify-page.md` and partly built: `apps/verify` (private) holds the
-  derivations of checks 5 and 7 and a Vite `build` (base `/verify/`, the
-  test-only-entry guard on, production only) of a placeholder page that ships
-  until the real page replaces it. The Wrapper's build copies
+  `specs/verify-page.md` and built but for the e2e rows: `apps/verify` (private)
+  holds checks 1 to 7, the configuration read, the states and their view (V-3
+  to V-14; "What is built" in the spec), its HTML (`index.html`, mount point
+  `#verify-root`, entry `src/main.ts`), and a Vite `build` (base `/verify/`,
+  the test-only-entry guard on, production only). The Wrapper's build copies
   `apps/verify/dist/` into its release under `verify/` with its own `<meta>`
   policy, SRI, and manifest entries, `headers.json` is keyed by path (`/*`,
-  `/verify/*`), and the size budget measures `verify/` apart ("What is built"
-  in the spec). The test-only-entry guard (`tools/test-only-entry-guard.ts`,
-  with `tools/guard-text.ts`) is shared by both builds from `tools/`, so
-  neither app imports the other. The rest waits for the verify API document
-  (`TODO(verify API)`); the fairness kernel's public vectors are in
-  `contracts` (`kernelVectors.v1`, 81 vectors in four sets, from se-backend
-  `9294d22`), with none yet for Coin Flip's payouts or `roundSecretHash`,
-  which the page checks against its definition.
+  `/verify/*`), and the size budget measures `verify/` apart. The
+  test-only-entry guard (`tools/test-only-entry-guard.ts`, with
+  `tools/guard-text.ts`) is shared by both builds from `tools/`, so neither app
+  imports the other. The verify API read is built to an **assumed** body (the
+  spec's A-1), and only `verify-api.ts` fetches or parses it, so the verify API
+  document replaces that one module (`TODO(verify API)`); A-1 to A-4 were
+  decided by the human on 2026-10-20 (A-1 interim until the document is
+  vendored). The fairness kernel's public vectors are in `contracts`
+  (`kernelVectors.v1`, 81 vectors in four sets, from se-backend `9294d22`),
+  with none yet for Coin Flip's payouts or `roundSecretHash`, which the page
+  checks against its definition.
   Its checks 5 and 7 follow the SuperEngine fairness kernel, kernelVersion 1
   (public; SHA-256 commitments and seed via Web Crypto, StepsDerive with the raw
   `keccak256` that `signing` exports). ShuffleDraw's input checks, hashed

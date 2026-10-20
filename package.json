@@ -128,6 +128,11 @@
     },
     "test:tools": {
       "command": "vitest run",
+      "dependencies": [
+        "./packages/contracts:build",
+        "./packages/signing:build",
+        "./packages/shell:build"
+      ],
       "files": [
         "tools/**",
         "vitest.config.ts",

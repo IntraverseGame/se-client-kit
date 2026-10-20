@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-19 (operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-20 (verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -31,7 +31,18 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   rejection limit, which the `shuffle-draw` set states, has its own unit tests
   (`drawLimit`, `acceptDraw`), since no vector rejects. VT-10, the verify page's shared-origin rule, is a text scan
   in `tools/shared-origin.test.ts` over `apps/verify`'s non-test sources and
-  HTML (comments and strings included). Only tests may import that entry, and no
+  HTML (comments and strings included). Checks 1 to 4 replay the Snapshot
+  `signature/` vectors (`src/fixtures/rounds.ts` parses them through the page's
+  own verify API read); the page's states are tested on an injected `fetch`,
+  clock, and address bar (`page-state.test.ts`, `page-state-config.test.ts`, and the driver `fixtures/page-controller.ts`), and its view in jsdom
+  (`render*.test.ts`, with `// @vitest-environment jsdom`, VT-4; axe, keyboard,
+  and zoom are the browser rows, not built). The stylesheet's V-14 rules are
+  checked from `tools/verify-page-styles.test.ts`, since `apps/verify` has no
+  Node types. `tools/config-parity.test.ts` runs one shared set of
+  configuration documents (`tools/fixtures/config-documents.ts`) through the
+  Wrapper's and the verify page's validators and requires the same verdict and
+  issues (V-3); `test:tools` builds `contracts`, `signing`, and `shell` first
+  for it. Only tests may import that entry, and no
   vector may reach a bundle (a lint rule and a build check). Prefer adding a
   vector to adding a one-off assertion.
   Released vector files are never edited. The vectors were produced by an

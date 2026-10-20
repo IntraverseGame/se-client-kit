@@ -6,6 +6,7 @@
 import {
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -63,6 +64,39 @@ afterEach(() => {
 });
 
 const REQUIRED = { requireVerify: true };
+
+/** The page's own `index.html`, as Vite would rewrite its two references. */
+const builtOwnPage = (): Readonly<Record<string, string>> => ({
+  "index.html": readFileSync(
+    join(import.meta.dirname, "../../verify/index.html"),
+    "utf8",
+  )
+    .replace("/src/main.ts", "/verify/assets/main.js")
+    .replace("/src/styles.css", "/verify/assets/main.css"),
+  "assets/main.js": "export {};",
+  "assets/main.css": "body{}",
+});
+
+describe("the verify page's own HTML in the release (VT-10, V-15 to V-17)", () => {
+  it("gets the <meta> policy with worker-src 'none' and SRI on its script and stylesheet", async () => {
+    const files = await verifyOutputFiles(verifyDist(builtOwnPage()), "/");
+    const page = new TextDecoder().decode(files.get("verify/index.html"));
+    expect(page).toContain(
+      `<meta http-equiv="Content-Security-Policy" content="${VERIFY_META_CONTENT_SECURITY_POLICY}">`,
+    );
+    expect(VERIFY_META_CONTENT_SECURITY_POLICY).toContain("worker-src 'none'");
+    expect(page.match(/integrity="sha256-/gu)).toHaveLength(2);
+    expect(page).toContain('id="verify-root"');
+  });
+
+  it("has no inline script or style", () => {
+    const html = builtOwnPage()["index.html"] as string;
+    expect(html).not.toMatch(/<style[\s>]/iu);
+    expect(html).not.toMatch(/\sstyle\s*=/iu);
+    expect(html).not.toMatch(/<script(?![^>]*\ssrc=)/iu);
+    expect(html).not.toMatch(/\son[a-z]+\s*=/iu);
+  });
+});
 
 describe("the verify page in the release", () => {
   it("signs its script, adds its own policy, and puts its files under verify/", async () => {

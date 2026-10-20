@@ -6,17 +6,19 @@ whether the evidence is consistent and whether the outcome follows from it, and
 it does not take the API's word for either. The kit builds it (decided by the
 backend's TPO, 2026-10-18); the backend owns only the API it reads.
 
-Status: **specified; partly built.** Built: the derivations of checks 5 and 7
-under the SuperEngine fairness kernel, kernelVersion 1, keyed on the kernel
-version, in `apps/verify` ([What is built](#what-is-built)), and the raw
-`keccak256` they take from `signing`, and the build and release (V-15 to V-17;
-[What is built](#what-is-built)) around a placeholder page. Not built: the page
-itself (its states and its HTML), the verify API read and its validator, checks
-1 to 4 and 6, and the rules on which reveals a round carries. The rest waits for
-the verify API document, to come, which defines the response body; what depends
-on it is marked `TODO(verify API)`. Its four design decisions were made by the
-human on 2026-10-18, and five more on the kernel derivations on 2026-10-19
-([Decisions](#decisions)).
+Status: **specified; partly built.** Built, in `apps/verify`
+([What is built](#what-is-built)): the derivations of checks 5 and 7 under the
+SuperEngine fairness kernel, kernelVersion 1, keyed on the kernel version, and
+the raw `keccak256` they take from `signing`; the quorum read of check 6; checks
+1 to 4; the rules on which reveals a round carries; the configuration read
+(V-3); the page's states, their view, and its accessibility (V-4 to V-14); the
+verify API read, built to an **assumed** response body confined to one module;
+the page's HTML and module entry (`index.html`, `src/main.ts`, mounting at
+`#verify-root`), and the build and release (V-15 to V-17). Not built: the e2e
+suites (VT-5 to VT-9). The response body waits for the verify API document, to
+come; what depends on it is marked `TODO(verify API)`. Its four design decisions
+were made by the human on 2026-10-18, and five more on the kernel derivations on
+2026-10-19 ([Decisions](#decisions)).
 
 ## Purpose
 
@@ -154,10 +156,10 @@ what happened, and, where the player can act, one control.
   flight, the page shows the round id and "checking this round", announced
   politely. A request times out after 15 s (as W-43's SHOULD).
 - **V-6. Recomputed and matches.** Every applicable check passed. The page shows
-  the round id, the game, the result (`won` or `lost`, or `canceled` with its
-  reason), and the payout as the evidence's `formatted` string, then the list of
-  checks, each with what was compared and "matches". It says plainly what was
-  **not** checked (V-13).
+  the round id, its shape ("one step, two options"; the page names no game), the
+  result (`won` or `lost`, or `canceled` with its reason), and the payout as the
+  evidence's `formatted` string, then the list of checks, each with what was
+  compared and "matches". It says plainly what was **not** checked (V-13).
 - **V-7. Mismatch.** At least one check failed. The page says "this round does
   not match its evidence", names every failed check with the two values it
   compared, and shows no result as established. A mismatch is a result, not an
@@ -167,13 +169,16 @@ what happened, and, where the player can act, one control.
   chain", names that check, and offers to check again; it still shows no result
   as established.
 - **V-8. Not recomputable.** The API returned the round, but the page cannot
-  recompute it, for one of two reasons:
+  recompute it, for one of three reasons:
   - the round has not ended (`won`, `lost`, and `canceled` are the ended
     statuses): the page shows what it could check, says the rest waits for the
     round's end, and offers to check again;
   - the round's kernel version is one this page does not know (V-12a): the page
     says it cannot recompute rounds of that kernel version, names it, runs no
-    derivation, and offers no retry.
+    derivation, and offers no retry;
+  - the round is not a one-step, two-option config round (A-3): the page says it
+    recomputes rounds of that shape only, shows checks 1 to 4 and 6, runs no
+    derivation of checks 5 and 7, and offers no retry.
 - **V-9. Not found.** The API answered that it has no such round. The page says
   so, shows the id it looked for, and offers the form.
   <!-- TODO(verify API): the status code and body for an unknown round, from the verify API document. -->
@@ -187,7 +192,13 @@ what happened, and, where the player can act, one control.
   request the policy blocked. The page says it could not reach the service, says
   so distinctly when the browser reports being offline, and offers to try again.
 
-A configuration error (V-3) is its own state, like the Wrapper's.
+A configuration error (V-3) is its own state, like the Wrapper's. When the
+document could not be fetched (a network failure or a timeout) or could not be
+read (a non-success status, or a body that is not JSON), the state offers "try
+again", which reads the configuration again and then shows what the address asks
+for; when the document was read and is invalid, it offers no control (the same
+document would fail again). A failure of the checks themselves (an exception in
+the page's own code) is shown as V-10, never left on V-5.
 
 ### What the page recomputes (V-12, V-13)
 
@@ -294,19 +305,17 @@ alone, and the payout is shown, not recomputed (V-13).
      is refused as `config` and nothing is asked. The page trusts the validated
      configuration for provider independence (V-3); the module does not recheck
      it. W-26b's second pass at `h_low` and its lag margin do not apply: check 6
-     reads one fixed block N, not a moving tip. **Until the page calls it**, the
-     page (one build for every environment, V-17) shows check 6 as "not checked"
-     with the API's `blockValue` beside it (V-13), and check 7 uses that value
-     and says that its result rests on an unchecked block hash. The quorum read
-     lands before the first release.
-     <!-- TODO(verify page): call `readBlockHashByQuorum` from the page's state machine once it exists, and show the answers and the degraded indicator; the evidence's `blockNumber` type waits for the verify API document. -->
+     reads one fixed block N, not a moving tip. **The page calls it** for every
+     round (`block-check.ts`): it shows each endpoint's answer (chain id and
+     block hash) and, for W-26a's exception, the degraded indicator beside the
+     check; when the read fails, check 6 is "could not be verified" and check 7
+     is not run, since it has no agreed block hash.
+     <!-- TODO(verify API): the evidence's `blockNumber` type waits for the verify API document; the page assumes a JSON integer, read as `bigint`. -->
   7. **Seed and outcome.** Under kernel version 1:
      - **The seed** is `SHA-256(blockValue || roundSecret)`: a 64-byte preimage,
        block N's 32-byte hash first, then the round secret's 32 bytes.
-       `blockValue` is the hash check 6 agreed on (until the quorum read is
-       built, the API's `blockValue`, and the check says its result rests on an
-       unchecked block hash). The recomputed seed MUST equal the revealed
-       `fairnessProof.seed`.
+       `blockValue` is the hash check 6 agreed on, never the API's. The
+       recomputed seed MUST equal the revealed `fairnessProof.seed`.
      - **The outcome.** Coin Flip is one step with two options of which one
        loses, `(n = 2, k = 1)`, so
        `losingIndex = StepsDerive(seed, [(2, 1)])[0][0]`, where StepsDerive is
@@ -357,11 +366,11 @@ alone, and the payout is shown, not recomputed (V-13).
   this page: the payout amount and its terms (`payoutTermsHash` is taken as
   signed, as W-26 does), the on-chain record (`record.txHash`, `chainId`), and a
   ZK proof's `status` and `verifiedBy` (`record` and `zkProof` are optional and
-  shown only when present); for a `canceled` round without reveals, checks 5 and
-  7; and, until the quorum read is built, block N's hash (check 6). Links from
-  the evidence (`blockExplorerUrl`, `explorerUrl`, `proofLink`) are shown as
-  text, not as links, in the first release: they come from the API the page does
-  not trust.
+  shown only when present); and, for a `canceled` round without reveals, checks
+  5 and 7; and `newRound.actionKey` (A-4: the page has no player key to compare
+  it with). Links from the evidence (`blockExplorerUrl`, `explorerUrl`,
+  `proofLink`) are shown as text, not as links, in the first release: they come
+  from the API the page does not trust.
 - **Which package does what.** `signing` for every keccak256 hash and the
   signature recovery (it has no kit dependency at run time); Web Crypto for
   SHA-256; `apps/verify` for StepsDerive and the kernel's rules; the vendored
@@ -370,18 +379,23 @@ alone, and the payout is shown, not recomputed (V-13).
   checked against that document like the Snapshot's (`snapshot` if the body
   embeds a Snapshot, otherwise a validator built the same way); the verify API
   read through `play-client`, whose spec already names "the verify API read"
-  ([packages](./client-kit/packages.md)); the chain read through the page's own
-  read-only JSON-RPC module (check 6). The page never imports `shell`: it holds
-  no credential, and the shell's code does not belong in its bundle.
+  ([packages](./client-kit/packages.md)), once the verify API document is
+  vendored (**interim**, A-1: until then the read and its hand-written validator
+  are the app's own module, `apps/verify/src/verify-api.ts`); the chain read
+  through the page's own read-only JSON-RPC module (check 6). The page never
+  imports `shell`: it holds no credential, and the shell's code does not belong
+  in its bundle.
   <!-- TODO(verify API): whether the body embeds an `se.snapshot/1` Snapshot or has its own schema, so which validator applies; it comes with the verify API document. -->
 - **Amounts** are strings in the evidence and `bigint` where compared, never a
   JS `number` (the kit's rule).
 
 ### What is built
 
-`apps/verify` holds, today, only the derivations of checks 5 and 7 for a Coin
-Flip config round and their tests (VT-1b's kernel version part, VT-2 for checks
-5 and 7, and VT-10's source check):
+`apps/verify` holds what the Status line lists: checks 1 to 4 and 6, the
+configuration read, the page's states and view, and the assumed verify API read,
+each with its tests. Its kernel derivations of checks 5 and 7 for a one-step,
+two-option config round (Coin Flip's shape) and their tests (VT-1b's kernel
+version part, VT-2 for checks 5 and 7, and VT-10's source check) are:
 
 - **Keyed on the kernel version (V-12a).** The kernels the page implements are a
   map from kernel version to derivations; version 1 is the only entry. A check
@@ -413,25 +427,65 @@ Flip config round and their tests (VT-1b's kernel version part, VT-2 for checks
   function with unit tests (`m` of 1 and of 2^32 give 2^256, `m` of 3 gives
   2^256 − 1, and a hash at or above the limit is rejected), since no vector
   exercises a rejection (D-7).
-- Both checks assume the reveals are present: which reveals a round must carry
-  (V-12, check 5) and how the page shows a check it did not run are the page's,
-  built with it.
-- VT-10's source check runs over `apps/verify` today (D-6); the `<meta>` policy
-  with `worker-src 'none'` is added by the release step (below) and tested
-  there.
+- Both checks assume the reveals are present; which reveals a round must carry
+  (V-12, check 5) is the caller's (`verify-round.ts`): a `canceled` round with
+  neither reveal shows checks 5 and 7 as "not checked", and any other ended
+  round missing one fails both.
+- VT-10's source check runs over `apps/verify` (D-6), HTML included; the
+  `<meta>` policy's `worker-src 'none'` part is checked on the page's own HTML
+  in the Wrapper's release test (`apps/wrapper/src/release-verify.test.ts`).
 - **The build and release (V-15 to V-17).** `apps/verify` has a Vite build
   (`vite.config.ts`: base `/verify/`, `publicDir: false`, no env files, a
-  production build only) of a placeholder `index.html` and
-  `src/placeholder-entry.ts`, which the page's own HTML and entry replace. The
-  Wrapper's build depends on it and copies `apps/verify/dist/` into its output
-  under `verify/` (`apps/wrapper/release-verify.ts`), adding the page's `<meta>`
-  policy and SRI (`release-sri.ts`, shared with the Wrapper's page), listing its
-  files in the integrity manifest, and holding them to the output allow-list
-  with `verify/index.html` as the second HTML file. `headers.json` holds the
-  page's headers under `/verify/*`. The size budget measures "verify output" and
+  production build only) of the page's `index.html` (one `#verify-root`, a
+  `<noscript>` line for a player without JavaScript, a stylesheet link, a module
+  script, no inline script or style, no policy of its own) and its entry
+  `src/main.ts`, which calls `startVerifyPage`. The Wrapper's build depends on
+  it and copies `apps/verify/dist/` into its output under `verify/`
+  (`apps/wrapper/release-verify.ts`), adding the page's `<meta>` policy and SRI
+  (`release-sri.ts`, shared with the Wrapper's page), listing its files in the
+  integrity manifest, and holding them to the output allow-list with
+  `verify/index.html` as the second HTML file. `headers.json` holds the page's
+  headers under `/verify/*`. The size budget measures "verify output" and
   "verify page, gzip" apart from the Wrapper's (`tools/size-budget.ts`); their
-  limits are provisional, equal to the Wrapper's, until the first build of the
-  real page.
+  limits are still the provisional ones, equal to the Wrapper's; the first build
+  of the real page measured 119788 bytes (output) and 39199 bytes (gzip), both
+  within them, and the human sets the limits from it.
+
+The page around them is built too:
+
+- **The verify API read** (`verify-api.ts`) is the only module that fetches or
+  parses the API's answer; everything past it works on the typed evidence
+  (`round-evidence.ts`). It is built to an **assumed** body, until the verify
+  API document is vendored (A-1). Amounts (`betAmount`, `payout.value`) and
+  `blockNumber` are read as `bigint`; a body that fails validation is an API
+  error and none of it is used (V-10).
+- **Checks 1 to 4** (`auth-checks.ts`) use `signing` and the configured trust
+  anchors only. **Check 6** (`block-check.ts`) calls the quorum read for every
+  round.
+- **The configuration** (`environment-config.ts`, `config-fields.ts`,
+  `load-config.ts`) is validated by the Wrapper's rules, spelled again here
+  since the page cannot import the Wrapper; `tools/config-parity.test.ts` runs
+  one shared set of documents through both validators and requires the same
+  verdict (V-3, one schema); the document's path is the Wrapper's, provisional
+  like it.
+- **The states** (`page-state.ts`): a controller with `fetch`, the timers, the
+  address bar, and the offline flag injected, which shows exactly one state; a
+  submit or a retry is followed by focus on the new heading, a direct load or
+  back and forward never. A read that a newer one replaced is dropped. A valid
+  submit adds a history entry for `<verifyBaseUrl>/rounds/{roundId}` on the same
+  origin, or loads that URL when `verifyBaseUrl` is on another one.
+- **The verdict** (`verify-round.ts`): any failed check gives V-7 and lists
+  every failed check (with check 6 when it could not be verified too); check 6
+  alone gives V-7's chain wording; then V-8. For a round that has not ended
+  (A-2), a check that fails only because the evidence lacks a value it will
+  carry later (such as `readyHash`), and check 6 when its read failed as
+  `too-few` or `no-block`, are "not checked: it waits for the round's end", not
+  a mismatch; any other failure of check 6 still surfaces.
+- **The view** (`render.ts`, `report-view.ts`, `view-parts.ts`, `dom.ts`,
+  `messages.ts`, `styles.css`): built with DOM calls and text nodes only, no
+  markup string and no inline style; one polite live region and one alert
+  region, both present from the start; English text. `start-page.ts` wires it to
+  the browser for the HTML to come.
 
 ### Accessibility (V-14)
 
@@ -454,13 +508,14 @@ Flip config round and their tests (VT-1b's kernel version part, VT-2 for checks
 - **V-15. The source** is a new private app, **`apps/verify`**
   (`@intraverse/se-client-verify`, D-2): plain TypeScript and Vite like the
   Wrapper, `publicDir: false`, no runtime dependency outside the kit's
-  allow-list. It depends on `signing`, `contracts` (runtime entry),
-  `play-client`, and `snapshot` if the body embeds a Snapshot, and **never on
-  `shell`** or the `contracts` test-only entry; the import-direction lint
-  refuses both. As a new workspace it passes the add-a-package checks, and the
-  packages spec, the dependency direction in `AGENTS.md`, the import-direction
-  lint and its test, and the architecture memory are updated in the pull request
-  that adds it.
+  allow-list. It depends on `signing` and `contracts` (runtime entry); once the
+  verify API document is vendored, also on `play-client`, and on `snapshot` if
+  the body embeds a Snapshot (until then its verify API read is its own, A-1);
+  and it **never depends on `shell`** or the `contracts` test-only entry; the
+  import-direction lint refuses both. As a new workspace it passes the
+  add-a-package checks, and the packages spec, the dependency direction in
+  `AGENTS.md`, the import-direction lint and its test, and the architecture
+  memory are updated in the pull request that adds it.
 - **V-16. The release artifact.** The page ships **inside** the Wrapper's
   release artifact, under `verify/`, so one digest and one attestation cover
   both and the deploy side has nothing new to pull. The release build extends
@@ -484,23 +539,25 @@ Flip config round and their tests (VT-1b's kernel version part, VT-2 for checks
 
 ## Errors and edge cases
 
-| Situation                                        | Behavior                                         |
-| ------------------------------------------------ | ------------------------------------------------ |
-| id with upper-case hex, or white space around it | normalized (V-4), then checked                   |
-| id that is a UUID but not v7, or not canonical   | refused by the pattern (V-4); no request         |
-| unknown round                                    | not found (V-9)                                  |
-| round not ended                                  | not recomputable (V-8), with "check again"       |
-| unknown `kernelVersion`                          | not recomputable (V-8), no derivation run        |
-| `canceled` without reveals                       | checks 5 and 7 "not checked" (V-13)              |
-| `won` or `lost` without a reveal                 | check 5 fails: mismatch (V-7)                    |
-| RPC endpoints disagree, or too few answer        | check 6 fails: could not verify the chain (V-7)  |
-| `blockValue` differs from the chain's hash       | check 6 fails: mismatch (V-7)                    |
-| body that fails validation                       | API error (V-10); nothing of it is shown as fact |
-| a source the configuration does not list         | check 2 fails: mismatch (V-7)                    |
-| signature not canonical, or recovers to another  | check 3 fails: mismatch (V-7)                    |
-| invalid configuration document                   | configuration error; no request (V-3)            |
-| offline, or a request blocked by the policy      | API unreachable (V-11)                           |
-| two checks fail                                  | every failed check is listed (V-7)               |
+| Situation                                                                           | Behavior                                          |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------- |
+| id with upper-case hex, or white space around it                                    | normalized (V-4), then checked                    |
+| id that is a UUID but not v7, or not canonical                                      | refused by the pattern (V-4); no request          |
+| unknown round                                                                       | not found (V-9)                                   |
+| round not ended                                                                     | not recomputable (V-8), with "check again"        |
+| unknown `kernelVersion`                                                             | not recomputable (V-8), no derivation run         |
+| `canceled` without reveals                                                          | checks 5 and 7 "not checked" (V-13)               |
+| `won` or `lost` without a reveal                                                    | check 5 fails: mismatch (V-7)                     |
+| RPC endpoints disagree, or too few answer                                           | check 6 fails: could not verify the chain (V-7)   |
+| `blockValue` differs from the chain's hash                                          | check 6 fails: mismatch (V-7)                     |
+| body that fails validation                                                          | API error (V-10); nothing of it is shown as fact  |
+| a source the configuration does not list                                            | check 2 fails: mismatch (V-7)                     |
+| signature that recovers to another signer, or has a high `s` or an out-of-range `r` | check 3 fails: mismatch (V-7)                     |
+| signature of the wrong length or with a bad `v`                                     | body fails validation: API error (V-10)           |
+| configuration document not fetched or not read                                      | configuration error with "try again" (V-3)        |
+| invalid configuration document                                                      | configuration error, no control; no request (V-3) |
+| offline, or a request blocked by the policy                                         | API unreachable (V-11)                            |
+| two checks fail                                                                     | every failed check is listed (V-7)                |
 
 ## Security
 
@@ -546,20 +603,20 @@ never reported anywhere.
 
 ## Test plan
 
-| Row   | Level               | What it proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ----- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| VT-1  | unit                | the round id: normalization, the schema's pattern (v7 only, canonical), the path parser for `/rounds/{id}` (empty, extra segments, encoded characters), and the URL the Wrapper builds (W-39); `verifyApiBaseUrl`'s rule, and the Wrapper's schema accepting it                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| VT-1a | unit                | the chain read (check 6): a quorum that agrees passes; another chain id, too few answering, a timeout, an endpoint with a chain id but no block, and two hashes fail in W-26b's order, and a refused configuration (`config`) asks nothing; `fetch` is called unbound; `blockValue` present and equal, present and different, absent; the one-endpoint degraded indicator                                                                                                                                                                                                                                                                                                           |
-| VT-1b | unit                | the kernel version (V-12a): kernel 1 runs the derivations, an unknown one shows V-8 and runs none; a `canceled` round without reveals shows checks 5 and 7 as "not checked"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| VT-2  | unit                | each check of V-12 against the vendored vectors, each with a passing case and a case per failure: checks 1 to 4 against `created`, `ready`, and the `signature/` Snapshot vectors' `randomnessTarget` and signature verdicts; checks 5 and 7 (SHA-256, the seed, StepsDerive, Coin Flip's outcome) against the fairness kernel's public vectors (the SuperEngine fairness kernel, kernelVersion 1: `kernel/public/v1/seed`, `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`, read through the `contracts` test-only entry as `kernelVectors.v1`), and `roundSecretHash` against its definition until the kernel has a vector for it |
-| VT-3  | unit                | the body's validation: a body the verify API document's schema refuses is an API error, never a partial result; amounts read as `bigint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| VT-4  | component (jsdom)   | every state V-4 to V-11 and the configuration error renders its heading, text, and control, with an axe scan and no inline style; values from the body render as text                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| VT-6  | e2e, browser        | from the Wrapper: after a round ends, the verify link opens `<verifyBaseUrl>/rounds/{roundId}` in a new context and that page reaches V-6 or V-8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| VT-8  | e2e + build check   | the policy and SRI: the page loads with the `headers.json` policy and no violation, every script and stylesheet carries `integrity`, and no request leaves the configured origins (the harness's catch-all route records none)                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| VT-9  | release dry run     | the page is inside the artifact under `verify/`, two builds give one digest, and its two size measurements are reported and held to their own limits (D-3), apart from the Wrapper's                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| VT-10 | unit (source check) | `apps/verify`'s sources never reference `navigator.locks`, `BroadcastChannel`, `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `document.cookie`, `Worker`, `SharedWorker`, or `serviceWorker` (the shared-origin rule), and its `<meta>` policy carries `worker-src 'none'`. Built: `tools/shared-origin.test.ts` scans every non-test source and HTML file of `apps/verify` as text, comments and strings included, for each name as a whole word (`locks`, `cookie`, and `cookieStore` included), with a case per name; the `<meta>` part is checked once the page has its HTML                                                                                         |
+| Row   | Level               | What it proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VT-1  | unit                | the round id: normalization, the schema's pattern (v7 only, canonical), the path parser for `/rounds/{id}` (empty, extra segments, encoded characters), and the URL the Wrapper builds (W-39); `verifyApiBaseUrl`'s rule, and the Wrapper's schema accepting it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| VT-1a | unit                | the chain read (check 6): a quorum that agrees passes; another chain id, too few answering, a timeout, an endpoint with a chain id but no block, and two hashes fail in W-26b's order, and a refused configuration (`config`) asks nothing; `fetch` is called unbound; `blockValue` present and equal, present and different, absent; the one-endpoint degraded indicator                                                                                                                                                                                                                                                                                                                                                                                                 |
+| VT-1b | unit                | the kernel version (V-12a): kernel 1 runs the derivations, an unknown one shows V-8 and runs none; a `canceled` round without reveals shows checks 5 and 7 as "not checked"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| VT-2  | unit                | each check of V-12 against the vendored vectors, each with a passing case and a case per failure: checks 1 to 4 against `created`, `ready`, and the `signature/` Snapshot vectors' `randomnessTarget` and signature verdicts; checks 5 and 7 (SHA-256, the seed, StepsDerive, Coin Flip's outcome) against the fairness kernel's public vectors (the SuperEngine fairness kernel, kernelVersion 1: `kernel/public/v1/seed`, `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`, read through the `contracts` test-only entry as `kernelVectors.v1`), and `roundSecretHash` against its definition until the kernel has a vector for it                                                                                       |
+| VT-3  | unit                | the body's validation: a body the verify API document's schema refuses is an API error, never a partial result; amounts read as `bigint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| VT-4  | component (jsdom)   | every state V-4 to V-11 and the configuration error renders its heading, text, and control, with no inline style; values from the body render as text. jsdom component tests; the axe scan is in the browser rows (VT-7), as for the Wrapper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| VT-6  | e2e, browser        | from the Wrapper: after a round ends, the verify link opens `<verifyBaseUrl>/rounds/{roundId}` in a new context and that page reaches V-6 or V-8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| VT-8  | e2e + build check   | the policy and SRI: the page loads with the `headers.json` policy and no violation, every script and stylesheet carries `integrity`, and no request leaves the configured origins (the harness's catch-all route records none)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| VT-9  | release dry run     | the page is inside the artifact under `verify/`, two builds give one digest, and its two size measurements are reported and held to their own limits (D-3), apart from the Wrapper's                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| VT-10 | unit (source check) | `apps/verify`'s sources never reference `navigator.locks`, `BroadcastChannel`, `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `document.cookie`, `Worker`, `SharedWorker`, or `serviceWorker` (the shared-origin rule), and its `<meta>` policy carries `worker-src 'none'`. Built: `tools/shared-origin.test.ts` scans every non-test source and HTML file of `apps/verify` as text, comments and strings included, for each name as a whole word (`locks`, `cookie`, and `cookieStore` included), with a case per name; the `<meta>` part is checked in `apps/wrapper/src/release-verify.test.ts`, which feeds the page's `index.html` through the release step, and the source HTML itself is checked for no inline script or style and no policy of its own |
 
 **The e2e fake of the verify API** joins the fake Play API in the e2e harness: a
 route at the configured verify API base on a `.test` origin, answering
@@ -621,6 +678,48 @@ Decided by the human on 2026-10-19, during the review of the kernel derivations:
   changesets, and `.changeset/config.json` ignores
   `@intraverse/se-client-verify` as it does the reference game
   ([Packages](./client-kit/packages.md)).
+
+### Assumptions (decided)
+
+Made while building the page's states (2026-10-20), each the least-claiming
+reading of the spec. A-1 (interim) to A-4 were decided by the human on
+2026-10-20, as recorded below; nothing is open.
+
+- **A-1. The verify API's body** is assumed to be the Snapshot's fields
+  (`roundId`, `status`, `closeReason`, `payout`, `config.steps`, `proofs`) plus
+  an optional integer `kernelVersion` (absent: kernel version 1, V-12a); 404 is
+  "no such round" (V-9), any other non-2xx an error (V-10). Only `verify-api.ts`
+  holds this assumption. **Interim** (decided by the human, 2026-10-20): the
+  read and its hand-written validator are app-local in `verify-api.ts`; when the
+  verify API document is vendored they move to `play-client`, with a validator
+  generated from or checked against that document, and the app then depends on
+  `play-client`.
+  <!-- TODO(verify API): replace A-1 with the vendored document's schema and its generated types. -->
+- **A-2. A round that has not ended** reaches V-8 rather than V-7 when the only
+  failures are evidence it does not carry yet, or a chain read of block N that
+  failed as `too-few` or `no-block` (block N may not exist yet). Decided by the
+  human, 2026-10-20: a `hash-mismatch`, `other-chain`, `no-chain-id`, or
+  `config` failure of check 6 still surfaces (V-7's chain wording), whatever the
+  round's status.
+- **A-3. A round that is not one step of two options** is shown as not
+  recomputable (V-8's third reason), with checks 1 to 4 and 6 and no retry; the
+  spec's scope names Coin Flip only. Decided by the human, 2026-10-20: the shape
+  check stays, but the page does not name the game: the summary says "one step,
+  two options", and the not-recomputable text says the page recomputes rounds of
+  that shape only. One helper (`isOneStepTwoOptions`, in `round-evidence.ts`)
+  holds the test.
+- **A-4. Check 3 does not compare `newRound.actionKey`** with anything: the page
+  has no player key, so the `signature/create-round-auth-action-key` vector,
+  refused by the shell, passes check 3 on the page. Decided by the human,
+  2026-10-20: confirmed. The action key is listed under "shown, not checked"
+  (V-13).
+
+Also decided by the human, 2026-10-20: a malformed signature (a bad length or
+`v`, which the Snapshot schema's `Signature65` pattern refuses) fails the body's
+validation and shows V-10, not a check 3 mismatch; only a high `s` or an
+out-of-range `r` reaches check 3. The configuration-error state offers "try
+again" for a document that could not be fetched or read, and no control for an
+invalid one (V-3).
 
 ## References
 
