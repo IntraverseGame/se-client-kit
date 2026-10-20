@@ -194,11 +194,11 @@ ADR-006 is still proposed: its acceptance is the human's call before the merge.
 - **W-49d.** After `welcome`, the Wrapper SHOULD tell the operator page the
   height its content needs:
 
-  | Field    | Value                                                                                                                                                                |
-  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `schema` | `"se.operator/1"`                                                                                                                                                    |
-  | `type`   | `"resize"`                                                                                                                                                           |
-  | `height` | the document's `scrollHeight` in CSS pixels, an integer from 1 to 16384; a larger value is sent as 16384 (the bound is provisional, decided 2026-10-18, RFC-001 Q15) |
+  | Field    | Value                                                                                                                                                                                                                                                          |
+  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `schema` | `"se.operator/1"`                                                                                                                                                                                                                                              |
+  | `type`   | `"resize"`                                                                                                                                                                                                                                                     |
+  | `height` | the height the content needs: the `<body>`'s box in CSS pixels (never the document's `scrollHeight`, which is not below the viewport), an integer from 1 to 16384; a larger value is sent as 16384 (the bound is provisional, decided 2026-10-18, RFC-001 Q15) |
   - Sent only after `welcome`, only to the fixed operator origin, with no reply;
     the operator page MAY ignore it.
   - Sent once right after `welcome`, then whenever the height changes (observed
@@ -381,6 +381,7 @@ cannot start", and only reloading the iframe (with a new launch) retries. Until
 const frame = document.querySelector("#se-wrapper"); // your iframe
 const seOrigin = new URL(launchUrl).origin;
 let welcomed = false;
+let timer;
 const hello = () =>
   frame.contentWindow?.postMessage(
     { schema: "se.operator/1", type: "hello" },
@@ -394,11 +395,11 @@ window.addEventListener("message", event => {
   }
 });
 frame.addEventListener("load", () => {
+  // Each load (a reload, a new launch) is a new Wrapper that needs a hello.
+  welcomed = false;
+  clearInterval(timer);
   hello();
-  const timer = setInterval(
-    () => (welcomed ? clearInterval(timer) : hello()),
-    250,
-  );
+  timer = setInterval(() => (welcomed ? clearInterval(timer) : hello()), 250);
 });
 frame.src = launchUrl;
 ```

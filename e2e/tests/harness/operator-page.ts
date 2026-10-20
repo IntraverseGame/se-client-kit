@@ -74,6 +74,7 @@ export const startEmbedding = async (
         frame.setAttribute("referrerpolicy", referrerPolicy);
       }
       let welcomed = false;
+      let timer: ReturnType<typeof setInterval> | undefined;
       globalThis.addEventListener("message", event => {
         if (event.source !== frame.contentWindow) return;
         if (event.origin !== seOrigin) return;
@@ -94,8 +95,11 @@ export const startEmbedding = async (
       frame.addEventListener("load", () => {
         state.loads += 1;
         if (!hello) return;
+        // Each load is a new Wrapper that needs a hello.
+        welcomed = false;
+        clearInterval(timer);
         sayHello();
-        const timer = setInterval(() => {
+        timer = setInterval(() => {
           if (welcomed) {
             clearInterval(timer);
           } else {

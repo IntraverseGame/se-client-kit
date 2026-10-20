@@ -72,41 +72,80 @@ describe("createMessageDispatch (W-49b)", () => {
   });
 });
 
+/** A document whose body is `content` tall inside a viewport of 800. */
+const documentOf = (content: () => number, withBody = true): Document =>
+  ({
+    // Never below the viewport, as the platform's `scrollHeight` is.
+    documentElement: {
+      get scrollHeight() {
+        return Math.max(800, content());
+      },
+    },
+    body: withBody
+      ? { getBoundingClientRect: () => ({ height: content() }) }
+      : null,
+  }) as unknown as Document;
+
+/** Observes `doc`; the frames and the observer's callback are the test's. */
+const observed = (doc: Document) => {
+  const heights: number[] = [];
+  const frames: (() => void)[] = [];
+  const elements: Element[] = [];
+  let resize: () => void = ignore;
+  observeHeight(
+    {
+      doc,
+      createObserver: callback => {
+        resize = callback;
+        return { observe: element => elements.push(element) };
+      },
+      requestFrame: callback => frames.push(callback),
+    },
+    next => heights.push(next),
+  );
+  return {
+    heights,
+    elements,
+    resize: (): void => {
+      resize();
+      frames.shift()?.();
+    },
+    frames,
+    resizeOnly: (): void => resize(),
+  };
+};
+
 describe("observeHeight (W-49d)", () => {
   it("measures once, then once per frame however many resizes", () => {
-    const heights: number[] = [];
-    const frames: (() => void)[] = [];
-    let onResize: () => void = ignore;
-    const observed: Element[] = [];
     let height = 300;
-    const doc = {
-      documentElement: {
-        get scrollHeight() {
-          return height;
-        },
-      },
-      body: {},
-    } as unknown as Document;
-    observeHeight(
-      {
-        doc,
-        createObserver: callback => {
-          onResize = callback;
-          return { observe: element => observed.push(element) };
-        },
-        requestFrame: callback => frames.push(callback),
-      },
-      next => heights.push(next),
-    );
-    expect(heights).toEqual([300]);
-    expect(observed).toEqual([doc.documentElement, doc.body]);
+    const doc = documentOf(() => height);
+    const run = observed(doc);
+    expect(run.heights).toEqual([300]);
+    expect(run.elements).toEqual([doc.documentElement, doc.body]);
     height = 420;
-    onResize();
-    onResize();
-    expect(frames).toHaveLength(1);
-    frames.shift()?.();
-    expect(heights).toEqual([300, 420]);
-    onResize();
-    expect(frames).toHaveLength(1);
+    run.resizeOnly();
+    run.resizeOnly();
+    expect(run.frames).toHaveLength(1);
+    run.frames.shift()?.();
+    expect(run.heights).toEqual([300, 420]);
+    run.resizeOnly();
+    expect(run.frames).toHaveLength(1);
+  });
+
+  it("reports a smaller height when the content shrinks below the viewport", () => {
+    let height = 1200;
+    const run = observed(documentOf(() => height));
+    height = 500;
+    run.resize();
+    height = 300;
+    run.resize();
+    // The document's scrollHeight would stay at 800 once below the viewport.
+    expect(run.heights).toEqual([1200, 500, 300]);
+  });
+
+  it("falls back to the document element where there is no body", () => {
+    const run = observed(documentOf(() => 300, false));
+    expect(run.heights).toEqual([800]);
+    expect(run.elements).toHaveLength(1);
   });
 });
