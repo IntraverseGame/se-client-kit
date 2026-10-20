@@ -1,7 +1,8 @@
 // The browser entry of the Wrapper: it takes the launch code out of the URL
 // before anything else (W-1: before any request or log line), then wires the
 // platform (DOM, `fetch`, timers, the online state, the clipboard, the
-// console, Web Locks, the random sources) into `boot`. The launch code stays
+// console, Web Locks, the random sources, the page's framing and its parent,
+// and the height observer) into `boot`. The launch code stays
 // sealed: nothing here can read it, and only the shell's session redeems it.
 
 import {
@@ -15,6 +16,7 @@ import {
 
 import { boot } from "./boot.ts";
 import { embeddingOf } from "./embedding.ts";
+import { observeHeight } from "./height-observer.ts";
 import { createJsonRpcTransport } from "./json-rpc.ts";
 import { ENVIRONMENT_CONFIG_PATH } from "./load-environment-config.ts";
 import { platformTimers } from "./timers.ts";
@@ -63,6 +65,21 @@ if (host !== null) {
     copyText: (text: string): Promise<void> =>
       navigator.clipboard.writeText(text),
     embedding: embeddingOf(globalThis.window),
+    // The operator page, when framed: only `welcome` and `resize` go to it,
+    // to the origin its handshake fixed (W-49b).
+    parent: globalThis.window.parent,
+    observeHeight: onHeight => {
+      observeHeight(
+        {
+          doc: document,
+          createObserver: onResize => new ResizeObserver(onResize),
+          requestFrame: callback => {
+            globalThis.requestAnimationFrame(callback);
+          },
+        },
+        onHeight,
+      );
+    },
     window: {
       addEventListener: (type, listener) => {
         globalThis.addEventListener(type, listener);
@@ -72,7 +89,8 @@ if (host !== null) {
       },
       origin: globalThis.location.origin,
     },
-    // A refused configuration or framing redeems nothing (W-1, W-49).
+    // A refused configuration, framing, or handshake redeems nothing (W-1,
+    // W-49a, W-49c).
     discardLaunchCode: () => {
       discardLaunchCode(launchCode);
     },

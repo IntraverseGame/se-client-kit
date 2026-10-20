@@ -1,62 +1,77 @@
-// W-49's fail-closed minimum (decided in human review, 2026-10-17), applied
-// before the session opens: a framed Wrapper opens no session (no redeem, no
-// key, no signature, no game) unless it can prove every page that frames it is
-// on `operatorOrigins`. `frame-ancestors`, set by the host, stays the primary
-// control; this is defense in depth.
+// W-49a, the framing decision (specs/wrapper/operator-embedding.md, ADR-006),
+// taken once the configuration is validated and before the session opens (no
+// redeem, no key, no signature, no game). `frame-ancestors`, set by the host,
+// stays the primary control; this is defense in depth.
 //
-// - Not framed (`window.parent === window`): unchanged.
-// - Framed, where `location.ancestorOrigins` exists: every entry must be on
-//   `operatorOrigins` (exact match); a masked entry (`"null"`) refuses, and so
-//   does an empty list (a framed page always has an ancestor).
-// - Framed, in a browser without `location.ancestorOrigins`: refused. The
-//   operator handshake that would lift this is RFC-001's (the operator launch
-//   contract), not built.
+// - Not framed (`window.parent === window`): a standalone launch, with no
+//   handshake and no operator channel.
+// - Framed and nested (`window.parent !== window.top`, or more than one
+//   `location.ancestorOrigins` entry): refused. Only direct embedding is
+//   supported.
+// - Framed, where `location.ancestorOrigins` exists: refused unless it holds
+//   exactly one entry and that entry is on `operatorOrigins` (exact match); a
+//   masked entry (`"null"`) refuses, and so does an empty list. A listed entry
+//   still needs the `se.operator/1` handshake (W-49c, the shell's operator
+//   channel).
+// - Framed, where `location.ancestorOrigins` is missing: the handshake.
 //
-// It is the minimum until RFC-001 is accepted and built. Only a reason code is
-// logged, never an origin.
+// A refusal is logged as `embedding.refused` with its reason code only, never
+// an origin.
 
 /** What the page knows of its framing, read from the platform once. */
 export type EmbeddingContext = {
   /** `window.parent !== window`. */
   readonly framed: boolean;
+  /** `window.parent !== window.top`: framed through another page. */
+  readonly nested: boolean;
   /** `location.ancestorOrigins`, nearest first; `undefined` where absent. */
   readonly ancestorOrigins: readonly string[] | undefined;
 };
 
-/** Why a framed Wrapper refused to open a session. */
+/** Why a framed Wrapper refused to open a session (W-49a). */
 export type EmbeddingRefusal =
-  /** An ancestor origin is not on `operatorOrigins`. */
+  /** The ancestor origin is not on `operatorOrigins`. */
   | "ancestor-not-allowed"
-  /** An ancestor origin is masked (`"null"`). */
+  /** The ancestor origin is masked (`"null"`). */
   | "ancestor-masked"
-  /**
-   * Framed in a browser without `location.ancestorOrigins`, or with an empty
-   * one: nothing proves who frames the page.
-   */
-  | "ancestors-unknown";
+  /** Framed, with an empty `location.ancestorOrigins`. */
+  | "ancestors-unknown"
+  /** Framed through another page: only direct embedding is supported. */
+  | "nested";
 
 export type EmbeddingVerdict =
-  | { readonly ok: true }
+  /** `handshake`: framed, so the session waits for the handshake (W-49c). */
+  | { readonly ok: true; readonly handshake: boolean }
   | { readonly ok: false; readonly reason: EmbeddingRefusal };
 
-const ALLOWED: EmbeddingVerdict = Object.freeze({ ok: true });
+const STANDALONE: EmbeddingVerdict = Object.freeze({
+  ok: true,
+  handshake: false,
+});
+const HANDSHAKE: EmbeddingVerdict = Object.freeze({
+  ok: true,
+  handshake: true,
+});
 
 const refused = (reason: EmbeddingRefusal): EmbeddingVerdict =>
   Object.freeze({ ok: false, reason });
 
-/** Whether the session may open for this framing (W-49's minimum). */
+/** Whether the session may open for this framing, and after a handshake. */
 export const checkEmbedding = (
   context: EmbeddingContext,
   operatorOrigins: readonly string[],
 ): EmbeddingVerdict => {
-  if (!context.framed) return ALLOWED;
+  if (!context.framed) return STANDALONE;
   const ancestors = context.ancestorOrigins;
-  if (ancestors === undefined || ancestors.length === 0) {
-    return refused("ancestors-unknown");
+  if (context.nested || (ancestors !== undefined && ancestors.length > 1)) {
+    return refused("nested");
   }
-  if (ancestors.includes("null")) return refused("ancestor-masked");
-  return ancestors.every(origin => operatorOrigins.includes(origin))
-    ? ALLOWED
+  if (ancestors === undefined) return HANDSHAKE;
+  const [nearest] = ancestors;
+  if (nearest === undefined) return refused("ancestors-unknown");
+  if (nearest === "null") return refused("ancestor-masked");
+  return operatorOrigins.includes(nearest)
+    ? HANDSHAKE
     : refused("ancestor-not-allowed");
 };
 
@@ -64,6 +79,7 @@ export const checkEmbedding = (
 export type FramingWindow = {
   readonly parent: unknown;
   readonly self: unknown;
+  readonly top: unknown;
   readonly location: { readonly ancestorOrigins?: Iterable<string> };
 };
 
@@ -72,6 +88,7 @@ export const embeddingOf = (window: FramingWindow): EmbeddingContext => {
   const list = window.location.ancestorOrigins;
   return {
     framed: window.parent !== window.self,
+    nested: window.parent !== window.top,
     ancestorOrigins: list === undefined ? undefined : [...list],
   };
 };

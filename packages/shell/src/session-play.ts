@@ -12,6 +12,7 @@
 
 import type { RandomUuid } from "@intraverse/se-client-play-client";
 
+import type { Environment } from "./chain-config.ts";
 import {
   type ControllerBridge,
   createControllerBridge,
@@ -48,6 +49,8 @@ export type PlaySessionParts = {
   readonly gameOrigins: readonly string[];
   /** The Wrapper's own origin, the SE origin, fixed at open. */
   readonly ownOrigin: string;
+  /** The configuration's `environment`, for W-37's loopback exemption. */
+  readonly environment: Environment;
   readonly ended: () => boolean;
   readonly end: () => void;
 };
@@ -69,7 +72,7 @@ export const createPlaySession = (
   // A start or a cash-out in flight: a second one is refused, never sent.
   let acting = false;
   const gameOrigins: readonly string[] = Object.freeze([...parts.gameOrigins]);
-  const { ownOrigin } = parts;
+  const { ownOrigin, environment } = parts;
 
   const reader = createSnapshotReader({
     transport: flowOptions.transport,
@@ -187,6 +190,7 @@ export const createPlaySession = (
       gameOrigin: origin,
       gameOrigins,
       ownOrigin,
+      environment,
       pick,
     });
     if (!result.ok)

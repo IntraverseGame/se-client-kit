@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-19 (verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-19 (operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -232,11 +232,20 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   the full rule everywhere: the heading focused, the game's heading not
   focused, the game's document without focus.
   `fakePlayApi.redeemAgain()` allows one more redeem for the cloned tab of
-  T-17. `t9a-embedding.spec.ts` frames the bundle from a test page on
-  `PAGES_ORIGIN`: a listed page opens the session in every project; every
-  project's browser has `ancestorOrigins` (Firefox's too, first CI run
-  2026-10-18), which a test asserts, and the path without it is a component
-  test (`boot-session.test.ts`). Rows that cannot run yet stay `test.fixme` in
+  T-17. T-9a's e2e cases embed the bundle from the fake operator page
+  (`tests/operator`, `harness/operator-page.ts`) on `OPERATOR_ORIGIN` (listed
+  by `serveListing`) or `UNLISTED_ORIGIN`; it says `hello` every 250 ms until
+  `welcome` and records what it received. `startEmbedding` does not wait for
+  the frame: Firefox gives a frame refused by `frame-ancestors` no name. A
+  Snapshot answer's `links` replaces the vector's `context.links`. Every
+  project's browser has `ancestorOrigins` (Firefox's too), which a test
+  asserts; the path without it is a component test (`operator-gate.test.ts`,
+  on `fixtures/framed-boot.ts`, a fake parent and a configuration read the
+  test releases; it also has a switchable online state and an opening the
+  test can hold, for the one-read, one-redeem guard). Under
+  `referrerpolicy="no-referrer"` Playwright 1.64's Firefox masks the entry,
+  its WebKit and an installed Chrome 155 (`SE_E2E_BROWSER_CHANNEL=chrome`) do
+  not (the test annotates it per run). Rows that cannot run yet stay `test.fixme` in
   `pending.spec.ts`, never a body that passes. The reference game's build is
   served at D, `https://game.e2e-games.test` (`GAME_ORIGIN`, origins.ts), for
   every test (`serve-origins.ts`): the fake's redeem answers it as `gameOrigin`

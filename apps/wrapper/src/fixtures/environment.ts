@@ -4,6 +4,9 @@
 
 export const SOURCE = "base";
 
+/** The Wrapper's own origin, the SE origin, the documents are checked for. */
+export const SE_ORIGIN = "https://se.example";
+
 /** `count` endpoints of `SOURCE`, each with its own provider. */
 export const endpoints = (
   count: number,

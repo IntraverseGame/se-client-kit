@@ -9,8 +9,9 @@ as far as the shell is concerned); then the chain configuration, the tip check,
 and the decision it leads to (W-26a, W-26b, and W-26's pass or fail); then the
 `CreateRoundAuth` and `T_0` checks (W-26 items 1 to 5), the re-issue rule, and
 the round's verdict that combines them with the tip check; then the
-`se.controller/1` game bridge (W-37, W-38, and W-23's pre-check); then the round
-flows (start, move, cash-out, the required cancel, the W-16 resend, and the W-19
+`se.controller/1` game bridge (W-37, W-38, and W-23's pre-check) and the
+`se.operator/1` operator channel (W-49b to W-49d); then the round flows (start,
+move, cash-out, the required cancel, the W-16 resend, and the W-19
 resynchronization), the pick use case, and the UI's Snapshot reader; then the
 session (the launch code, the redeem, the play token and its refresh, and the
 UI's use cases over the round flows). The Wrapper requirements each rule serves
@@ -25,11 +26,16 @@ are in brackets.
   (`createControllerBridge` with its option, result, and state types) with the
   `se.controller/1` message types (`CONTROLLER_SCHEMA`, `ROUND_STATUSES`,
   `HelloMessage`, `ActionMessage`, `SnapshotMessage`, `RejectMessage`,
-  `GameSnapshot`, `GameStep`, `Pick`, `RejectReason`, and the unions), and the
-  UI's Snapshot reader (`createSnapshotReader` with `SnapshotReader`,
-  `SnapshotReaderOptions`, and `SnapshotRead`, and the re-exported
-  `ValidSnapshot` and `ValidPlayProblem` of the `snapshot` package), and the
-  session: `takeLaunchCode` and `discardLaunchCode` with
+  `GameSnapshot`, `GameStep`, `Pick`, `RejectReason`, and the unions), the
+  operator channel (`createOperatorChannel`, `HANDSHAKE_TIMEOUT_MS`, and the
+  types `OperatorChannel`, `OperatorChannelState`, `OperatorCheck`,
+  `OperatorMessageEvent`, `OperatorWindow`, `HandshakeOutcome`, and
+  `HandshakeRefusal`) with the `se.operator/1` message types (`OPERATOR_SCHEMA`,
+  `MAX_RESIZE_HEIGHT`, `OperatorHello`, `WelcomeMessage`, `ResizeMessage`, and
+  `OperatorBoundMessage`), and the UI's Snapshot reader (`createSnapshotReader`
+  with `SnapshotReader`, `SnapshotReaderOptions`, and `SnapshotRead`, and the
+  re-exported `ValidSnapshot` and `ValidPlayProblem` of the `snapshot` package),
+  and the session: `takeLaunchCode` and `discardLaunchCode` with
   `MAX_LAUNCH_CODE_LENGTH` and the types `LaunchCode`, `LaunchLocation`, and
   `LaunchHistory`; `openPlaySession` with `PlaySessionOptions`, `SessionParts`,
   `SessionOpening`, `PlaySession`, `SessionRead`, `RoundState`, `GameMount`,
@@ -41,9 +47,11 @@ are in brackets.
   applies W-26a's boot rule before it starts; the transport types because the
   Wrapper supplies the transport (it owns `fetch` and the Content Security
   Policy); the bridge because the Wrapper mounts the game iframe and owns the
-  window it talks through; the reader because the Wrapper UI renders only what
-  the shell validated (decided in human review, 2026-10-17). The protocol types
-  are also exported, as types only, at the subpath
+  window it talks through; the operator channel because the Wrapper routes the
+  parent window's messages to it and awaits its handshake before it opens the
+  session; the reader because the Wrapper UI renders only what the shell
+  validated (decided in human review, 2026-10-17). The protocol types are also
+  exported, as types only, at the subpath
   `@intraverse/se-client-shell/controller` (`src/controller.ts`, a `types`
   condition only, no value): the message types, `GameSnapshot`, `GameStep`,
   `Pick`, `Presentation`, `RoundStatus`, and `RejectReason`, for the
@@ -373,36 +381,61 @@ are in brackets.
   that required a cancel.
 - **The game bridge (W-37, W-38, W-23's pre-check).**
   `createControllerBridge(options)` takes the game origin D, the configuration's
-  `gameOrigins`, the Wrapper's own origin, the game frame's window (only its
-  `postMessage`), a `listen` function that subscribes to the page's `message`
-  events and returns the unsubscribe, the pick use case, and `onIncompatible`.
-  It touches no global. It returns `{ ok: false, refusal }` without listening
-  when D or the Wrapper's origin is not a serialized origin as `event.origin`
-  gives it (a malformed host, a port above 65535, or an explicit default port
-  included; `invalid-origin`), D is the Wrapper's origin (`same-origin`), or D
-  is not on the allow-list (`origin-not-allowed`); the registrable-domain rule
-  (W-37's comparison key, ADR-007) is not checked yet: it joins this check, with
-  a refusal code of its own, in #42, and the options then also take the
-  configuration's `environment`, for its loopback exemption in `local` only.
-  Otherwise it returns `{ ok: true, bridge }`: `sendSnapshot` takes a validated
-  Snapshot (ignored when its `version` is below the latest given), `state()` is
-  `awaiting-hello`, `ready`, `incompatible`, or `closed`, and `close()`
-  unsubscribes. A message counts only when its `source` is the frame and its
-  `origin` is D; the parser reads only own data properties of a plain object, so
-  no game code runs. The rules of the message set, the allow-list, and the order
-  of the pick checks are in
-  [W-38](../wrapper/the-game-iframe-and-the-controller-boundary.md). The game's
-  copy of a Snapshot is built field by field from the allow-list, never by
-  removing fields. It posts only with `targetOrigin = D` (a frame that throws on
-  `postMessage` is ignored). The pick use case takes the pick and resolves with
-  `{ accepted: true }` or `{ accepted: false, reason }`: it holds the round and
-  the signing, so the bridge never sees a signed action, a key, or a token; one
-  that throws or rejects answers `not_active`. The bridge's pre-check is an
+  `gameOrigins` and `environment`, the Wrapper's own origin, the game frame's
+  window (only its `postMessage`), a `listen` function that subscribes to the
+  page's `message` events and returns the unsubscribe, the pick use case, and
+  `onIncompatible`. It touches no global. It returns `{ ok: false, refusal }`
+  without listening when D or the Wrapper's origin is not a serialized origin as
+  `event.origin` gives it (a malformed host, a port above 65535, or an explicit
+  default port included; `invalid-origin`), D is the Wrapper's origin
+  (`same-origin`), D's host shares its comparison key (its last two labels; an
+  IP literal or a single label is its own key) with the Wrapper's (`same-site`,
+  W-37's registrable-domain rule without a public suffix list, ADR-007), except
+  two loopback hosts when `environment` is `local`, or D is not on the
+  allow-list (`origin-not-allowed`). The session gives the bridge the
+  `environment` of the configuration it was opened with, beside the allow-list
+  and its own origin; the UI's mount cannot. Otherwise it returns
+  `{ ok: true, bridge }`: `sendSnapshot` takes a validated Snapshot (ignored
+  when its `version` is below the latest given), `state()` is `awaiting-hello`,
+  `ready`, `incompatible`, or `closed`, and `close()` unsubscribes. A message
+  counts only when its `source` is the frame and its `origin` is D; the parser
+  reads only own data properties of a plain object, so no game code runs. The
+  rules of the message set, the allow-list, and the order of the pick checks are
+  in [W-38](../wrapper/the-game-iframe-and-the-controller-boundary.md). The
+  game's copy of a Snapshot is built field by field from the allow-list, never
+  by removing fields. It posts only with `targetOrigin = D` (a frame that throws
+  on `postMessage` is ignored). The pick use case takes the pick and resolves
+  with `{ accepted: true }` or `{ accepted: false, reason }`: it holds the round
+  and the signing, so the bridge never sees a signed action, a key, or a token;
+  one that throws or rejects answers `not_active`. The bridge's pre-check is an
   early filter only (a second pick for the same step can pass it once the first
   settles, before the answering Snapshot arrives, and a test shows it); the use
   case is the gate and MUST re-check W-23 against the shell's own latest
   validated Snapshot and refuse a step it has already signed (W-15). The bridge
   logs nothing.
+- **The operator channel (W-49b to W-49d, ADR-006).**
+  `createOperatorChannel({ parent })` takes the operator page's window (only its
+  `postMessage`) and touches no global; the Wrapper routes the page's `message`
+  events whose `source` is the parent to its `receive`. Until `check` it records
+  the first well-formed `hello` from the parent, with its origin, and answers
+  nothing. `check({ operatorOrigins, ancestorOrigins, clock, timeoutMs? })`,
+  called once the configuration is validated, resolves with `{ ok: true }` or
+  `{ ok: false, reason }`: a recorded `hello` is checked at once (its origin on
+  `operatorOrigins` and equal to `ancestorOrigins[0]` where that list exists:
+  accepted; any other: `operator-not-allowed`, final); otherwise the first valid
+  `hello` after it is accepted, and with none within `timeoutMs`
+  (`HANDSHAKE_TIMEOUT_MS`, 10 s, on the injected clock) it is
+  `handshake-timeout`, final. Accepting fixes the operator origin and posts
+  `welcome` to it; a later valid `hello` from that origin and the parent gets
+  `welcome` again; every other message is ignored and never answered.
+  `resize(height)` posts `{ schema, type: "resize", height }` only once open,
+  only to the fixed origin, with the height rounded up and bounded to 1 to
+  `MAX_RESIZE_HEIGHT` (16384), and never the same value twice in a row. A
+  `hello` is read only through the own data properties of a plain object with
+  exactly `schema: "se.operator/1"` and `type: "hello"`. It holds no key, no
+  token, and no launch code, and logs nothing; the Wrapper logs the refusal
+  (`embedding.refused`). `state()` is `recording`, `waiting`, `open`, or
+  `refused`.
 - **Key custody (W-9 to W-13).** A session generates its action key with
   `signing`'s `createSigner` on the first need (the first `address()` or
   signature), from the injected random source (the platform's

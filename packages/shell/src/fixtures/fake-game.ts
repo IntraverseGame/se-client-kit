@@ -86,6 +86,7 @@ export const createFakeGame = (
     gameOrigin: GAME_ORIGIN,
     gameOrigins: [GAME_ORIGIN],
     ownOrigin: SE_ORIGIN,
+    environment: "production",
     frame,
     listen: (next): (() => void) => {
       handler = next;
@@ -171,6 +172,7 @@ export const mountOf = (game: FakeGame): GameMountOptions => {
     gameOrigin: _d,
     gameOrigins: _list,
     ownOrigin: _own,
+    environment: _environment,
     pick: _pick,
     ...frame
   } = game.options;

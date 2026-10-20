@@ -14,6 +14,7 @@ import {
   type RoundStatus,
   STATUSES,
 } from "./controller-protocol.ts";
+import { type Fields, hasExactly, plainFields } from "./plain-fields.ts";
 
 /** What the parser makes of a message from the game. */
 export type ParsedGameMessage =
@@ -27,38 +28,6 @@ export type ParsedGameMessage =
 const IGNORED: ParsedGameMessage = Object.freeze({ kind: "ignored" });
 
 const ACTION_ID = /^[A-Za-z0-9_-]{1,64}$/u;
-
-type Fields = ReadonlyMap<string, unknown>;
-
-/**
- * The own data properties of a plain object, or `undefined` for anything else
- * (a string, an array, a class instance, an accessor, a symbol key). Reading
- * never runs the game's code.
- */
-const plainFields = (value: unknown): Fields | undefined => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return undefined;
-  }
-  try {
-    const prototype: unknown = Object.getPrototypeOf(value);
-    if (prototype !== Object.prototype && prototype !== null) return undefined;
-    const descriptors = Object.getOwnPropertyDescriptors(value);
-    if (Object.getOwnPropertySymbols(descriptors).length > 0) return undefined;
-    const fields = new Map<string, unknown>();
-    for (const [key, descriptor] of Object.entries(descriptors)) {
-      if (!("value" in descriptor)) return undefined;
-      fields.set(key, descriptor.value);
-    }
-    return fields;
-  } catch {
-    // A proxy that throws is not a plain object.
-    return undefined;
-  }
-};
-
-/** Whether `fields` has exactly the names `names`, no more and no fewer. */
-const hasExactly = (fields: Fields, names: readonly string[]): boolean =>
-  fields.size === names.length && names.every(name => fields.has(name));
 
 /** A non-empty array with no repeats, every item from `allowed`. */
 const readList = <T extends string>(

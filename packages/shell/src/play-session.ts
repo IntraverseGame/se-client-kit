@@ -158,6 +158,8 @@ export const openSessionOver = async (
     gameOrigin,
     gameOrigins: options.gameOrigins,
     ownOrigin: options.ownOrigin,
+    // The accepted configuration's, never the UI's (W-37's loopback exemption).
+    environment: options.config.environment,
     ended: keeper.ended,
     end: keeper.end,
   });

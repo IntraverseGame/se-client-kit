@@ -12,6 +12,7 @@
 // shell's checks of the round (W-19, W-26), and the states it decides at open
 // (`session-ended`, `other-tab`, `unsupported-browser`) arrive through `block`.
 
+import type { Connectivity } from "./connectivity.ts";
 import type { EnvironmentConfig } from "./environment-config.ts";
 import { followed } from "./poll-follow.ts";
 import { createView } from "./render.ts";
@@ -30,13 +31,6 @@ import {
   type WrapperState,
 } from "./wrapper-state.ts";
 
-/** The browser's online state and its changes (W-43). */
-export type Connectivity = {
-  readonly onLine: () => boolean;
-  /** Calls back on `online` and `offline`; returns the unsubscribe. */
-  readonly subscribe: (onChange: () => void) => () => void;
-};
-
 export type WrapperAppOptions = {
   readonly doc: Document;
   readonly host: HTMLElement;
@@ -53,6 +47,10 @@ export type RoundIntents = Pick<Intents, "start" | "cashOut" | "checkAgain">;
 export type WrapperApp = {
   /** Applies a validated environment configuration (W-26a, W-39). */
   readonly configure: (config: EnvironmentConfig) => void;
+  /** Offers the lobby and deposit controls, once the gate opened (W-49e). */
+  readonly allowLinks: (rules: NonNullable<ViewOptions["links"]>) => void;
+  /** A start or cash-out call is in flight: no lobby or deposit (W-49f). */
+  readonly callInFlight: (inFlight: boolean) => void;
   /** Connects the session's Snapshot read and the round flows' intents. */
   readonly connect: (session: {
     readonly readSnapshot: () => Promise<SnapshotRead>;
@@ -76,6 +74,8 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     offline: options.connectivity?.onLine() === false,
   };
   let verifyBaseUrl: string | undefined;
+  let links: ViewOptions["links"];
+  let calling = false;
   let readSnapshot: (() => Promise<SnapshotRead>) | undefined;
   let roundIntents: RoundIntents = {};
   // The round whose `ended` cancel was followed by its one read (W-33).
@@ -87,9 +87,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
   // `apply`, `view`, `poller`, and `reread` refer to each other; each is
   // called only after all of them exist.
   const apply = (next: WrapperState, cause: ChangeCause): void => {
-    if (next === state) {
-      return;
-    }
+    if (next === state) return;
     state = next;
     const shownRound = state.snapshot?.roundId;
     if (
@@ -145,9 +143,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
 
   const readOnce = async (cause: ChangeCause): Promise<void> => {
     const port = readSnapshot;
-    if (port === undefined) {
-      return;
-    }
+    if (port === undefined) return;
     let read: SnapshotRead;
     try {
       read = await port();
@@ -183,9 +179,12 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
       ...(readSnapshot === undefined ? {} : { retry }),
       ...(options.copyText === undefined ? {} : { copyText: options.copyText }),
     };
-    return verifyBaseUrl === undefined
-      ? { intents }
-      : { intents, verifyBaseUrl };
+    return {
+      intents,
+      ...(verifyBaseUrl === undefined ? {} : { verifyBaseUrl }),
+      ...(links === undefined ? {} : { links }),
+      ...(calling ? { calling } : {}),
+    };
   };
 
   const view = createView(options.doc, options.host, viewOptions);
@@ -256,10 +255,15 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
         "poll",
       );
     },
-    connect: (session: {
-      readonly readSnapshot: () => Promise<SnapshotRead>;
-      readonly intents?: RoundIntents;
-    }): void => {
+    allowLinks: (rules): void => {
+      links = rules;
+      view.update(state, "poll");
+    },
+    callInFlight: (inFlight): void => {
+      calling = inFlight;
+      view.update(state, "poll");
+    },
+    connect: (session): void => {
       readSnapshot = session.readSnapshot;
       const { start, ...others } = session.intents ?? {};
       roundIntents =

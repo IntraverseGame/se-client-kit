@@ -3,7 +3,11 @@
 
 import type { RoundState } from "@intraverse/se-client-shell";
 
-import { type GameWindow, wireSession } from "../session-wiring.ts";
+import {
+  createMessageDispatch,
+  type MessageTarget,
+} from "../message-dispatch.ts";
+import { wireSession } from "../session-wiring.ts";
 import { mount, type Mounted } from "./app.ts";
 import {
   createFakeSession,
@@ -13,7 +17,7 @@ import {
 
 export const SE_ORIGIN = "https://play.example.com";
 
-export const fakeWindow = (): GameWindow & {
+export const fakeWindow = (): MessageTarget & {
   readonly listeners: () => number;
 } => {
   const listeners = new Set<unknown>();
@@ -24,7 +28,6 @@ export const fakeWindow = (): GameWindow & {
     removeEventListener: (_type, listener) => {
       listeners.delete(listener);
     },
-    origin: SE_ORIGIN,
     listeners: () => listeners.size,
   };
 };
@@ -40,7 +43,12 @@ export const wired = async (
   const fake = createFakeSession();
   prepare(fake);
   wireSession(
-    { app: ui.app, doc: globalThis.document, window: fakeWindow() },
+    {
+      app: ui.app,
+      doc: globalThis.document,
+      ownOrigin: SE_ORIGIN,
+      messages: createMessageDispatch(fakeWindow()),
+    },
     fake.session,
   );
   await ui.settle();

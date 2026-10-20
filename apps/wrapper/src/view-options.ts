@@ -1,6 +1,7 @@
 // What the UI is given besides its state: the player intents that are wired,
-// and the environment's verify base.
+// the environment's verify base, and the lobby and deposit rules.
 
+import type { LinkRules } from "./operator-links.ts";
 import type { ShownAmount } from "./round-input.ts";
 
 /**
@@ -26,6 +27,16 @@ export type ViewOptions = {
   readonly intents: Intents;
   /** The environment's `verifyBaseUrl`; no verify link without it. */
   readonly verifyBaseUrl?: string;
+  /**
+   * The lobby and deposit rules (W-49e), once the operator gate opened (after
+   * `welcome`, or standalone); no lobby or deposit control without them.
+   */
+  readonly links?: LinkRules;
+  /**
+   * A start or cash-out call is in flight: leaving would end the session before
+   * its answer, so no lobby or deposit is offered (W-49f).
+   */
+  readonly calling?: true;
 };
 
 /** Why the state changed: only a player's own action moves focus (W-46). */

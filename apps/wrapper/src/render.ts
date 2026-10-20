@@ -24,6 +24,7 @@ import {
 } from "./dom.ts";
 import { icon } from "./icons.ts";
 import { type Localized, messagesFor } from "./messages.ts";
+import { linkPlan, linkView } from "./operator-links.ts";
 import { roundEnded } from "./round-input.ts";
 import { roundView } from "./round-view.ts";
 import {
@@ -73,6 +74,8 @@ export const createView = (
   const alert = el("div", { class: "se-alert", role: "alert" });
   const status = el("section", { class: "se-status" });
   const ended = el("section", { class: "se-ended" });
+  // The lobby and deposit controls (W-49e, W-49f).
+  const links = el("div", { class: "se-actions se-links" });
   const gameHost = el("div", { class: "se-game" });
   gameHost.hidden = true;
   const live = el("div", {
@@ -82,7 +85,7 @@ export const createView = (
   });
   const root = el("div", { class: "se-wrapper" }, [
     notices,
-    el("main", { class: "se-main" }, [alert, status, gameHost, ended]),
+    el("main", { class: "se-main" }, [alert, status, gameHost, ended, links]),
     live,
   ]);
   host.replaceChildren(root);
@@ -191,9 +194,6 @@ export const createView = (
         state.check?.cancel === "check-later",
         options.intents.checkAgain !== undefined,
         cancelEnded,
-        state.blocking === "session-ended"
-          ? (snapshot?.context.links?.lobby ?? null)
-          : null,
       ]),
       () =>
         showRound
@@ -223,6 +223,12 @@ export const createView = (
           ? []
           : roundIdAndVerify(el, m, endedRound.roundId, options, announce),
     );
+
+    const plan = linkPlan(state, options.links, options.calling === true);
+    section(links, JSON.stringify([localized.language, plan]), () =>
+      linkView(el, m, plan),
+    );
+    links.hidden = plan.lobby === undefined && plan.deposit === undefined;
 
     const statusHeadingElement = root.querySelector(`#${STATUS_HEADING_ID}`);
     if (statusHeadingElement === null) {

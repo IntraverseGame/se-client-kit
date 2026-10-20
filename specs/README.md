@@ -109,7 +109,7 @@ the specs' headings.
   - [Accessibility](./wrapper.md#accessibility) — W-45 to W-48
   - [Operator embedding](./wrapper/operator-embedding.md) — W-49 to W-49f: the
     framing check, the `se.operator/1` handshake, `resize`, the lobby and
-    deposit navigations, and T-9a's test plan
+    deposit navigations, the operator guidance, and T-9a's test plan
   - [Configuration](./wrapper.md#configuration)
 - [Errors and edge cases](./wrapper.md#errors-and-edge-cases) ·
   [Security](./wrapper.md#security) ·

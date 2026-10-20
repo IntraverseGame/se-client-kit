@@ -42,8 +42,11 @@ Part of the [Wrapper spec](../wrapper.md), section
     the accepted configuration (above). Two hosts on one registrable domain
     always share their last two labels, so the rule never accepts such a pair;
     it can refuse a legitimate pair on a shared multi-label public suffix
-    (`a.co.uk` and `b.co.uk`), which fails closed. It is built with #42; until
-    then only an equal origin is refused (decided 2026-10-17).
+    (`a.co.uk` and `b.co.uk`), which fails closed. Built (#42): the refusal code
+    is `same-site` (ADR-007's open question 1, proposed with the
+    implementation). An IP literal is recognised in its canonical serialized
+    form (four decimal parts of 0 to 255 with no leading zero, or `[::1]`)
+    before any label split.
   - **Where D comes from** was decided in human review, 2026-10-17: the
     `sessions:redeem` response's `gameOrigin`, a serialized origin with no path
     (`https:`, or a loopback `http:` origin in a local environment), which the

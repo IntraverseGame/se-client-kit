@@ -14,15 +14,18 @@ section Decisions) and are recorded in
 launch URL, the launch code's form, and the operator's side of the backend's
 launch are the backend's launch URL contract and are only named here (W-1).
 
-**What is built, and when this changes.** The code today implements the
-fail-closed minimum of 2026-10-17 (#58), described at the end of this file. The
-requirements below are the accepted contract; they are built with #42, and until
-then the minimum applies. Two of them change behaviour that has shipped: a
-framed page whose `location.ancestorOrigins` lists more than one origin, all
-listed, opens a session today and is refused under W-49a (direct embedding
-only); and a framed page on a browser with `location.ancestorOrigins` opens a
-session today without a handshake and waits for one under W-49c. Both changes
-land with #42's implementation, not before.
+**What is built.** The requirements below are built (#42). They replaced the
+fail-closed minimum of 2026-10-17 (#58, summarized at the end of this file) and
+tightened it in two ways: a framed page whose `location.ancestorOrigins` lists
+more than one origin is refused under W-49a (direct embedding only), and a
+framed page on a browser with `location.ancestorOrigins` waits for the handshake
+of W-49c before it opens a session. Where the code is: the shell's operator
+channel (`operator-channel.ts`, `operator-protocol.ts`) holds the handshake and
+`resize`; the Wrapper app holds the framing decision (`embedding.ts`), the one
+`message` listener (`message-dispatch.ts`), the gate that awaits the handshake
+before the session opens (`operator-gate.ts`), the height observer
+(`height-observer.ts`), and the lobby and deposit anchors (`operator-links.ts`).
+ADR-006 is still proposed: its acceptance is the human's call before the merge.
 
 ## The rule
 
@@ -62,8 +65,13 @@ land with #42's implementation, not before.
   when the embedding iframe's referrer policy is `no-referrer`, or `same-origin`
   for a cross-origin parent: the entry reads `"null"`. An operator page that
   sets either value on the Wrapper's iframe is refused on that path (the
-  operator guidance below). Whether each engine masks as the standard says is an
-  assumption that T-9a's e2e cases settle.
+  operator guidance below). T-9a's e2e case records what each engine does
+  (2026-10-19, Playwright 1.64.0): its Firefox build masks the entry and
+  refuses; its WebKit build, and an installed Google Chrome 155 run as the
+  Chromium project through the opt-in `SE_E2E_BROWSER_CHANNEL=chrome`, keep the
+  operator's origin, so the handshake decides there. Playwright's own Chromium
+  build was not observed locally; CI's Chromium job records it. An operator page
+  must not rely on either.
 
 ## The `se.operator/1` protocol
 
@@ -128,10 +136,12 @@ land with #42's implementation, not before.
      ([Configuration](../wrapper.md#configuration)), so dropping an early
      `hello` would let a healthy operator time out.
   2. **After validation**, the Wrapper decides its framing (W-49a). If a `hello`
-     was recorded, it is checked at once as in step 3: a listed origin completes
-     the handshake, and an unlisted one is the configuration-error state (the
-     parent's origin cannot change, so waiting would not help). Otherwise the
-     handshake timer starts.
+     was recorded, it is checked at once as in step 3: an origin that passes
+     step 3's check completes the handshake, and any other (unlisted, or not
+     equal to `location.ancestorOrigins[0]` where that exists) is the
+     configuration-error state with the reason `operator-not-allowed` (decided
+     2026-10-19; the parent's origin cannot change, so waiting would not help).
+     Otherwise the handshake timer starts.
   3. **Accept the first valid `hello`** (the recorded one, or the first after
      validation) with `event.source === window.parent`, an `event.origin` on
      `operatorOrigins` (exact match, and equal to `location.ancestorOrigins[0]`
@@ -184,11 +194,11 @@ land with #42's implementation, not before.
 - **W-49d.** After `welcome`, the Wrapper SHOULD tell the operator page the
   height its content needs:
 
-  | Field    | Value                                                                                                                                                                |
-  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `schema` | `"se.operator/1"`                                                                                                                                                    |
-  | `type`   | `"resize"`                                                                                                                                                           |
-  | `height` | the document's `scrollHeight` in CSS pixels, an integer from 1 to 16384; a larger value is sent as 16384 (the bound is provisional, decided 2026-10-18, RFC-001 Q15) |
+  | Field    | Value                                                                                                                                                                                                                                                          |
+  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `schema` | `"se.operator/1"`                                                                                                                                                                                                                                              |
+  | `type`   | `"resize"`                                                                                                                                                                                                                                                     |
+  | `height` | the height the content needs: the `<body>`'s box in CSS pixels (never the document's `scrollHeight`, which is not below the viewport), an integer from 1 to 16384; a larger value is sent as 16384 (the bound is provisional, decided 2026-10-18, RFC-001 Q15) |
   - Sent only after `welcome`, only to the fixed operator origin, with no reply;
     the operator page MAY ignore it.
   - Sent once right after `welcome`, then whenever the height changes (observed
@@ -246,16 +256,27 @@ land with #42's implementation, not before.
 - **W-49f.** Which Wrapper states offer the controls (decided 2026-10-18,
   RFC-001 Q8). The state names are those of W-44 and the status table of W-31.
 
-  | Wrapper state                                                                                                                         | Lobby                                   | Deposit |
-  | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------- |
-  | before `welcome` (framed), loading, the configuration-error state                                                                     | no                                      | no      |
-  | `idle`, and a typed error shown at `idle`, `INSUFFICIENT_FUNDS` included (W-42)                                                       | yes                                     | yes     |
-  | `starting`, `active`, `resolving`, or any state with a signed action not yet seen applied (W-15)                                      | no                                      | no      |
-  | `won`, `lost`, `canceled` (the round id and verify link shown, W-39)                                                                  | yes                                     | yes     |
-  | session ended (the relaunch instruction of W-1a and W-2)                                                                              | yes, labelled as the way to relaunch    | no      |
-  | open in another tab, round failed verification, out of sync, Snapshot rejected (W-44)                                                 | yes, from the latest validated Snapshot | no      |
-  | connection problem (W-43), chain check not independent (W-26a), "game not compatible" (W-38), the generic error (W-42) outside `idle` | no                                      | no      |
-  | any other state, including one a later spec adds                                                                                      | no                                      | no      |
+  | Wrapper state                                                                                                                                                   | Lobby                                   | Deposit |
+  | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------- |
+  | before `welcome` (framed), loading, the configuration-error state                                                                                               | no                                      | no      |
+  | a start or cash-out call in flight, in any state (decided 2026-10-19)                                                                                           | no                                      | no      |
+  | `idle`, and a typed error or the generic error shown at `idle`, `INSUFFICIENT_FUNDS` included (W-42)                                                            | yes                                     | yes     |
+  | `starting`, `active`, `resolving`, or any state with a signed action not yet seen applied (W-15)                                                                | no                                      | no      |
+  | `won`, `lost`, `canceled` (the round id and verify link shown, W-39), and a typed error shown beside them (`INSUFFICIENT_FUNDS` on the next start, for example) | yes                                     | yes     |
+  | session ended (the relaunch instruction of W-1a and W-2)                                                                                                        | yes, labelled as the way to relaunch    | no      |
+  | open in another tab, round failed verification, out of sync, Snapshot rejected (W-44)                                                                           | yes, from the latest validated Snapshot | no      |
+  | connection problem (W-43), "game not compatible" (W-38), the generic error (W-42) outside `idle`                                                                | no                                      | no      |
+  | "this browser cannot keep your session safe" (W-14), "could not verify the chain" (W-26a), and any other state, including one a later spec adds                 | no                                      | no      |
+
+  **The generic error** is the shell's `refused` answer (it did not act on the
+  player's request, or the use case failed), shown as "Something went wrong"; a
+  typed error is a Play API problem with its `code`. **The "chain check not
+  independent" indicator** (W-26a) is a development notice shown for the whole
+  session, not a state: it hides no control, and the controls follow the other
+  rows (decided 2026-10-19). **A call in flight**: from the player's start or
+  cash-out until its answer is shown, neither control is offered, since leaving
+  would end the session before the answer (decided 2026-10-19); "check again", a
+  read only, hides nothing.
 
   During a round the controls are hidden because leaving ends the session and
   the round then runs to its expiry rule (OQ-1); the operator's own page may
@@ -275,20 +296,20 @@ Through the shell's redacting logger, at `warn`, once per page: one event,
 `embedding.refused`, with a reason code only, never an origin or a message's
 content. The reasons:
 
-| Reason                 | When                                                                                          |
-| ---------------------- | --------------------------------------------------------------------------------------------- |
-| `ancestor-not-allowed` | `location.ancestorOrigins` names an origin that is not on `operatorOrigins`                   |
-| `ancestor-masked`      | an entry of `location.ancestorOrigins` is `"null"`                                            |
-| `ancestors-unknown`    | framed, with an empty `location.ancestorOrigins`                                              |
-| `nested`               | framed, with `window.parent !== window.top` or more than one `location.ancestorOrigins` entry |
-| `operator-not-allowed` | a recorded `hello` (W-49c, step 1) came from an origin that is not on `operatorOrigins`       |
-| `handshake-timeout`    | no valid `hello` within the handshake timeout                                                 |
+| Reason                 | When                                                                                                                                                                         |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ancestor-not-allowed` | `location.ancestorOrigins` names an origin that is not on `operatorOrigins`                                                                                                  |
+| `ancestor-masked`      | an entry of `location.ancestorOrigins` is `"null"`                                                                                                                           |
+| `ancestors-unknown`    | framed, with an empty `location.ancestorOrigins`; or the framing is unknown (none was read from the platform, or a page held framed has no operator channel)                 |
+| `nested`               | framed, with `window.parent !== window.top` or more than one `location.ancestorOrigins` entry                                                                                |
+| `operator-not-allowed` | a recorded `hello` (W-49c, step 1) came from an origin that is not on `operatorOrigins`, or is not `location.ancestorOrigins[0]` where that list exists (decided 2026-10-19) |
+| `handshake-timeout`    | no valid `hello` within the handshake timeout                                                                                                                                |
 
 Nothing is logged for an ignored message, so a hostile page cannot flood the
 console. This follows the [Observability](../wrapper.md#observability) section:
-console only, no backend telemetry. Until #42, the built minimum also logs
-`ancestors-unknown` for a framed page without `location.ancestorOrigins`; under
-W-49c that page waits for the handshake instead.
+console only, no backend telemetry. A framed page without
+`location.ancestorOrigins` logs nothing for its framing: it waits for the
+handshake (W-49c).
 
 ## Security
 
@@ -335,29 +356,83 @@ W-49c that page waits for the handshake instead.
 
 ## Operator guidance
 
-A public integration note, written in this repository once #42 is built, says:
+The public integration note for an operator page that embeds the Wrapper. It
+uses only what the page observes: the launch URL it was given (the SE origin is
+that URL's origin), the iframe it creates, and the messages it receives.
 
-- post `hello` (exactly `schema: "se.operator/1"` and `type: "hello"`) to the
-  Wrapper iframe's `contentWindow`, with `targetOrigin` set to the SE origin
-  (the origin of the launch URL), on the iframe's `load` event and then every
-  250 ms until `welcome` arrives (SHOULD), with no timer of its own;
-- on every message it receives, check that `event.source` is the Wrapper
-  iframe's `contentWindow` and `event.origin` is the SE origin;
-- size the iframe from `resize` (optional);
-- set no `sandbox` attribute on the Wrapper's iframe, no `referrerpolicy` of
-  `no-referrer` or `same-origin` on it, and no `allow` feature the release
-  bundle's `Permissions-Policy` turns off;
-- embed the Wrapper directly (no page in between), and supply the lobby and
-  deposit links at launch, the lobby on a listed origin.
+**Embed.** Put the launch URL in an iframe on your own page, directly: the
+Wrapper refuses to start when another page sits between yours and it (W-49a),
+and when your page's origin is not on the environment's `operatorOrigins` list
+(ask SuperEngine to list every origin that embeds the Wrapper, and the origin of
+your lobby). On that iframe set no `sandbox` attribute, no `referrerpolicy` of
+`no-referrer` or `same-origin` (some browsers then hide your origin from the
+Wrapper, which refuses), and no `allow` feature the Wrapper's
+`Permissions-Policy` turns off.
+
+**Say hello.** On the iframe's `load` event, post
+`{ "schema": "se.operator/1", "type": "hello" }` to the iframe's `contentWindow`
+with `targetOrigin` set to the SE origin, never `"*"`, and repeat it every 250
+ms until `welcome` arrives (SHOULD). Keep no timer of your own: the Wrapper
+waits up to 10 s after it has read its configuration, then shows "The game
+cannot start", and only reloading the iframe (with a new launch) retries. Until
+`welcome`, the Wrapper redeems nothing and shows only its loading state.
+
+```js
+const frame = document.querySelector("#se-wrapper"); // your iframe
+const seOrigin = new URL(launchUrl).origin;
+let welcomed = false;
+let timer;
+const hello = () =>
+  frame.contentWindow?.postMessage(
+    { schema: "se.operator/1", type: "hello" },
+    seOrigin,
+  );
+window.addEventListener("message", event => {
+  if (event.source !== frame.contentWindow || event.origin !== seOrigin) return;
+  if (event.data?.type === "welcome") welcomed = true;
+  if (event.data?.type === "resize" && Number.isInteger(event.data.height)) {
+    frame.style.height = `${event.data.height}px`;
+  }
+});
+frame.addEventListener("load", () => {
+  // Each load (a reload, a new launch) is a new Wrapper that needs a hello.
+  welcomed = false;
+  clearInterval(timer);
+  hello();
+  timer = setInterval(() => (welcomed ? clearInterval(timer) : hello()), 250);
+});
+frame.src = launchUrl;
+```
+
+**Check what you receive.** Act on a message only when `event.source` is the
+iframe's `contentWindow` and `event.origin` is the SE origin. The Wrapper sends
+`welcome` and `resize` only; a game inside it can post to your page too, from
+another origin, and must be ignored.
+
+**Size the iframe (optional).** `resize` carries `height`, the CSS pixels the
+Wrapper's content needs, an integer from 1 to 16384. The width is yours.
+
+**Lobby and deposit.** Supply both links when you launch the session; the
+Wrapper shows them to the player as its own links, never as messages. The
+lobby's origin must be on `operatorOrigins`: the player's click navigates your
+top-level page there, and ends the Wrapper's session. The deposit, any `https:`
+URL, opens in a new tab with no opener and no referrer, and the session stays
+open. The Wrapper hides both while a round is in play.
 
 ## The test plan for T-9a
 
 T-9a is unit and e2e. Every case is hermetic: an injected clock for the timeout,
 the in-repo fake Play API, and a fake operator page on a third test origin (and
-an unlisted fourth). Its handshake cases run in the Chromium, Firefox, and
-WebKit projects ([testing-and-ci.md](../client-kit/testing-and-ci.md)) once #42
-builds them; until then they are declared pending in
-`e2e/tests/pending.spec.ts`, never as passing.
+an unlisted fourth). Its e2e cases run in the Chromium, Firefox, and WebKit
+projects ([testing-and-ci.md](../client-kit/testing-and-ci.md)):
+`t9a-embedding.spec.ts`, `t9a-navigations.spec.ts`, and
+`t9a-operator-round.spec.ts`. The unit cases are the shell's
+`operator-channel.test.ts`, `operator-protocol.test.ts` (1 to 3, 5, 8, 10), and
+the Wrapper's `operator-gate.test.ts`, `operator-gate-guards.test.ts`,
+`operator-gate-closed.test.ts`, `embedding.test.ts`,
+`environment-config.test.ts`, `operator-links.test.ts`,
+`operator-links-calls.test.ts`, `operator-no-secret.test.ts`, and
+`message-dispatch.test.ts` (4 to 12).
 
 **Unit** (the operator channel in the `shell`; the dispatch and the controls in
 the Wrapper app):
@@ -433,26 +508,15 @@ the Wrapper app):
 17. **The secret scan** (T-13's) also runs over every message the fake operator
     page received and every navigation URL.
 
-The e2e harness gains, with #42: the fake operator page on a third origin (with
-a lobby and a deposit page), an unlisted fourth origin, and a way to serve the
-bundle with and without the `frame-ancestors` header.
+The e2e harness has the fake operator page (`e2e/tests/operator`,
+`harness/operator-page.ts`) on a third origin (with a lobby and a deposit page)
+and on an unlisted fourth, a Snapshot answer that carries the operator's
+`context.links`, and a way to serve the bundle with the `frame-ancestors` header
+(without it is the suite's default).
 
-## The built minimum (until #42)
+## The minimum it replaced
 
-Decided in human review, 2026-10-17, and built in `apps/wrapper`'s
-`embedding.ts`. It runs after the configuration is accepted and before the
-session opens (no redeem, no key, no signature, no game mount). A page that is
-not framed is unchanged. A framed one:
-
-- where `location.ancestorOrigins` exists, refuses to start (the
-  configuration-error state, nothing signed) unless every entry is on
-  `operatorOrigins` (exact match); a masked entry (`"null"`) or an empty list
-  refuses;
-- where it does not exist, opens no session and signs nothing while framed (no
-  browser the suite runs lacks it; the path is a component test).
-
-A refusal logs `embedding.refused` with its reason code only
-(`ancestor-not-allowed`, `ancestor-masked`, `ancestors-unknown`), never an
-origin. The minimum sends and accepts no operator message. #42 replaces it with
-W-49a to W-49f; the minimum is never relaxed to "allow when unknown" in the
-meantime.
+From 2026-10-17 (#58) until #42, the Wrapper applied a fail-closed minimum: a
+framed page opened a session only where `location.ancestorOrigins` existed and
+every entry was on `operatorOrigins`, and refused everywhere else; it sent and
+accepted no operator message. W-49a to W-49f replaced it.
