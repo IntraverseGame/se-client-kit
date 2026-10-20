@@ -1,4 +1,4 @@
-// The vendored Play API document and Snapshot schema refer only inside
+// The vendored Play API and verify API documents and the Snapshot schema refer only inside
 // themselves (`#/...`), so generating their types reads nothing else: no other
 // file and no network (tools/generate-contracts.ts).
 
@@ -39,6 +39,14 @@ const refCount = (text: string): number => text.split("$ref").length - 1;
 describe("the vendored documents' references", () => {
   it("are all local in the Play API document", () => {
     const text = readFileSync(join(schemas, "play.v1.openapi.yaml"), "utf8");
+    const refs = yamlRefs(text);
+    expect(refs.length).toBe(refCount(text));
+    expect(refs.length).toBeGreaterThan(0);
+    expect(refs.filter(ref => !isLocal(ref))).toEqual([]);
+  });
+
+  it("are all local in the verify API document", () => {
+    const text = readFileSync(join(schemas, "verify.v1.openapi.yaml"), "utf8");
     const refs = yamlRefs(text);
     expect(refs.length).toBe(refCount(text));
     expect(refs.length).toBeGreaterThan(0);

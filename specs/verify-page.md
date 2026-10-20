@@ -12,15 +12,18 @@ SuperEngine fairness kernel, kernelVersion 1, keyed on the kernel version, and
 the raw `keccak256` they take from `signing`; the quorum read of check 6; checks
 1 to 4; the rules on which reveals a round carries; the configuration read
 (V-3); the page's states, their view, and its accessibility (V-4 to V-14); the
-verify API read, built to an **assumed** response body confined to one module;
-the page's HTML and module entry (`index.html`, `src/main.ts`, mounting at
-`#verify-root`), and the build and release (V-15 to V-17); and the e2e fake of
-the verify API with VT-5's browser rows
+verify API read, built to the vendored verify API document
+(`GET /verify/v1/rounds/{roundId}`) and confined to its own modules; the page's
+HTML and module entry (`index.html`, `src/main.ts`, mounting at `#verify-root`),
+and the build and release (V-15 to V-17); and the e2e fake of the verify API
+with VT-5's browser rows
 ([The e2e fake](#the-e2e-fake-of-the-verify-api-built)). Not built: the e2e rows
-VT-6 to VT-8. The response body waits for the verify API document, to come; what
-depends on it is marked `TODO(verify API)`. Its four design decisions were made
-by the human on 2026-10-18, and five more on the kernel derivations on
-2026-10-19 ([Decisions](#decisions)).
+VT-6 to VT-8. The verify API document is vendored into `contracts`
+(`schemas/verify.v1.openapi.yaml`, with its generated types); what it does not
+yet carry (the on-chain record and the proofs) is still marked
+`TODO(verify API)`. The request is `play-client`'s `getRoundVerification` (A-1).
+Its four design decisions were made by the human on 2026-10-18, and five more on
+the kernel derivations on 2026-10-19 ([Decisions](#decisions)).
 
 ## Purpose
 
@@ -63,11 +66,11 @@ Out of scope:
 - **The infrastructure owner owns:** the Wrapper's hosting origin, so the page's
   production URL; carrying out the edge rules of V-2, which are decided; and the
   RPC providers the configuration lists.
-- **Consumes:** the verify API document (vendored into `contracts` when
-  published, with its generated types, as
-  [the contracts package](./client-kit/the-contracts-package.md) already plans);
-  the Snapshot schema's `RoundId` and `RoundIdBytes32` definitions; the
-  environment configuration document the Wrapper reads
+- **Consumes:** the verify API document (vendored into `contracts` with its
+  generated types, as
+  [the contracts package](./client-kit/the-contracts-package.md) describes); the
+  Snapshot schema's `RoundId` and `RoundIdBytes32` definitions; the environment
+  configuration document the Wrapper reads
   ([wrapper.md](./wrapper.md#configuration)).
 
 ## Contract
@@ -76,8 +79,12 @@ Out of scope:
 
 - **Round id:** the Snapshot's `roundId`, a UUIDv7 in canonical lowercase text
   (the Snapshot schema's `RoundId`).
-- **Evidence:** the round's public fields the verify API returns.
-  <!-- TODO(verify API): the response body, from the verify API document, to come. Until then every field named below is by its Snapshot name. -->
+- **Evidence:** the round's public fields the verify API returns: the document's
+  `RoundVerification`, in the page's own names
+  ([The evidence](#the-evidence-from-the-verify-api-document)). Where this spec
+  names a field of the evidence (`newRound`, `randomnessProof`, `fairnessProof`,
+  `config.steps`), it is the page's name for it, and that section maps it to the
+  document's field.
 - **Recomputed:** every check of
   [What the page recomputes](#what-the-page-recomputes) that applies to the
   round ran in the browser and passed.
@@ -171,25 +178,42 @@ what happened, and, where the player can act, one control.
   chain", names that check, and offers to check again; it still shows no result
   as established.
 - **V-8. Not recomputable.** The API returned the round, but the page cannot
-  recompute it, for one of three reasons:
+  recompute it, for one of four reasons:
   - the round has not ended (`won`, `lost`, and `canceled` are the ended
     statuses): the page shows what it could check, says the rest waits for the
     round's end, and offers to check again;
   - the round's kernel version is one this page does not know (V-12a): the page
     says it cannot recompute rounds of that kernel version, names it, runs no
     derivation, and offers no retry;
+  - the round was voided or refused (A-5): the page says so, and offers no retry
+    (below);
   - the round is not a one-step, two-option config round (A-3): the page says it
     recomputes rounds of that shape only, shows checks 1 to 4 and 6, runs no
     derivation of checks 5 and 7, and offers no retry.
-- **V-9. Not found.** The API answered that it has no such round. The page says
-  so, shows the id it looked for, and offers the form.
-  <!-- TODO(verify API): the status code and body for an unknown round, from the verify API document. -->
+
+  A **voided** round (`idle` with a `voidReason`) and a **refused** round
+  (`idle` with a `rejectCode`, refused before any money moved) will never be
+  played, so they are not "not ended": the page's heading says "This round was
+  voided" or "This round was refused", the text says it will not change and
+  there is nothing to wait for, there is no "check again", and it shows the
+  checks that could be made. It shows only that wording: the `voidReason` and
+  the `rejectCode` are the backend's codes and are not shown. A failed check
+  still makes the verdict V-7, before this.
+
+- **V-9. Not found.** The API answered that it has no such round: `404`, with an
+  `application/problem+json` body whose `code` is `NOT_FOUND`. The page says so,
+  shows the id it looked for, and offers the form. It branches on the status,
+  not on the body.
 - **V-10. API error.** The API answered with an error (any other 4xx or 5xx), or
   with a body that does not validate against the verify API document's schema.
   The page says the verification service could not answer, offers to try again,
   and claims nothing about the round. A body that fails validation is never
-  partly used.
-  <!-- TODO(verify API): the error status codes and body, from the verify API document. -->
+  partly used. The document's errors are `400` (`INVALID_ARGUMENT`: the round id
+  is not a UUIDv7 in lowercase, which the page's own check (V-4) keeps from
+  being sent), `429` (`RATE_LIMITED`, with `Retry-After`), `500` (`INTERNAL`),
+  and `503` (`UNAVAILABLE`), each an `application/problem+json` body with a
+  `code` and a `retryable` hint; the page treats every one of them alike and
+  does not read the body, so a `code` added later changes nothing.
 - **V-11. API unreachable.** No answer: offline, DNS, TLS, timeout, reset, or a
   request the policy blocked. The page says it could not reach the service, says
   so distinctly when the browser reports being offline, and offers to try again.
@@ -235,13 +259,13 @@ alone, and the payout is shown, not recomputed (V-13).
 <!-- TODO(fairness kernel): vectors for Coin Flip's payouts and roundSecretHash, vendored when the kernel publishes them. -->
 
 - **V-12a. Kernel version.** The page keys its derivations (checks 5 and 7) on
-  the round's kernel version, which the verify API's response carries (the
-  Snapshot has no such field). Until the verify API document is published the
-  page assumes kernel version 1. A round whose kernel version is not one the
-  page implements is shown as not recomputable (V-8): the page never applies one
-  kernel version's derivation to a round of another, and never guesses. Checks 1
-  to 4 and 6 do not depend on it.
-  <!-- TODO(verify API): the name and type of the response's kernel version field; until then, kernel version 1 is assumed. -->
+  the round's kernel version, which the verify API's response carries as
+  `kernel.version` (an integer from 1; `kernel` also names the kernel and lists
+  its public vector sets, which the page does not use; the Snapshot has no such
+  field). A round whose kernel version is not one the page implements is shown
+  as not recomputable (V-8): the page never applies one kernel version's
+  derivation to a round of another, and never guesses. Checks 1 to 4 and 6 do
+  not depend on it.
 
 - **V-12. The checks, for a Coin Flip config round.**
   1. **Round id.** `newRound.roundId` is the round id's `bytes32` form (the 16
@@ -311,8 +335,10 @@ alone, and the payout is shown, not recomputed (V-13).
      round (`block-check.ts`): it shows each endpoint's answer (chain id and
      block hash) and, for W-26a's exception, the degraded indicator beside the
      check; when the read fails, check 6 is "could not be verified" and check 7
-     is not run, since it has no agreed block hash.
-     <!-- TODO(verify API): the evidence's `blockNumber` type waits for the verify API document; the page assumes a JSON integer, read as `bigint`. -->
+     is not run, since it has no agreed block hash. The block number is
+     `entropy.block`, an `int64` in the document: the page reads a JSON integer
+     as `bigint`, and a value that is not a safe integer (above 2^53 − 1, which
+     `JSON.parse` would already have rounded) fails the body's validation.
   7. **Seed and outcome.** Under kernel version 1:
      - **The seed** is `SHA-256(blockValue || roundSecret)`: a 64-byte preimage,
        block N's 32-byte hash first, then the round secret's 32 bytes.
@@ -368,34 +394,88 @@ alone, and the payout is shown, not recomputed (V-13).
   this page: the payout amount and its terms (`payoutTermsHash` is taken as
   signed, as W-26 does), the on-chain record (`record.txHash`, `chainId`), and a
   ZK proof's `status` and `verifiedBy` (`record` and `zkProof` are optional and
-  shown only when present); and, for a `canceled` round without reveals, checks
-  5 and 7; and `newRound.actionKey` (A-4: the page has no player key to compare
-  it with). Links from the evidence (`blockExplorerUrl`, `explorerUrl`,
-  `proofLink`) are shown as text, not as links, in the first release: they come
-  from the API the page does not trust.
+  shown only when present; the verify API document has no field for them, its
+  `onchain_record` and `proofs` checks being "not available yet", so today none
+  is present); and, for a `canceled` round without reveals, checks 5 and 7; and
+  `newRound.actionKey` (A-4: the page has no player key to compare it with).
+  Links from the evidence (`blockExplorerUrl`, `explorerUrl`, `proofLink`) are
+  shown as text, not as links, in the first release: they come from the API the
+  page does not trust.
+  <!-- TODO(verify API): the on-chain record and the proofs, when the document carries them (its `onchain_record` and `proofs` checks). -->
 - **Which package does what.** `signing` for every keccak256 hash and the
   signature recovery (it has no kit dependency at run time); Web Crypto for
   SHA-256; `apps/verify` for StepsDerive and the kernel's rules; the vendored
   schemas in `contracts` (runtime entry) for the round id pattern and the verify
-  API document's types; a validator for the API's body, generated from or
-  checked against that document like the Snapshot's (`snapshot` if the body
-  embeds a Snapshot, otherwise a validator built the same way); the verify API
-  read through `play-client`, whose spec already names "the verify API read"
-  ([packages](./client-kit/packages.md)), once the verify API document is
-  vendored (**interim**, A-1: until then the read and its hand-written validator
-  are the app's own module, `apps/verify/src/verify-api.ts`); the chain read
-  through the page's own read-only JSON-RPC module (check 6). The page never
-  imports `shell`: it holds no credential, and the shell's code does not belong
-  in its bundle.
-  <!-- TODO(verify API): whether the body embeds an `se.snapshot/1` Snapshot or has its own schema, so which validator applies; it comes with the verify API document. -->
+  API document's types; a validator for the API's body, which has a schema of
+  its own and embeds no Snapshot (so `snapshot` does not apply), hand-written
+  over the document's generated types and held to the document's patterns by a
+  test (`tools/verify-api-patterns.test.ts`); the verify API request, through
+  `play-client`'s `getRoundVerification` (A-1), whose body stays `unknown` until
+  the page's validator (`verify-body.ts`) reads it; the chain read through the
+  page's own read-only JSON-RPC module (check 6). The page never imports
+  `shell`: it holds no credential, and the shell's code does not belong in its
+  bundle.
 - **Amounts** are strings in the evidence and `bigint` where compared, never a
   JS `number` (the kit's rule).
+
+### The evidence, from the verify API document
+
+`GET <verifyApiBaseUrl>/rounds/{roundId}` answers `RoundVerification`. The page
+validates the fields it uses, and the ones the document requires of the rest
+(`closed`, `bet`, `game`, `actions`, `checks`, and the shapes inside them), and
+maps them to the evidence its checks take. A field that is present and malformed
+fails the whole body (V-10); a field the page does not know is ignored. The page
+never reads the document's own verdict: `checks` and `recomputed.kind` are
+validated and unused, and the result is the page's own (Security). The map:
+
+| The page's evidence                                     | The document's field                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roundId`, `status`, `closeReason`                      | `roundId`, `status` (`idle`, `starting`, `active`, `resolving`, `won`, `lost`, `canceled`), `closeReason` (`expired`)                                                                                                                                                  |
+| `kernelVersion`                                         | `kernel.version` (V-12a)                                                                                                                                                                                                                                               |
+| `newRound`                                              | `commitment.createRoundAuth.newRound`: `abi.encode(NewRound)`, 352 bytes, decoded by the page (below)                                                                                                                                                                  |
+| `createRoundAuth.prepareWindow`, `expiry`, `signature`  | `commitment.createRoundAuth.prepareWindow`, `expiryUnix` (read as a decimal string), `signature`                                                                                                                                                                       |
+| `createRoundAuth.domain`, `signer`                      | `commitment.registryChainId`, `registryAddress` (the `verifyingContract`), `commitment.adminSigner`; compared with the configuration (check 3); the digest uses the configured domain, never these                                                                     |
+| `createRoundAuth.entropyChainId`                        | `entropy.chainId`                                                                                                                                                                                                                                                      |
+| `randomnessProof.source`, `blockNumber`, `blockValue`   | `entropy.source`, `entropy.block` (read as `bigint`), `entropy.value` (optional)                                                                                                                                                                                       |
+| `randomnessProof.roundSecretHash`, `roundSecret`        | `commitment.roundSecretHash`, `reveal.roundSecret`                                                                                                                                                                                                                     |
+| `fairnessProof.seedHash`, `readyHash`, `seed`           | `seedHash`, `readyHash`, `reveal.seed`                                                                                                                                                                                                                                 |
+| `terms`                                                 | `game.terms.nodes` (`options`, `losers`, `next`)                                                                                                                                                                                                                       |
+| `steps` (`optionCount`, `selectedIndex`, `losingIndex`) | `recomputed.steps` (`node`, `option`, `losers`): the API's replay of the round, which the page compares with its own (check 7); `optionCount` is the node's `options`; `losingIndex` is the only entry of `losers` and is absent when the replay names none or several |
+| `payout` (`formatted`, `value`, `unit`)                 | `payout` (`amount`, `currency`, `decimals`); `formatted` is written by the page from the base units and `decimals` by `bigint` arithmetic (`1.94 EUR`), as the document carries no formatted string                                                                    |
+
+The page also validates, and does not use, `bet`, `game`'s other fields, `shape`
+beyond A-3, `transcriptHash`, `reveal.configuration`, `actions` (the signed
+actions and their transcript), `voidReason`, `rejectCode`, and `closed`. The
+document's `transcript`, `action_signatures`, `configuration`, and `payout`
+checks (the kernel's replay of a round from its signed actions) are not among
+this page's checks; they are a later increment, not claimed.
+
+**`newRound`.** The document carries it as bytes. The page decodes the eleven
+32-byte words in `NewRound`'s order (`roundId`, `playerRef`, `currency` as ASCII
+`bytes32`, `betAmount` as a `uint128`, `gameId`, `gameVersion`, `circuitVersion`
+as `uint32`, `roundSecretHash`, `randomnessTarget`, `actionKey`,
+`payoutTermsHash`), encodes the decoded fields again with `signing`'s
+`hashNewRound`, and requires that hash to equal the `keccak256` of the bytes it
+was given. Bytes that are not the canonical encoding of what they decode to
+(non-zero padding, a unit that is not ASCII, a length other than 352) fail the
+body's validation (V-10), so no check reads a field the signed bytes do not
+carry. Check 3's `created` is the same hash.
+
+**What a round may not carry.** `commitment`, `entropy`, `reveal`, `seedHash`,
+`readyHash`, `payout`, and `recomputed` are optional in the document (a round
+not yet bound, one refused before money moved, a voided one, a `ROOT_LOST` one).
+The page then has no `randomnessProof` (it needs `entropy.source`,
+`entropy.block`, and `commitment.roundSecretHash`) or no `fairnessProof` (it
+needs `seedHash`), and each check that needs what is missing fails on an ended
+round and waits on a round that has not ended (A-2). A `createRoundAuth` without
+`registryChainId`, `registryAddress`, `adminSigner`, or `entropy.chainId` is a
+malformed body (V-10), since the authorization cannot be read without them.
 
 ### What is built
 
 `apps/verify` holds what the Status line lists: checks 1 to 4 and 6, the
-configuration read, the page's states and view, and the assumed verify API read,
-each with its tests. Its kernel derivations of checks 5 and 7 for a one-step,
+configuration read, the page's states and view, and the verify API read, each
+with its tests. Its kernel derivations of checks 5 and 7 for a one-step,
 two-option config round (Coin Flip's shape) and their tests (VT-1b's kernel
 version part, VT-2 for checks 5 and 7, and VT-10's source check) are:
 
@@ -457,12 +537,19 @@ version part, VT-2 for checks 5 and 7, and VT-10's source check) are:
 
 The page around them is built too:
 
-- **The verify API read** (`verify-api.ts`) is the only module that fetches or
-  parses the API's answer; everything past it works on the typed evidence
-  (`round-evidence.ts`). It is built to an **assumed** body, until the verify
-  API document is vendored (A-1). Amounts (`betAmount`, `payout.value`) and
-  `blockNumber` are read as `bigint`; a body that fails validation is an API
-  error and none of it is used (V-10).
+- **The verify API read** (`verify-api.ts`, over `play-client`'s
+  `getRoundVerification`: one attempt, no credential, the 15 s timeout, and its
+  typed errors mapped to V-9 to V-11: a `ProblemError` or `ProtocolError` with
+  status `404` is not found, any other is an API error, a `NetworkError` is
+  unreachable) and **the body's validation** (`verify-body.ts`, with
+  `verify-readers.ts`, `verify-amount.ts`, and `verify-new-round.ts`) are the
+  only modules that fetch or parse the API's answer; everything past them works
+  on the typed evidence (`round-evidence.ts`). They are built to the vendored
+  verify API document
+  ([The evidence](#the-evidence-from-the-verify-api-document)); the read is the
+  the app's own validation of what `play-client` returns as `unknown` (A-1).
+  Amounts (`betAmount`, `payout.value`) and `blockNumber` are read as `bigint`;
+  a body that fails validation is an API error and none of it is used (V-10).
 - **Checks 1 to 4** (`auth-checks.ts`) use `signing` and the configured trust
   anchors only. **Check 6** (`block-check.ts`) calls the quorum read for every
   round.
@@ -512,14 +599,13 @@ The page around them is built too:
 - **V-15. The source** is a new private app, **`apps/verify`**
   (`@intraverse/se-client-verify`, D-2): plain TypeScript and Vite like the
   Wrapper, `publicDir: false`, no runtime dependency outside the kit's
-  allow-list. It depends on `signing` and `contracts` (runtime entry); once the
-  verify API document is vendored, also on `play-client`, and on `snapshot` if
-  the body embeds a Snapshot (until then its verify API read is its own, A-1);
-  and it **never depends on `shell`** or the `contracts` test-only entry; the
-  import-direction lint refuses both. As a new workspace it passes the
-  add-a-package checks, and the packages spec, the dependency direction in
-  `AGENTS.md`, the import-direction lint and its test, and the architecture
-  memory are updated in the pull request that adds it.
+  allow-list. It depends on `signing`, `contracts` (runtime entry), and
+  `play-client` (the verify API read, A-1); it does not need `snapshot`, since
+  the verify API's body embeds no Snapshot; and it **never depends on `shell`**
+  or the `contracts` test-only entry; the import-direction lint refuses both. As
+  a new workspace it passes the add-a-package checks, and the packages spec, the
+  dependency direction in `AGENTS.md`, the import-direction lint and its test,
+  and the architecture memory are updated in the pull request that adds it.
 - **V-16. The release artifact.** The page ships **inside** the Wrapper's
   release artifact, under `verify/`, so one digest and one attestation cover
   both and the deploy side has nothing new to pull. The release build extends
@@ -614,7 +700,7 @@ never reported anywhere.
 | VT-1b | unit                | the kernel version (V-12a): kernel 1 runs the derivations, an unknown one shows V-8 and runs none; a `canceled` round without reveals shows checks 5 and 7 as "not checked"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | VT-2  | unit                | each check of V-12 against the vendored vectors, each with a passing case and a case per failure: checks 1 to 4 against `created`, `ready`, and the `signature/` Snapshot vectors' `randomnessTarget` and signature verdicts; checks 5 and 7 (SHA-256, the seed, StepsDerive, Coin Flip's outcome) against the fairness kernel's public vectors (the SuperEngine fairness kernel, kernelVersion 1: `kernel/public/v1/seed`, `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`, read through the `contracts` test-only entry as `kernelVectors.v1`), and `roundSecretHash` against its definition until the kernel has a vector for it                                                                                       |
 | VT-3  | unit                | the body's validation: a body the verify API document's schema refuses is an API error, never a partial result; amounts read as `bigint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| VT-4  | component (jsdom)   | every state V-4 to V-11 and the configuration error renders its heading, text, and control, with no inline style; values from the body render as text. jsdom component tests; the axe scan is in the browser rows (VT-7), as for the Wrapper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| VT-4  | component (jsdom)   | every state V-4 to V-11 (V-8's voided and refused included) and the configuration error renders its heading, text, and control, with no inline style; values from the body render as text. jsdom component tests; the axe scan is in the browser rows (VT-7), as for the Wrapper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended; a round of a kernel version the page does not know (V-8)                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | VT-6  | e2e, browser        | from the Wrapper: after a round ends, the verify link opens `<verifyBaseUrl>/rounds/{roundId}` in a new context and that page reaches V-6 or V-8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -624,14 +710,13 @@ never reported anywhere.
 
 **The e2e fake of the verify API** joins the fake Play API in the e2e harness: a
 route at the configured verify API base on a `.test` origin, answering
-`GET /verify/v1/rounds/{roundId}` from canned rounds built from the vendored
-vectors (a matching round, a tampered copy, an unfinished round, a `canceled`
-round without reveals, an unknown kernel version), the not-found answer for an
-unknown id, a scripted error, and an abort for the unreachable case; the
-harness's RPC routes answer the chain read (agreeing, disagreeing, and silent
-endpoints). It is hermetic like the rest of the harness: no real network, and a
-request to any other origin fails the test.
-<!-- TODO(verify API): the canned bodies follow the verify API document once it is vendored. -->
+`GET /verify/v1/rounds/{roundId}` from canned rounds, in the vendored verify API
+document's shape, built from the vendored vectors (a matching round, a tampered
+copy, an unfinished round, a `canceled` round without reveals, an unknown kernel
+version), the not-found answer for an unknown id, a scripted error, and an abort
+for the unreachable case; the harness's RPC routes answer the chain read
+(agreeing, disagreeing, and silent endpoints). It is hermetic like the rest of
+the harness: no real network, and a request to any other origin fails the test.
 
 ### The e2e fake of the verify API: built
 
@@ -640,23 +725,26 @@ In `e2e/tests/harness/` (the suite's harness, never shipped):
 - `fake-verify-api.ts`: a context route at the configured `verifyApiBaseUrl` (in
   the suite the Wrapper's origin plus `/verify/v1`, a same-origin read as in
   preview, so no CORS) answering `GET <base>/rounds/{roundId}` per round id:
-  `round` (200 with a JSON body), `not-found` (404, no body; also the answer for
-  an id with no script), `error` (a scripted status), `unreadable` (200, not
-  JSON), and `abort` (the request fails: unreachable). Answers can be queued
-  (used once, in order) before a standing one, so a retry can differ from the
-  first read. Any other method or path is recorded as unexpected and fails the
-  test.
+  `round` (200 with a JSON body), `not-found` (404 with the document's
+  `application/problem+json` body, `NOT_FOUND`; also the answer for an id with
+  no script), `error` (a scripted status, with a `Problem` body of that status's
+  code), `unreadable` (200, not JSON), and `abort` (the request fails:
+  unreachable). Answers can be queued (used once, in order) before a standing
+  one, so a retry can differ from the first read. Any other method or path is
+  recorded as unexpected and fails the test.
 - `verify-rounds.ts`: the canned rounds, built at run time from the vendored
   `valid/coinflip-active-ready-hash` vector (the round tests' round) through
-  `contracts`' test-only entry. The matching round is that vector as `canceled`
-  without reveals (checks 1 to 4 and 6 match, 5 and 7 "not checked"); the
-  not-ended round is the vector as it is (`active`); the unknown-kernel round
-  adds `kernelVersion: 2`; a tampered round changes one field per check (2:
-  `blockNumber`, 3: `prepareWindow`, 4: `readyHash`, 5: both reveals,
-  `roundSecret` and `seed`, neither hashing to its commitment, so the comparison
-  runs and does not stop at "a reveal is missing", 6: a `blockValue` that is not
-  block N's hash); a check 1 case serves the matching round under another round
-  id.
+  `contracts`' test-only entry and written as the document's `RoundVerification`
+  body, the Snapshot's signed values placed in its fields (no vendored vector is
+  a verify API body). The matching round is that vector as `canceled` without
+  reveals (checks 1 to 4 and 6 match, 5 and 7 "not checked"); the not-ended
+  round is the vector as it is (`active`); the unknown-kernel round has
+  `kernel.version` 2; a tampered round changes one field per check (2:
+  `entropy.block`, 3: `commitment.createRoundAuth.prepareWindow`, 4:
+  `readyHash`, 5: both reveals, `reveal.roundSecret` and `reveal.seed`, neither
+  hashing to its commitment, so the comparison runs and does not stop at "a
+  reveal is missing", 6: an `entropy.value` that is not block N's hash); a check
+  1 case serves the matching round under another round id.
 - `verify-page.ts`: the page's harness: the bundle's `verify/index.html` served
   for `/verify/` and `/verify/rounds/*` (V-2), the configuration document (the
   round tests' pins, `verifyBaseUrl` the Wrapper's origin plus `/verify`), the
@@ -673,8 +761,9 @@ Not built here: a `won` or `lost` round that matches (checks 5 and 7
 recomputed), because `roundSecretHash` is signed into `newRound`, so a reveal
 that hashes to it needs a round the backend signed with that reveal; a check 7
 tamper apart from check 5 (it needs the same round); VT-6 (the Wrapper's verify
-link after a round ends), VT-7 (axe on every state, keyboard use, zoom), and
-VT-8 (the policy and SRI), which need the built page and its `headers.json`.
+link after a round ends), VT-7 (axe on every state, the voided and refused ones
+included, keyboard use, zoom), and VT-8 (the policy and SRI), which need the
+built page and its `headers.json`.
 
 ## Decisions
 
@@ -730,18 +819,21 @@ Decided by the human on 2026-10-19, during the review of the kernel derivations:
 
 Made while building the page's states (2026-10-20), each the least-claiming
 reading of the spec. A-1 (interim) to A-4 were decided by the human on
-2026-10-20, as recorded below; nothing is open.
+2026-10-20, as recorded below; A-5 was made when the page was built on the
+vendored document; (c) was accepted and (b) decided on 2026-10-20.
 
-- **A-1. The verify API's body** is assumed to be the Snapshot's fields
-  (`roundId`, `status`, `closeReason`, `payout`, `config.steps`, `proofs`) plus
-  an optional integer `kernelVersion` (absent: kernel version 1, V-12a); 404 is
-  "no such round" (V-9), any other non-2xx an error (V-10). Only `verify-api.ts`
-  holds this assumption. **Interim** (decided by the human, 2026-10-20): the
-  read and its hand-written validator are app-local in `verify-api.ts`; when the
-  verify API document is vendored they move to `play-client`, with a validator
-  generated from or checked against that document, and the app then depends on
-  `play-client`.
-  <!-- TODO(verify API): replace A-1 with the vendored document's schema and its generated types. -->
+- **A-1. The verify API's body and its read.** The body was assumed to be the
+  Snapshot's fields plus a `kernelVersion`; the verify API document is now
+  vendored, and the body is its `RoundVerification`
+  ([The evidence](#the-evidence-from-the-verify-api-document)). The read was
+  interim and app-local (decided by the human, 2026-10-20); it has moved, as
+  decided: the request is `play-client`'s `getRoundVerification` (a public entry
+  of that package, which returns the body as `unknown` like its other reads),
+  the app depends on `play-client`, and the validation of the body stays in
+  `apps/verify` (`verify-body.ts`), since the page, not the transport, decides
+  what it accepts. 404 is `NOT_FOUND` (V-9) and any other non-2xx an error
+  (V-10). Closed.
+
 - **A-2. A round that has not ended** reaches V-8 rather than V-7 when the only
   failures are evidence it does not carry yet, or a chain read of block N that
   failed as `too-few` or `no-block` (block N may not exist yet). Decided by the
@@ -749,17 +841,37 @@ reading of the spec. A-1 (interim) to A-4 were decided by the human on
   `config` failure of check 6 still surfaces (V-7's chain wording), whatever the
   round's status.
 - **A-3. A round that is not one step of two options** is shown as not
-  recomputable (V-8's third reason), with checks 1 to 4 and 6 and no retry; the
+  recomputable (its own V-8 reason), with checks 1 to 4 and 6 and no retry; the
   spec's scope names Coin Flip only. Decided by the human, 2026-10-20: the shape
   check stays, but the page does not name the game: the summary says "one step,
   two options", and the not-recomputable text says the page recomputes rounds of
   that shape only. One helper (`isOneStepTwoOptions`, in `round-evidence.ts`)
-  holds the test.
+  holds the test; with the verify API document it reads the game's payout terms
+  (`game.terms.nodes`: one last node of two options of which one loses) and the
+  config `shape` (empty, or `[2]`), not the steps the replay played.
 - **A-4. Check 3 does not compare `newRound.actionKey`** with anything: the page
   has no player key, so the `signature/create-round-auth-action-key` vector,
   refused by the shell, passes check 3 on the page. Decided by the human,
   2026-10-20: confirmed. The action key is listed under "shown, not checked"
   (V-13).
+
+- **A-5. Made building the page on the vendored document (2026-10-20); (b) and
+  (c) settled by the human the same day:** (a) the document's `Commitment`,
+  `Entropy`, and `Reveal` fields are all optional, so a round without them is
+  read, not refused: the page has no `randomnessProof` (or no `fairnessProof`),
+  its checks fail on an ended round and wait on one that has not ended (A-2); an
+  authorization without its registry chain, registry address, admin signer, or
+  entropy chain is refused as malformed. (b) The document has no `closeReason`
+  but `expired`, no per-round "voided" status (a voided or refused round is
+  `idle` with a `voidReason` or `rejectCode`) and no formatted amount. Decided
+  by the human, 2026-10-20: such a round is its own V-8 state (voided, refused),
+  not "not ended": the page says it was voided or refused, offers no "check
+  again", and never waits for it; it shows only that wording, not the codes. The
+  page writes the payout text itself (`1.94 EUR`) from the base units and
+  `decimals`. (c) (accepted) The pick and the loser come from the API's replay
+  (`recomputed.steps`), as `config.steps` did, and are compared with the page's
+  own derivation (check 7). (d) `newRound` is decoded from its bytes and checked
+  against its own hash (above).
 
 Also decided by the human, 2026-10-20: a malformed signature (a bad length or
 `v`, which the Snapshot schema's `Signature65` pattern refuses) fails the body's
@@ -781,7 +893,9 @@ invalid one (V-3).
   (the release artifact, SRI, the policy),
   [Testing and CI](./client-kit/testing-and-ci.md) (the size budget, the e2e
   harness).
-- The verify API document (backend, not yet published).
+- The verify API document (backend; vendored in `contracts` as
+  `schemas/verify.v1.openapi.yaml`, its public name
+  `verify/v1 OpenAPI document`; `GET /verify/v1/rounds/{roundId}`).
 - The SuperEngine fairness kernel, kernelVersion 1 (public fairness contract;
   its public vector sets are vendored into `contracts`:
   [how the kit gets its contracts](./client-kit/how-the-kit-gets-its-contracts.md)).

@@ -24,11 +24,13 @@ import {
 import {
   matchingRound,
   notEndedRound,
+  refusedRound,
   tamperedRound,
   type TamperedCheck,
   unknownKernelRound,
   UNKNOWN_ROUND_ID,
   VERIFY_ROUND_ID,
+  voidedRound,
 } from "./harness/verify-rounds.ts";
 
 /** The note of a check whose reveal is absent (check 5 recomputes nothing). */
@@ -40,6 +42,8 @@ const TEXT = {
   mismatch: "This round does not match its evidence",
   chainUnverified: "This round could not be verified against the chain",
   notEnded: "This round has not ended yet",
+  voided: "This round was voided",
+  refused: "This round was refused",
   notFound: "Round not found",
   apiError: "The verification service could not answer",
   unreachable: "The verification service could not be reached",
@@ -241,6 +245,31 @@ test.describe("the verify page (VT-5)", () => {
     await verifyPage.open(page, VERIFY_ROUND_ID);
     await expect(heading(page, TEXT.notEnded)).toBeVisible();
   });
+
+  for (const [name, body, title] of [
+    ["voided", voidedRound, TEXT.voided],
+    ["refused", refusedRound, TEXT.refused],
+  ] as const) {
+    test(`says a ${name} round was ${name}, with nothing to check again`, async ({
+      page,
+      fakeVerifyApi,
+      verifyPage,
+    }) => {
+      fakeVerifyApi.answerEvery(VERIFY_ROUND_ID, {
+        kind: "round",
+        body: body(),
+      });
+      await verifyPage.open(page, VERIFY_ROUND_ID);
+      await expect(heading(page, title)).toBeVisible();
+      await expect(heading(page, TEXT.notEnded)).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Check again" }),
+      ).toHaveCount(0);
+      // The backend's reason and code are not shown.
+      await expect(page.getByText("ENTROPY_TIMEOUT")).toHaveCount(0);
+      await expect(page.getByText("INSUFFICIENT_FUNDS")).toHaveCount(0);
+    });
+  }
 
   test("shows a round of a kernel version it does not know", async ({
     page,

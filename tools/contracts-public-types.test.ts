@@ -23,6 +23,8 @@ const MODULES: readonly GeneratedModule[] = [
   // The Play API document has no webhooks, no `$defs`, and no external
   // documents: all three are empty.
   { file: "play.ts", notPublic: ["$defs", "external", "webhooks"] },
+  // Likewise the verify API document.
+  { file: "verify.ts", notPublic: ["$defs", "external", "webhooks"] },
 ];
 
 const generatedNames = (file: string): string[] =>

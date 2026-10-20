@@ -41,7 +41,12 @@ export type Verdict =
   /** The round cannot be recomputed (V-8). */
   | {
       readonly kind: "not-recomputable";
-      readonly reason: "not-ended" | "unknown-kernel" | "unsupported-shape";
+      readonly reason:
+        | "not-ended"
+        | "unknown-kernel"
+        | "unsupported-shape"
+        | "voided"
+        | "refused";
     };
 
 export type RoundReport = {
@@ -86,7 +91,7 @@ const ENDED: ReadonlySet<string> = new Set(["won", "lost", "canceled"]);
 
 /** Checks 5 and 7 need the reveals; what a round carries decides how. */
 const revealsOf = (evidence: RoundEvidence) => {
-  const roundSecret = evidence.randomnessProof.roundSecret as
+  const roundSecret = evidence.randomnessProof?.roundSecret as
     | Hash32
     | undefined;
   const seed = evidence.fairnessProof?.seed as Hash32 | undefined;
@@ -108,6 +113,7 @@ const recomputeFairness = async (
   agreed: Hash32 | undefined,
 ): Promise<[CheckResult, CheckResult]> => {
   const { roundSecret, seed } = revealsOf(evidence);
+  const proof = evidence.randomnessProof;
   const version = evidence.kernelVersion;
   const status = evidence.status as EndedStatus;
   if (
@@ -118,13 +124,13 @@ const recomputeFairness = async (
     const note = "A canceled round is not guaranteed to carry its reveals.";
     return [notChecked(5, note), notChecked(7, note)];
   }
-  if (roundSecret === undefined || seed === undefined) {
+  if (proof === undefined || roundSecret === undefined || seed === undefined) {
     return [missingReveals(5), missingReveals(7)];
   }
   const commitments = fromKernel(
     5,
     await checkCommitments(version, {
-      roundSecretHash: evidence.randomnessProof.roundSecretHash as Hash32,
+      roundSecretHash: proof.roundSecretHash as Hash32,
       roundSecret,
       seedHash: (evidence.fairnessProof?.seedHash ?? "0x") as Hash32,
       seed,
@@ -200,9 +206,14 @@ export const verdictOf = (
     };
   }
   if (unverified.length > 0) return { kind: "chain-unverified" };
+  if (evidence.closure !== undefined) {
+    // A-5 (b): a voided or refused round will never be played, so it is not
+    // "not ended" (no "check again").
+    return { kind: "not-recomputable", reason: evidence.closure };
+  }
   if (!isOneStepTwoOptions(evidence)) {
     // A-3 (specs/verify-page.md, decided 2026-10-20): a round that is not a
-    // one-step, two-option config round is a third V-8 reason, with no retry.
+    // one-step, two-option config round is its own V-8 reason, with no retry.
     return { kind: "not-recomputable", reason: "unsupported-shape" };
   }
   if (kernelFor(evidence.kernelVersion) === undefined) {

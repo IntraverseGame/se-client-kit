@@ -1,15 +1,15 @@
 # `@intraverse/se-client-play-client`
 
 A typed `fetch` client for the SuperEngine Play API (`/play/v1`) and the verify
-read the Wrapper needs.
+API read (`/verify/v1`).
 
 **Status:** pre-release. Not published to npm yet. The package holds one typed
 function per Play API operation (redeem, refresh, start, continue, cash-out,
 cancel, the Snapshot read), typed from the Play API document in
 `@intraverse/se-client-contracts`, and the request layer under them: the request
 options, the timeout, the typed errors, problem mapping, bounded retries,
-idempotency keys, and the play token's refresh schedule. The verify read is
-specified, not implemented yet.
+idempotency keys, and the play token's refresh schedule. The verify API read,
+`getRoundVerification`, is on the same request layer.
 
 ## Install
 
@@ -83,6 +83,14 @@ try {
     redeem answer also holds `gameOrigin`, the origin to frame the game at,
     checked only against the document's length bounds: whether it is an allowed
     origin is the shell's check. A Snapshot answer is `unknown`.
+    - `getRoundVerification(transport, roundId, { signal? })` reads
+      `GET /verify/v1/rounds/{roundId}` (no credential, a read, repeated as one
+      is). Make its transport with `verifyApiBaseUrl` as the `baseUrl`; the
+      answer is `{ body, receivedAtMs, clockOffsetMs }` with `body: unknown`,
+      for the caller to validate. The document's problems (`404 NOT_FOUND`,
+      `429 RATE_LIMITED`, ...) are `ProblemError`s. `VERIFY_ROUTES` is its
+      route, checked against the verify API document at compile time
+      (`verifyRoute`, `VerifyOperationId`, `VerifyRoute`).
   - `PLAY_ROUTES` is each operation's method and path below the base, checked
     against the document at compile time. The wire types are the document's
     generated types: `RedeemLaunchCodeRequest`, `RedeemLaunchCodeResponse`,

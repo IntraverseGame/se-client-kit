@@ -92,6 +92,9 @@ brackets):
 
 ## Operations
 
+The verify API's read is the one operation outside `/play/v1`, at the end of
+this section ([The verify API read](#the-verify-api-read)).
+
 One function per operation of the vendored Play API document (`/play/v1`), named
 by its `operationId`. Each takes the transport, the request body (when the
 operation has one), and the call's options: the `Authorization` function (every
@@ -197,3 +200,34 @@ one shape (a move at the cash-out route), and a type test keeps it so.
   resent after a lost response too) and never for an answer that does not match
   the document, and that the case table's problem statuses equal the document's
   for each operation (a type test).
+
+## The verify API read
+
+`getRoundVerification(transport, roundId, options?)` reads
+`GET /verify/v1/rounds/{roundId}` of the vendored verify API document, for the
+verify page ([verify-page.md](../verify-page.md), A-1). The transport it takes
+is made with `verifyApiBaseUrl` (which ends with `/verify/v1`) as its `baseUrl`;
+the request layer is the same, so the request options (W-3), the timeout (W-43),
+the problem mapping and the retry rules apply as for the Play API.
+
+- **Route.** `VERIFY_ROUTES.getRoundVerification` is `GET /rounds/{roundId}`
+  below the base, checked at compile time against the document's literal route
+  table (`VerifyApiOperationRoutes` in `contracts`) by `verifyRoute`, as
+  `PLAY_ROUTES` is against the Play API's. The round id is percent-encoded into
+  the path; its form (a UUIDv7 in lowercase, `400 INVALID_ARGUMENT` otherwise)
+  is the caller's check.
+- **No credential.** The read is public: it takes no `authorization`, sends no
+  `Authorization` header, and its retry class is `idempotent` (a read).
+- **Answer.** `{ body, receivedAtMs, clockOffsetMs }` with `body: unknown`. A
+  round's evidence is untrusted until the consumer validates it; the client
+  reads none of its fields.
+- **Errors.** The document's `400`, `404` (`NOT_FOUND`), `429` (`RATE_LIMITED`),
+  `500`, and `503` carry `application/problem+json` with a typed `code` and
+  `retryable`, read by `readProblem` into a `ProblemError`; an error status
+  without such a body is a `ProtocolError`; no answer is a `NetworkError`. A
+  consumer that wants one attempt passes a transport with `retry.maxAttempts` 1.
+- **Tests** (`verify-api.test.ts`) cover the route against the document, what is
+  sent (no credential, no body, the platform request options, the encoded path),
+  the answer, each problem status the document lists, an error status without a
+  problem body, a body that is not JSON, a failed fetch, and a repeat on a
+  retryable problem.

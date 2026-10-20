@@ -14,6 +14,7 @@ import {
   CHECK_TITLES,
   compare,
   type Detail,
+  notChecked,
   settled,
 } from "./check-result.ts";
 import type { VerifyConfig } from "./environment-config.ts";
@@ -44,6 +45,12 @@ export const checkBlock = async (
   config: VerifyConfig,
   evidence: RoundEvidence,
 ): Promise<{ result: CheckResult; agreed: Hash32 | undefined }> => {
+  if (evidence.randomnessProof === undefined) {
+    return {
+      agreed: undefined,
+      result: notChecked(6, "The round carries no entropy block yet."),
+    };
+  }
   const { source, blockNumber } = evidence.randomnessProof;
   const pinned = Object.hasOwn(config.sources, source)
     ? config.sources[source]

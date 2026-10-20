@@ -4,6 +4,7 @@
 //
 //   src/generated/snapshot.ts   the structural types of the Snapshot schema
 //   src/generated/play.ts       the types of the Play API document (/play/v1)
+//   src/generated/verify.ts     ... and of the verify API document (/verify/v1)
 //   src/vectors/catalog.ts      every vendored vector, for the test-only entry
 //
 //   pnpm exec tsx tools/generate-contracts.ts          # fail if out of date
@@ -81,13 +82,15 @@ const loadOpenApi = async (): Promise<OpenApiTs> => {
 };
 
 const noNetwork = (): never => {
-  throw new Error("the Play API document refers outside itself");
+  throw new Error("an API document refers outside itself");
 };
 
 const SCHEMA = "src/schemas/se.snapshot.v1.schema.json";
 const SNAPSHOT_TYPES = "src/generated/snapshot.ts";
 const PLAY_DOCUMENT = "src/schemas/play.v1.openapi.yaml";
 const PLAY_TYPES = "src/generated/play.ts";
+const VERIFY_DOCUMENT = "src/schemas/verify.v1.openapi.yaml";
+const VERIFY_TYPES = "src/generated/verify.ts";
 const CATALOG = "src/vectors/catalog.ts";
 
 const BANNER = (source: string): string =>
@@ -149,13 +152,14 @@ const snapshotTypes = async (packageDir: string): Promise<string> => {
 };
 
 /**
- * The types of the Play API document. Every object is a `type` alias
- * (`exportType`); an object schema without properties is a record of `unknown`
- * values, not of `never`; an object the document does not close stays closed.
+ * The types of an OpenAPI document (the Play API's or the verify API's). Every
+ * object is a `type` alias (`exportType`); an object schema without properties
+ * is a record of `unknown` values, not of `never`; an object the document does
+ * not close stays closed.
  */
-const playTypes = async (packageDir: string): Promise<string> => {
+const apiTypes = async (dir: string, document: string): Promise<string> => {
   const openapiTs = await loadOpenApi();
-  const body = await openapiTs(pathToFileURL(join(packageDir, PLAY_DOCUMENT)), {
+  const body = await openapiTs(pathToFileURL(join(dir, document)), {
     exportType: true,
     emptyObjectsUnknown: true,
     additionalProperties: false,
@@ -164,7 +168,7 @@ const playTypes = async (packageDir: string): Promise<string> => {
     fetch: noNetwork,
   });
   const types = toTypeAliases(body);
-  return `${BANNER(PLAY_DOCUMENT)}${types}\n${operationRoutes(types)}`;
+  return `${BANNER(document)}${types}\n${operationRoutes(types)}`;
 };
 
 /** The name a vector is exported under: its file name without `.json`. */
@@ -251,7 +255,8 @@ export const generateContractsFiles = async (
 ): Promise<Map<string, string>> =>
   new Map([
     [SNAPSHOT_TYPES, await snapshotTypes(packageDir)],
-    [PLAY_TYPES, await playTypes(packageDir)],
+    [PLAY_TYPES, await apiTypes(packageDir, PLAY_DOCUMENT)],
+    [VERIFY_TYPES, await apiTypes(packageDir, VERIFY_DOCUMENT)],
     [CATALOG, catalogSource(packageDir)],
   ]);
 

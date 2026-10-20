@@ -16,6 +16,13 @@
       "sha256": "16b2a8e79453126fd6e01faaf2ab1c4d89b95ac6322341799ca532f17f282458"
     },
     {
+      "path": "src/schemas/verify.v1.openapi.yaml",
+      "source": "se-backend",
+      "sourceName": "verify/v1 OpenAPI document",
+      "sourceCommit": "af3aab46b98d4d937ab5c32f4d97a6236ccecc6d",
+      "sha256": "93c149e93bde07a2487a43c3ec49460d5d96784d3e1f9c4a49be221f5188a318"
+    },
+    {
       "path": "src/vectors/kernel/v1/derive.json",
       "source": "se-backend",
       "sourceName": "kernel/public/v1/derive",

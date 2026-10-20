@@ -52,7 +52,9 @@ Today the package holds the Snapshot schema and its types, and the Play API
 document's types: `PlayApiPaths` (by path and method), `PlayApiOperations` (by
 `operationId`), `PlayApiComponents` (its schemas and responses), and
 `PlayApiOperationRoutes` (each operation's path and method). The verify API
-document is not here yet.
+document (`GET /verify/v1/rounds/{roundId}`) is here too, with the same four
+kinds of type named `VerifyApiPaths`, `VerifyApiOperations`,
+`VerifyApiComponents`, and `VerifyApiOperationRoutes`.
 
 ## More
 

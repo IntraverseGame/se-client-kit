@@ -7,11 +7,11 @@ Part of the [Client kit spec](../client-kit.md), section
 else**. It has no logic: no validator, no client, no encoder, no helper. The
 logic packages read it and never write to it.
 
-- **Contents.** The Play API OpenAPI document (the Play and verify documents
-  only), the Snapshot JSON Schema, the signing vectors, the Snapshot vectors
-  (`valid/`, `invalid/`, `signature/`, `typed-data/`, the canonical `typedData`
-  bytes of signed actions, and `signed-action/`, signed actions made by an
-  independent signer from a public test key: the same public development key as
+- **Contents.** The Play API and verify API OpenAPI documents (those two only),
+  the Snapshot JSON Schema, the signing vectors, the Snapshot vectors (`valid/`,
+  `invalid/`, `signature/`, `typed-data/`, the canonical `typedData` bytes of
+  signed actions, and `signed-action/`, signed actions made by an independent
+  signer from a public test key: the same public development key as
   `packages/signing/src/fixtures/keys.ts`, anvil account 3, test-only and never
   funded, embedded in the vector and never edited out; with `keys.ts` these are
   the only files that may hold it, per AGENTS.md), the public vector sets of the
@@ -61,14 +61,15 @@ logic packages read it and never write to it.
   public name and the path in this package, never a path inside a private
   repository.) Today the runtime modules are `schemas/snapshot.ts` (the schema
   as data of unknown shape), `generated/snapshot.ts` (its structural types), and
-  `generated/play.ts` (the Play API document's types; the document itself is not
-  imported by any module, only read by the generator); the test-only module is
-  `vectors/catalog.ts`, generated, which imports every vector and exports
-  `signingVectors`, `snapshotVectors` (`valid`, `invalid`, `signature`,
-  `typedData` from `typed-data/`, and `signedAction` from `signed-action/`), and
-  `kernelVectors` (`v1` from `kernel/v1/`, keyed by file name: `seed`,
-  `shuffle-draw`, `steps-derive`, and `derive`).
-  <!-- TODO(verify API): the verify API document is not published yet; it joins `schemas/` with its `openapi-typescript` types under `generated/`. -->
+  `generated/play.ts` and `generated/verify.ts` (the Play API and verify API
+  documents' types; the documents themselves, `schemas/play.v1.openapi.yaml` and
+  `schemas/verify.v1.openapi.yaml`, are not imported by any module, only read by
+  the generator); the test-only module is `vectors/catalog.ts`, generated, which
+  imports every vector and exports `signingVectors`, `snapshotVectors` (`valid`,
+  `invalid`, `signature`, `typedData` from `typed-data/`, and `signedAction`
+  from `signed-action/`), and `kernelVectors` (`v1` from `kernel/v1/`, keyed by
+  file name: `seed`, `shuffle-draw`, `steps-derive`, and `derive`).
+
 - **Tarball.** What is published is the allow-list of check 3 below. The
   manifest still exports `./testing` for the kit's own tests; the published
   package has no such file. `contracts.lock.json` is not in the tarball: it
@@ -92,7 +93,16 @@ logic packages read it and never write to it.
   cannot tell them apart; a `paths` member it cannot read fails the generation.
   The document embeds a copy of the Snapshot schema's definitions, so
   `PlayApiComponents["schemas"]["Snapshot"]` duplicates `Snapshot`;
-  `play-client` never reads it (a Snapshot answer stays `unknown`).
+  `play-client` never reads it (a Snapshot answer stays `unknown`). The verify
+  API document's types are named the same way: `VerifyApiPaths`,
+  `VerifyApiOperations`, `VerifyApiComponents`, and `VerifyApiOperationRoutes`
+  (one operation, `getRoundVerification`, `GET /verify/v1/rounds/{roundId}`).
+  The document is its own: it embeds no Snapshot, its `Amount` is an object
+  (`amount` as a base-10 string of base units, `currency`, `decimals`), its
+  `Kernel` carries the round's kernel `version`, and its errors are
+  `application/problem+json`. It was synced from se-backend `main` at `17d2099`;
+  the lock records `af3aab4`, the last commit that touched the file; the lock
+  records its public name, `verify/v1 OpenAPI document`.
 - **Display numbers are not amounts.** The generated Snapshot types carry two
   JSON numbers from the contract: `Amount.normalized` and `Multiplier`, both
   display-only by the contract's own definition. They are never an input to

@@ -113,6 +113,26 @@ describe("verdictOf", () => {
     });
   });
 
+  it.each(["voided", "refused"] as const)(
+    "is not recomputable as %s, not as not ended, for an idle round that will not be played",
+    async reason => {
+      const evidence = await evidenceOf(round("idle"));
+      expect(
+        verdictOf({ ...evidence, closure: reason }, checksWith({})),
+      ).toEqual({ kind: "not-recomputable", reason });
+    },
+  );
+
+  it("still reports a failed check of a voided round before saying it was voided", async () => {
+    const evidence = await evidenceOf(round("idle"));
+    expect(
+      verdictOf(
+        { ...evidence, closure: "voided" },
+        checksWith({ 3: failed(3) }),
+      ),
+    ).toEqual({ kind: "mismatch", failed: [3] });
+  });
+
   it("treats a not-checked check as no failure", async () => {
     const evidence = await evidenceOf(round("canceled"));
     const checks = checksWith({ 5: notChecked(5, "n"), 7: notChecked(7, "n") });
@@ -248,5 +268,27 @@ describe("verifyRound", () => {
     const report = await run(snapshot);
     expect(statusOf(report, 6)).toBe("mismatch");
     expect(report.verdict).toEqual({ kind: "mismatch", failed: [6] });
+  });
+
+  it("waits for a round that carries no entropy block or proofs yet", async () => {
+    const snapshot = round("active");
+    Reflect.deleteProperty(snapshot, "proofs");
+    const report = await run(snapshot);
+    expect(statusOf(report, 2)).toBe("not-checked");
+    expect(statusOf(report, 3)).toBe("not-checked");
+    expect(statusOf(report, 6)).toBe("not-checked");
+    expect(report.verdict).toEqual({
+      kind: "not-recomputable",
+      reason: "not-ended",
+    });
+  });
+
+  it("fails an ended round that carries no entropy block or proofs", async () => {
+    const snapshot = round("won");
+    Reflect.deleteProperty(snapshot, "proofs");
+    const report = await run(snapshot);
+    expect(statusOf(report, 2)).toBe("mismatch");
+    expect(statusOf(report, 3)).toBe("mismatch");
+    expect(report.verdict.kind).toBe("mismatch");
   });
 });

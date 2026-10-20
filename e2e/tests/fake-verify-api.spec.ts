@@ -15,8 +15,10 @@ import { expect, test } from "./harness/verify-page.ts";
 import {
   matchingRound,
   notEndedRound,
+  refusedRound,
   tamperedRound,
   unknownKernelRound,
+  voidedRound,
   UNKNOWN_ROUND_ID,
   VERIFY_ROUND_ID,
 } from "./harness/verify-rounds.ts";
@@ -175,14 +177,21 @@ const changedPaths = (
 };
 
 test.describe("the canned rounds", () => {
-  test("hold the vendored round, as the Snapshot's fields", () => {
+  test("hold the vendored round, as the verify API document's fields", () => {
     const round = matchingRound();
     expect(round).toMatchObject({
       roundId: VERIFY_ROUND_ID,
       status: "canceled",
     });
     expect(notEndedRound()["status"]).toBe("active");
-    expect(unknownKernelRound()["kernelVersion"]).toBe(2);
+    expect(unknownKernelRound()["kernel"]).toMatchObject({ version: 2 });
+    expect(voidedRound()).toMatchObject({
+      status: "idle",
+      voidReason: "ENTROPY_TIMEOUT",
+    });
+    expect(refusedRound()).toMatchObject({ status: "idle" });
+    expect(refusedRound()).not.toHaveProperty("voidReason");
+    expect(refusedRound()).toHaveProperty("rejectCode");
   });
 
   test("a tampered round changes one field of the matching round (check 5: its two reveals)", () => {
@@ -190,10 +199,11 @@ test.describe("the canned rounds", () => {
       const changed = changedPaths(matchingRound(), tamperedRound(check));
       expect(changed, `check ${check}`).toHaveLength(1);
     }
-    expect(changedPaths(matchingRound(), tamperedRound(5)).toSorted()).toEqual([
-      "proofs.fairnessProof.seed",
-      "proofs.randomnessProof.roundSecret",
-    ]);
+    // The matching round has no reveal; check 5's copy adds both of them.
+    expect(changedPaths(matchingRound(), tamperedRound(5))).toEqual(["reveal"]);
+    expect(
+      Object.keys(tamperedRound(5)["reveal"] as object).toSorted(),
+    ).toEqual(["roundSecret", "seed"]);
     expect(matchingRound()).toEqual(matchingRound());
   });
 });

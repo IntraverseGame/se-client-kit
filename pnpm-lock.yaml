@@ -229,6 +229,9 @@ importers:
       '@intraverse/se-client-contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@intraverse/se-client-play-client':
+        specifier: workspace:*
+        version: link:../../packages/play-client
       '@intraverse/se-client-signing':
         specifier: workspace:*
         version: link:../../packages/signing
