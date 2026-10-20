@@ -85,10 +85,9 @@ describe("the request", () => {
     expect(request?.init.redirect).toBe("error");
   });
 
-  // SOURCE BUG (reported): `createVerifyApi` calls `options.fetch(...)`, so
-  // `fetch` gets the options object as `this`; the browser's `fetch` throws
-  // "Illegal invocation" then. This test fails until the module calls it
-  // unbound, as `chain-read.ts` does.
+  // The browser's `fetch` throws "Illegal invocation" when it is called with
+  // another `this`; `createVerifyApi` must call it unbound, as `chain-read.ts`
+  // does.
   it("calls fetch unbound (the fake throws otherwise)", async () => {
     const { result } = await read({ kind: "json", body: body() }, true);
     expect(result.kind).toBe("found");

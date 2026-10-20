@@ -43,9 +43,8 @@ describe("loadEnvironmentConfig", () => {
     expect(request?.init.redirect).toBe("error");
   });
 
-  // SOURCE BUG (reported): `loadEnvironmentConfig` calls `options.fetch(...)`,
-  // so the browser's `fetch` would get the options object as `this` and throw
-  // "Illegal invocation". This test fails until it calls `fetch` unbound.
+  // The browser's `fetch` throws "Illegal invocation" when it is called with
+  // another `this`; `loadEnvironmentConfig` must call it unbound.
   it("calls fetch unbound (the fake throws otherwise)", async () => {
     const { result } = await load(
       { kind: "json", body: environmentDocument() },

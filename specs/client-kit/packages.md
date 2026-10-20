@@ -91,8 +91,9 @@ contracts (test-only entry) ──▶ the tests of signing, snapshot, shell, wra
 - `contracts` is the only leaf that holds data; `signing` has no kit dependency
   at run time. `snapshot` and `play-client` depend on `contracts`'s runtime
   entry. `signing` takes vectors from `contracts`' test-only entry in its tests.
-  No other package imports `contracts` directly except in tests (the consumers
-  of the test-only entry are listed in
+  No other package imports `contracts` directly except in tests, and the
+  `verify` app, which takes the runtime entry (the Snapshot schema's patterns);
+  only tests import the test-only entry (the consumers are listed in
   [The `contracts` package](./the-contracts-package.md)). No package imports
   another sideways (`snapshot` and `play-client` never import each other), and a
   package never imports an app.

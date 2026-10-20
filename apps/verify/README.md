@@ -23,8 +23,11 @@ For a round of one step with two options:
   signer under the configured registry domain, over the same secret commitment
   the round reveals.
 - **Ready evidence.** The ready hash binds the round to its seed commitment.
-- **Block N.** The page reads block N's hash from several of the configured
-  chain endpoints itself, and they must agree.
+- **Block N.** The page reads block N's hash from the configured chain endpoints
+  itself, and at least the configured quorum (`minRpcQuorum`) of them must
+  agree. A local or preview configuration may use one endpoint with a quorum of
+  1; the page then shows a "chain check not independent (development)" indicator
+  beside the check.
 
 And, under kernelVersion 1:
 
