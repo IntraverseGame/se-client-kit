@@ -54,9 +54,16 @@ brackets):
   `notAfterMs`, the type and a runtime check refuse a refresh without it, and no
   repeat starts at or after it, W-6, W-7), or `idempotent` (a mutating call with
   its intent's idempotency key, or a read: a lost response or a retryable
-  problem is repeated with the same bytes, W-16, W-42, W-43). A problem that is
-  not `retryable`, an aborted request, and `SESSION_EXPIRED`, `SESSION_REVOKED`,
-  and `UNAUTHENTICATED` whatever their flag, are never repeated. The bound is a
+  problem is repeated with the same bytes, W-16, W-42, W-43), or `start` (the
+  start of a round, `startRound`: a lost response is repeated as for
+  `idempotent`, but a problem only when its `code` is `UNAVAILABLE` and it is
+  `retryable`. This is an allow-list: a start voided or refused before any money
+  moved, `FUNDING_UNCONFIRMED`, `ENTROPY_UNAVAILABLE`, `PREPARATION_TIMEOUT`, or
+  `ROUND_VOIDED`, and any code added later, is answered once whatever its
+  `retryable`, since the Play API document says to retry such a start with a new
+  key, which only the player's next start does, W-36). A problem that is not
+  `retryable`, an aborted request, and `SESSION_EXPIRED`, `SESSION_REVOKED`, and
+  `UNAUTHENTICATED` whatever their flag, are never repeated. The bound is a
   configuration value, checked when the transport is created (`maxAttempts` a
   safe integer of at least 1; both delays finite and non-negative, the initial
   one not above the maximum). Its defaults are provisional, since W-42 asks only
@@ -103,7 +110,7 @@ one shape (a move at the cash-out route), and a type test keeps it so.
 | ------------------ | ------------------------ | ------------ | ---------- | --------------------------------------------------------------------------------------- |
 | `redeemLaunchCode` | `POST /sessions:redeem`  | `never`      | none       | `sessionId`, the sealed `playToken`, `tokenExpiresAt`, `sessionExpiresAt`, `gameOrigin` |
 | `refreshPlayToken` | `POST /sessions:refresh` | `refresh`    | play token | the sealed `playToken`, `tokenExpiresAt`                                                |
-| `startRound`       | `POST /rounds:start`     | `idempotent` | play token | the round's Snapshot, `unknown`                                                         |
+| `startRound`       | `POST /rounds:start`     | `start`      | play token | the round's Snapshot, `unknown`                                                         |
 | `continueRound`    | `POST /rounds:continue`  | `idempotent` | play token | the round's Snapshot, `unknown`                                                         |
 | `cashOutRound`     | `POST /rounds:cashOut`   | `idempotent` | play token | the round's Snapshot, `unknown`                                                         |
 | `cancelRound`      | `POST /rounds:cancel`    | `never`      | play token | the round's Snapshot, `unknown`                                                         |
@@ -181,9 +188,12 @@ one shape (a move at the cash-out route), and a type test keeps it so.
   caller, a body that is not JSON, an answer that does not match the document,
   that a repeat resends the same bytes, that the redeem and the cancel are never
   repeated (a lost response, a retryable `UNAVAILABLE`, an unknown retryable
-  `code`), that neither the token nor the launch code reaches a URL or an error,
-  that a sealed result printed as JSON holds no token and its type has no plain
-  string field for it, that the seal is called once per answer (a refresh resent
-  after a lost response too) and never for an answer that does not match the
-  document, and that the case table's problem statuses equal the document's for
-  each operation (a type test).
+  `code`), that a start answered with `FUNDING_UNCONFIRMED`,
+  `ENTROPY_UNAVAILABLE`, `PREPARATION_TIMEOUT`, or `ROUND_VOIDED` marked
+  `retryable: true` is sent once while `UNAVAILABLE` and a lost response are
+  repeated, that neither the token nor the launch code reaches a URL or an
+  error, that a sealed result printed as JSON holds no token and its type has no
+  plain string field for it, that the seal is called once per answer (a refresh
+  resent after a lost response too) and never for an answer that does not match
+  the document, and that the case table's problem statuses equal the document's
+  for each operation (a type test).

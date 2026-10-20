@@ -47,7 +47,8 @@ describe.each(PROBLEM_CASES)(
   },
 );
 
-describe.each(CASES)("$id", c => {
+// The start repeats only UNAVAILABLE: see operations-start-voided.test.ts.
+describe.each(CASES.filter(c => c.id !== "startRound"))("$id", c => {
   it("keeps an unknown problem code and falls back on retryable", async () => {
     c.queueProblem(h, 503, UNKNOWN_CODE, true);
     c.queueProblem(h, 503, UNKNOWN_CODE, true);

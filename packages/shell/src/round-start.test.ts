@@ -51,7 +51,7 @@ describe("start (W-22, W-26)", () => {
       bet: { value: "100", unit: "EUR" },
       actionKey: setup.session.address(),
     });
-    expect(start?.retry).toBe("idempotent");
+    expect(start?.retry).toBe("start");
     expect(flow.verdict()).toEqual({
       state: "ready",
       initial: setup.issued.initial,

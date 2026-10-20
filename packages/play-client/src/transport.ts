@@ -76,7 +76,7 @@ type PlayRequestBase = {
 export type PlayRequest = PlayRequestBase &
   (
     | {
-        readonly retry: "never" | "idempotent";
+        readonly retry: "never" | "idempotent" | "start";
         /** No repeat starts at or after this local time. */
         readonly notAfterMs?: number;
       }
