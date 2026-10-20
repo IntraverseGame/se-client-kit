@@ -125,7 +125,7 @@ Several agents and people work in one clone at once. Rules:
   `.css`, each gzip at zlib's default level, summed, limit 65536), decided by
   the human on 2026-10-18 (`WRAPPER_BUDGET`), plus two of the verify page's
   under `verify/` (`verify output`, `verify page, gzip`; `VERIFY_BUDGET`,
-  provisional limits until the first build; V-16, D-3), counted apart from the
+  provisional limits, the first build measured 119788 and 39199; V-16, D-3), counted apart from the
   Wrapper's. Enforced by
   `pnpm check:size-budget` (`tools/check-size-budget.ts`, in `pnpm check` and
   the `build` CI job), and directly by the release dry run (listed once; the

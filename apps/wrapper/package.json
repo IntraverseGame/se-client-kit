@@ -79,6 +79,7 @@
     "test": {
       "command": "tsx ../../tools/check-kit-dist.ts test && vitest run",
       "files": [
+        "../verify/index.html",
         "index.html",
         "public/**",
         "src/**",

@@ -31,7 +31,7 @@ world-readable and cannot be taken back, so what may be committed is limited
 | `shell`          | package        | headless part of the Wrapper: sessions, key custody, transcript, checks |
 | `wrapper`        | app            | the UI, built into a release bundle                                     |
 | `reference-game` | app            | a minimal sandboxed game for tests and as a sample                      |
-| `verify`         | app            | the verify page: its checks, states, and view; no HTML or build yet    |
+| `verify`         | app            | the verify page: its checks, states, and view; with its HTML and build    |
 
 Dependency direction: `contracts` ← `snapshot` and `play-client` ← `shell` ←
 `wrapper`; `signing` ← `shell`; `signing` and `contracts`' runtime entry ← `verify` (never `shell`); tests

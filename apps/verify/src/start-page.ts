@@ -2,9 +2,6 @@
 // timers, address bar, and clipboard, and mounts the view into `#verify-root`.
 // It holds no key, no token, and no session, and it never imports `shell`. It
 // persists nothing: the round id lives only in the URL.
-// PROVISIONAL: the page's HTML (`verify/index.html`, with its `<meta>` policy)
-// and its build are V-15 to V-17's, not built yet; this module is the entry
-// that HTML will load.
 
 import { ENVIRONMENT_CONFIG_PATH } from "./load-config.ts";
 import { createVerifyPage, type VerifyPage } from "./page-state.ts";

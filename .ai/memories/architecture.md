@@ -365,7 +365,8 @@ structure below.
 - **The verify page** is the kit's (backend TPO, 2026-10-18), specified in
   `specs/verify-page.md` and built but for the e2e rows: `apps/verify` (private)
   holds checks 1 to 7, the configuration read, the states and their view (V-3
-  to V-14; "What is built" in the spec), and a Vite `build` (base `/verify/`,
+  to V-14; "What is built" in the spec), its HTML (`index.html`, mount point
+  `#verify-root`, entry `src/main.ts`), and a Vite `build` (base `/verify/`,
   the test-only-entry guard on, production only). The Wrapper's build copies
   `apps/verify/dist/` into its release under `verify/` with its own `<meta>`
   policy, SRI, and manifest entries, `headers.json` is keyed by path (`/*`,

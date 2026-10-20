@@ -8,9 +8,9 @@ word for the result.
 published on its own: it ships inside the Wrapper's release, under `verify/`. It
 holds the page's checks, its states (the form, checking, matched, mismatched,
 not recomputable, not found, and the service's errors), and their accessible
-view, built on the recomputation that rests on the SuperEngine fairness kernel,
-kernelVersion 1. It reads the verification service through an assumed answer
-format until that format is published.
+view and its HTML page, built on the recomputation that rests on the SuperEngine
+fairness kernel, kernelVersion 1. It reads the verification service through an
+assumed answer format until that format is published.
 
 ## What it recomputes
 
