@@ -1,8 +1,14 @@
 // Test-only: a fake bundle for the release integrity step, its hooks run as
 // the bundler would, and the output directory it would write.
 
-import { releaseIntegrity } from "../../release-integrity.ts";
-import { verifyOutput } from "../../release-output-check.ts";
+import {
+  releaseIntegrity,
+  type ReleaseIntegrityOptions,
+} from "../../release-integrity.ts";
+import {
+  verifyOutput,
+  type VerifyOutputOptions,
+} from "../../release-output-check.ts";
 
 export const sha256 = async (
   text: string,
@@ -51,8 +57,11 @@ type Hook = {
 };
 
 /** Runs the plugin's `generateBundle` over a bundle, as the bundler would. */
-export const run = async (bundle: Bundle): Promise<Bundle> => {
-  const plugin = releaseIntegrity() as unknown as {
+export const run = async (
+  bundle: Bundle,
+  options: ReleaseIntegrityOptions = {},
+): Promise<Bundle> => {
+  const plugin = releaseIntegrity(options) as unknown as {
     configResolved: (config: unknown) => void;
     generateBundle: Hook;
   };
@@ -78,7 +87,11 @@ export const writtenFiles = (bundle: Bundle): Map<string, Uint8Array> =>
     Object.entries(bundle).map(([file, entry]) => [
       file,
       encoder.encode(
-        entry.type === "chunk" ? entry.code : String(entry.source),
+        entry.type === "chunk"
+          ? entry.code
+          : typeof entry.source === "string"
+            ? entry.source
+            : new TextDecoder().decode(entry.source),
       ),
     ]),
   );
@@ -87,13 +100,18 @@ export const writtenFiles = (bundle: Bundle): Map<string, Uint8Array> =>
 export const verified = async (
   change: (files: Map<string, Uint8Array>) => void = () => {},
   bundle: Bundle = bundleOf(),
+  options: ReleaseIntegrityOptions = {},
+  checks: VerifyOutputOptions = {},
 ): Promise<void> => {
-  const files = writtenFiles(await run(bundle));
+  const files = writtenFiles(await run(bundle, options));
   change(files);
-  await verifyOutput(files, "/");
+  await verifyOutput(files, "/", checks);
 };
 
 export const sourceOf = (bundle: Bundle, file: string): string => {
   const entry = bundle[file];
-  return entry?.type === "asset" ? String(entry.source) : (entry?.code ?? "");
+  if (entry?.type !== "asset") return entry?.code ?? "";
+  return typeof entry.source === "string"
+    ? entry.source
+    : new TextDecoder().decode(entry.source);
 };

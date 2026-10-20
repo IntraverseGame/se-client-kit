@@ -9,8 +9,9 @@ backend's TPO, 2026-10-18); the backend owns only the API it reads.
 Status: **specified; partly built.** Built: the derivations of checks 5 and 7
 under the SuperEngine fairness kernel, kernelVersion 1, keyed on the kernel
 version, in `apps/verify` ([What is built](#what-is-built)), and the raw
-`keccak256` they take from `signing`. Not built: the page itself (its states,
-its HTML, its build and release), the verify API read and its validator, checks
+`keccak256` they take from `signing`, and the build and release (V-15 to V-17;
+[What is built](#what-is-built)) around a placeholder page. Not built: the page
+itself (its states and its HTML), the verify API read and its validator, checks
 1 to 4 and 6, and the rules on which reveals a round carries. The rest waits for
 the verify API document, to come, which defines the response body; what depends
 on it is marked `TODO(verify API)`. Its four design decisions were made by the
@@ -405,8 +406,22 @@ Flip config round and their tests (VT-1b's kernel version part, VT-2 for checks
 - Both checks assume the reveals are present: which reveals a round must carry
   (V-12, check 5) and how the page shows a check it did not run are the page's,
   built with it.
-- VT-10's source check runs over `apps/verify` today (D-6); the `<meta>`
-  policy's `worker-src 'none'` part comes with the page's HTML.
+- VT-10's source check runs over `apps/verify` today (D-6); the `<meta>` policy
+  with `worker-src 'none'` is added by the release step (below) and tested
+  there.
+- **The build and release (V-15 to V-17).** `apps/verify` has a Vite build
+  (`vite.config.ts`: base `/verify/`, `publicDir: false`, no env files, a
+  production build only) of a placeholder `index.html` and
+  `src/placeholder-entry.ts`, which the page's own HTML and entry replace. The
+  Wrapper's build depends on it and copies `apps/verify/dist/` into its output
+  under `verify/` (`apps/wrapper/release-verify.ts`), adding the page's `<meta>`
+  policy and SRI (`release-sri.ts`, shared with the Wrapper's page), listing its
+  files in the integrity manifest, and holding them to the output allow-list
+  with `verify/index.html` as the second HTML file. `headers.json` holds the
+  page's headers under `/verify/*`. The size budget measures "verify output" and
+  "verify page, gzip" apart from the Wrapper's (`tools/size-budget.ts`); their
+  limits are provisional, equal to the Wrapper's, until the first build of the
+  real page.
 
 ### Accessibility (V-14)
 

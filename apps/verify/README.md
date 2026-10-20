@@ -5,11 +5,12 @@ your browser from its public evidence, without taking the verification service's
 word for the result.
 
 **Status:** pre-release, and not a page yet. It is an application, not an npm
-package, and is never published on its own: it will ship inside the Wrapper's
-release. Today it holds only the recomputation that rests on the SuperEngine
-fairness kernel, kernelVersion 1. The page itself (reading a round, its states,
-its checks of the round's signature and of the entropy chain) is specified, not
-built yet.
+package, and is never published on its own: it ships inside the Wrapper's
+release, under `verify/`. Until the page is built, what ships there is a
+placeholder that says so. Today it holds the recomputation that rests on the
+SuperEngine fairness kernel, kernelVersion 1. The page itself (reading a round,
+its states, its checks of the round's signature and of the entropy chain) is
+specified, not built yet.
 
 ## What it recomputes today
 

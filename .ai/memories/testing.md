@@ -296,10 +296,10 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `apps/wrapper/dist/` to `WRAPPER_BUDGET`; the measuring and judging are pure
   (`tools/size-budget.ts`, covered by `tools/size-budget.test.ts`, which also
   keeps the limits equal to the testing spec's list). The release dry run and
-  the publish step call `checkWrapperSize` directly, so a problem is listed
+  the publish step call `checkReleaseSize` directly, so a problem is listed
   once; an output without `index.html` (an empty `dist/` too) is a problem.
   **Known gap:** nothing tests that the dry-run and publish CLIs still call
-  `checkWrapperSize` (mutants S8a/S8b survive): they are CLI glue, and a test
+  `checkReleaseSize` (mutants S8a/S8b survive): they are CLI glue, and a test
   would mean a full dry run in `pnpm check`. On `main` the required `build`
   job runs `check:size-budget` on the same commit; the publish job's digest
   check does not enforce size by itself.

@@ -106,7 +106,7 @@ describe("wireit edges", () => {
 
   it("the Vite builds declare NODE_ENV as an external env", () => {
     const apps = viteBuilds();
-    expect(apps).toEqual(["reference-game", "wrapper"]);
+    expect(apps).toEqual(["reference-game", "verify", "wrapper"]);
     for (const app of apps) {
       expect(wireitOf(`apps/${app}`)["build"]?.env).toEqual({
         NODE_ENV: { external: true },

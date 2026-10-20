@@ -1,11 +1,11 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, join, sep } from "node:path";
+import { delimiter, dirname, join, sep } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import {
-  checkWrapperSize,
+  checkReleaseSize,
   prepareOut,
   scratchEnvironment,
 } from "./release-steps.ts";
@@ -100,24 +100,36 @@ describe("prepareOut", () => {
 const withDist = (files: Readonly<Record<string, Uint8Array>>): string => {
   const root = mkdtempSync(join(tmpdir(), "se-client-kit-size-"));
   const dist = join(root, "apps", "wrapper", "dist");
-  mkdirSync(join(dist, "assets"), { recursive: true });
+  mkdirSync(dist, { recursive: true });
   for (const [path, bytes] of Object.entries(files)) {
+    mkdirSync(dirname(join(dist, path)), { recursive: true });
     writeFileSync(join(dist, path), bytes);
   }
   return root;
 };
 
-describe("checkWrapperSize", () => {
-  it("passes a built output within the budget", () => {
+const text = (value: string): Uint8Array => new TextEncoder().encode(value);
+
+describe("checkReleaseSize", () => {
+  it("passes a built output within the budgets, each page measured apart", () => {
     const root = withDist({
-      "index.html": new TextEncoder().encode("<!doctype html>"),
-      "assets/index.js": new TextEncoder().encode("console.log(1);"),
+      "index.html": text("<!doctype html>"),
+      "assets/index.js": text("console.log(1);"),
+      "verify/index.html": text("<!doctype html><title>v</title>"),
     });
     try {
-      const report = checkWrapperSize(root);
+      const report = checkReleaseSize(root);
       expect(report.problems).toEqual([]);
+      expect(report.rows.map(row => row.name)).toEqual([
+        "wrapper output",
+        "wrapper page, gzip",
+        "verify output",
+        "verify page, gzip",
+      ]);
       expect(report.rows.map(row => row.bytes)).toEqual([
         30,
+        expect.any(Number),
+        31,
         expect.any(Number),
       ]);
     } finally {
@@ -129,11 +141,27 @@ describe("checkWrapperSize", () => {
     const root = withDist({
       "index.html": new Uint8Array(1),
       "assets/big.js": new Uint8Array(204_800),
+      "verify/index.html": new Uint8Array(1),
     });
     try {
-      expect(checkWrapperSize(root).problems).toContain(
+      expect(checkReleaseSize(root).problems).toContain(
         "wrapper output: 204801 bytes, over its size budget of 204800 bytes by 1",
       );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not count the verify page's bytes toward the Wrapper's budget", () => {
+    const root = withDist({
+      "index.html": new Uint8Array(1),
+      "verify/index.html": new Uint8Array(1),
+      "verify/assets/big.js": new Uint8Array(204_800),
+    });
+    try {
+      expect(checkReleaseSize(root).problems).toEqual([
+        "verify output: 204801 bytes, over its size budget of 204800 bytes by 1",
+      ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -142,8 +170,20 @@ describe("checkWrapperSize", () => {
   it("reports an empty dist/ as no release build", () => {
     const root = withDist({});
     try {
-      expect(checkWrapperSize(root).problems).toEqual([
+      expect(checkReleaseSize(root).problems).toEqual([
         "the Wrapper output has no index.html, so it is not a release build",
+        "the Wrapper output has no verify/index.html, so it is not a release build",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports an output without the verify page", () => {
+    const root = withDist({ "index.html": text("<!doctype html>") });
+    try {
+      expect(checkReleaseSize(root).problems).toEqual([
+        "the Wrapper output has no verify/index.html, so it is not a release build",
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -153,9 +193,11 @@ describe("checkWrapperSize", () => {
   it("reports a Wrapper that is not built, never a pass", () => {
     const root = mkdtempSync(join(tmpdir(), "se-client-kit-size-"));
     try {
-      expect(checkWrapperSize(root).problems).toEqual([
+      expect(checkReleaseSize(root).problems).toEqual([
         "wrapper output: not measured, so its size budget cannot pass",
         "wrapper page, gzip: not measured, so its size budget cannot pass",
+        "verify output: not measured, so its size budget cannot pass",
+        "verify page, gzip: not measured, so its size budget cannot pass",
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });

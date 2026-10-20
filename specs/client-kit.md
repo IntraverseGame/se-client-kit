@@ -247,10 +247,20 @@ would need a looser policy:
   element
   (`script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; require-trusted-types-for 'script'; trusted-types 'none'`),
   so it holds even where a header is missing;
-- `headers.json` holds the recommended headers. The policy is
-  `default-src 'none'`, `'self'` for scripts, styles, images, and fonts,
-  `base-uri`, `form-action`, and `object-src` `'none'`, Trusted Types required,
-  and three placeholders the deploy side fills from the environment's document:
+- `headers.json` holds the recommended headers by path pattern: `/*` for the
+  Wrapper's, and `/verify/*` for the verify page's
+  ([verify page](./verify-page.md), V-16 and Security), which replace the
+  Wrapper's for that path rather than add to them. That holds only if the host
+  applies the most specific rule; a host that merges every matching rule (some
+  do) would send both policies, and the browser would enforce both: the
+  Wrapper's `connect-src` does not list the verify API's origin, so the page
+  could not reach a verify API on another origin. The hosting step therefore
+  excludes `/verify/*` from `/*`, or serves the Wrapper's rule only with headers
+  safe on every path, and checks the real response headers of a preview deploy.
+  No hosting step exists yet. The Wrapper's policy is `default-src 'none'`,
+  `'self'` for scripts, styles, images, and fonts, `base-uri`, `form-action`,
+  and `object-src` `'none'`, Trusted Types required, and three placeholders the
+  deploy side fills from the environment's document:
   `connect-src 'self' {{connectOrigins}}` (the Play API's and the RPC endpoints'
   origins), `frame-src {{gameOrigins}}`, and
   `frame-ancestors {{operatorOrigins}}` (`'none'` when the list is empty).
@@ -259,6 +269,10 @@ would need a looser policy:
   payment, USB, MIDI, display capture, credential `get`, and clipboard read
   (clipboard write is not a recognised feature and is not listed); this list is
   proposed for review;
+- the verify page (`apps/verify`, built on its own) is copied into the output
+  under `verify/` with the same rules: its own `<meta>` policy (the one above
+  with `worker-src 'none'`), SRI on every script and stylesheet, which must lie
+  under `verify/`, and its files in the manifest (`release-verify.ts`);
 - `integrity-manifest.json` holds the SHA-256 of every other file;
 - the Wrapper has no public directory (`publicDir: false`), so every file goes
   through the build;
@@ -271,11 +285,11 @@ would need a looser policy:
   hash. The file types are an allow-list, compared in lower case: `.js` and
   `.css`, each loaded by a tag of the page that carries `integrity` (a dynamic
   `import()` chunk, which would load without SRI, fails the build); `.json` for
-  `integrity-manifest.json` and `headers.json` only; and `index.html`, written
-  exactly so, as the only HTML. Every other type fails the build (another HTML
-  spelling such as `Evil.HTML`, `.htm`, or `.xhtml`, an `.svg`, which can hold a
-  script, a `.cjs`, an image, a font); a type the Wrapper needs is added to the
-  allow-list explicitly.
+  `integrity-manifest.json` and `headers.json` only; and `index.html` and
+  `verify/index.html`, each written exactly so, as the only HTML. Every other
+  type fails the build (another HTML spelling such as `Evil.HTML`, `.htm`, or
+  `.xhtml`, an `.svg`, which can hold a script, a `.cjs`, an image, a font); a
+  type the Wrapper needs is added to the allow-list explicitly.
 
 <!-- TODO(infrastructure owner): the hosting hostnames, the repository and the protected environment that run the deploy job, the CDN header rules, and the `frame-ancestors` allow-list (the Wrapper is embedded by each operator's page, so the allow-list comes from operator configuration and cannot be one static header), and the RPC provider list with its CORS behavior and `connect-src` entries (owned by the infrastructure owner; see [wrapper.md](./wrapper.md#configuration)). -->
 

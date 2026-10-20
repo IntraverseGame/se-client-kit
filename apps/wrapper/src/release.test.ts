@@ -12,7 +12,12 @@ import {
   CSP_PLACEHOLDERS,
   META_CONTENT_SECURITY_POLICY,
   PERMISSIONS_POLICY,
-  releaseHeaders,
+  VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE,
+  VERIFY_CSP_PLACEHOLDER,
+  VERIFY_META_CONTENT_SECURITY_POLICY,
+  verifyHeaders,
+  wrapperHeaders,
+  headersFile,
 } from "../release-headers.ts";
 import {
   type EnvironmentConfig,
@@ -83,7 +88,7 @@ describe("the recommended headers", () => {
   });
 
   it("sends no referrer and turns off unused powerful features", () => {
-    const headers = releaseHeaders();
+    const headers = wrapperHeaders();
     expect(headers["Referrer-Policy"]).toBe("no-referrer");
     expect(headers["Permissions-Policy"]).toBe(PERMISSIONS_POLICY);
     expect(PERMISSIONS_POLICY).toContain("camera=()");
@@ -115,5 +120,71 @@ describe("contentSecurityPolicyFor", () => {
       contentSecurityPolicyFor(configOf({ operatorOrigins: [] })),
     );
     expect(policy.get("frame-ancestors")).toBe("'none'");
+  });
+});
+
+describe("the verify page's recommended headers", () => {
+  const policy = directives(VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE);
+
+  it("has the meta policy specs/verify-page.md (Security) gives, the Wrapper's with worker-src 'none'", () => {
+    expect(VERIFY_META_CONTENT_SECURITY_POLICY).toBe(
+      "script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'",
+    );
+    expect(
+      VERIFY_META_CONTENT_SECURITY_POLICY.replace(" worker-src 'none';", ""),
+    ).toBe(META_CONTENT_SECURITY_POLICY);
+  });
+
+  it("allows no inline script or style, no eval, and no worker", () => {
+    for (const text of [
+      VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE,
+      VERIFY_META_CONTENT_SECURITY_POLICY,
+    ]) {
+      expect(text).not.toMatch(/unsafe-inline|unsafe-eval|unsafe-hashes|\*/u);
+    }
+    expect(policy.get("default-src")).toBe("'none'");
+    expect(policy.get("script-src")).toBe("'self'");
+    expect(policy.get("style-src")).toBe("'self'");
+    expect(policy.get("worker-src")).toBe("'none'");
+    expect(policy.get("form-action")).toBe("'none'");
+    expect(policy.get("require-trusted-types-for")).toBe("'script'");
+    expect(
+      directives(VERIFY_META_CONTENT_SECURITY_POLICY).get("worker-src"),
+    ).toBe("'none'");
+  });
+
+  it("is never embedded, embeds nothing, and leaves one placeholder", () => {
+    expect(policy.get("frame-ancestors")).toBe("'none'");
+    expect(policy.get("frame-src")).toBe("'none'");
+    expect(policy.get("connect-src")).toBe(`'self' ${VERIFY_CSP_PLACEHOLDER}`);
+    expect(
+      VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE.match(/\{\{/gu),
+    ).toHaveLength(1);
+  });
+
+  it("keeps the meta policy free of what only a header can set", () => {
+    const meta = directives(VERIFY_META_CONTENT_SECURITY_POLICY);
+    for (const name of [
+      "default-src",
+      "connect-src",
+      "frame-src",
+      "frame-ancestors",
+    ]) {
+      expect(meta.has(name)).toBe(false);
+    }
+  });
+
+  it("keeps the Wrapper's referrer and permissions policy", () => {
+    expect(verifyHeaders()).toEqual({
+      ...wrapperHeaders(),
+      "Content-Security-Policy": VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE,
+    });
+  });
+
+  it("is the headers file's entry for /verify/*, beside the Wrapper's for /*", () => {
+    expect(headersFile()).toEqual({
+      "/*": wrapperHeaders(),
+      "/verify/*": verifyHeaders(),
+    });
   });
 });

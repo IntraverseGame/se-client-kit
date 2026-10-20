@@ -9,10 +9,13 @@
   "include": [
     "src",
     "vite.config.ts",
-    "test-only-entry-guard.ts",
+    "../../tools/test-only-entry-guard.ts",
+    "../../tools/guard-text.ts",
     "release-integrity.ts",
     "release-headers.ts",
     "release-files.ts",
-    "release-output-check.ts"
+    "release-output-check.ts",
+    "release-sri.ts",
+    "release-verify.ts"
   ]
 }

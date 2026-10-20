@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createServer, loadConfigFromFile, type UserConfig } from "vite";
 import { describe, expect, it } from "vitest";
 
-import { testOnlyEntryGuard } from "../test-only-entry-guard.ts";
+import { testOnlyEntryGuard } from "../../../tools/test-only-entry-guard.ts";
 import { useGuardScratch, VECTOR } from "./fixtures/guard-scratch.ts";
 import { asReleaseBuild, loadBuildConfig } from "./fixtures/release-build.ts";
 

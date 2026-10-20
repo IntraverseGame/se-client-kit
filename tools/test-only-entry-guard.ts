@@ -2,7 +2,12 @@ import { parseAst, type Plugin } from "vite";
 
 import { normalizePath, textForms } from "./guard-text.ts";
 
-// The Wrapper bundle must never contain a vector. Vite inlines imported data
+// Shared by the Vite builds of the Wrapper (apps/wrapper) and the verify page
+// (apps/verify, specs/verify-page.md V-15); each app's vite.config.ts adds it
+// with its own name for the messages. It lives in tools/ so neither app
+// imports the other.
+//
+// A shipped bundle must never contain a vector. Vite inlines imported data
 // and drops the specifier, so the finished bundle cannot be inspected for it;
 // the guard fails the build the moment the module graph reaches the `contracts`
 // test-only entry or any vector (specs/client-kit/the-contracts-package.md,
@@ -149,7 +154,11 @@ const importsStylesheet = (code: string, id: string): boolean =>
   !isThirdParty(id) &&
   (CSS_IMPORT.test(code) || CSS_COMPOSES_FROM.test(code));
 
-const mentionsTestOnlyPath = (code: string, id: string): boolean => {
+const mentionsTestOnlyPath = (
+  app: string,
+  code: string,
+  id: string,
+): boolean => {
   if (TEST_ONLY_MENTION.test(code)) return true;
   const file = id.split("?")[0] ?? id;
   if (!SCRIPT_MODULE.test(file)) {
@@ -163,7 +172,7 @@ const mentionsTestOnlyPath = (code: string, id: string): boolean => {
     // scan. Project code the guard cannot parse is refused: fail closed.
     if (isThirdParty(id)) return false;
     throw new Error(
-      `The Wrapper guard cannot parse ${id} to check its string literals, so the build is refused (fail closed). Fix the module's syntax or keep it out of the Wrapper's graph.`,
+      `The ${app} guard cannot parse ${id} to check its string literals, so the build is refused (fail closed). Fix the module's syntax or keep it out of the ${app}'s graph.`,
     );
   }
   return stringsIn(program).some(
@@ -176,39 +185,42 @@ const mentionsTestOnlyPath = (code: string, id: string): boolean => {
 const isTestOnlyId = (id: string): boolean =>
   TEST_ONLY_FILE.test(id.replaceAll("\\", "/"));
 
-const fail = (target: string, importer?: string): never => {
+const fail = (app: string, target: string, importer?: string): never => {
   throw new Error(
-    `The Wrapper bundle must not contain the contracts test-only entry or a vector: "${target}" is reached from ${importer ?? "the build entry"}.`,
+    `The ${app} bundle must not contain the contracts test-only entry or a vector: "${target}" is reached from ${importer ?? "the build entry"}.`,
   );
 };
 
-export const testOnlyEntryGuard = (): Plugin => ({
+/** The guard for one app's build; `app` names it in a refusal. */
+export const testOnlyEntryGuard = (app = "Wrapper"): Plugin => ({
   name: "se-client-test-only-entry-guard",
   enforce: "pre",
   async resolveId(source, importer, options) {
     if (TEST_ONLY_SPECIFIER.test(source) || isTestOnlyId(source)) {
-      fail(source, importer);
+      fail(app, source, importer);
     }
     const resolved = await this.resolve(source, importer, {
       ...options,
       skipSelf: true,
     });
     if (resolved !== null && isTestOnlyId(resolved.id)) {
-      fail(resolved.id, importer);
+      fail(app, resolved.id, importer);
     }
     return resolved;
   },
   load: (id: string) => {
-    if (isTestOnlyId(id)) fail(id);
+    if (isTestOnlyId(id)) fail(app, id);
     return null;
   },
   transform: (code: string, id: string) => {
     if (importsStylesheet(code, id)) {
       throw new Error(
-        `The Wrapper guard refuses a CSS @import or a CSS Modules "composes ... from" a file in ${id}: Vite loads that stylesheet by reading the file itself, so the guard cannot scan it. Import the stylesheet from a module instead.`,
+        `The ${app} guard refuses a CSS @import or a CSS Modules "composes ... from" a file in ${id}: Vite loads that stylesheet by reading the file itself, so the guard cannot scan it. Import the stylesheet from a module instead.`,
       );
     }
-    if (mentionsTestOnlyPath(code, id)) fail("a path in its source", id);
+    if (mentionsTestOnlyPath(app, code, id)) {
+      fail(app, "a path in its source", id);
+    }
     return null;
   },
 });

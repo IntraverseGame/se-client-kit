@@ -43,7 +43,7 @@ const FIXED_DIRECTIVES: readonly string[] = [
  * so they are left to the header (no `default-src` here, which would block
  * them).
  */
-export const META_CONTENT_SECURITY_POLICY: string = [
+const META_DIRECTIVES: readonly string[] = [
   "script-src 'self'",
   "style-src 'self'",
   "object-src 'none'",
@@ -51,7 +51,9 @@ export const META_CONTENT_SECURITY_POLICY: string = [
   "form-action 'none'",
   "require-trusted-types-for 'script'",
   "trusted-types 'none'",
-].join("; ");
+];
+
+export const META_CONTENT_SECURITY_POLICY: string = META_DIRECTIVES.join("; ");
 
 /** The header's policy, with the per-environment placeholders. */
 export const CONTENT_SECURITY_POLICY_TEMPLATE: string = [
@@ -79,12 +81,71 @@ export const PERMISSIONS_POLICY: string = [
   "clipboard-read=()",
 ].join(", ");
 
-/** The headers file of the release bundle (`headers.json`). */
-export const releaseHeaders = (): Readonly<Record<string, string>> =>
+/** The Wrapper's response headers, with the per-environment placeholders. */
+export const wrapperHeaders = (): Readonly<Record<string, string>> =>
   Object.freeze({
     "Content-Security-Policy": CONTENT_SECURITY_POLICY_TEMPLATE,
     "Referrer-Policy": "no-referrer",
     "Permissions-Policy": PERMISSIONS_POLICY,
+  });
+
+/** The one placeholder of the verify page's policy (specs/verify-page.md). */
+export const VERIFY_CSP_PLACEHOLDER = "{{verifyConnectOrigins}}";
+
+/** The verify page's directives that hold in every environment. */
+const VERIFY_FIXED_DIRECTIVES: readonly string[] = FIXED_DIRECTIVES.flatMap(
+  directive =>
+    directive === "object-src 'none'"
+      ? [directive, "worker-src 'none'"]
+      : [directive],
+);
+
+/**
+ * The verify page's `<meta>` policy: the Wrapper's, with `worker-src 'none'`
+ * after `form-action` (the page uses no worker of any kind;
+ * specs/verify-page.md, Security, which gives the exact string).
+ */
+export const VERIFY_META_CONTENT_SECURITY_POLICY: string =
+  META_DIRECTIVES.flatMap(directive =>
+    directive === "form-action 'none'"
+      ? [directive, "worker-src 'none'"]
+      : [directive],
+  ).join("; ");
+
+/**
+ * The verify page's header policy. It is never embedded (`frame-ancestors
+ * 'none'`) and embeds nothing (`frame-src 'none'`); it connects to its own
+ * origin, the verify API, and the RPC endpoints.
+ */
+export const VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE: string = [
+  ...VERIFY_FIXED_DIRECTIVES,
+  `connect-src 'self' ${VERIFY_CSP_PLACEHOLDER}`,
+  "frame-src 'none'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+/** The verify page's response headers: its own policy, the Wrapper's rest. */
+export const verifyHeaders = (): Readonly<Record<string, string>> =>
+  Object.freeze({
+    ...wrapperHeaders(),
+    "Content-Security-Policy": VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE,
+  });
+
+/** The path pattern of the Wrapper's headers and the verify page's. */
+export const WRAPPER_HEADERS_PATH = "/*";
+export const VERIFY_HEADERS_PATH = "/verify/*";
+
+/**
+ * The headers file of the release bundle (`headers.json`): the headers by path
+ * pattern. The more specific pattern, `/verify/*`, replaces the Wrapper's
+ * headers for the verify page, it does not add to them.
+ */
+export const headersFile = (): Readonly<
+  Record<string, Readonly<Record<string, string>>>
+> =>
+  Object.freeze({
+    [WRAPPER_HEADERS_PATH]: wrapperHeaders(),
+    [VERIFY_HEADERS_PATH]: verifyHeaders(),
   });
 
 const originOf = (url: string): string => new URL(url).origin;

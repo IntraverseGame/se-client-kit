@@ -3,22 +3,19 @@ import { resolve } from "node:path";
 import type { HtmlTagDescriptor, Plugin, Rolldown } from "vite";
 
 import {
-  attributesOf,
-  base64,
-  digest,
   HEADERS_FILE,
   hex,
-  INLINE_HANDLER,
+  digest,
   MANIFEST_FILE,
   PAGE,
-  STYLE_ATTRIBUTE,
-  TAG,
 } from "./release-files.ts";
 import {
+  headersFile,
   META_CONTENT_SECURITY_POLICY,
-  releaseHeaders,
 } from "./release-headers.ts";
 import { readTree, verifyOutput } from "./release-output-check.ts";
+import { withIntegrity } from "./release-sri.ts";
+import { verifyOutputFiles } from "./release-verify.ts";
 
 // The release bundle's integrity and its strict Content Security Policy
 // (specs/client-kit.md, How the Wrapper reaches the SuperEngine origin, and
@@ -41,7 +38,12 @@ import { readTree, verifyOutput } from "./release-output-check.ts";
 //     stylesheet must be one the page names by a tag (so it carries SRI: a
 //     dynamic `import()` chunk, which would load without it, is refused). A
 //     file another step wrote (a `public/` directory, a later plugin) or
-//     changed fails the build.
+//     changed fails the build;
+//   - the verify page (apps/verify, specs/verify-page.md V-16) is read from its
+//     own build and put into the output under `verify/` with the same rules:
+//     its own `<meta>` policy, SRI, its files in the manifest, and
+//     `verify/index.html` as the second allowed HTML file. `headers.json`
+//     holds its policy under `/verify/*` (release-verify.ts).
 
 type OutputBundle = Rolldown.OutputBundle;
 
@@ -67,15 +69,13 @@ const bytesOf = (bundle: OutputBundle, file: string): Uint8Array => {
  */
 const manifestOf = async (
   bundle: OutputBundle,
-  extra: Readonly<Record<string, string>> = {},
+  extra: ReadonlyMap<string, Uint8Array> = new Map(),
 ): Promise<string> => {
   const sources = new Map<string, Uint8Array>();
   for (const file of Object.keys(bundle)) {
     if (file !== MANIFEST_FILE) sources.set(file, bytesOf(bundle, file));
   }
-  for (const [file, text] of Object.entries(extra)) {
-    sources.set(file, encoder.encode(text));
-  }
+  for (const [file, bytes] of extra) sources.set(file, bytes);
   const files = await Promise.all(
     [...sources.keys()]
       .toSorted()
@@ -94,65 +94,18 @@ const manifestOf = async (
   )}\n`;
 };
 
-const refuse = (what: string): never => {
-  throw new Error(
-    `The Wrapper's release page ${what}, which its strict Content Security Policy forbids; the build is refused.`,
-  );
+export type ReleaseIntegrityOptions = {
+  /**
+   * The verify app's build output, put into the release under `verify/`
+   * (release-verify.ts). A release build always sets it; without it (the
+   * component tests of this step) there is no verify page.
+   */
+  readonly verifyDist?: string;
 };
 
-/** The bundle file a same-origin reference names, or a refusal. */
-const fileOf = (
-  reference: string,
-  base: string,
-  bundle: OutputBundle,
-): string => {
-  if (!reference.startsWith(base) || reference.startsWith("//")) {
-    return refuse(`loads ${reference} from outside the bundle`);
-  }
-  const file = reference.slice(base.length);
-  if (bundle[file] === undefined) {
-    return refuse(`references ${reference}, which is not an emitted file`);
-  }
-  return file;
-};
-
-/** The page with an `integrity` attribute on every script and link. */
-const withIntegrity = async (
-  html: string,
-  base: string,
-  bundle: OutputBundle,
-): Promise<string> => {
-  if (INLINE_HANDLER.test(html)) refuse("has an event-handler attribute");
-  if (STYLE_ATTRIBUTE.test(html)) refuse("has a style attribute");
-  const tags = [...html.matchAll(TAG)];
-  const replacements = await Promise.all(
-    tags.map(async match => {
-      const [whole, rawName = "", rawAttributes = ""] = match;
-      const name = rawName.toLowerCase();
-      if (name === "style") refuse("has an inline <style>");
-      const attributes = attributesOf(rawAttributes);
-      const reference =
-        name === "script" ? attributes.get("src") : attributes.get("href");
-      if (reference === undefined) {
-        return name === "script" ? refuse("has an inline <script>") : whole;
-      }
-      if (attributes.has("integrity")) {
-        return refuse("already has an integrity attribute");
-      }
-      const file = fileOf(reference, base, bundle);
-      const integrity = `sha256-${base64(await digest(bytesOf(bundle, file)))}`;
-      return whole.replace(/\s*\/?>$/u, ` integrity="${integrity}">`);
-    }),
-  );
-  let index = 0;
-  return html.replace(TAG, () => {
-    const replacement = replacements[index];
-    index += 1;
-    return replacement ?? "";
-  });
-};
-
-export const releaseIntegrity = (): Plugin => {
+export const releaseIntegrity = (
+  options: ReleaseIntegrityOptions = {},
+): Plugin => {
   let base = "/";
   let outDir = "";
   return {
@@ -184,14 +137,31 @@ export const releaseIntegrity = (): Plugin => {
             `The release integrity step found no ${PAGE} to sign; the build is refused.`,
           );
         }
-        page.source = await withIntegrity(page.source, base, bundle);
-        const headers = `${JSON.stringify(releaseHeaders(), undefined, 2)}\n`;
+        page.source = await withIntegrity(
+          "Wrapper's",
+          page.source,
+          base,
+          file =>
+            bundle[file] === undefined ? undefined : bytesOf(bundle, file),
+        );
+        const extra = new Map<string, Uint8Array>();
+        if (options.verifyDist !== undefined) {
+          for (const [file, source] of await verifyOutputFiles(
+            options.verifyDist,
+            base,
+          )) {
+            extra.set(file, source);
+            this.emitFile({ type: "asset", fileName: file, source });
+          }
+        }
+        const headers = `${JSON.stringify(headersFile(), undefined, 2)}\n`;
+        extra.set(HEADERS_FILE, encoder.encode(headers));
         this.emitFile({
           type: "asset",
           fileName: HEADERS_FILE,
           source: headers,
         });
-        const manifest = await manifestOf(bundle, { [HEADERS_FILE]: headers });
+        const manifest = await manifestOf(bundle, extra);
         this.emitFile({
           type: "asset",
           fileName: MANIFEST_FILE,
@@ -204,7 +174,9 @@ export const releaseIntegrity = (): Plugin => {
     closeBundle: {
       order: "post",
       handler: async () => {
-        await verifyOutput(await readTree(outDir), base);
+        await verifyOutput(await readTree(outDir), base, {
+          requireVerify: options.verifyDist !== undefined,
+        });
       },
     },
   };

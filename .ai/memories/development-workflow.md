@@ -123,7 +123,10 @@ Several agents and people work in one clone at once. Rules:
   measurements, `wrapper output` (every file of `apps/wrapper/dist/`,
   uncompressed, limit 204800) and `wrapper page, gzip` (`index.html`, `.js`,
   `.css`, each gzip at zlib's default level, summed, limit 65536), decided by
-  the human on 2026-10-18 (`WRAPPER_BUDGET`). Enforced by
+  the human on 2026-10-18 (`WRAPPER_BUDGET`), plus two of the verify page's
+  under `verify/` (`verify output`, `verify page, gzip`; `VERIFY_BUDGET`,
+  provisional limits until the first build; V-16, D-3), counted apart from the
+  Wrapper's. Enforced by
   `pnpm check:size-budget` (`tools/check-size-budget.ts`, in `pnpm check` and
   the `build` CI job), and directly by the release dry run (listed once; the
   dry run does not run the CLI) and `tools/release-publish.ts`. A test keeps

@@ -43,7 +43,11 @@ const RUNTIME_SOURCE = /^src\/(?:index\.ts|(?:schemas|generated)\/.+)$/u;
 
 const PACKAGE_FILE = /\.(?:js|js\.map|d\.ts)$/u;
 /** The apps Vite builds into a page (HTML, CSS, assets), not a library. */
-const VITE_APPS: ReadonlySet<string> = new Set(["wrapper", "reference-game"]);
+const VITE_APPS: ReadonlySet<string> = new Set([
+  "wrapper",
+  "verify",
+  "reference-game",
+]);
 const FORBIDDEN_FILE = /(?:\.(?:test|spec)\.|tsbuildinfo)/u;
 /** A declaration file must not point at a map that is not there. */
 const DECLARATION_MAP_COMMENT = /\/\/# sourceMappingURL=/u;

@@ -360,9 +360,16 @@ structure below.
 ## Known open items
 
 - **The verify page** is the kit's (backend TPO, 2026-10-18), specified in
-  `specs/verify-page.md` and partly built: `apps/verify` (private, `typecheck`
-  and `test` only, no `build`, no page yet) holds the derivations of checks 5
-  and 7 ("What is built" in the spec). The rest waits for the verify API document
+  `specs/verify-page.md` and partly built: `apps/verify` (private) holds the
+  derivations of checks 5 and 7 and a Vite `build` (base `/verify/`, the
+  test-only-entry guard on, production only) of a placeholder page that ships
+  until the real page replaces it. The Wrapper's build copies
+  `apps/verify/dist/` into its release under `verify/` with its own `<meta>`
+  policy, SRI, and manifest entries, `headers.json` is keyed by path (`/*`,
+  `/verify/*`), and the size budget measures `verify/` apart ("What is built"
+  in the spec). The test-only-entry guard (`tools/test-only-entry-guard.ts`,
+  with `tools/guard-text.ts`) is shared by both builds from `tools/`, so
+  neither app imports the other. The rest waits for the verify API document
   (`TODO(verify API)`); the fairness kernel's public vectors are in
   `contracts` (`kernelVectors.v1`, from se-backend `ad36bc4`), with none yet
   for ShuffleDraw alone, Coin Flip's payouts, or `roundSecretHash`, which the

@@ -6,5 +6,10 @@
     "moduleResolution": "Bundler",
     "rewriteRelativeImportExtensions": false
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "vite.config.ts",
+    "../../tools/test-only-entry-guard.ts",
+    "../../tools/guard-text.ts"
+  ]
 }

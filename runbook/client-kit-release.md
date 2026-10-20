@@ -283,9 +283,10 @@ and no network, and publishes nothing:
    the two copies' package tarballs byte-identical.
 5. It holds the first copy's Wrapper output to its size budget
    (`tools/size-budget.ts`: every file uncompressed, and the page with its
-   scripts and stylesheets gzip-compressed); a measurement over its limit is a
-   problem, listed once. (`pnpm check:size-budget` applies the same check in
-   `pnpm check` and the `build` CI job.)
+   scripts and stylesheets gzip-compressed), and the verify page under `verify/`
+   to its own, measured apart (specs/verify-page.md, V-16); a measurement over
+   its limit is a problem, listed once. (`pnpm check:size-budget` applies the
+   same check in `pnpm check` and the `build` CI job.)
 6. It writes to `--out` the artifact and its `.sha256`, the five tarballs, and
    `release-dry-run.json` (source commit, versions, tarball hashes, digests, the
    size budget, problems), and prints the same summary (in CI, also to the job
@@ -428,16 +429,18 @@ If the release uses a stored npm token (rather than trusted publishing):
   is already on npm with other bytes. Never overwrite it: bump the version with
   a changeset and release again; if the published bytes are not ours, treat it
   as a security incident (Escalation).
-- **"the Wrapper output has no index.html, so it is not a release build"**
-  (`check:size-budget`, the dry run, or the publish step). `apps/wrapper/dist/`
-  exists but is empty or lacks its page: a build failed halfway or something
-  else wrote there. Run `pnpm build` again (after `pnpm clean:cache` if wireit
-  restored a stale output) and check the Wrapper's build output; never release
-  such an output.
+- **"the Wrapper output has no index.html, so it is not a release build"** (or
+  `verify/index.html`; `check:size-budget`, the dry run, or the publish step).
+  `apps/wrapper/dist/` exists but is empty or lacks a page (the Wrapper's, or
+  the verify page the Wrapper's build copies from `apps/verify/dist/`): a build
+  failed halfway or something else wrote there. Run `pnpm build` again (after
+  `pnpm clean:cache` if wireit restored a stale output) and check the Wrapper's
+  build output; never release such an output.
 - **"over its size budget"** (`check:size-budget`, the dry run, or the publish
-  step). The Wrapper's release output grew past a limit. Find what grew (compare
-  `apps/wrapper/dist/` with `main`'s build); shrink it, or raise the limit in a
-  reviewed change to `tools/size-budget.ts` and the budget list in
+  step). The Wrapper's release output, or the verify page under `verify/`, grew
+  past a limit. Find what grew (compare `apps/wrapper/dist/` with `main`'s
+  build); shrink it, or raise the limit in a reviewed change to
+  `tools/size-budget.ts` and the budget list in
   [the testing spec](../specs/client-kit/testing-and-ci.md) together (a test
   keeps them equal), saying why in the pull request. Never raise it to make a
   release pass unexamined.

@@ -121,14 +121,26 @@ describe("the workspace scripts list every input", () => {
     ["build", "src/app.css", true],
     ["build", "src/fixtures/guard-scratch.ts", false],
     ["build", "src/app.test.ts", false],
-    ["test", "guard-text.ts", true],
-    ["test", "src/fixtures/html-path-entities.json", true],
     ["test", "src/fixtures/guard-scratch.ts", true],
-    ["typecheck", "guard-text.ts", true],
   ])("the Wrapper's %s selects %s: %s", (script, path, expected) => {
     expect(
       matchesFiles(workspaceFiles(root, "apps/wrapper", script), path),
     ).toBe(expected);
+  });
+
+  // The test-only-entry guard is shared from tools/ by both Vite apps, outside
+  // their directories, so the on-disk derivation cannot see it: pinned here.
+  it.each(
+    ["apps/wrapper", "apps/verify"].flatMap(app =>
+      ["build", "test", "typecheck"].flatMap(script =>
+        [
+          "../../tools/test-only-entry-guard.ts",
+          "../../tools/guard-text.ts",
+        ].map(path => [app, script, path] as const),
+      ),
+    ),
+  )("%s's %s selects %s", (app, script, path) => {
+    expect(matchesFiles(workspaceFiles(root, app, script), path)).toBe(true);
   });
 
   it.each([
