@@ -225,7 +225,8 @@ export const cases: readonly Case[] = [
   importing(src("tools"), "@superengine/signing", true),
 
   // Tests may take vectors from the contracts test-only entry, and only the
-  // tests of signing, snapshot, shell, and the Wrapper do.
+  // tests of signing, snapshot, shell, the Wrapper, and the verify page do
+  // (the verify page's cases are in verify-direction-cases.ts).
   ...["signing", "snapshot", "shell"].map(p =>
     importing(
       testFile(`packages/${p}`),

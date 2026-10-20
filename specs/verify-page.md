@@ -6,10 +6,16 @@ whether the evidence is consistent and whether the outcome follows from it, and
 it does not take the API's word for either. The kit builds it (decided by the
 backend's TPO, 2026-10-18); the backend owns only the API it reads.
 
-Status: **specified, not built.** The build waits for the verify API document,
-to come, which defines the response body; what depends on it is marked
-`TODO(verify API)`. Its four design decisions were made by the human on
-2026-10-18 ([Decisions](#decisions)).
+Status: **specified; partly built.** Built: the derivations of checks 5 and 7
+under the SuperEngine fairness kernel, kernelVersion 1, keyed on the kernel
+version, in `apps/verify` ([What is built](#what-is-built)), and the raw
+`keccak256` they take from `signing`. Not built: the page itself (its states,
+its HTML, its build and release), the verify API read and its validator, checks
+1 to 4 and 6, and the rules on which reveals a round carries. The rest waits for
+the verify API document, to come, which defines the response body; what depends
+on it is marked `TODO(verify API)`. Its four design decisions were made by the
+human on 2026-10-18, and five more on the kernel derivations on 2026-10-19
+([Decisions](#decisions)).
 
 ## Purpose
 
@@ -281,19 +287,45 @@ definition alone, and the payout is shown, not recomputed (V-13).
      - **The outcome.** Coin Flip is one step with two options of which one
        loses, `(n = 2, k = 1)`, so
        `losingIndex = StepsDerive(seed, [(2, 1)])[0][0]`, where StepsDerive is
-       the kernel's keccak256-based shuffle draw. It MUST equal
+       the kernel's keccak256-based shuffle draw (below). It MUST equal
        `config.steps[0].losingIndex`. The player's pick is
        `config.steps[0].selectedIndex`: the round is `won` when the pick is not
        the losing index and `lost` when it is, and that MUST equal the round's
-       status.
+       status. A pick that is not a whole number in `[0, n)`, so for Coin Flip
+       neither 0 nor 1, gives no outcome, so it fails the status comparison, as
+       a missing pick does (D-5).
      - For a `canceled` round that carries its reveals, the seed and the outcome
-       are recomputed and shown, with no status to compare them with.
+       are recomputed and shown, with no status to compare them with; its
+       `config.steps[0].losingIndex` is compared with the recomputed one when
+       the evidence carries it.
+     - **StepsDerive(seed, steps)**, for steps `(n_j, k_j)` from `j = 0`: the
+       seed must be 32 bytes (`seed-length`), then every `n_j` a whole number
+       from 1 to 2^32 (`n-out-of-range`), then every `k_j` one from 0 to `n_j`
+       (`k-out-of-range`); an empty list derives nothing. Step `j` starts from
+       the options `a = [0, 1, …, n_j − 1]` and runs a forward partial
+       Fisher–Yates: for `t` from 0 to `k_j − 1`, it draws
+       `u = ShuffleDraw(seed, j, t, n_j − t)` and swaps `a[t]` with `a[t + u]`;
+       its losers are `a[0 .. k_j)`, in ascending order. The page keeps only the
+       positions whose option has moved, so its memory grows with `k_j`, not
+       with `n_j` (which may be 2^32).
+     - **ShuffleDraw(seed, j, t, m)** is a fair draw from 0 to `m − 1`: for a
+       counter `ctr` from 0, it reads
+       `x = uint256(keccak256(bytes32("steps-v1") ‖ seed ‖ uint256(j) ‖ uint256(t) ‖ uint256(ctr)))`,
+       five 32-byte words (`bytes32` is the label's UTF-8 bytes padded with zero
+       bytes, `uint256` a big-endian word), and returns `x mod m` with that
+       `ctr` at the first `x` below the limit `2^256 − (2^256 mod m)`: the
+       accepted values then split evenly over the `m` results, so none is
+       favoured. The vectors pin each draw, and so the hashed words; every
+       vector accepts at counter 0 (a rejection has a chance below 2^−224 at
+       these `m`), so no vector exercises the rejection itself, and the limit is
+       the kit's own rule, held by its unit tests (D-7).
+       <!-- TODO(fairness kernel): no vendored document states ShuffleDraw's hashed words or its rejection rule. The hashed words are pinned by the vectors' draws; the rejection rule is the kit's own, pinned by no vendored vector or document (every vector accepts at counter 0), and only the kit's unit test of the limit holds it. -->
      - **What StepsDerive needs:** keccak256 over bytes, which in the kit only
-       `signing` has (through its allow-listed hash dependency) and which it
-       does not export today. The build adds a raw `keccak256` to `signing`'s
-       public API (a public API change, with its spec and changeset) and
-       implements StepsDerive in `apps/verify`, so the app adds no runtime
-       dependency of its own.
+       `signing` has (through its allow-listed hash dependency). `signing`
+       exports a raw `keccak256` for it
+       ([The cryptography](./client-kit/the-cryptography.md)), and StepsDerive
+       is implemented in `apps/verify`, so the app adds no runtime dependency of
+       its own.
 
      The payout is shown, not recomputed.
 - **V-13. Shown, not checked.** The page shows, and labels as not checked by
@@ -319,6 +351,43 @@ definition alone, and the payout is shown, not recomputed (V-13).
   <!-- TODO(verify API): whether the body embeds an `se.snapshot/1` Snapshot or has its own schema, so which validator applies; it comes with the verify API document. -->
 - **Amounts** are strings in the evidence and `bigint` where compared, never a
   JS `number` (the kit's rule).
+
+### What is built
+
+`apps/verify` holds, today, only the derivations of checks 5 and 7 for a Coin
+Flip config round and their tests (VT-1b's kernel version part, VT-2 for checks
+5 and 7, and VT-10's source check):
+
+- **Keyed on the kernel version (V-12a).** The kernels the page implements are a
+  map from kernel version to derivations; version 1 is the only entry. A check
+  asked for any other version (another integer, a fraction, `NaN`) returns "not
+  recomputable" with that version, and no hash is computed.
+- **Check 5** takes the two commitments and the two reveals (`roundSecretHash`,
+  `roundSecret`, `seedHash`, `seed`) and recomputes both commitments. **Check
+  7** takes block N's hash, the round secret, the revealed seed, the status
+  (`won`, `lost`, or `canceled`), and `config.steps[0]`'s `selectedIndex` and
+  `losingIndex` when present; it compares the seed, the losing index, and, for
+  `won` and `lost`, the status that the pick gives. A `won` or `lost` round
+  without its pick or its losing index, or with a pick outside `[0, 2)`, fails
+  that comparison (D-5). A `canceled` round's seed and losing index are
+  recomputed and returned; its losing index is compared only when the evidence
+  carries one, and it has no status to compare.
+- Each check returns every comparison with the two values compared (the
+  recomputed one and the evidence's, both as text: `0x` lowercase hex for a
+  hash, base 10 for an index) and whether it matches, and every value it
+  recomputed. A value the kernel cannot take, not `0x` lowercase hex or of the
+  wrong length, is reported as refused, with the kernel's error name
+  (`block-value-length`, `secret-length`, `seed-length`) or `not-hex`: a
+  mismatch, never a result.
+- ShuffleDraw's rejection limit, `2^256 − (2^256 mod m)`, is its own small
+  function with unit tests (`m` of 1 and of 2^32 give 2^256, `m` of 3 gives
+  2^256 − 1, and a hash at or above the limit is rejected), since no vector
+  exercises a rejection (D-7).
+- Both checks assume the reveals are present: which reveals a round must carry
+  (V-12, check 5) and how the page shows a check it did not run are the page's,
+  built with it.
+- VT-10's source check runs over `apps/verify` today (D-6); the `<meta>`
+  policy's `worker-src 'none'` part comes with the page's HTML.
 
 ### Accessibility (V-14)
 
@@ -446,7 +515,7 @@ never reported anywhere.
 | VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | VT-8  | e2e + build check   | the policy and SRI: the page loads with the `headers.json` policy and no violation, every script and stylesheet carries `integrity`, and no request leaves the configured origins (the harness's catch-all route records none)                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | VT-9  | release dry run     | the page is inside the artifact under `verify/`, two builds give one digest, and its two size measurements are reported and held to their own limits (D-3), apart from the Wrapper's                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| VT-10 | unit (source check) | `apps/verify`'s sources never reference `navigator.locks`, `BroadcastChannel`, `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `document.cookie`, `Worker`, `SharedWorker`, or `serviceWorker` (the shared-origin rule), and its `<meta>` policy carries `worker-src 'none'`                                                                                                                                                                                                                                                                                                                                                              |
+| VT-10 | unit (source check) | `apps/verify`'s sources never reference `navigator.locks`, `BroadcastChannel`, `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `document.cookie`, `Worker`, `SharedWorker`, or `serviceWorker` (the shared-origin rule), and its `<meta>` policy carries `worker-src 'none'`. Built: `tools/shared-origin.test.ts` scans every non-test source and HTML file of `apps/verify` as text, comments and strings included, for each name as a whole word (`locks`, `cookie`, and `cookieStore` included), with a case per name; the `<meta>` part is checked once the page has its HTML                                                        |
 
 **The e2e fake of the verify API** joins the fake Play API in the e2e harness: a
 route at the configured verify API base on a `.test` origin, answering
@@ -485,6 +554,26 @@ Decided by the human on 2026-10-18, each the recommended option.
   `/verify/v1` (V-3), which the Wrapper's schema will accept too from the verify
   page's build on (shipped before, or with, any document that carries it).
   Rejected: deriving it from `playApiBaseUrl`.
+
+Decided by the human on 2026-10-19, during the review of the kernel derivations:
+
+- **D-5. A Coin Flip pick outside `[0, n)` fails check 7's status comparison**
+  (V-12, check 7): a `selectedIndex` that is not a whole number from 0 to
+  `n − 1` gives no outcome, like a missing pick, and is never read as a win.
+- **D-6. VT-10's source check is built with the kernel derivations**, not later
+  with the page, so `apps/verify` is held to the shared-origin rule from its
+  first source file.
+- **D-7. ShuffleDraw's rejection limit is tested directly**, as its own
+  function, since every vendored vector accepts at counter 0 and so none pins
+  the rejection rule.
+- **D-8. `signing`'s `keccak256` takes and returns bytes** (a `Uint8Array` in,
+  32 bytes out), not hex text
+  ([The cryptography](./client-kit/the-cryptography.md)).
+- **D-9. The verify app has no changesets of its own**: it ships inside the
+  Wrapper's release artifact, so its release notes go in the Wrapper's
+  changesets, and `.changeset/config.json` ignores
+  `@intraverse/se-client-verify` as it does the reference game
+  ([Packages](./client-kit/packages.md)).
 
 ## References
 

@@ -86,6 +86,7 @@
         "./packages/shell:typecheck",
         "./apps/wrapper:typecheck",
         "./apps/reference-game:typecheck",
+        "./apps/verify:typecheck",
         "./e2e:typecheck",
         "typecheck:tools"
       ]
@@ -116,6 +117,7 @@
         "./packages/signing:test",
         "./apps/wrapper:test",
         "./apps/reference-game:test",
+        "./apps/verify:test",
         "./packages/snapshot:test",
         "./packages/play-client:test",
         "./packages/shell:test",

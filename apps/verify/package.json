@@ -1,0 +1,60 @@
+{
+  "name": "@intraverse/se-client-verify",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The verify page: a SuperEngine round recomputed in the browser from its public evidence.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "wireit",
+    "test": "wireit"
+  },
+  "wireit": {
+    "typecheck": {
+      "command": "tsx ../../tools/check-kit-dist.ts typecheck && tsc -p tsconfig.json",
+      "files": [
+        "src/**",
+        "package.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json",
+        "../../tools/check-kit-dist.ts",
+        "../../tools/kit-dist.ts",
+        "../../tools/kit-dist-fs.ts"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ],
+      "dependencies": [
+        "../../packages/signing:build",
+        "../../packages/contracts:build"
+      ]
+    },
+    "test": {
+      "command": "tsx ../../tools/check-kit-dist.ts test && vitest run",
+      "files": [
+        "src/**",
+        "*.ts",
+        "package.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json",
+        "../../tools/check-kit-dist.ts",
+        "../../tools/kit-dist.ts",
+        "../../tools/kit-dist-fs.ts"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ],
+      "dependencies": [
+        "../../packages/signing:build",
+        "../../packages/contracts:build"
+      ]
+    }
+  },
+  "dependencies": {
+    "@intraverse/se-client-signing": "workspace:*"
+  },
+  "devDependencies": {
+    "@intraverse/se-client-contracts": "workspace:*"
+  }
+}

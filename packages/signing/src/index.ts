@@ -8,6 +8,7 @@ export {
   type GrammarAction,
 } from "./grammar.ts";
 export type { Address, Bytes32, Hex } from "./hex.ts";
+export { keccak256 } from "./keccak.ts";
 export {
   type CloseRoundAuth,
   type CreateRoundAuth,

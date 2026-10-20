@@ -55,6 +55,15 @@ Part of the [Client kit spec](../client-kit.md), section
     each round of `closes` names the hash of its terms, and do not rebuild one.
     The kit computes no payout: the server does, and the Snapshot carries it
     (`payout`).
+- **Raw Keccak-256.** `keccak256(data)` hashes bytes its caller encoded: it
+  takes a `Uint8Array` and returns 32 new bytes, Ethereum's Keccak-256 (the
+  original Keccak padding, not NIST SHA3-256), without changing its input; any
+  other value is refused with `invalid-input`. It is public for the verify
+  page's StepsDerive, whose draws hash words of their own
+  ([Verify page](../verify-page.md#what-the-page-recomputes-v-12-v-13), V-12
+  check 7), so that app adds no hash dependency; the shell does not use it. Its
+  tests check known answers and the seeds that the fairness kernel's public
+  vectors name as `keccak256` of a text.
 - **Keys.** `createSigner` draws 32 bytes from the platform's cryptographic
   random source (`crypto.getRandomValues`, through `@noble/hashes`; a test
   injects its own source), redraws a value that is zero or not below the curve

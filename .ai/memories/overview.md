@@ -1,6 +1,6 @@
 ---
 description: What se-client-kit is, why it is public, the package map, and its boundary to the backend. Read first on any task.
-last-verified: 2026-10-19 (the signed-action specification is used by name, not copied; fairness kernel vectors pull request: the public kernel vector bundle joins the shared contracts; play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
+last-verified: 2026-10-19 (verify kernel pull request: the `verify` app; the signed-action specification is used by name, not copied; fairness kernel vectors pull request: the public kernel vector bundle joins the shared contracts; play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
 ---
 
 # Overview
@@ -31,10 +31,11 @@ world-readable and cannot be taken back, so what may be committed is limited
 | `shell`          | package        | headless part of the Wrapper: sessions, key custody, transcript, checks |
 | `wrapper`        | app            | the UI, built into a release bundle                                     |
 | `reference-game` | app            | a minimal sandboxed game for tests and as a sample                      |
+| `verify`         | app            | the verify page; today the fairness kernel's derivations only           |
 
 Dependency direction: `contracts` ← `snapshot` and `play-client` ← `shell` ←
-`wrapper`; `signing` ← `shell`; tests read vectors from `contracts`' test-only
-entry. The intended npm names are `@intraverse/se-client-<name>` (not claimed on
+`wrapper`; `signing` ← `shell`; `signing` ← `verify` (never `shell`); tests
+read vectors from `contracts`' test-only entry. The intended npm names are `@intraverse/se-client-<name>` (not claimed on
 npm yet; that is part of the publishing work, #12).
 
 Details: [architecture.md](./architecture.md).

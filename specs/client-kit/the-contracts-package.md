@@ -261,9 +261,9 @@ logic packages read it and never write to it.
   runtime dependency. `snapshot` and `play-client` depend on its runtime entry;
   the test-only entry has these consumers, **all of them tests and all of them
   development dependencies**: the unit tests of `signing`, `snapshot`, and
-  `shell`; the Wrapper's component tests; and the e2e suite's fake Play API. It
-  never reaches a published tarball or a browser bundle (the three checks
-  above).
+  `shell`; the Wrapper's component tests; the verify page's unit tests (the
+  fairness kernel's vectors); and the e2e suite's fake Play API. It never
+  reaches a published tarball or a browser bundle (the three checks above).
 - **Replaceable by design.** If the backend later publishes its contracts as a
   package (OQ-6 decided: publish later, option B), `contracts` is the one
   package that is replaced by that dependency (or becomes a thin re-export of

@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-19 (re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-19 (verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -20,9 +20,18 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   replayed by `signing`'s and the shell's `cancel-vector.test.ts`;
   `tools/contracts-signed-action.test.ts` checks their pairing with `typed-data/` and `valid/` and that their embedded
   key is signing's `PLAYER_KEY`. The fairness kernel's public vectors
-  (`kernelVectors.v1`) are vendored and replayed by no test yet: the verify
-  page's tests (VT-2, issue #71) will replay them, with StepsDerive written
-  there, never in `contracts`. Only tests may import that entry, and no
+  (`kernelVectors.v1`) are replayed by the verify page's unit tests
+  (`apps/verify/src/*.test.ts`, VT-2, through `src/fixtures/kernel-vectors.ts`;
+  each set's vector count is asserted so none is skipped), with StepsDerive
+  written there, never in `contracts`; `signing`'s `keccak.test.ts` checks the
+  seeds they name as `keccak256` of a text. Checks 5 and 7 are tested with
+  evidence built from those vectors (the reference seed, and Coin Flip's
+  (2, 1) from the n = 2, k = 1 derive chain); `roundSecretHash` has no vector,
+  so its expected value is a constant computed outside the kit. ShuffleDraw's
+  rejection limit has its own unit tests (`drawLimit`, `acceptDraw`), since no
+  vector rejects. VT-10, the verify page's shared-origin rule, is a text scan
+  in `tools/shared-origin.test.ts` over `apps/verify`'s non-test sources and
+  HTML (comments and strings included). Only tests may import that entry, and no
   vector may reach a bundle (a lint rule and a build check). Prefer adding a
   vector to adding a one-off assertion.
   Released vector files are never edited. The vectors were produced by an
