@@ -1,5 +1,6 @@
-// VT-2 (specs/verify-page.md): StepsDerive against the fairness kernel's public
-// vector sets `kernel/public/v1/steps-derive` and `kernel/public/v1/derive`.
+// VT-2 (specs/verify-page.md): ShuffleDraw and StepsDerive against the fairness
+// kernel's public vector sets `kernel/public/v1/shuffle-draw`,
+// `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`.
 
 import { describe, expect, it } from "vitest";
 
@@ -8,12 +9,18 @@ import {
   expectedSteps,
   field,
   inputSteps,
+  type KernelVector,
   pathSteps,
   vectorsOf,
 } from "./fixtures/kernel-vectors.ts";
 import { bytesFromHex } from "./hex.ts";
 import { KernelError } from "./kernel-error.ts";
-import { acceptDraw, drawLimit, stepsDerive } from "./steps-derive.ts";
+import {
+  acceptDraw,
+  drawLimit,
+  shuffleDraw,
+  stepsDerive,
+} from "./steps-derive.ts";
 
 const seedOf = (hex: string): Uint8Array => {
   const bytes = bytesFromHex(hex);
@@ -21,6 +28,7 @@ const seedOf = (hex: string): Uint8Array => {
   return bytes;
 };
 
+const drawSet = vectorsOf("shuffle-draw");
 const stepsSet = vectorsOf("steps-derive");
 const deriveSet = vectorsOf("derive");
 
@@ -33,6 +41,75 @@ const errorOf = (call: () => unknown): string | undefined => {
   }
   return undefined;
 };
+
+/** A shuffle-draw vector's input, as ShuffleDraw takes it. */
+const drawInput = (vector: KernelVector): Parameters<typeof shuffleDraw> => {
+  const at = (key: string): string => field(vector.input, key, vector.id);
+  return [
+    at("label"),
+    seedOf(at("seed")),
+    BigInt(at("j")),
+    BigInt(at("t")),
+    BigInt(at("m")),
+  ];
+};
+
+describe("kernel/public/v1/shuffle-draw", () => {
+  it("has the vendored set's 37 vectors, 10 of them errors", () => {
+    expect(drawSet).toHaveLength(37);
+    expect(drawSet.filter(v => v.error !== undefined)).toHaveLength(10);
+  });
+
+  it.each(drawSet.filter(v => v.error === undefined).map(v => [v.id, v]))(
+    "%s: the draw and the counter it was accepted at",
+    (_, vector) => {
+      const { u, ctr } = shuffleDraw(...drawInput(vector));
+      expect({ u, ctr }).toEqual({
+        u: BigInt(field(vector.expected, "u", vector.id)),
+        ctr: vector.expected["acceptedAtCtr"],
+      });
+    },
+  );
+
+  it.each(drawSet.filter(v => v.error !== undefined).map(v => [v.id, v]))(
+    "%s: refused with the vector's error",
+    (_, vector) => {
+      expect(errorOf(() => shuffleDraw(...drawInput(vector)))).toBe(
+        vector.error,
+      );
+    },
+  );
+});
+
+describe("shuffleDraw", () => {
+  const seed = seedOf(
+    "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+  );
+
+  it("refuses an m above 2^64 - 1", () => {
+    expect(
+      errorOf(() => shuffleDraw("steps-v1", seed, 0n, 0n, 1n << 64n)),
+    ).toBe("m-out-of-range");
+  });
+
+  it("refuses a j or a t that is not a uint256 value", () => {
+    for (const [j, t] of [
+      [-1n, 0n],
+      [0n, -1n],
+      [1n << 256n, 0n],
+      [0n, 1n << 256n],
+    ] as const) {
+      expect(() => shuffleDraw("steps-v1", seed, j, t, 3n)).toThrow(RangeError);
+    }
+  });
+
+  it("gives StepsDerive's draws under the label steps-v1", () => {
+    const [step] = stepsDerive(seed, [{ n: 1000, k: 3 }]);
+    expect(step?.draws).toEqual(
+      [0n, 1n, 2n].map(t => shuffleDraw("steps-v1", seed, 0n, t, 1000n - t).u),
+    );
+  });
+});
 
 describe("kernel/public/v1/steps-derive", () => {
   it("has the vendored set's 24 vectors, 7 of them errors", () => {
@@ -122,8 +199,9 @@ describe("stepsDerive", () => {
   });
 });
 
-// ShuffleDraw's rejection rule. Every vendored vector accepts at counter 0, so
-// no vector pins it: these cases hold it.
+// ShuffleDraw's rejection rule, which `kernel/public/v1/shuffle-draw` states
+// (limit = 2^256 - (2^256 mod m)). Every vendored vector accepts at counter 0,
+// so no vector exercises a rejection: these cases do.
 describe("the draw limit", () => {
   const TWO_256 = 1n << 256n;
 

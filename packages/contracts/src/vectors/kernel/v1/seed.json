@@ -6,7 +6,7 @@
   "vectors": [
     {
       "vector": "kernel/public/v1/seed/reference",
-      "description": "The reference block value and secret; its seed is the reference seed of the steps-derive and derive sets",
+      "description": "The reference block value and secret; its seed is the reference seed of the shuffle-draw, steps-derive and derive sets",
       "input": {
         "blockValue": "e3b9d93baea441f5c5c3682720d88336fe41481161704cdf044c3ad1a1853ba9",
         "secret": "08ea0974ed5b01788fd4a27ad22918be158df16c9b60097f3c7dbcc7b0dcb42a"

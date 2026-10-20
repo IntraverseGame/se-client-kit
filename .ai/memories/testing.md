@@ -28,8 +28,8 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   evidence built from those vectors (the reference seed, and Coin Flip's
   (2, 1) from the n = 2, k = 1 derive chain); `roundSecretHash` has no vector,
   so its expected value is a constant computed outside the kit. ShuffleDraw's
-  rejection limit has its own unit tests (`drawLimit`, `acceptDraw`), since no
-  vector rejects. VT-10, the verify page's shared-origin rule, is a text scan
+  rejection limit, which the `shuffle-draw` set states, has its own unit tests
+  (`drawLimit`, `acceptDraw`), since no vector rejects. VT-10, the verify page's shared-origin rule, is a text scan
   in `tools/shared-origin.test.ts` over `apps/verify`'s non-test sources and
   HTML (comments and strings included). Only tests may import that entry, and no
   vector may reach a bundle (a lint rule and a build check). Prefer adding a

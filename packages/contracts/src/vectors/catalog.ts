@@ -131,7 +131,8 @@ import vector124 from "./snapshot/typed-data/pick-multi-path.json" with { type: 
 import vector125 from "./snapshot/signed-action/coinflip-cancel.json" with { type: "json" };
 import vector126 from "./kernel/v1/derive.json" with { type: "json" };
 import vector127 from "./kernel/v1/seed.json" with { type: "json" };
-import vector128 from "./kernel/v1/steps-derive.json" with { type: "json" };
+import vector128 from "./kernel/v1/shuffle-draw.json" with { type: "json" };
+import vector129 from "./kernel/v1/steps-derive.json" with { type: "json" };
 import signing from "./signing.json" with { type: "json" };
 
 /** Every vector is data of unknown shape: a consumer validates what it reads. */
@@ -301,6 +302,7 @@ export const kernelVectors: KernelVectors = {
   v1: {
     "derive": vector126,
     "seed": vector127,
-    "steps-derive": vector128,
+    "shuffle-draw": vector128,
+    "steps-derive": vector129,
   },
 };

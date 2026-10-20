@@ -16,17 +16,17 @@ logic packages read it and never write to it.
   funded, embedded in the vector and never edited out; with `keys.ts` these are
   the only files that may hold it, per AGENTS.md), the public vector sets of the
   SuperEngine fairness kernel, kernelVersion 1 (`kernel/public/v1/seed`,
-  `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`; data for the
-  verify page's tests, with no kernel logic here), the types generated from the
-  documents and the schema (`openapi-typescript` for the OpenAPI documents, with
-  `exportType` so every object is a `type` alias, and `emptyObjectsUnknown` so
-  an object schema without properties is a record of `unknown` values; a
-  leftover `export interface` fails the generation; `openapi-typescript` is
-  pinned at 6.7.6, which has no TypeScript dependency, reads the document from a
-  `file:` URL, and is given a `fetch` that refuses, so a reference outside the
-  document fails the generation; every `$ref` in the vendored documents is
-  local, which a test checks
-  ([ADR-004](../../decisions/ADR-004-openapi-typescript-6.md));
+  `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`, and
+  `kernel/public/v1/derive`; data for the verify page's tests, with no kernel
+  logic here), the types generated from the documents and the schema
+  (`openapi-typescript` for the OpenAPI documents, with `exportType` so every
+  object is a `type` alias, and `emptyObjectsUnknown` so an object schema
+  without properties is a record of `unknown` values; a leftover
+  `export interface` fails the generation; `openapi-typescript` is pinned at
+  6.7.6, which has no TypeScript dependency, reads the document from a `file:`
+  URL, and is given a `fetch` that refuses, so a reference outside the document
+  fails the generation; every `$ref` in the vendored documents is local, which a
+  test checks ([ADR-004](../../decisions/ADR-004-openapi-typescript-6.md));
   `json-schema-to-typescript` for the Snapshot schema, which gives the
   structural types only: the conditional blindness rules stay with the validator
   in `snapshot`; its `export interface` declarations are rewritten as
@@ -51,23 +51,23 @@ logic packages read it and never write to it.
   `test/vectors/signing.json`; `vectors/snapshot/valid/`,
   `vectors/snapshot/invalid/`, `vectors/snapshot/signature/`,
   `vectors/snapshot/typed-data/`, and `vectors/snapshot/signed-action/`; and
-  `vectors/kernel/v1/`, the fairness kernel's `seed.json`, `steps-derive.json`,
-  and `derive.json`, recorded in the lock under their set ids), and any module
-  that only the test-only entry uses. Nothing else belongs in `src/`. A module
-  that both entries import is a runtime module by definition, so it lives under
-  `schemas/` or `generated/` and holds no vector data. (`test/vectors/...` is
-  the path in the backend's contracts repository, which is already public by
-  name; `contracts.lock.json` records each artifact's public name and the path
-  in this package, never a path inside a private repository.) Today the runtime
-  modules are `schemas/snapshot.ts` (the schema as data of unknown shape),
-  `generated/snapshot.ts` (its structural types), and `generated/play.ts` (the
-  Play API document's types; the document itself is not imported by any module,
-  only read by the generator); the test-only module is `vectors/catalog.ts`,
-  generated, which imports every vector and exports `signingVectors`,
-  `snapshotVectors` (`valid`, `invalid`, `signature`, `typedData` from
-  `typed-data/`, and `signedAction` from `signed-action/`), and `kernelVectors`
-  (`v1` from `kernel/v1/`, keyed by file name: `seed`, `steps-derive`, and
-  `derive`).
+  `vectors/kernel/v1/`, the fairness kernel's `seed.json`, `shuffle-draw.json`,
+  `steps-derive.json`, and `derive.json`, recorded in the lock under their set
+  ids), and any module that only the test-only entry uses. Nothing else belongs
+  in `src/`. A module that both entries import is a runtime module by
+  definition, so it lives under `schemas/` or `generated/` and holds no vector
+  data. (`test/vectors/...` is the path in the backend's contracts repository,
+  which is already public by name; `contracts.lock.json` records each artifact's
+  public name and the path in this package, never a path inside a private
+  repository.) Today the runtime modules are `schemas/snapshot.ts` (the schema
+  as data of unknown shape), `generated/snapshot.ts` (its structural types), and
+  `generated/play.ts` (the Play API document's types; the document itself is not
+  imported by any module, only read by the generator); the test-only module is
+  `vectors/catalog.ts`, generated, which imports every vector and exports
+  `signingVectors`, `snapshotVectors` (`valid`, `invalid`, `signature`,
+  `typedData` from `typed-data/`, and `signedAction` from `signed-action/`), and
+  `kernelVectors` (`v1` from `kernel/v1/`, keyed by file name: `seed`,
+  `shuffle-draw`, `steps-derive`, and `derive`).
   <!-- TODO(verify API): the verify API document is not published yet; it joins `schemas/` with its `openapi-typescript` types under `generated/`. -->
 - **Tarball.** What is published is the allow-list of check 3 below. The
   manifest still exports `./testing` for the kit's own tests; the published
