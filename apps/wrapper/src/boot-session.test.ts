@@ -17,6 +17,7 @@ import type { EmbeddingContext } from "./embedding.ts";
 import type { EnvironmentConfig } from "./environment-config.ts";
 import { environmentDocument } from "./fixtures/environment.ts";
 import { createFakeSession, snapshotRead } from "./fixtures/fake-session.ts";
+import { stepTimers } from "./fixtures/flush.ts";
 import { manualTimers } from "./fixtures/manual-timers.ts";
 import { messagesFor } from "./messages.ts";
 
@@ -35,6 +36,7 @@ let discarded = 0;
 const bootWith = (
   document_: unknown,
   openSession: (config: EnvironmentConfig) => Promise<SessionOpening>,
+  extra: Partial<Parameters<typeof boot>[0]> = {},
 ): ReturnType<typeof boot> => {
   records.length = 0;
   discarded = 0;
@@ -44,7 +46,7 @@ const bootWith = (
   return boot({
     doc: document,
     host,
-    timers: manualTimers(),
+    timers: extra.timers ?? manualTimers(),
     fetch: () =>
       Promise.resolve({
         ok: true,
@@ -65,6 +67,7 @@ const bootWith = (
     discardLaunchCode: () => {
       discarded += 1;
     },
+    ...(extra.returns === undefined ? {} : { returns: extra.returns }),
   });
 };
 
@@ -83,6 +86,30 @@ describe("boot opens the session", () => {
     ]);
     expect(result).toMatchObject({ kind: "configured", session: fake.session });
     expect(discarded).toBe(0);
+  });
+
+  it("watches the page's return for one balance read (RFC-001 Q16)", async () => {
+    const fake = createFakeSession();
+    fake.reads.push(snapshotRead("coinflip-idle"));
+    const timers = manualTimers();
+    const returners: (() => void)[] = [];
+    await bootWith(
+      environmentDocument(),
+      () => Promise.resolve({ kind: "open", session: fake.session }),
+      {
+        timers,
+        returns: onReturn => {
+          returners.push(onReturn);
+          return () => {};
+        },
+      },
+    );
+    await stepTimers(timers, 100);
+    const before = fake.served();
+    for (const onReturn of returners) onReturn();
+    await stepTimers(timers, 1000);
+    expect(returners).toHaveLength(1);
+    expect(fake.served()).toBe(before + 1);
   });
 
   it("never with a refused configuration", async () => {

@@ -18,7 +18,11 @@ import { followed } from "./poll-follow.ts";
 import { createView } from "./render.ts";
 import type { SnapshotRead } from "./round-input.ts";
 import { createSnapshotPoller, type PollConfig } from "./snapshot-poller.ts";
-import { createSnapshotReread, droppedLower } from "./snapshot-reread.ts";
+import {
+  createSnapshotReread,
+  droppedLower,
+  readQuietly,
+} from "./snapshot-reread.ts";
 import type { Timers } from "./timers.ts";
 import type { ChangeCause, Intents, ViewOptions } from "./view-options.ts";
 import {
@@ -65,6 +69,10 @@ export type WrapperApp = {
   /** Where the game iframe is mounted (W-37); see `View.gameHost`. */
   readonly gameHost: () => HTMLElement;
   readonly state: () => WrapperState;
+  /** A start or cash-out call is in flight (W-49f). */
+  readonly calling: () => boolean;
+  /** One quiet read of the session's Snapshot (RFC-001 Q16); see `readQuiet`. */
+  readonly readQuiet: () => Promise<void>;
   readonly dispose: () => void;
 };
 
@@ -107,32 +115,17 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
       state.check?.cancel === "ended" ? state.snapshot?.roundId : undefined;
     if (ended !== undefined && ended !== endedReadFor) {
       endedReadFor = ended;
-      void readAfterEnded();
+      void readQuiet();
     }
   };
 
   /**
-   * Once the shell's cancel ended a round, the Snapshot is read once, through
-   * the session's read (W-33, W-35), so "round ended" shows the current
-   * balance: a Snapshot or the session's end is applied as usual; a failed read
-   * (no response, a typed error, a rejected answer) is dropped, and the round's
-   * last balance stays, with no error state. It is never repeated for the
-   * round. A final state (session ended, another tab) is kept: `acceptRead`
-   * never replaces one, and a round in one never shows its cancel `ended`.
+   * A read nobody asked for (W-33, RFC-001 Q16), applied only as a Snapshot or
+   * the session's end: after the shell's cancel ended a round, and when the
+   * page returns. A final state is kept (`acceptRead` never replaces one).
    */
-  const readAfterEnded = async (): Promise<void> => {
-    const port = readSnapshot;
-    if (port === undefined) return;
-    let read: SnapshotRead;
-    try {
-      read = await port();
-    } catch {
-      return;
-    }
-    if (read.kind === "snapshot" || read.kind === "session-ended") {
-      apply(acceptRead(state, read), "poll");
-    }
-  };
+  const readQuiet = (): Promise<void> =>
+    readQuietly(readSnapshot, read => apply(acceptRead(state, read), "poll"));
 
   /** Applies a read; a Snapshot dropped for a lower `version` is read again. */
   const take = (read: SnapshotRead, cause: ChangeCause): void => {
@@ -290,6 +283,8 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     },
     gameHost: (): HTMLElement => view.gameHost,
     state: (): WrapperState => state,
+    calling: (): boolean => calling,
+    readQuiet,
     dispose: (): void => {
       poller.stop();
       reread.stop();

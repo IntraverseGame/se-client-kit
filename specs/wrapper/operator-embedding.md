@@ -286,9 +286,26 @@ ADR-006 is accepted.
   was validated (a refused redeem, for example) has no `context.links` and so no
   control: it shows the relaunch instruction as text.
 
-  Not decided: whether the Wrapper reads the balance again when the player comes
-  back from a deposit in another tab (RFC-001 Q16, a follow-up).
-  <!-- TODO(RFC-001 Q16, #96): the balance after a deposit in another tab; W-35 does not poll at `idle`, so the next start's answer is authoritative until this is decided. -->
+  **The balance after a deposit in another tab** (decided by the human,
+  2026-10-20, RFC-001 Q16 option A, narrowed; #96). At `idle` and on a round's
+  result the Wrapper does not poll (W-35), so the balance can be out of date
+  after a deposit made in another tab. When the page becomes visible again
+  (`visibilitychange` to `visible`), the Wrapper reads the Snapshot once, after
+  a 1 s debounce that merges events that come together (a constant, as W-35's
+  rates). `focus` is not a trigger: it also fires when the focus moves from the
+  game's frame back to the Wrapper's page after every move (W-46), which is not
+  a return. It is never a poll: one read per return, none while a read of this
+  kind is in flight, none while a start or cash-out call is in flight, and none
+  in a state that polls or has its own reads (`starting`, `active`, `resolving`,
+  the shell's cancel mid-way), while a typed error or a blocking state shows,
+  with a connection problem, offline, or in a final state. Like the read after a
+  cancel ended a round (W-33), it is applied only as a Snapshot or the session's
+  end; a failed read (no response, a typed error, a rejected answer) is dropped
+  with no error state. It reads only: it never sends or signs. Every read
+  carries a new `version` (W-32), so the new balance is shown, not dropped as an
+  equal one (W-29). T-21 covers it in component tests; no e2e row is added,
+  since the fake Play API answers a fixed Snapshot and cannot change a balance
+  between reads.
 
 ## What is logged
 
