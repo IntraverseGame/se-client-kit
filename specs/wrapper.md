@@ -308,10 +308,16 @@ accepted, and what the Wrapper shows when a round ends. See
   message; it retries only when `retryable` is `true`, with the same
   `idempotencyKey`, a bounded number of times with backoff, then shows the
   error. The redeem (W-1, W-2) and the cancel (W-25) are never retried
-  automatically, whatever `retryable` says. Every `code` is one of the schema's
-  closed `ErrorCode` list, so a problem with any other `code` fails validation
-  (W-28) and shows the generic error state; for a listed `code` this table does
-  not name, it falls back to `status` and `retryable` (the "any other" row).
+  automatically, whatever `retryable` says. The transport repeats a start (with
+  the same `idempotencyKey`) only after a lost response or a `503`
+  `UNAVAILABLE`; a start voided or refused before any money moved
+  (`FUNDING_UNCONFIRMED`, `ENTROPY_UNAVAILABLE`, `PREPARATION_TIMEOUT`,
+  `ROUND_VOIDED`) is sent once whatever its `retryable`, since the Play API
+  document says to retry it with a new key, which only the player's new start
+  does (W-36). Every `code` is one of the schema's closed `ErrorCode` list, so a
+  problem with any other `code` fails validation (W-28) and shows the generic
+  error state; for a listed `code` this table does not name, it falls back to
+  `status` and `retryable` (the "any other" row).
 
   | Condition                                                                                                                                                                                   | The Wrapper                                                                                                                                                                                                                 |
   | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -320,7 +326,7 @@ accepted, and what the Wrapper shows when a round ends. See
   | `LIMIT_EXCEEDED`, `PLAYER_RESTRICTED`                                                                                                                                                       | tells the player; no retry                                                                                                                                                                                                  |
   | `SESSION_EXPIRED`, `SESSION_REVOKED`                                                                                                                                                        | the session-ended state, with the lobby control when its link is present and allowed (W-49e, W-49f)                                                                                                                         |
   | `STALE_ACTION`                                                                                                                                                                              | W-19                                                                                                                                                                                                                        |
-  | `FUNDING_UNCONFIRMED`, `ENTROPY_UNAVAILABLE`, `PREPARATION_TIMEOUT`, `ROUND_VOIDED`, `UNAVAILABLE` (retryable; `UNAVAILABLE` unless the problem says `retryable: false`, as for the redeem) | one automatic retry path with backoff, except for the redeem and the cancel (W-25), which are not retried; then "try again"                                                                                                 |
+  | `FUNDING_UNCONFIRMED`, `ENTROPY_UNAVAILABLE`, `PREPARATION_TIMEOUT`, `ROUND_VOIDED`, `UNAVAILABLE` (retryable; `UNAVAILABLE` unless the problem says `retryable: false`, as for the redeem) | one automatic retry path with backoff, except for the redeem and the cancel (W-25), which are not retried, and a start answered with any of the four voided-start codes, which is sent once; then "try again"               |
   | any other                                                                                                                                                                                   | the generic error with `requestId`; a "try again" only if `retryable`                                                                                                                                                       |
 
 - **W-43.** Network failure. A request that fails with no response (offline,

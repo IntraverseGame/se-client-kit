@@ -15,10 +15,21 @@ import type { PlayClientError } from "./protocol-error.ts";
  * - `idempotent`: a mutating call with its intent's idempotency key, or a read. A
  *   retryable problem or a lost response is repeated with the same bytes and
  *   key (W-16, W-42, W-43).
+ * - `start`: the start of a round. A lost response is repeated with the same
+ *   bytes and key as for `idempotent`, but a problem only when its code is
+ *   `UNAVAILABLE` (an allow-list, so a code added later is not repeated). Any
+ *   other problem, a start voided or refused before any money moved
+ *   (`FUNDING_UNCONFIRMED`, `ENTROPY_UNAVAILABLE`, `PREPARATION_TIMEOUT`,
+ *   `ROUND_VOIDED`) included, whatever its `retryable`, is answered once: the
+ *   Play API document says to retry such a start with a new key, which is the
+ *   player's next start (W-16, W-36, W-42).
  *
  * A problem that is not `retryable` is never repeated.
  */
-export type RetryClass = "never" | "refresh" | "idempotent";
+export type RetryClass = "never" | "refresh" | "idempotent" | "start";
+
+/** The problem codes a `start` call repeats with the same key. */
+const START_REPEATED_CODES: ReadonlySet<string> = new Set(["UNAVAILABLE"]);
 
 /** Bounded backoff (Wrapper configuration). */
 export type RetryConfig = {
@@ -83,6 +94,7 @@ export const isRepeatable = (
   return (
     error instanceof ProblemError &&
     error.problem.retryable &&
-    !endsSession(error.problem)
+    !endsSession(error.problem) &&
+    (retryClass !== "start" || START_REPEATED_CODES.has(error.problem.code))
   );
 };

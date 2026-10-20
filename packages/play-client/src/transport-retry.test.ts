@@ -191,3 +191,45 @@ describe("the refresh (W-6, W-7)", () => {
     expect(h.api.requests).toHaveLength(1);
   });
 });
+
+describe("the start's retry class (W-16, W-36, W-42)", () => {
+  const startRequest = {
+    method: "POST",
+    path: "/rounds:start",
+    body: { idempotencyKey: "0192f3a4-5b6c-7d8e-9f01-23456789abcd" },
+    retry: "start",
+  } as const;
+
+  it.each([
+    "FUNDING_UNCONFIRMED",
+    "ENTROPY_UNAVAILABLE",
+    "PREPARATION_TIMEOUT",
+    "ROUND_VOIDED",
+    "A_CODE_ADDED_LATER",
+  ])("does not repeat %s, though it says retryable: true", async code => {
+    h.api.reply(
+      json(503, { ...unavailable, code, retryable: true }),
+      json(200, {}),
+    );
+    const { error } = await h.settle(
+      h.transport.send(startRequest),
+      LONG_WAIT_MS,
+    );
+    expect(error).toBeInstanceOf(ProblemError);
+    expect(h.api.requests).toHaveLength(1);
+  });
+
+  it("repeats UNAVAILABLE and a lost response", async () => {
+    h.api.reply(
+      { kind: "network-failure" },
+      json(statusOf(unavailable), unavailable),
+      json(200, { done: true }),
+    );
+    const { value } = await h.settle(
+      h.transport.send(startRequest),
+      LONG_WAIT_MS,
+    );
+    expect(value?.body).toEqual({ done: true });
+    expect(h.api.requests).toHaveLength(3);
+  });
+});
