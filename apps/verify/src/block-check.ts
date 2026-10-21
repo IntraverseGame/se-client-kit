@@ -39,11 +39,15 @@ const answersOf = (read: ChainRead): Detail[] =>
     { label: `${a.provider}: block hash`, value: a.blockHash ?? "no answer" },
   ]);
 
-/** Check 6: block N's hash by a quorum read, beside the evidence's optional one. */
+/**
+ * Check 6: block N's hash by a quorum read, beside the evidence's optional one.
+ * Rejects with an `AbortError` when `signal` aborts (it is not a result).
+ */
 export const checkBlock = async (
   deps: ChainReadDeps,
   config: VerifyConfig,
   evidence: RoundEvidence,
+  signal?: AbortSignal,
 ): Promise<{ result: CheckResult; agreed: Hash32 | undefined }> => {
   if (evidence.randomnessProof === undefined) {
     return {
@@ -67,6 +71,7 @@ export const checkBlock = async (
             environment: config.environment,
           },
           blockNumber,
+          signal,
         );
   if (!read.ok) {
     return {

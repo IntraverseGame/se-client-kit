@@ -84,18 +84,40 @@ const isRecord = (value: Json): value is Readonly<Record<string, Json>> =>
 
 const toQuantity = (value: bigint): string => `0x${value.toString(16)}`;
 
-/** One JSON-RPC call; `undefined` for any failure: it is no answer. */
+/** The error of a read the caller aborted: neither an answer nor a failure. */
+const abortError = (): DOMException =>
+  new DOMException("The chain read was aborted.", "AbortError");
+
+/** Throws the `AbortError` when the caller's `signal` has aborted. */
+export const throwIfAborted = (signal: AbortSignal | undefined): void => {
+  if (signal?.aborted === true) throw abortError();
+};
+
+/**
+ * One JSON-RPC call; `undefined` for any failure: it is no answer. The caller's
+ * `signal` is different: when it aborts, the request ends and the call throws
+ * an `AbortError`, never `undefined`, so an abort is not mistaken for a silent
+ * endpoint. The per-call timeout stays "no answer".
+ */
 const call = async (
   deps: ChainReadDeps,
   url: string,
   method: string,
   params: readonly Json[],
+  signal?: AbortSignal,
 ): Promise<Json> => {
+  throwIfAborted(signal);
   const { fetch: doFetch, clock } = deps;
+  // The timer and the caller's signal both end the request through this one.
   const controller = new AbortController();
+  const onAbort = (): void => {
+    controller.abort();
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
   const handle = clock.setTimeout(() => {
     controller.abort();
   }, RPC_TIMEOUT_MS);
+  let result: Json;
   try {
     const response = await doFetch(url, {
       method: "POST",
@@ -105,22 +127,27 @@ const call = async (
       credentials: "omit",
       cache: "no-store",
     });
-    if (!response.ok) return undefined;
-    const body: Json = await response.json();
-    if (!isRecord(body) || body["error"] !== undefined) return undefined;
-    return body["result"];
+    const body: Json = response.ok ? await response.json() : undefined;
+    result =
+      isRecord(body) && body["error"] === undefined
+        ? body["result"]
+        : undefined;
   } catch {
-    return undefined;
+    result = undefined;
   } finally {
     clock.clearTimeout(handle);
+    signal?.removeEventListener("abort", onAbort);
   }
+  throwIfAborted(signal);
+  return result;
 };
 
 const readChainId = async (
   deps: ChainReadDeps,
   url: string,
+  signal?: AbortSignal,
 ): Promise<bigint | undefined> => {
-  const result = await call(deps, url, "eth_chainId", []);
+  const result = await call(deps, url, "eth_chainId", [], signal);
   return typeof result === "string" && QUANTITY.test(result)
     ? BigInt(result)
     : undefined;
@@ -131,11 +158,15 @@ const readBlockHash = async (
   deps: ChainReadDeps,
   url: string,
   blockNumber: bigint,
+  signal?: AbortSignal,
 ): Promise<Hash32 | undefined> => {
-  const result = await call(deps, url, "eth_getBlockByNumber", [
-    toQuantity(blockNumber),
-    false,
-  ]);
+  const result = await call(
+    deps,
+    url,
+    "eth_getBlockByNumber",
+    [toQuantity(blockNumber), false],
+    signal,
+  );
   if (!isRecord(result)) return undefined;
   const { hash, number } = result;
   if (typeof hash !== "string" || !HASH.test(hash)) return undefined;
@@ -148,10 +179,11 @@ const askEndpoint = async (
   deps: ChainReadDeps,
   endpoint: RpcEndpoint,
   blockNumber: bigint,
+  signal?: AbortSignal,
 ): Promise<EndpointAnswer> => {
   const [chainId, blockHash] = await Promise.all([
-    readChainId(deps, endpoint.url),
-    readBlockHash(deps, endpoint.url, blockNumber),
+    readChainId(deps, endpoint.url, signal),
+    readBlockHash(deps, endpoint.url, blockNumber, signal),
   ]);
   return { provider: endpoint.provider, chainId, blockHash };
 };
@@ -171,18 +203,24 @@ const configIsRefused = (config: ChainReadConfig): boolean =>
  * `minRpcQuorum` endpoints answered, every answering endpoint gave a chain id,
  * no endpoint that gave a chain id lacks the hash, and all returned the same
  * hash. The first failure in that order is the one returned; an outlier is
- * never dropped and no side is picked.
+ * never dropped and no side is picked. When `signal` aborts, the requests in
+ * flight end and the read rejects with an `AbortError`: an abort is not an
+ * endpoint's answer, so it is never a failure of this read.
  */
 export const readBlockHashByQuorum = async (
   deps: ChainReadDeps,
   config: ChainReadConfig,
   blockNumber: bigint,
+  signal?: AbortSignal,
 ): Promise<ChainRead> => {
+  throwIfAborted(signal);
   if (configIsRefused(config) || blockNumber < 0n) {
     return { ok: false, reason: "config", answers: [] };
   }
   const answers = await Promise.all(
-    config.endpoints.map(endpoint => askEndpoint(deps, endpoint, blockNumber)),
+    config.endpoints.map(endpoint =>
+      askEndpoint(deps, endpoint, blockNumber, signal),
+    ),
   );
   const fail = (reason: ChainReadFailure): ChainRead => ({
     ok: false,
