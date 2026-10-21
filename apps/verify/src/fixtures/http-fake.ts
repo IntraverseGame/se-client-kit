@@ -12,7 +12,9 @@ export type Reply =
   /** `fetch` rejects (offline, DNS, TLS, a blocked request). */
   | { readonly kind: "reject" }
   /** No answer until the request is aborted (the timeout). */
-  | { readonly kind: "hang" };
+  | { readonly kind: "hang" }
+  /** No answer, and no timeout, until the caller aborts the request. */
+  | { readonly kind: "wait" };
 
 export type HttpFake = {
   readonly fetch: typeof fetch;
@@ -72,6 +74,12 @@ export const httpFake = (reply: Reply, unbound = false): HttpFake => {
             reject(new DOMException("aborted", "AbortError"));
           });
           queueMicrotask(fire);
+        });
+      case "wait":
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          });
         });
       case "json":
         return Promise.resolve(

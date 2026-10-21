@@ -95,3 +95,54 @@ describe("statuses", () => {
     expect(fake.pending()).toBe(0);
   });
 });
+
+const start = (reply: Reply, signal?: AbortSignal) => {
+  const fake = httpFake(reply);
+  const api = createVerifyApi({
+    fetch: fake.fetch,
+    clock: fake.clock,
+    baseUrl: BASE,
+  });
+  return { fake, answer: api.readRound(ID, signal) };
+};
+
+describe("an aborted read", () => {
+  it("sends the read's signal to fetch", async () => {
+    const controller = new AbortController();
+    const { fake, answer } = start({ kind: "wait" }, controller.signal);
+    await Promise.resolve();
+    expect(fake.requests).toHaveLength(1);
+    expect(fake.requests[0]?.init.signal).toBeDefined();
+    expect(fake.requests[0]?.init.signal?.aborted).toBe(false);
+    controller.abort();
+    await answer;
+    expect(fake.requests[0]?.init.signal?.aborted).toBe(true);
+  });
+
+  it("ends the request and answers aborted, not unreachable (V-11)", async () => {
+    const controller = new AbortController();
+    const { fake, answer } = start({ kind: "wait" }, controller.signal);
+    controller.abort();
+    expect(await answer).toEqual({ kind: "aborted" });
+    expect(fake.pending()).toBe(0);
+  });
+
+  it("answers aborted for a signal that is aborted already", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const { answer } = start({ kind: "wait" }, controller.signal);
+    expect(await answer).toEqual({ kind: "aborted" });
+  });
+
+  it("reads a timeout as unreachable even with a signal that stands", async () => {
+    const controller = new AbortController();
+    const { answer } = start({ kind: "hang" }, controller.signal);
+    expect(await answer).toEqual({ kind: "unreachable" });
+  });
+
+  it("reads an answer that comes before the abort as the answer", async () => {
+    const controller = new AbortController();
+    const { answer } = start({ kind: "json", body: body() }, controller.signal);
+    expect((await answer).kind).toBe("found");
+  });
+});

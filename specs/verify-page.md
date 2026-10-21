@@ -163,7 +163,10 @@ what happened, and, where the player can act, one control.
   the path's text in the field, and makes no request.
 - **V-5. Loading.** While the API read or the chain read (V-12, check 6) is in
   flight, the page shows the round id and "checking this round", announced
-  politely. A request times out after 15 s (as W-43's SHOULD).
+  politely. A request times out after 15 s (as W-43's SHOULD). A read that a
+  newer one replaces (a new submit, a retry, back or forward to another round or
+  to the form) is aborted, not just ignored: the request ends, and nothing of it
+  is shown, not even an error. An abort is never V-10 or V-11.
 - **V-6. Recomputed and matches.** Every applicable check passed. The page shows
   the round id, its shape ("one step, two options"; the page names no game), the
   result (`won` or `lost`, or `canceled` with its reason), and the payout as the
@@ -541,11 +544,17 @@ The page around them is built too:
   `getRoundVerification`: one attempt, no credential, the 15 s timeout, and its
   typed errors mapped to V-9 to V-11: a `ProblemError` or `ProtocolError` with
   status `404` is not found, any other is an API error, a `NetworkError` is
-  unreachable) and **the body's validation** (`verify-body.ts`, with
-  `verify-readers.ts`, `verify-amount.ts`, and `verify-new-round.ts`) are the
-  only modules that fetch or parse the API's answer; everything past them works
-  on the typed evidence (`round-evidence.ts`). They are built to the vendored
-  verify API document
+  unreachable, except one the caller aborted, which is `aborted`, neither V-10
+  nor V-11). `readRound(roundId, signal?)` takes the read's `AbortSignal` and
+  passes it to `play-client`'s `signal` request option; `play-client` already
+  has that option (its request layer spec: "a request may carry the caller's
+  abort signal", `specs/client-kit/the-play-client-request-layer.md`), so its
+  API does not change. The port's answers are `found`, `not-found`, `error`,
+  `unreachable`, and `aborted`) and **the body's validation** (`verify-body.ts`,
+  with `verify-readers.ts`, `verify-amount.ts`, and `verify-new-round.ts`) are
+  the only modules that fetch or parse the API's answer; everything past them
+  works on the typed evidence (`round-evidence.ts`). They are built to the
+  vendored verify API document
   ([The evidence](#the-evidence-from-the-verify-api-document)); the read is the
   the app's own validation of what `play-client` returns as `unknown` (A-1).
   Amounts (`betAmount`, `payout.value`) and `blockNumber` are read as `bigint`;
@@ -562,9 +571,14 @@ The page around them is built too:
 - **The states** (`page-state.ts`): a controller with `fetch`, the timers, the
   address bar, and the offline flag injected, which shows exactly one state; a
   submit or a retry is followed by focus on the new heading, a direct load or
-  back and forward never. A read that a newer one replaced is dropped. A valid
-  submit adds a history entry for `<verifyBaseUrl>/rounds/{roundId}` on the same
-  origin, or loads that URL when `verifyBaseUrl` is on another one.
+  back and forward never. A read that a newer one replaced is aborted through
+  its `AbortController` (one per read, replaced by the next read and by the
+  form), and its answer is dropped if it arrives anyway (a generation number):
+  the `aborted` answer shows nothing and is not a state. The checks that follow
+  a found round (V-12, the chain read) are not aborted; their result is dropped
+  the same way. A valid submit adds a history entry for
+  `<verifyBaseUrl>/rounds/{roundId}` on the same origin, or loads that URL when
+  `verifyBaseUrl` is on another one.
 - **The verdict** (`verify-round.ts`): any failed check gives V-7 and lists
   every failed check (with check 6 when it could not be verified too); check 6
   alone gives V-7's chain wording; then V-8. For a round that has not ended
@@ -647,6 +661,7 @@ The page around them is built too:
 | configuration document not fetched or not read                                      | configuration error with "try again" (V-3)        |
 | invalid configuration document                                                      | configuration error, no control; no request (V-3) |
 | offline, or a request blocked by the policy                                         | API unreachable (V-11)                            |
+| a read replaced by a newer one (submit, retry, back, forward, the form)             | the older request is aborted; nothing of it shows |
 | two checks fail                                                                     | every failed check is listed (V-7)                |
 
 ## Security
@@ -700,6 +715,7 @@ never reported anywhere.
 | VT-1b | unit                | the kernel version (V-12a): kernel 1 runs the derivations, an unknown one shows V-8 and runs none; a `canceled` round without reveals shows checks 5 and 7 as "not checked"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | VT-2  | unit                | each check of V-12 against the vendored vectors, each with a passing case and a case per failure: checks 1 to 4 against `created`, `ready`, and the `signature/` Snapshot vectors' `randomnessTarget` and signature verdicts; checks 5 and 7 (SHA-256, the seed, StepsDerive, Coin Flip's outcome) against the fairness kernel's public vectors (the SuperEngine fairness kernel, kernelVersion 1: `kernel/public/v1/seed`, `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`, read through the `contracts` test-only entry as `kernelVectors.v1`), and `roundSecretHash` against its definition until the kernel has a vector for it                                                                                       |
 | VT-3  | unit                | the body's validation: a body the verify API document's schema refuses is an API error, never a partial result; amounts read as `bigint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| VT-3a | unit                | the abort of a read: the verify API port sends the read's signal, ends the request when it aborts, and answers `aborted` (neither V-10 nor V-11); the controller aborts the earlier read when a newer one starts or the form replaces it, shows nothing for an `aborted` answer, and drops a late answer of a replaced read; it is passed to `fetch` as a signal that is not aborted for the read that stands                                                                                                                                                                                                                                                                                                                                                             |
 | VT-4  | component (jsdom)   | every state V-4 to V-11 (V-8's voided and refused included) and the configuration error renders its heading, text, and control, with no inline style; values from the body render as text. jsdom component tests; the axe scan is in the browser rows (VT-7), as for the Wrapper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended; a round of a kernel version the page does not know (V-8); the backend's recorded `won` and `lost` rounds match with checks 5 and 7 recomputed, and a tampered copy of each names check 5 or 7                                                                                                                                                                                                                                                                                                                      |
 | VT-6  | e2e, browser        | from the Wrapper: after a round ends, the verify link opens `<verifyBaseUrl>/rounds/{roundId}` in a new page and that page reaches V-6. Built: `verify-link.spec.ts` (a win; the configuration points `verifyBaseUrl` at the Wrapper's origin plus `/verify`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
