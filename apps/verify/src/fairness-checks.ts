@@ -74,8 +74,8 @@ export type OutcomeEvidence = {
   readonly losingIndex?: number | undefined;
 };
 
-/** Coin Flip: one step, two options, one of which loses. */
-const COIN_FLIP_STEPS = [{ n: 2, k: 1 }] as const;
+/** The shape the page recomputes: one step, two options, one of which loses. */
+const ONE_STEP_TWO_OPTIONS = [{ n: 2, k: 1 }] as const;
 
 /** The evidence field behind each kernel input error. */
 const FIELD_OF: Readonly<Record<KernelErrorCode, string>> = {
@@ -216,7 +216,7 @@ export const checkSeedAndOutcome = (
     const blockValue = decode("blockValue", evidence.blockValue);
     const secret = decode("roundSecret", evidence.roundSecret);
     const seed = await kernel.seed(blockValue, secret);
-    const [step] = kernel.stepsDerive(seed, COIN_FLIP_STEPS);
+    const [step] = kernel.stepsDerive(seed, ONE_STEP_TWO_OPTIONS);
     const [losingIndex] = step?.losers ?? [];
     if (losingIndex === undefined) throw new KernelError("k-out-of-range");
     const values = {
@@ -234,7 +234,11 @@ export const checkSeedAndOutcome = (
       comparisons.push(
         compare(
           "status",
-          outcomeOf(evidence.selectedIndex, losingIndex, COIN_FLIP_STEPS[0].n),
+          outcomeOf(
+            evidence.selectedIndex,
+            losingIndex,
+            ONE_STEP_TWO_OPTIONS[0].n,
+          ),
           evidence.status,
         ),
       );
