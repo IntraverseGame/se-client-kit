@@ -2,8 +2,8 @@
 // It owns no DOM: a view shows each state, and every effect (`fetch`, the
 // timers, the address bar, the browser's offline flag) is injected, so the
 // tests are hermetic. The page is in exactly one state at a time; a read that
-// a newer one replaced is aborted, and its answer, if it comes anyway, is
-// dropped, never shown.
+// a newer one replaced is aborted (its API request and its chain requests), and
+// its answer, if it comes anyway, is dropped, never shown.
 
 import type { ChainReadClock } from "./chain-read.ts";
 import type { VerifyConfig } from "./environment-config.ts";
@@ -74,11 +74,16 @@ export type PageDeps = {
   readonly isOffline: () => boolean;
   /** The verify API port; defaults to `createVerifyApi` (tests inject one). */
   readonly api?: (config: VerifyConfig) => VerifyApi;
-  /** The checks of V-12; defaults to `verifyRound` (tests inject one). */
+  /**
+   * The checks of V-12; defaults to `verifyRound` (tests inject one). `signal`
+   * is the read's: when it aborts, the chain requests end and the promise
+   * rejects (the controller shows nothing for it).
+   */
   readonly verify?: (
     config: VerifyConfig,
     evidence: RoundEvidence,
     asked: string,
+    signal: AbortSignal,
   ) => Promise<RoundReport>;
 };
 
@@ -122,12 +127,18 @@ export const createVerifyPage = (
 
   const verify =
     deps.verify ??
-    ((cfg: VerifyConfig, evidence: RoundEvidence, asked: string) =>
+    ((
+      cfg: VerifyConfig,
+      evidence: RoundEvidence,
+      asked: string,
+      signal: AbortSignal,
+    ) =>
       verifyRound(
         { fetch: deps.fetch, clock: deps.clock },
         cfg,
         evidence,
         asked,
+        signal,
       ));
 
   const read = async (roundId: string, focus: boolean): Promise<void> => {
@@ -153,10 +164,16 @@ export const createVerifyPage = (
       case "found": {
         let report: RoundReport;
         try {
-          report = await verify(config, answer.evidence, roundId);
+          report = await verify(
+            config,
+            answer.evidence,
+            roundId,
+            controller.signal,
+          );
         } catch {
-          // The checks should not throw; if they do, nothing is claimed.
-          if (mine !== generation) return;
+          // The checks should not throw; if they do, nothing is claimed. An
+          // aborted read (the generation moved) shows nothing, not an error.
+          if (mine !== generation || controller.signal.aborted) return;
           view.show({ kind: "api-error", roundId }, focus);
           return;
         }

@@ -14,6 +14,8 @@ export type Behavior = {
   readonly chainId?: number | "garbage" | "missing";
   readonly hash?: string | "missing" | "wrong-block";
   readonly hang?: boolean;
+  /** Pends until the request's signal aborts; the clock never fires. */
+  readonly park?: boolean;
   readonly status?: number;
 };
 
@@ -21,6 +23,8 @@ export type Fake = {
   readonly deps: ChainReadDeps;
   readonly requests: { url: string; method: string; params: unknown }[];
   readonly delays: number[];
+  /** The signal each request was sent with, in order. */
+  readonly signals: (AbortSignal | undefined)[];
 };
 
 export const fake = (behaviors: Readonly<Record<string, Behavior>>): Fake => {
@@ -28,6 +32,7 @@ export const fake = (behaviors: Readonly<Record<string, Behavior>>): Fake => {
   let next = 0;
   const delays: number[] = [];
   const requests: Fake["requests"] = [];
+  const signals: Fake["signals"] = [];
   const clock: ChainReadClock = {
     setTimeout: (callback, ms) => {
       next += 1;
@@ -54,13 +59,14 @@ export const fake = (behaviors: Readonly<Record<string, Behavior>>): Fake => {
     };
     if (this !== undefined) throw new TypeError("Illegal invocation");
     requests.push({ url, method: body.method, params: body.params });
+    signals.push(init?.signal ?? undefined);
     const behavior = behaviors[url] ?? {};
-    if (behavior.hang === true) {
+    if (behavior.hang === true || behavior.park === true) {
       return new Promise<Response>((_resolve, reject) => {
         init?.signal?.addEventListener("abort", () => {
           reject(new DOMException("aborted", "AbortError"));
         });
-        queueMicrotask(fire);
+        if (behavior.park !== true) queueMicrotask(fire);
       });
     }
     const reply = (result: unknown): Promise<Response> =>
@@ -84,5 +90,6 @@ export const fake = (behaviors: Readonly<Record<string, Behavior>>): Fake => {
     deps: { fetch: fakeFetch as typeof fetch, clock },
     requests,
     delays,
+    signals,
   };
 };

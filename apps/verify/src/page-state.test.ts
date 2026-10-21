@@ -115,6 +115,7 @@ describe("a round's URL (V-5 to V-11)", () => {
       expect.objectContaining({ verifyApiBaseUrl: `${ORIGIN}/verify/v1` }),
       EVIDENCE,
       ROUND_ID,
+      expect.any(AbortSignal),
     );
   });
 
