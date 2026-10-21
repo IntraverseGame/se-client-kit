@@ -515,7 +515,16 @@ development-only, so it may import the test-only entry of `contracts`.
   `fake-verify-api.spec.ts`; VT-5 is `verify-page.spec.ts` and
   `verify-page-recorded.spec.ts`, which run against the bundle's page and fail,
   with a message, if the bundle lacks it (they never skip). The catch-all route
-  still refuses and records any other request (VT-8's last clause).
+  still refuses and records any other request (VT-8's last clause). The
+  remaining rows: VT-6 (`verify-link.spec.ts`: the Wrapper's verify link after a
+  win opens the page in a new page, which reaches V-6), VT-7
+  (`verify-page-accessibility.spec.ts`, `verify-page-keyboard.spec.ts`: axe on
+  every state, keyboard, focus, live regions, 200 % zoom), and VT-8
+  (`verify-page-policy.spec.ts`: the page served with the built `headers.json`
+  `/verify/*` policy, its placeholder filled as the deploy side does, via the
+  `verifyPolicy` option of `verify-page.ts`: no `securitypolicyviolation`, the
+  policy enforced, `integrity` on every script and stylesheet and enforced by
+  the browser, no request outside the configured origins).
 - **Locally**, `pnpm exec playwright install chromium` (in `e2e/`) installs the
   browser once; `pnpm test:e2e` runs the `chromium` project unless
   `SE_E2E_PROJECT` names another (`firefox`, `webkit`, after installing that
