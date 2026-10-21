@@ -2,13 +2,11 @@
 // browser, against the fakes of VT-5. An axe scan (the WCAG 2.2 A and AA rules,
 // `harness/accessibility.ts`) of every state the page can show: the form, its
 // refused submit, a match, a mismatch, a chain that could not be verified, a
-// round not ended, voided, refused, of an unknown kernel, not found, an API
-// error, an unreachable service, and the configuration error (without and with
-// a retry). Then the keyboard-only use of the form and of the retry, the focus
+// round not ended, voided, refused, of an unknown kernel, of a shape other than
+// one step of two options (A-3), not found, an API error, an unreachable
+// service, and the configuration error (without and with a retry). Then the keyboard-only use of the form and of the retry, the focus
 // after a submit and after a retry (and none moved on its own), the polite
-// live region and the alert, the focus indicator, and 200 % zoom. The one state
-// without a case here is "one step, two options only" (V-13), which no canned
-// round reaches; its view is a jsdom case (VT-4).
+// live region and the alert, the focus indicator, and 200 % zoom.
 
 import type { Page } from "@playwright/test";
 
@@ -30,6 +28,7 @@ import {
   refusedRound,
   tamperedRound,
   unknownKernelRound,
+  unsupportedShapeRound,
   UNKNOWN_ROUND_ID,
   VERIFY_ROUND_ID,
   voidedRound,
@@ -86,6 +85,24 @@ test.describe("the verify page's accessibility (VT-7)", () => {
         expect(await auditAccessibility(page)).toEqual([]);
       });
     }
+
+    test("a round that is not one step of two options", async ({
+      page,
+      fakeVerifyApi,
+      verifyPage,
+    }) => {
+      fakeVerifyApi.answerEvery(VERIFY_ROUND_ID, {
+        kind: "round",
+        body: unsupportedShapeRound(),
+      });
+      await verifyPage.open(page, VERIFY_ROUND_ID);
+      // The heading is the unknown kernel's too; the text tells them apart.
+      await expect(h1(page)).toContainText("This round cannot be recomputed");
+      await expect(
+        page.getByText("recomputes rounds of one step with two options only"),
+      ).toBeVisible();
+      expect(await auditAccessibility(page)).toEqual([]);
+    });
 
     test("a chain that could not be verified", async ({
       page,

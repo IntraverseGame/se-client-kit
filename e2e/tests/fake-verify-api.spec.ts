@@ -18,6 +18,7 @@ import {
   refusedRound,
   tamperedRound,
   unknownKernelRound,
+  unsupportedShapeRound,
   voidedRound,
   UNKNOWN_ROUND_ID,
   VERIFY_ROUND_ID,
@@ -185,6 +186,12 @@ test.describe("the canned rounds", () => {
     });
     expect(notEndedRound()["status"]).toBe("active");
     expect(unknownKernelRound()["kernel"]).toMatchObject({ version: 2 });
+    expect(changedPaths(matchingRound(), unsupportedShapeRound())).toEqual([
+      "game.terms.nodes.0.options",
+    ]);
+    expect(unsupportedShapeRound()).toMatchObject({
+      game: { terms: { nodes: [{ options: 3 }] } },
+    });
     expect(voidedRound()).toMatchObject({
       status: "idle",
       voidReason: "ENTROPY_TIMEOUT",

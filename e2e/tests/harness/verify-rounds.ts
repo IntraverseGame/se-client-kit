@@ -188,6 +188,18 @@ export const unknownKernelRound = (): Json => {
   return { ...round, kernel: { ...field(round, "kernel"), version: 2 } };
 };
 
+/**
+ * The matching round for a game of one step with three options, so it is not
+ * the one shape the page recomputes (A-3): `game.terms.nodes` has one node of
+ * three options. The `shape` stays empty, as the matching round's does.
+ */
+export const unsupportedShapeRound = (): Json => {
+  const round = matchingRound();
+  const nodes = field(field(round, "game"), "terms")["nodes"] as Json[];
+  for (const node of nodes) node["options"] = 3;
+  return round;
+};
+
 /** The checks a canned round can fail on its own. */
 export type TamperedCheck = 2 | 3 | 4 | 5 | 6;
 

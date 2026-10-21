@@ -703,7 +703,7 @@ never reported anywhere.
 | VT-4  | component (jsdom)   | every state V-4 to V-11 (V-8's voided and refused included) and the configuration error renders its heading, text, and control, with no inline style; values from the body render as text. jsdom component tests; the axe scan is in the browser rows (VT-7), as for the Wrapper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended; a round of a kernel version the page does not know (V-8); the backend's recorded `won` and `lost` rounds match with checks 5 and 7 recomputed, and a tampered copy of each names check 5 or 7                                                                                                                                                                                                                                                                                                                      |
 | VT-6  | e2e, browser        | from the Wrapper: after a round ends, the verify link opens `<verifyBaseUrl>/rounds/{roundId}` in a new page and that page reaches V-6. Built: `verify-link.spec.ts` (a win; the configuration points `verifyBaseUrl` at the Wrapper's origin plus `/verify`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom. Built: `verify-page-accessibility.spec.ts` (axe in 14 cases) and `verify-page-keyboard.spec.ts` (keyboard, focus, live regions, indicator, zoom)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom. Built: `verify-page-accessibility.spec.ts` (axe in 15 cases) and `verify-page-keyboard.spec.ts` (keyboard, focus, live regions, indicator, zoom)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | VT-8  | e2e + build check   | the policy and SRI: the page loads with the `headers.json` policy and no violation, every script and stylesheet carries `integrity`, and no request leaves the configured origins. Built: `verify-page-policy.spec.ts` against the built bundle's own `headers.json` (see the e2e section)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | VT-9  | release dry run     | the page is inside the artifact under `verify/`, two builds give one digest, and its two size measurements are reported and held to their own limits (D-3), apart from the Wrapper's                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | VT-10 | unit (source check) | `apps/verify`'s sources never reference `navigator.locks`, `BroadcastChannel`, `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `document.cookie`, `Worker`, `SharedWorker`, or `serviceWorker` (the shared-origin rule), and its `<meta>` policy carries `worker-src 'none'`. Built: `tools/shared-origin.test.ts` scans every non-test source and HTML file of `apps/verify` as text, comments and strings included, for each name as a whole word (`locks`, `cookie`, and `cookieStore` included), with a case per name; the `<meta>` part is checked in `apps/wrapper/src/release-verify.test.ts`, which feeds the page's `index.html` through the release step, and the source HTML itself is checked for no inline script or style and no policy of its own |
@@ -713,10 +713,11 @@ route at the configured verify API base on a `.test` origin, answering
 `GET /verify/v1/rounds/{roundId}` from canned rounds, in the vendored verify API
 document's shape, built from the vendored vectors (a matching round, a tampered
 copy, an unfinished round, a `canceled` round without reveals, an unknown kernel
-version), the not-found answer for an unknown id, a scripted error, and an abort
-for the unreachable case; the harness's RPC routes answer the chain read
-(agreeing, disagreeing, and silent endpoints). It is hermetic like the rest of
-the harness: no real network, and a request to any other origin fails the test.
+version, a game of one step with three options), the not-found answer for an
+unknown id, a scripted error, and an abort for the unreachable case; the
+harness's RPC routes answer the chain read (agreeing, disagreeing, and silent
+endpoints). It is hermetic like the rest of the harness: no real network, and a
+request to any other origin fails the test.
 
 ### The e2e fake of the verify API: built
 
@@ -787,14 +788,13 @@ VT-6 to VT-8 are built, each in a spec file of its own:
 - `verify-page-accessibility.spec.ts` and `verify-page-keyboard.spec.ts` (VT-7):
   axe (the Wrapper's `auditAccessibility`, WCAG 2.2 A and AA) on the form, its
   refused submit, a match, a mismatch, a chain that could not be verified, a
-  round not ended, voided, refused, of an unknown kernel, not found, an API
-  error, an unreachable service, and the configuration error with and without a
-  retry; then keyboard-only use of the form and of the retry, focus on the new
-  heading after a submit and a retry (and none moved on its own), the polite
-  region (a match, a refused submit's error) and `role="alert"` (a failure), the
-  focus indicator, and a 640 by 360 viewport (200 % zoom) with no horizontal
-  scroll. The "one step, two options only" state (V-13) has no canned round; its
-  view is a jsdom case (VT-4).
+  round not ended, voided, refused, of an unknown kernel, of a shape other than
+  one step of two options (A-3), not found, an API error, an unreachable
+  service, and the configuration error with and without a retry; then
+  keyboard-only use of the form and of the retry, focus on the new heading after
+  a submit and a retry (and none moved on its own), the polite region (a match,
+  a refused submit's error) and `role="alert"` (a failure), the focus indicator,
+  and a 640 by 360 viewport (200 % zoom) with no horizontal scroll.
 - `verify-page-policy.spec.ts` (VT-8): the `verifyPolicy` option of
   `verify-page.ts` serves the page with the `/verify/*` entry of the built
   `apps/wrapper/dist/headers.json`, its `{{verifyConnectOrigins}}` placeholder
