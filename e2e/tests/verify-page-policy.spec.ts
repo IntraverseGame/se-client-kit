@@ -66,6 +66,19 @@ const ALLOWED_ORIGINS: readonly string[] = [
   ...ROUND_RPC_ENDPOINTS.map(endpoint => new URL(endpoint.url).origin),
 ];
 
+/** The sorted source list of `directive` in `policy`, empty if it has none. */
+const sourcesOf = (
+  policy: string | undefined,
+  directive: string,
+): readonly string[] =>
+  (
+    (policy ?? "")
+      .split(";")
+      .map(part => part.trim().split(/\s+/u))
+      .find(([name]) => name === directive)
+      ?.slice(1) ?? []
+  ).toSorted();
+
 test.beforeAll(() => {
   if (!verifyPageBuilt()) throw new Error(VERIFY_PAGE_NOT_BUILT);
 });
@@ -98,10 +111,11 @@ test.describe("the verify page under its headers.json policy (VT-8)", () => {
     expect(policy).toContain("default-src 'none'");
     expect(policy).toContain("frame-ancestors 'none'");
     expect(policy).toContain("worker-src 'none'");
-    expect(policy).toContain(`connect-src 'self' ${WRAPPER_ORIGIN}`);
-    for (const endpoint of ROUND_RPC_ENDPOINTS) {
-      expect(policy).toContain(new URL(endpoint.url).origin);
-    }
+    // Exactly the page's own origin and the configured ones: an extra allowed
+    // origin in the release header fails here.
+    expect(sourcesOf(policy, "connect-src")).toEqual(
+      ["'self'", ...ALLOWED_ORIGINS].toSorted(),
+    );
     // Check 6 read the chain across origins, which `connect-src` allowed.
     expect(verifyRpc.calls().length).toBeGreaterThan(0);
     expect(await violations(page)).toEqual([]);
