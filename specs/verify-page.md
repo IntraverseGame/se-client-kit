@@ -16,14 +16,14 @@ verify API read, built to the vendored verify API document
 (`GET /verify/v1/rounds/{roundId}`) and confined to its own modules; the page's
 HTML and module entry (`index.html`, `src/main.ts`, mounting at `#verify-root`),
 and the build and release (V-15 to V-17); and the e2e fake of the verify API
-with VT-5's browser rows
-([The e2e fake](#the-e2e-fake-of-the-verify-api-built)). Not built: the e2e rows
-VT-6 to VT-8. The verify API document is vendored into `contracts`
-(`schemas/verify.v1.openapi.yaml`, with its generated types); what it does not
-yet carry (the on-chain record and the proofs) is still marked
-`TODO(verify API)`. The request is `play-client`'s `getRoundVerification` (A-1).
-Its four design decisions were made by the human on 2026-10-18, and five more on
-the kernel derivations on 2026-10-19 ([Decisions](#decisions)).
+with its browser rows VT-5 to VT-8
+([The e2e fake](#the-e2e-fake-of-the-verify-api-built)). The verify API document
+is vendored into `contracts` (`schemas/verify.v1.openapi.yaml`, with its
+generated types); what it does not yet carry (the on-chain record and the
+proofs) is still marked `TODO(verify API)`. The request is `play-client`'s
+`getRoundVerification` (A-1). Its four design decisions were made by the human
+on 2026-10-18, and five more on the kernel derivations on 2026-10-19
+([Decisions](#decisions)).
 
 ## Purpose
 
@@ -702,9 +702,9 @@ never reported anywhere.
 | VT-3  | unit                | the body's validation: a body the verify API document's schema refuses is an API error, never a partial result; amounts read as `bigint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | VT-4  | component (jsdom)   | every state V-4 to V-11 (V-8's voided and refused included) and the configuration error renders its heading, text, and control, with no inline style; values from the body render as text. jsdom component tests; the axe scan is in the browser rows (VT-7), as for the Wrapper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended; a round of a kernel version the page does not know (V-8); the backend's recorded `won` and `lost` rounds match with checks 5 and 7 recomputed, and a tampered copy of each names check 5 or 7                                                                                                                                                                                                                                                                                                                      |
-| VT-6  | e2e, browser        | from the Wrapper: after a round ends, the verify link opens `<verifyBaseUrl>/rounds/{roundId}` in a new context and that page reaches V-6 or V-8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| VT-8  | e2e + build check   | the policy and SRI: the page loads with the `headers.json` policy and no violation, every script and stylesheet carries `integrity`, and no request leaves the configured origins (the harness's catch-all route records none)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| VT-6  | e2e, browser        | from the Wrapper: after a round ends, the verify link opens `<verifyBaseUrl>/rounds/{roundId}` in a new page and that page reaches V-6. Built: `verify-link.spec.ts` (a win; the configuration points `verifyBaseUrl` at the Wrapper's origin plus `/verify`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom. Built: `verify-page-accessibility.spec.ts` (axe in 14 cases) and `verify-page-keyboard.spec.ts` (keyboard, focus, live regions, indicator, zoom)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| VT-8  | e2e + build check   | the policy and SRI: the page loads with the `headers.json` policy and no violation, every script and stylesheet carries `integrity`, and no request leaves the configured origins. Built: `verify-page-policy.spec.ts` against the built bundle's own `headers.json` (see the e2e section)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | VT-9  | release dry run     | the page is inside the artifact under `verify/`, two builds give one digest, and its two size measurements are reported and held to their own limits (D-3), apart from the Wrapper's                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | VT-10 | unit (source check) | `apps/verify`'s sources never reference `navigator.locks`, `BroadcastChannel`, `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `document.cookie`, `Worker`, `SharedWorker`, or `serviceWorker` (the shared-origin rule), and its `<meta>` policy carries `worker-src 'none'`. Built: `tools/shared-origin.test.ts` scans every non-test source and HTML file of `apps/verify` as text, comments and strings included, for each name as a whole word (`locks`, `cookie`, and `cookieStore` included), with a case per name; the `<meta>` part is checked in `apps/wrapper/src/release-verify.test.ts`, which feeds the page's `index.html` through the release step, and the source HTML itself is checked for no inline script or style and no policy of its own |
 
@@ -750,7 +750,7 @@ In `e2e/tests/harness/` (the suite's harness, never shipped):
   round tests' pins, `verifyBaseUrl` the Wrapper's origin plus `/verify`), the
   fake verify API, and the round tests' two fake RPC endpoints (`fake-rpc.ts`:
   agree, disagree, and a silent endpoint) for check 6. The routes carry no
-  response headers, so the policy and SRI are not proven here (VT-8).
+  response headers unless a test sets `verifyPolicy` (VT-8, below).
 - `fake-verify-api.spec.ts` tests the fake, the canned rounds, and the RPC
   answers as the page asks them, and `fake-recorded-rounds.spec.ts` the recorded
   rounds (no page load); `verify-page.spec.ts` and
@@ -775,9 +775,40 @@ In `e2e/tests/harness/` (the suite's harness, never shipped):
   round secret (check 5). The payout amount is never recomputed (V-13), so a
   payout tamper is not a check's failure.
 
-Not built here: VT-6 (the Wrapper's verify link after a round ends), VT-7 (axe
-on every state, the voided and refused ones included, keyboard use, zoom), and
-VT-8 (the policy and SRI), which need the built page and its `headers.json`.
+VT-6 to VT-8 are built, each in a spec file of its own:
+
+- `verify-link.spec.ts` (VT-6): the Wrapper plays a win (the round fixtures),
+  its verify link (`target="_blank"`, `rel="noopener noreferrer"`) points at
+  `<verifyBaseUrl>/rounds/{roundId}`, and clicking it opens a new page, which is
+  the bundle's verify page against the fake verify API and the fake RPC
+  endpoints and reaches V-6. The configuration for this test puts
+  `verifyBaseUrl` on the Wrapper's origin, as in preview. The V-8 outcome is not
+  repeated here (it is VT-5's).
+- `verify-page-accessibility.spec.ts` and `verify-page-keyboard.spec.ts` (VT-7):
+  axe (the Wrapper's `auditAccessibility`, WCAG 2.2 A and AA) on the form, its
+  refused submit, a match, a mismatch, a chain that could not be verified, a
+  round not ended, voided, refused, of an unknown kernel, not found, an API
+  error, an unreachable service, and the configuration error with and without a
+  retry; then keyboard-only use of the form and of the retry, focus on the new
+  heading after a submit and a retry (and none moved on its own), the polite
+  region (a match, a refused submit's error) and `role="alert"` (a failure), the
+  focus indicator, and a 640 by 360 viewport (200 % zoom) with no horizontal
+  scroll. The "one step, two options only" state (V-13) has no canned round; its
+  view is a jsdom case (VT-4).
+- `verify-page-policy.spec.ts` (VT-8): the `verifyPolicy` option of
+  `verify-page.ts` serves the page with the `/verify/*` entry of the built
+  `apps/wrapper/dist/headers.json`, its `{{verifyConnectOrigins}}` placeholder
+  filled with the origins of `verifyApiBaseUrl` and the RPC endpoints as the
+  deploy side does. The page loads and recomputes with no
+  `securitypolicyviolation`; the policy is enforced (a `fetch` to another origin
+  is refused by `connect-src`); every script and stylesheet has `integrity`, no
+  inline script or style exists, and a script with changed bytes does not run
+  (the browser enforces the hash); and every request went to the Wrapper's
+  origin or a configured RPC endpoint. This is the e2e half; the build half (the
+  release step puts `integrity` on every tag and refuses what the policy would
+  have to be loosened for, and `headers.json` holds the `/verify/*` entry) is
+  `release-sri`'s and `release-verify.test.ts`'s unit tests and
+  `pnpm check:build-output`. No new build check was added.
 
 ## Decisions
 

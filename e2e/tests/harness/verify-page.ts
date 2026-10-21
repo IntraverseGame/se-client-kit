@@ -9,8 +9,10 @@
 // route is a Playwright route; the hermetic guard refuses all other requests,
 // so a request that leaves these origins fails the test (VT-8).
 //
-// The page's own routes do not carry its response headers (`headers.json` is a
-// host's file): the policy and SRI rows (VT-8) are not proven here.
+// The page's routes carry no response headers unless a test asks for the policy
+// (`verifyPolicy`, VT-8): then the page is served with the release bundle's
+// own `headers.json` entry for `/verify/*`, its one placeholder filled as the
+// deploy side fills it (`verifyPolicyHeaders`). VT-5 and VT-6 run without it.
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -32,6 +34,12 @@ import { ROUND, ROUND_PINS as VERIFY_PINS } from "./round-vector.ts";
 
 /** The page's file in the release bundle. */
 const VERIFY_INDEX = join(WRAPPER_DIST, "verify", "index.html");
+
+/** The release bundle's headers file, as the deploy side reads it. */
+const HEADERS_FILE = join(WRAPPER_DIST, "headers.json");
+
+/** The placeholder of the verify page's policy (`release-headers.ts`). */
+const CONNECT_PLACEHOLDER = "{{verifyConnectOrigins}}";
 
 /** The page's base, the Wrapper's origin plus `/verify` (V-1). */
 export const VERIFY_BASE_URL = `${WRAPPER_ORIGIN}/verify`;
@@ -66,12 +74,46 @@ export const verifyEnvironmentConfig = (
 });
 
 /**
+ * The response headers of the bundle's `headers.json` entry for `/verify/*`,
+ * with `{{verifyConnectOrigins}}` filled with the origins of `verifyApiBaseUrl`
+ * and of the configured RPC endpoints, as the deploy side does (V-16). The file
+ * is read as built, never rewritten; a missing entry or placeholder throws.
+ */
+export const verifyPolicyHeaders = (
+  verifyApiBaseUrl: string,
+  rpcUrls: readonly string[],
+): Readonly<Record<string, string>> => {
+  const file = JSON.parse(readFileSync(HEADERS_FILE, "utf8")) as Record<
+    string,
+    Record<string, string> | undefined
+  >;
+  const entry = file["/verify/*"];
+  if (entry === undefined)
+    throw new Error("headers.json has no /verify/* entry");
+  const origins = [
+    ...new Set([verifyApiBaseUrl, ...rpcUrls].map(url => new URL(url).origin)),
+  ];
+  const filled = Object.fromEntries(
+    Object.entries(entry).map(([name, value]) => [
+      name,
+      value.replaceAll(CONNECT_PLACEHOLDER, origins.join(" ")),
+    ]),
+  );
+  if (JSON.stringify(filled).includes("{{")) {
+    throw new Error("headers.json /verify/* still holds a placeholder");
+  }
+  return filled;
+};
+
+/**
  * Serves `verify/index.html` for `/verify/` and every path under
- * `/verify/rounds/` (V-2); any other path is the static origin's. Registered
- * after the shared origins, so it takes these paths first.
+ * `/verify/rounds/` (V-2), with `headers` as its response headers if given; any
+ * other path is the static origin's. Registered after the shared origins, so it
+ * takes these paths first.
  */
 export const serveVerifyPage = async (
   context: BrowserContext,
+  headers?: Readonly<Record<string, string>>,
 ): Promise<void> => {
   await context.route(`${WRAPPER_ORIGIN}/verify/**`, async route => {
     const { pathname } = new URL(route.request().url());
@@ -82,6 +124,7 @@ export const serveVerifyPage = async (
     await route.fulfill({
       status: 200,
       contentType: "text/html; charset=utf-8",
+      ...(headers === undefined ? {} : { headers: { ...headers } }),
       body: existsSync(VERIFY_INDEX) ? readFileSync(VERIFY_INDEX) : "",
     });
   });
@@ -97,6 +140,11 @@ type VerifyOptions = {
    * block N with its recorded hash on the fake RPC endpoints).
    */
   readonly verifyRounds: "canned" | "recorded";
+  /**
+   * Serve the page with the bundle's `headers.json` policy (VT-8) instead of
+   * with no response headers.
+   */
+  readonly verifyPolicy: boolean;
 };
 
 type VerifyFixtures = {
@@ -118,6 +166,7 @@ type VerifyFixtures = {
 export const test = base.extend<VerifyOptions & VerifyFixtures>({
   verifyApiBaseUrl: [`${WRAPPER_ORIGIN}/verify/v1`, { option: true }],
   verifyRounds: ["canned", { option: true }],
+  verifyPolicy: [false, { option: true }],
 
   fakeVerifyApi: async (
     { context, hermetic: _guard, verifyApiBaseUrl },
@@ -156,6 +205,7 @@ export const test = base.extend<VerifyOptions & VerifyFixtures>({
       playApiBaseUrl,
       verifyApiBaseUrl,
       verifyRounds,
+      verifyPolicy,
     },
     use,
   ) => {
@@ -167,7 +217,15 @@ export const test = base.extend<VerifyOptions & VerifyFixtures>({
         verifyRounds === "recorded" ? recordedPins() : VERIFY_PINS,
       ),
     );
-    await serveVerifyPage(context);
+    await serveVerifyPage(
+      context,
+      verifyPolicy
+        ? verifyPolicyHeaders(
+            verifyApiBaseUrl,
+            ROUND_RPC_ENDPOINTS.map(endpoint => endpoint.url),
+          )
+        : undefined,
+    );
     await use({
       open: async (page, roundId) => {
         await page.goto(verifyUrl(roundId));
