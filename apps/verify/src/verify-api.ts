@@ -35,11 +35,19 @@ export type VerifyApiResult =
   /** Another error status, or a body that does not validate (V-10). */
   | { readonly kind: "error" }
   /** No answer: offline, DNS, TLS, timeout, reset, a blocked request (V-11). */
-  | { readonly kind: "unreachable" };
+  | { readonly kind: "unreachable" }
+  /** The caller aborted the read (a newer one replaced it): shown as nothing. */
+  | { readonly kind: "aborted" };
 
-/** The port the page reads a round through. Never throws. */
+/**
+ * The port the page reads a round through. Never throws. Aborting `signal` ends
+ * the request and answers `aborted`.
+ */
 export type VerifyApi = {
-  readonly readRound: (roundId: string) => Promise<VerifyApiResult>;
+  readonly readRound: (
+    roundId: string,
+    signal?: AbortSignal,
+  ) => Promise<VerifyApiResult>;
 };
 
 export type VerifyApiOptions = {
@@ -73,15 +81,23 @@ export const createVerifyApi = (options: VerifyApiOptions): VerifyApi => {
     retry: ONE_ATTEMPT,
   });
   return {
-    readRound: async roundId => {
+    readRound: async (roundId, signal) => {
       try {
-        const { body } = await getRoundVerification(transport, roundId);
+        const { body } = await getRoundVerification(
+          transport,
+          roundId,
+          signal === undefined ? {} : { signal },
+        );
         const evidence = parseEvidence(body);
         return evidence === undefined
           ? { kind: "error" }
           : { kind: "found", evidence };
       } catch (error) {
-        if (error instanceof NetworkError) return { kind: "unreachable" };
+        if (error instanceof NetworkError) {
+          return {
+            kind: error.reason === "aborted" ? "aborted" : "unreachable",
+          };
+        }
         const status =
           error instanceof ProblemError
             ? error.problem.status

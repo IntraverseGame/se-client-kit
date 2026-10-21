@@ -65,7 +65,7 @@ describe("no round id (V-4)", () => {
     await s.page.start();
     await s.page.submit(`  ${ROUND_ID.toUpperCase()} \n`);
     expect(s.pushed).toEqual([`${ORIGIN}/verify/rounds/${ROUND_ID}`]);
-    expect(s.readRound).toHaveBeenCalledWith(ROUND_ID);
+    expect(s.readRound).toHaveBeenCalledWith(ROUND_ID, expect.anything());
     expect(s.view.shown.slice(-2)).toEqual([
       { state: { kind: "loading", roundId: ROUND_ID }, focus: true },
       {

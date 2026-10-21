@@ -2,7 +2,8 @@
 // It owns no DOM: a view shows each state, and every effect (`fetch`, the
 // timers, the address bar, the browser's offline flag) is injected, so the
 // tests are hermetic. The page is in exactly one state at a time; a read that
-// a newer one replaced is dropped, never shown.
+// a newer one replaced is aborted, and its answer, if it comes anyway, is
+// dropped, never shown.
 
 import type { ChainReadClock } from "./chain-read.ts";
 import type { VerifyConfig } from "./environment-config.ts";
@@ -116,6 +117,8 @@ export const createVerifyPage = (
   let retryableConfigError = false;
   // Each read gets a number; only the newest one may show its result.
   let generation = 0;
+  // The newest read's abort controller: a newer read or the form aborts it.
+  let inflight: AbortController | undefined;
 
   const verify =
     deps.verify ??
@@ -132,15 +135,19 @@ export const createVerifyPage = (
     generation += 1;
     const mine = generation;
     current = roundId;
+    inflight?.abort();
+    const controller = new AbortController();
+    inflight = controller;
     view.show({ kind: "loading", roundId }, focus);
     let answer: VerifyApiResult;
     try {
-      answer = await api.readRound(roundId);
+      answer = await api.readRound(roundId, controller.signal);
     } catch {
       // The port should not throw; if it does, it is an error, not a hang.
       answer = { kind: "error" };
     }
-    if (mine !== generation) return;
+    // An aborted read was replaced (the generation moved): it shows nothing.
+    if (mine !== generation || answer.kind === "aborted") return;
     let state: PageState;
     switch (answer.kind) {
       case "found": {
@@ -173,6 +180,8 @@ export const createVerifyPage = (
 
   const showForm = (text: string, error: boolean, focus: boolean): void => {
     generation += 1;
+    inflight?.abort();
+    inflight = undefined;
     current = undefined;
     view.show({ kind: "form", text, error }, focus);
   };
