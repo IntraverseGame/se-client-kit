@@ -141,20 +141,21 @@ outputs restored from the cache.
   `test:e2e` and `format` declare no `files`, so they always run (the e2e
   package's `test` still declares, as `external` `env`, the variables it reads:
   `SE_E2E_PROJECT`, `SE_E2E_BROWSER_CHANNEL`, and `CI`, so a cache key would
-  follow them if it ever got `files`). `lint:ts` depends on the build of every
-  kit package: oxlint's import plugin follows an import of a kit package through
-  its `exports` into its `dist/` and opens those files, so it must not run while
-  a build rewrites them. So `pnpm lint`, and CI's `lint` job, build the five
-  packages first (or restore them from the cache). Before this edge, a lint with
-  no `dist/` passed without following those imports: `import/no-cycle` silently
-  skipped every edge into another package. The two Vite builds (the Wrapper's
-  and the reference game's) declare `NODE_ENV` as `external` `env`, since
-  `NODE_ENV=development vite build` makes a development build, and the Wrapper's
-  build refuses any `NODE_ENV` but unset or `production`, any mode but
-  `production`, a set `VITE_USER_NODE_ENV`, and env files
-  (`apps/wrapper/src/build-refusals.test.ts` proves each in both directions,
-  with a planted `.env` and a `VITE_USER_NODE_ENV` in the environment, each
-  beside its control); the tsdown builds do not read it.
+  follow them if it ever got `files`; `test:preview`, which `pnpm check` never
+  reaches, declares the preview variables the same way). `lint:ts` depends on
+  the build of every kit package: oxlint's import plugin follows an import of a
+  kit package through its `exports` into its `dist/` and opens those files, so
+  it must not run while a build rewrites them. So `pnpm lint`, and CI's `lint`
+  job, build the five packages first (or restore them from the cache). Before
+  this edge, a lint with no `dist/` passed without following those imports:
+  `import/no-cycle` silently skipped every edge into another package. The two
+  Vite builds (the Wrapper's and the reference game's) declare `NODE_ENV` as
+  `external` `env`, since `NODE_ENV=development vite build` makes a development
+  build, and the Wrapper's build refuses any `NODE_ENV` but unset or
+  `production`, any mode but `production`, a set `VITE_USER_NODE_ENV`, and env
+  files (`apps/wrapper/src/build-refusals.test.ts` proves each in both
+  directions, with a planted `.env` and a `VITE_USER_NODE_ENV` in the
+  environment, each beside its control); the tsdown builds do not read it.
   `tools/wireit-edges.test.ts` holds these edges and declarations. `pnpm audit`
   is a plain CI step, never cached, because its result depends on the advisory
   database and not on repository files.
@@ -575,14 +576,154 @@ development-only, so it may import the test-only entry of `contracts`.
   the 32-byte draws) and anything secret-shaped replaced by `[redacted]`; the
   fake keeps whether a request was authorized, never the token.
 
-**Where the preview-stack e2e runs.** The SuperEngine preview stack is private,
-so a public CI job cannot reach it without a credential. This repository owns
-the e2e **suite**; a job owned by the backend repository checks this repository
-out at a **pinned commit**, installs with `--frozen-lockfile`, builds the
-Wrapper, and runs the suite against its own throwaway stack. That job holds no
-secret. The same suite runs against the fake Play API in this repository's own
-CI, so a change here is checked without the backend. Only the fake-API suites
-are deterministic and hermetic; the preview-stack run (wrapper.md T-10 to T-12,
-and so AC1) talks to a real stack, is **not hermetic**, and is never part of
-`pnpm check` or of this repository's required CI jobs.
-<!-- TODO(preview stack): the pin and the job live in the backend repository. -->
+**Where the preview-stack e2e runs, and the preview mode** (RFC-002). The
+SuperEngine preview stack is private, so a public CI job cannot reach it without
+a credential. This repository owns the e2e **suite** and its `preview` mode; a
+job owned by the backend repository checks this repository out at a **pinned
+commit**, installs with `--frozen-lockfile`, builds the Wrapper and the
+reference game, and runs `pnpm test:e2e:preview` against its own throwaway
+stack. That job holds no secret that this repository sees. The same suite runs
+against the fake Play API in this repository's own CI, so a change here is
+checked without the backend. Only the fake-API suites are deterministic and
+hermetic; the preview run (wrapper.md T-10 to T-12, and so AC1) talks to a real
+stack, is **not hermetic**, and is never part of `pnpm check` or of this
+repository's required CI jobs. The procedure is
+[`runbook/preview-e2e.md`](../../runbook/preview-e2e.md); the pin lives in the
+backend repository.
+
+- **The project and how it is reached.** `preview` is a fourth Playwright
+  project (`e2e/playwright.config.ts`), Chromium only, never the default. The
+  only way to run it is `pnpm test:e2e:preview`, which runs the e2e package's
+  `test:preview` script: a `tsx` launcher
+  (`e2e/tests/preview-support/run-preview.ts`) that sets the entry marker
+  `SE_E2E_PREVIEW_ENTRY=script` and starts `playwright test --project=preview`.
+  The config defines the project **only when the marker is set**; asked for
+  without it (`pnpm test:e2e` with `SE_E2E_PROJECT=preview`, or a bare
+  `playwright test --project=preview`) it throws a refusal that names the
+  script. The marker guards against an accidental run; it is not a security
+  boundary, and it is not a variable the backend's runner sets. `test:preview`
+  declares no `files` and no `output`, so wireit never caches it, and no script
+  but the root `test:e2e:preview` depends on it, so `pnpm check` never reaches
+  it. Playwright (1.64.0) loads the config in the runner process and again in
+  every worker process: the marker is an environment variable the workers
+  inherit, and the check is the same in each.
+- **Variables**, parsed only under the marker, by the pure
+  `preview-support/preview-environment.ts` (a function of an environment passed
+  as a parameter: it reads no `process.env` and does nothing at import). A
+  missing or malformed one fails in the config or the global setup, before any
+  browser starts, with a message that names the variable and a reason from a
+  closed set and holds no value. Origins are serialized origins as in W-37
+  (`https://host[:port]`, or `http:` on a loopback host only; no path, query,
+  fragment, or credentials; no wildcard). `SE_E2E_PREVIEW_ORIGIN` (required):
+  serves the Wrapper page and the environment document.
+  `SE_E2E_PREVIEW_LAUNCH_COMMAND` (required): the **absolute** path of the
+  launch hook's executable. `SE_E2E_PREVIEW_GAME_ORIGIN` (required): the one
+  `https:` game origin both games run at, different from the preview origin; the
+  suite serves the reference game's build at it by a route.
+  `SE_E2E_PREVIEW_ALLOWED_ORIGINS` (optional): comma-separated origins the
+  browser may reach besides the preview origin, such as the chain RPC endpoints.
+  There is no variable for a launch code, a token, a key, or a funding endpoint.
+- **The launch hook.** Called once per session a test opens, as
+  `<command> <game id>` with `coin-flip` or `cash-or-crash` (the kit's own
+  labels for the backend to map), without a shell, with standard input closed
+  and standard error dropped, a timeout (30 s) that kills the child's whole
+  process group, and a bounded output (4 KiB). It receives the runner's
+  environment plus `SE_E2E_PREVIEW_ORIGIN`, funds a new player, and prints one
+  line: the launch URL, validated exactly (one line, the preview origin, no
+  credentials, no query, the path `/`, a fragment of 1 to 128 characters that is
+  the launch code). Every failure is a `LaunchHookError` holding an exit code
+  (or none) and a reason (`start`, `exit`, `timeout`, `output`, `line`), never
+  the command or any output, and no `cause`.
+- **The browser** gets a minimal explicit environment (`launchOptions.env`:
+  `PATH`, `HOME`, `TMPDIR`, `LANG`, and nothing else), never the runner's, so no
+  `SE_E2E_*`, proxy, or credential name reaches it. The runner must not rely on
+  any variable reaching the browser.
+- **The network.** `guardPreview` replaces the hermetic guard in the preview
+  fixtures only: a request (or WebSocket) to an origin on the allow-list (the
+  preview origin and the listed ones, exact match, no pattern) continues to the
+  network and any other is aborted and recorded **as an origin only**, never a
+  URL, because the path or query of an RPC URL can hold a provider key. The
+  shared game origin is not on the list: a route fulfils it from
+  `apps/reference-game/dist`. The browser-level block stays: Chromium's
+  `--host-resolver-rules` is `MAP * ~NOTFOUND` plus an `EXCLUDE` per host of the
+  allow-list. Chromium applies the rules to an IP literal too, so a literal is
+  excluded as well, an IPv6 one without its brackets. The fake projects' flags
+  are constants and are not computed from any variable. A request the test makes
+  itself (the verify API read, the environment document) is checked on the same
+  list and refused before it is sent, naming the origin only, and follows no
+  redirect, since only its first URL is checked.
+- **The environment document check** (global setup, and again in each test's
+  fixture): the document is fetched as the Wrapper fetches it (no credentials,
+  no cache, no redirect, 15 s). `environment` other than `preview` stops the
+  run; `playApiBaseUrl` and `verifyApiBaseUrl` are read from the document, never
+  derived from the preview origin; every origin the browser would reach (the two
+  API bases, each RPC endpoint) must be on the allow-list, and `gameOrigins`
+  must list the shared game origin; a failure names the check or the origin
+  only. The Wrapper's own rules (W-26a, W-26b, the `preview` boot rule) are not
+  relaxed. A best-effort comparison of the served page's hashed asset names with
+  `apps/wrapper/dist` is reported on a mismatch and never fails the run; the
+  primary check is that the runner hands the stack and this project the same
+  pin.
+- **The rows in preview mode** assert properties the contracts promise, read
+  from the Snapshots the browser received (in memory, never logged), not vector
+  bytes. T-10 and T-11 play Coin Flip rounds until a win (T-10) or a loss (T-11)
+  is seen, at most 40; for every round that ends: the Wrapper reached `active`,
+  the heading agrees with the Snapshot, the round id shown is the Snapshot's,
+  the verify link is present, and the verify API answers 200 with a `status` and
+  a `payout` that agree (as `bigint`); the payout line shows `payout.formatted`
+  when the payout is above 0 and is absent when it is 0 (W-34). T-12 launches
+  Cash or Crash `[3,3,4]`, picks the first tile of row 0 until a pick survives
+  (at most 40 rounds), cashes out with the Wrapper's control (W-24), and asserts
+  `won`, the payout line, the verify API's agreement, and that nothing is
+  offered after the close; the last-surviving-move half is not played against
+  the stack. T-12 depends on the stack certifying Cash or Crash `[3,3,4]`
+  (OQ-3). The accessibility audit runs on the result state. W-29 is not a row: a
+  helper records the `version` of every Snapshot response of a session and,
+  among responses that did not overlap another Snapshot response in time,
+  asserts it never decreases; W-29's interim limit is removed when the backend's
+  run passes it.
+- **The secret scan stays on** in every preview test, over every channel it
+  reads, with no weaker needle set. The launch code is registered before the
+  navigation, the play token when the `sessions:redeem` response is read, and
+  the shaped patterns stay on. The action key is a draw the preview fixtures
+  script with **one key per test generated in Node** (`crypto.randomBytes(32)`),
+  never the public vector key; tracing must be off (the scripted bytes are an
+  init-script argument), and the bytes are never logged, attached, or written.
+  Every failure message goes through `redactSecrets`; the hook's output, the
+  launch URL, the token, and the key are never in a test title, annotation,
+  attachment, or the report. A navigation failure is rethrown redacted, since
+  Playwright's message names the URL.
+- **Tests of the mode itself** are hermetic and run on every change. In
+  `e2e/tests/preview-guard/` (an ordinary directory of the fake projects, so
+  `pnpm test:e2e` runs them): the variable parser, the launch-line validator,
+  the launch hook against absolute-path fixture scripts (success, a non-zero
+  exit, a timeout that leaves no child behind, over-long output, a sentinel on
+  standard output and standard error that appears in no error), the browser
+  environment, the allow-list's `--host-resolver-rules`, the bounded loop, the
+  version helper, the Snapshot readers, and the config's decisions; and, in the
+  Chromium project only, against a **local loopback test server** (an HTTP
+  listener on `127.0.0.1` that the test owns; not real network), `guardPreview`
+  (an allowed origin continues, a disallowed one is refused and recorded as an
+  origin with no path or query, WebSockets), the environment document check, and
+  the game origin fulfilled by a route with no request to any socket. Those
+  tests launch a browser of their own with the preview project's flags, since
+  the fake Chromium project resolves no host. The preview specs themselves
+  (`e2e/tests/preview/`) are not run by this repository's CI; the backend job
+  exercises them. `tools/e2e-preview-*.test.ts` (run by `pnpm test`) assert that
+  the root `check` script's closure holds neither preview script, that the
+  config has no `preview` project without the marker and refuses it, that the
+  fake projects ignore `preview/**` and keep their launch options, that no
+  `harness/` module and no fake-project spec reaches `preview-support/`, and
+  that every preview spec awaits a clean secret scan, and that the generic
+  routes and the launcher fail as above.
+- **The pin** is a full 40-character commit SHA of this repository's `main` (and
+  the release version it corresponds to, once one exists); a branch or a tag
+  alone is not a pin. It moves only by a backend pull request that reads the
+  runbook's **Changes** table. The kit records every rename of a variable,
+  change of the hook's contract, and change of an assertion that needs something
+  new from the stack. The first pin is the merge commit of the pull request that
+  implements RFC-002, known only after it merges (the runbook records it).
+- **Provisional numbers** (the per-test timeout of 5 minutes, the run timeout of
+  30 minutes, the stack-step timeout of 90 s, the hook timeout, the browser
+  environment names) are marked `TODO(preview stack)` in the code until the
+  first run.

@@ -36,7 +36,7 @@ Several agents and people work in one clone at once. Rules:
 - Scripts: `pnpm install --frozen-lockfile`, `pnpm check` (format check, lint,
   typecheck, unit tests, dependency allow-list, contracts check, build,
   build-output check, package files check), `pnpm test`,
-  `pnpm test:e2e`, `pnpm lint` (oxlint and stylelint), `pnpm format` (writes; oxfmt is the only formatter, for code, Markdown, and
+  `pnpm test:e2e`, `pnpm test:e2e:preview` (the real-stack project, backend's job; never part of `pnpm check`), `pnpm lint` (oxlint and stylelint), `pnpm format` (writes; oxfmt is the only formatter, for code, Markdown, and
   YAML), `pnpm format:check`,
   `pnpm typecheck`, `pnpm build`, `pnpm changeset`, `pnpm release:dry-run`
   (not part of `pnpm check`). Never an ad-hoc equivalent.
@@ -145,8 +145,9 @@ Several agents and people work in one clone at once. Rules:
   Unchanged tasks are skipped from the local cache in `.wireit/` (git-ignored,
   **per worktree**, as is `node_modules`: run `pnpm install --frozen-lockfile`
   once in each worktree). A script with no `files` is never cached
-  (`format`, `test:e2e`); e2e's `test` still declares the variables it reads
-  (`SE_E2E_PROJECT`, `SE_E2E_BROWSER_CHANNEL`, `CI`) as `external` `env`.
+  (`format`, `test:e2e`, `test:e2e:preview`); e2e's `test` still declares the
+  variables it reads (`SE_E2E_PROJECT`, `SE_E2E_BROWSER_CHANNEL`, `CI`) as
+  `external` `env`, and `test:preview` the preview variables.
   `lint:ts` depends on the five package builds: oxlint's import plugin opens
   kit packages' `dist/` through their `exports`, and a build running beside it
   made it fail ("Failed to open file …/dist/index.js"). So `pnpm lint` and

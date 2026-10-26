@@ -2,10 +2,12 @@
 // the tests that must prove a socket or a request outside the routes never
 // reaches a host (hermetic-workers.spec.ts, hermetic-proxy.spec.ts): without a
 // listener, "the socket failed" would prove nothing. It answers nothing and
-// closes every connection at once. The suite's only open sockets are three:
-// this listener, the UDP datagram counter (loopback-datagrams.ts), and the
-// stand-in proxy below (`listenAsProxy`), which reads one request line from
-// each connection and answers nothing.
+// closes every connection at once. The suite's open sockets are four: this
+// listener, the UDP datagram counter (loopback-datagrams.ts), the stand-in proxy
+// below (`listenAsProxy`), which reads one request line from each connection and
+// answers nothing, and the local test server of the preview-guard tests
+// (preview-guard/loopback-server.ts: HTTP and WebSocket on 127.0.0.1, which
+// proves that an allowed origin is continued to a server; RFC-002).
 
 import { connect, createServer, type Server } from "node:net";
 

@@ -15,7 +15,9 @@ bridge; the round flows, the pick use case, and the UI's Snapshot reader; the
 session: the launch code, the redeem, the token keeper, and the UI's use cases);
 the Wrapper app opens a session and renders from it (configuration, rendering,
 accessibility, the release check, the session wiring) and `reference-game` is
-the Coin Flip sample (types only from `shell`'s `controller` subpath). Flag any
+the `steps` sample: Coin Flip, and any other `steps` round as rows of tiles
+(Cash or Crash `[3,3,4]` is the second configuration it is tested on, RFC-002;
+types only from `shell`'s `controller` subpath). Flag any
 divergence from the
 structure below.
 

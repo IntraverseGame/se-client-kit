@@ -19,5 +19,6 @@ export const mountGame = (options: MountOptions): Game => {
     onView: page.show,
   });
   page.onCall(game.pick);
+  page.onTile(game.pickTile);
   return game;
 };

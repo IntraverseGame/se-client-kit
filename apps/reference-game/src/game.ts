@@ -25,6 +25,7 @@ import {
   helloMessage,
   parseWrapperMessage,
 } from "./protocol.ts";
+import { type StepsRound, stepsRound } from "./steps-round.ts";
 
 /** A window the game can post to (`window.parent`): only `postMessage`. */
 export type MessageTarget = {
@@ -52,7 +53,7 @@ export type GameView =
     }
   /** `hello` is sent; no Snapshot has arrived yet. */
   | { readonly kind: "waiting" }
-  /** The latest Snapshot is not a Coin Flip round. */
+  /** The latest Snapshot has no rows to play. */
   | { readonly kind: "unsupported" }
   | {
       readonly kind: "round";
@@ -61,7 +62,18 @@ export type GameView =
       readonly pending: Side | undefined;
       /** Why the Wrapper did not accept the player's last pick. */
       readonly rejected: RejectReason | undefined;
+    }
+  /** A `steps` round that is not Coin Flip: rows of tiles. */
+  | {
+      readonly kind: "steps";
+      readonly round: StepsRound;
+      /** The tile the player asked for, until a Snapshot or a reject answers. */
+      readonly pending: TilePick | undefined;
+      readonly rejected: RejectReason | undefined;
     };
+
+/** A tile of a row, as the game asks for it. */
+export type TilePick = { readonly step: number; readonly option: number };
 
 /** Why the view changed: the player's pick was answered, or anything else. */
 export type ViewCause = "answered" | "update";
@@ -80,6 +92,8 @@ export type Game = {
   readonly view: () => GameView;
   /** Asks the Wrapper for a pick; ignored unless the round takes one now. */
   readonly pick: (side: Side) => void;
+  /** Asks for a tile of a `steps` round; ignored unless it takes one now. */
+  readonly pickTile: (step: number, option: number) => void;
   /** Stops listening; nothing more is sent or taken. */
   readonly close: () => void;
 };
@@ -87,6 +101,12 @@ export type Game = {
 type Pending = {
   readonly id: string;
   readonly side: Side;
+  /** The latest Snapshot's version when the pick was asked for. */
+  readonly version: number;
+};
+
+type PendingTile = TilePick & {
+  readonly id: string;
   /** The latest Snapshot's version when the pick was asked for. */
   readonly version: number;
 };
@@ -109,20 +129,34 @@ export const createGame = (options: GameOptions): Game => {
     return Object.freeze({
       view: () => view,
       pick: ignore,
+      pickTile: ignore,
       close: ignore,
     });
   }
 
   let latest: CoinFlipRound | undefined;
+  let latestSteps: StepsRound | undefined;
   let latestVersion: number | undefined;
   let unsupported = false;
   let pending: Pending | undefined;
+  let pendingTile: PendingTile | undefined;
   let rejected: RejectReason | undefined;
   let picks = 0;
   let closed = false;
 
   const view = (): GameView => {
     if (unsupported) return freeze({ kind: "unsupported" });
+    if (latestSteps !== undefined) {
+      return freeze({
+        kind: "steps",
+        round: latestSteps,
+        pending:
+          pendingTile === undefined
+            ? undefined
+            : { step: pendingTile.step, option: pendingTile.option },
+        rejected,
+      });
+    }
     if (latest === undefined) return freeze({ kind: "waiting" });
     return freeze({
       kind: "round",
@@ -141,20 +175,26 @@ export const createGame = (options: GameOptions): Game => {
     const advanced =
       latestVersion === undefined || snapshot.version > latestVersion;
     latestVersion = snapshot.version;
+    // Coin Flip keeps its own page; every other `steps` round is rows of tiles.
     const round = coinFlipRound(snapshot);
-    unsupported = round === undefined;
+    const rows = round === undefined ? stepsRound(snapshot) : undefined;
+    unsupported = round === undefined && rows === undefined;
     latest = round;
+    latestSteps = rows;
     const answered =
-      pending !== undefined && snapshot.version > pending.version;
-    if (answered || unsupported) pending = undefined;
+      (pending !== undefined && snapshot.version > pending.version) ||
+      (pendingTile !== undefined && snapshot.version > pendingTile.version);
+    if (answered || round === undefined) pending = undefined;
+    if (answered || rows === undefined) pendingTile = undefined;
     if (advanced) rejected = undefined;
     emit(answered ? "answered" : "update");
   };
 
   const onReject = (id: string, reason: RejectReason): void => {
     // Only the answer to the game's own outstanding pick counts.
-    if (pending?.id !== id) return;
+    if (pending?.id !== id && pendingTile?.id !== id) return;
     pending = undefined;
+    pendingTile = undefined;
     rejected = reason;
     emit("answered");
   };
@@ -183,6 +223,32 @@ export const createGame = (options: GameOptions): Game => {
       rejected = undefined;
       parent.postMessage(
         actionMessage(pending.id, step, optionOf(side)),
+        parentOrigin,
+      );
+      emit("update");
+    },
+    pickTile: (step: number, option: number): void => {
+      if (closed || pendingTile !== undefined || latestSteps?.open !== true) {
+        return;
+      }
+      const row = latestSteps.steps.find(candidate => candidate.index === step);
+      if (
+        latestSteps.step !== step ||
+        row === undefined ||
+        option >= row.optionCount
+      ) {
+        return;
+      }
+      picks += 1;
+      pendingTile = {
+        id: `pick-${String(picks)}`,
+        step,
+        option,
+        version: latestSteps.version,
+      };
+      rejected = undefined;
+      parent.postMessage(
+        actionMessage(pendingTile.id, step, option),
         parentOrigin,
       );
       emit("update");

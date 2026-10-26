@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { CASH_OR_CRASH } from "./fixtures/cash-or-crash.ts";
 import { mount } from "./fixtures/page.ts";
 import { SNAPSHOTS, snapshotMessage } from "./fixtures/snapshots.ts";
 import { HEADING_ID } from "./render.ts";
@@ -44,6 +45,11 @@ const contrast = (a: string | undefined, b: string | undefined): number => {
   return ((high ?? 0) + 0.05) / ((low ?? 0) + 0.05);
 };
 
+/** The text of the label an element names with `aria-labelledby`. */
+const labelTextOf = (host: HTMLElement, element: Element): string | null =>
+  host.querySelector(`#${element.getAttribute("aria-labelledby") ?? ""}`)
+    ?.textContent ?? null;
+
 describe("accessibility", () => {
   const stylesheet = readFileSync(`${import.meta.dirname}/styles.css`, "utf8");
 
@@ -68,6 +74,28 @@ describe("accessibility", () => {
     expect(host.querySelector("#rg-calls-label")?.textContent).toBe(
       "Your call",
     );
+  });
+
+  it("labels every row of a steps round as a group, and every tile with its text", () => {
+    const { parent, host } = mount();
+    parent.send(snapshotMessage(CASH_OR_CRASH.active));
+    const groups = host.querySelectorAll('.rg-row[role="group"]');
+    expect(groups).toHaveLength(3);
+    for (const group of groups) {
+      expect(labelTextOf(host, group)).toMatch(/^Row \d/u);
+    }
+    const tiles = host.querySelectorAll(".rg-tile");
+    expect(tiles).toHaveLength(10);
+    for (const tile of tiles) {
+      expect(tile.textContent).toMatch(/^Tile \d/u);
+      expect(tile.getAttribute("type")).toBe("button");
+    }
+    expect(host.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
+  });
+
+  it("gives a tile the same sizes, focus, and held look as a call", () => {
+    expect(stylesheet).toMatch(/\.rg-tile \{[^}]*flex: 1 1 5rem/u);
+    expect(stylesheet).not.toMatch(/\.rg-tile[^{]*\{[^}]*height:/u);
   });
 
   it.each([

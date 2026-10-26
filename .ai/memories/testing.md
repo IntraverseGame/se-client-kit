@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-21 (verify e2e rows VT-6 to VT-8 pull request: the link, accessibility, and policy and SRI specs, the `verifyPolicy` option; recorded verify rounds pull request: the backend's won and lost rounds in the e2e fake; verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify e2e fake pull request: the fake verify API, the canned rounds, VT-5's rows; verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-26 (preview mode of the e2e suite pull request, RFC-002: the `preview` project, `preview-support/`, `preview-guard/`, `tools/e2e-preview-*.test.ts`, the reference game plays any `steps` round; verify e2e rows VT-6 to VT-8 pull request: the link, accessibility, and policy and SRI specs, the `verifyPolicy` option; recorded verify rounds pull request: the backend's won and lost rounds in the e2e fake; verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify e2e fake pull request: the fake verify API, the canned rounds, VT-5's rows; verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -91,7 +91,20 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   the sandbox, accessibility, and a scan that no secret reaches the page, logs,
   or storage. They run against an in-repo **fake Play API** that answers from
   the contract's vectors, so a public CI job needs no private service.
-  Preview-stack e2e runs elsewhere, against a pinned commit of this repository.
+  Preview-stack e2e runs elsewhere, against a pinned commit of this repository:
+  the `preview` project (RFC-002, `e2e/tests/preview/`, support in
+  `e2e/tests/preview-support/`) is defined only under the launcher's entry
+  marker, reachable only through `pnpm test:e2e:preview`, refused by the generic
+  routes, and never part of `pnpm check`; its hermetic tests live in
+  `e2e/tests/preview-guard/` (they run in every fake project; the ones that need
+  a socket use a loopback test server, in a browser of their own with the
+  preview flags, Chromium only), and `tools/e2e-preview-*.test.ts` prove the
+  boundary (script closure, config, imports, launcher, and that every preview spec awaits `secretScan.expectClean()`, `e2e-preview-specs.test.ts`). The test's own verify API read (`verify-read.ts`) checks the allow-list first and follows no redirect. Chromium applies
+  `--host-resolver-rules` to IP literals too: an IP-literal host needs its own
+  `EXCLUDE` (IPv6 without brackets). Playwright 1.64.0 loads the config in the
+  runner and in every worker. Preview specs never import the fake Play API, the
+  fake verify API, the fake RPC, or the round checks; no `harness/` module
+  imports `preview-support/`. Runbook: `runbook/preview-e2e.md`.
   The harness is `e2e/tests/harness/` (spec: testing-and-ci.md, "The e2e
   harness"); import `test` and `expect` from `harness/fixtures.ts`, never from
   `@playwright/test`. Every test is hermetic automatically (all origins are
@@ -499,8 +512,8 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 
 - `pnpm test` runs the `vitest run` of every workspace that has tests (today `apps/wrapper`, `apps/reference-game`, `packages/signing`, `packages/snapshot`, `packages/play-client`, and `packages/shell`; each must be listed in the root `test` dependencies; a package gets a `test` script with its first real test) plus the tooling tests in
   `tools/` (`test:tools`); `pnpm test:e2e` runs the Playwright suite (the
-  harness's tests, a smoke run on the Wrapper's bundle, one on the reference
-  game's build, and the pending T-rows
+  harness's tests, the preview mode's hermetic tests, a smoke run on the
+  Wrapper's bundle, one on the reference game's build, and the pending T-rows
   as skipped). `pnpm check` is everything below.
 - `tools/import-direction.test.ts` is the proof that the dependency-direction
   and other lint rules fail on a violation: it runs the real oxlint binary and

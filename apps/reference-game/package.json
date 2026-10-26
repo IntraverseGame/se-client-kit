@@ -2,7 +2,7 @@
   "name": "@intraverse/se-client-reference-game",
   "version": "0.0.0",
   "private": true,
-  "description": "A minimal Coin Flip game for the tests and as a sample for game developers.",
+  "description": "A minimal steps game (Coin Flip, Cash or Crash) for the tests and as a sample for game developers.",
   "type": "module",
   "scripts": {
     "build": "wireit",

@@ -127,18 +127,12 @@ describe("Snapshots", () => {
     expect(roundOf(game.view()).round.status).toBe("resolving");
   });
 
-  it("shows that a Snapshot is not Coin Flip", () => {
+  it("shows that a Snapshot with no rows has nothing to play", () => {
     const { parent, game } = start();
-    const twoSteps = withFields(SNAPSHOTS.active, {
-      config: {
-        kind: "steps",
-        steps: [
-          { index: 0, optionCount: 2, multiplier: 1.5 },
-          { index: 1, optionCount: 2, multiplier: 3 },
-        ],
-      },
+    const noRows = withFields(SNAPSHOTS.active, {
+      config: { kind: "steps", steps: [] },
     });
-    parent.send(snapshotMessage(twoSteps));
+    parent.send(snapshotMessage(noRows));
     expect(game.view()).toEqual({ kind: "unsupported" });
     game.pick("heads");
     expect(parent.posted).toHaveLength(1);

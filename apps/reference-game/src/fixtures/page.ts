@@ -73,3 +73,20 @@ export const headingFocusCount = (host: HTMLElement): (() => number) => {
 
 export const callsShown = (host: HTMLElement): boolean =>
   host.querySelector<HTMLElement>(".rg-calls")?.hidden === false;
+
+/** The tile `option` of the row `step` on a steps round's board. */
+export const tile = (
+  host: HTMLElement,
+  step: number,
+  option: number,
+): HTMLButtonElement => {
+  const found = host.querySelector<HTMLButtonElement>(
+    `.rg-tile[data-step="${String(step)}"][data-option="${String(option)}"]`,
+  );
+  if (found === null)
+    throw new Error(`no tile ${String(option)} in ${String(step)}`);
+  return found;
+};
+
+export const boardShown = (host: HTMLElement): boolean =>
+  host.querySelector<HTMLElement>(".rg-board")?.hidden === false;

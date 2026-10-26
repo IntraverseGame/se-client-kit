@@ -40,8 +40,10 @@ description: Use when adding or changing behavior, signing code, contracts, or t
 ## Constraints
 
 - Deterministic and hermetic; no secrets; no test imports another package's
-  internals. The preview-stack e2e (backend-owned job, never part of
-  `pnpm check`) is the one non-hermetic suite; do not add tests to it here.
+  internals. The preview-stack e2e (the `preview` project, run by a
+  backend-owned job, never part of `pnpm check`) is the one non-hermetic suite;
+  add to it only through the rows of the Wrapper's test plan, and prove its
+  support code with hermetic tests in `e2e/tests/preview-guard/`.
 - Never weaken a vector assertion or skip a test to go green — fix the code, or
   change the spec through the development flow. A released vector file is never
   edited; add a new version.

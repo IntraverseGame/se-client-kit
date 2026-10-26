@@ -32,6 +32,7 @@ pnpm install --frozen-lockfile   # install exactly what the lockfile says
 pnpm check                       # format check, lint, typecheck, unit tests, allow-list, contracts check, build, build-output and package files checks
 pnpm test                        # unit and component tests
 pnpm test:e2e                    # Playwright, against the in-repo fake Play API
+pnpm test:e2e:preview            # the preview project, against a real stack (runbook/preview-e2e.md); never part of pnpm check
 pnpm lint                        # oxlint (with the dependency-direction rules) and stylelint (CSS)
 pnpm format                      # writes: oxfmt formats everything it supports
 pnpm format:check                # the same, read-only
