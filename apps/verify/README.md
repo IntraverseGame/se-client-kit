@@ -7,14 +7,18 @@ word for the result.
 **Status:** pre-release. It is an application, not an npm package, and is never
 published on its own: it ships inside the Wrapper's release, under `verify/`. It
 holds the page's checks, its states (the form, checking, matched, mismatched,
-not recomputable, not found, and the service's errors), and their accessible
-view and its HTML page, built on the recomputation that rests on the SuperEngine
-fairness kernel, kernelVersion 1. It reads the verification service through an
-assumed answer format until that format is published.
+not recomputable, not found, the service's errors, the service being
+unreachable, and a configuration error), and their accessible view and its HTML
+page, built on the recomputation that rests on the SuperEngine fairness kernel,
+kernelVersion 1. It reads the verify API (`GET /verify/v1/rounds/{roundId}`) as
+the vendored verify API document defines it, and it uses none of the answer
+until the answer validates against that document.
 
 ## What it recomputes
 
-For a round of one step with two options:
+For every round it can read, the page runs these checks on what the round
+carries (a round that has not ended, or that was voided or refused, lacks some
+evidence, and the page then shows those checks as not checked):
 
 - **Round id.** The round's `bytes32` id is the one you asked for.
 - **Entropy target.** The round was bound, before the block existed, to block N
@@ -29,7 +33,7 @@ For a round of one step with two options:
   1; the page then shows a "chain check not independent (development)" indicator
   beside the check.
 
-And, under kernelVersion 1:
+And, for a round of one step with two options, under kernelVersion 1:
 
 - **Commitment and reveal.** `roundSecretHash` is the SHA-256 of the revealed
   round secret's 32 bytes, and `seedHash` is the SHA-256 of the revealed seed's
@@ -40,13 +44,26 @@ And, under kernelVersion 1:
   drawn with Keccak-256 from the seed; it must equal the round's losing index,
   and the player's pick against it must give the round's status (`won` or
   `lost`). A `canceled` round's seed and losing side are recomputed and shown,
-  with no status to compare.
+  with no status to compare; a `canceled` round that carries neither reveal
+  shows these two checks as "not checked".
+
+A round of another shape is reported as not recomputable: the page shows the
+first list of checks and runs neither derivation.
 
 SHA-256 comes from the browser's Web Crypto, and Keccak-256 from
 `@intraverse/se-client-signing`. Every derivation is keyed on the round's kernel
 version: a round of a version this page does not implement is reported as not
 recomputable, and nothing is derived for it. The derivations replay the kernel's
 public vectors.
+
+## What it shows without checking
+
+The page labels as not checked the payout amount and its terms, the round's
+player key (`newRound.actionKey`, which the page has no player key to compare
+with), and, when the evidence carries them, the on-chain record, a ZK proof's
+status, and links from the evidence, which are shown as text. The vendored
+verify API document has no field for the on-chain record, the proofs, or such
+links today: its checks for the record and the proofs are "not available yet".
 
 The page holds no key, no token, and no session, and it never loads the code
 that holds the player's key.
