@@ -101,21 +101,22 @@ Part of the [Wrapper spec](../wrapper.md), section
   after a move, or of a round that is not `active`, is a 422
   `FAILED_PRECONDITION`; a cancel the engine refuses (a wrong signer, sequence,
   or `previous`) is a 400 `INVALID_ARGUMENT` and leaves the round `active`, as
-  the Play API document states. The kit declines that document's "a corrected
-  cancel may follow": the shell MUST NEVER sign a second cancel at `(round, 1)`
-  (W-15; decided by human review, 2026-10-17): after a refused cancel, a 400
-  included, it reads the Snapshot and signs nothing at that sequence again, so
-  the round ends by its expiry rule unless the Snapshot shows the cancel applied
-  (`canceled`). A cancel is not answered from a log as a repeated move is (a
-  cancel sent again after it was accepted, or while the round is `resolving`, is
-  answered 422 `FAILED_PRECONDITION`, and a 503 `UNAVAILABLE` may come with the
-  cancel already stored): after a lost send (no answer, or a 503 not marked
-  `retryable: false`, a bare 503 included: W-16's one definition, decided in
-  human review, 2026-10-18), the shell MUST read the Snapshot
-  (`GET /play/v1/snapshot`) before it sends the same signed cancel again, and
-  `play-client` never repeats it on its own. When that read shows the round
-  still `active` with no move (and its `CreateRoundAuth` not re-issued), the
-  shell sends the same signed cancel bytes again, once, with the same
+  the Play API document states: a stale cancel stays a 400, while a stale move
+  or cash-out is a 409 `STALE_ACTION`. The kit declines that document's "a
+  corrected cancel may follow": the shell MUST NEVER sign a second cancel at
+  `(round, 1)` (W-15; decided by human review, 2026-10-17): after a refused
+  cancel, a 400 included, it reads the Snapshot and signs nothing at that
+  sequence again, so the round ends by its expiry rule unless the Snapshot shows
+  the cancel applied (`canceled`). A cancel is not answered from a log as a
+  repeated move is (a cancel sent again after it was accepted, or while the
+  round is `resolving`, is answered 422 `FAILED_PRECONDITION`, and a 503
+  `UNAVAILABLE` may come with the cancel already stored): after a lost send (no
+  answer, or a 503 not marked `retryable: false`, a bare 503 included: W-16's
+  one definition, decided in human review, 2026-10-18), the shell MUST read the
+  Snapshot (`GET /play/v1/snapshot`) before it sends the same signed cancel
+  again, and `play-client` never repeats it on its own. When that read shows the
+  round still `active` with no move (and its `CreateRoundAuth` not re-issued),
+  the shell sends the same signed cancel bytes again, once, with the same
   `idempotencyKey`, never a new signature (W-16; decided by human review,
   2026-10-17); when it shows `resolving`, the cancel is settling (below); when
   the read itself fails or shows another round (after a lost send, a 503 marked

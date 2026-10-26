@@ -205,41 +205,42 @@ the storage rule, what may outlive a page, and serializing the key's use. See
   bytes sent again are answered with the round when they were applied (even once
   the round has closed) and processed normally when they were not, so the shell
   still sends the same key and never re-signs. Another action at an accepted
-  sequence is a 409 `STALE_ACTION` (today the backend's own stale refusals still
-  arrive as a 400 `INVALID_ARGUMENT`); either answer to a resend is a refusal
-  (W-19), with no further send. The one resend is shared by every path: the
-  shell's own after the read and any resend the player asks for, so that action
-  is sent at most twice. It never re-signs, never sends that action a third
-  time, never resends once a read showed it applied, the step moved on, or the
-  round no longer `active`, and never in a state that takes no resend (W-19's
-  hold, a failed check, out of sync, or the session ended). A re-issue (W-26)
-  does not stop it: the resend is not a new signature, so a move or a cash-out
-  already signed is never stranded. The cancel flow differs on purpose: after a
-  re-issue it resends nothing (W-25). If the resend fails too, the action stays
-  pending, nothing new is signed at that sequence, and the round ends as this
-  item says (by a read that shows it applied, or by its expiry rule). While the
-  round is still `active` with that move or cash-out neither applied nor
-  refused, the Wrapper shows it as **not confirmed** (decided in human review,
-  2026-10-19; the session's `RoundState.unconfirmed`), never as a plain round in
-  play: "Your move hasn't been confirmed" (or "Your cash-out hasn't been
-  confirmed"), "If it never arrives, the round ends by its time limit.", the
-  round id, and "Check again". The expiry is text only, with no clock. "Check
-  again" reads the round once (a click while that read is in flight does
-  nothing), and the Wrapper reads it once every 30 s in the background (W-35);
-  neither ever sends or signs anything. A typed error stops the background read,
-  as it stops every poll, until the player tries again or checks again: "Check
-  again", like "Try again", first clears the typed error shown. The game stays
-  waiting. Any read that settles the round clears the state: the move applied
-  shows the result, and the step moved on or the round ended follow their usual
-  rules. Only a lost resend gives the state: a resend answered with a 503 marked
-  `retryable: false` keeps the handling above. A `PlayerCancel` is the
-  exception: the backend does not answer a repeated cancel from a log, so the
-  shell sends a cancel again only after it read the Snapshot (W-25), never as a
-  blind resend, and only when that read showed the round `active` with no move:
-  a read that fails instead puts the cancel in settling, and the resend is
-  forgone; after the resend, a second unknown outcome and an `active` read with
-  no move put it in settling too, with no third send, and so does a re-issued
-  `active` read with no move after an unknown outcome (W-25).
+  sequence is a 409 `STALE_ACTION`, as is a wrong `sequence` or `previous` (the
+  Play API document since se-backend `9ffdcc0`); either a 409 or a 400
+  `INVALID_ARGUMENT` to a resend is a refusal (W-19), with no further send. The
+  one resend is shared by every path: the shell's own after the read and any
+  resend the player asks for, so that action is sent at most twice. It never
+  re-signs, never sends that action a third time, never resends once a read
+  showed it applied, the step moved on, or the round no longer `active`, and
+  never in a state that takes no resend (W-19's hold, a failed check, out of
+  sync, or the session ended). A re-issue (W-26) does not stop it: the resend is
+  not a new signature, so a move or a cash-out already signed is never stranded.
+  The cancel flow differs on purpose: after a re-issue it resends nothing
+  (W-25). If the resend fails too, the action stays pending, nothing new is
+  signed at that sequence, and the round ends as this item says (by a read that
+  shows it applied, or by its expiry rule). While the round is still `active`
+  with that move or cash-out neither applied nor refused, the Wrapper shows it
+  as **not confirmed** (decided in human review, 2026-10-19; the session's
+  `RoundState.unconfirmed`), never as a plain round in play: "Your move hasn't
+  been confirmed" (or "Your cash-out hasn't been confirmed"), "If it never
+  arrives, the round ends by its time limit.", the round id, and "Check again".
+  The expiry is text only, with no clock. "Check again" reads the round once (a
+  click while that read is in flight does nothing), and the Wrapper reads it
+  once every 30 s in the background (W-35); neither ever sends or signs
+  anything. A typed error stops the background read, as it stops every poll,
+  until the player tries again or checks again: "Check again", like "Try again",
+  first clears the typed error shown. The game stays waiting. Any read that
+  settles the round clears the state: the move applied shows the result, and the
+  step moved on or the round ended follow their usual rules. Only a lost resend
+  gives the state: a resend answered with a 503 marked `retryable: false` keeps
+  the handling above. A `PlayerCancel` is the exception: the backend does not
+  answer a repeated cancel from a log, so the shell sends a cancel again only
+  after it read the Snapshot (W-25), never as a blind resend, and only when that
+  read showed the round `active` with no move: a read that fails instead puts
+  the cancel in settling, and the resend is forgone; after the resend, a second
+  unknown outcome and an `active` read with no move put it in settling too, with
+  no third send, and so does a re-issued `active` read with no move after an
+  unknown outcome (W-25).
 - **W-17.** `PlayerCancel` and the first `PlayerAction` of a round are both at
   sequence 1. After the shell signs one, it MUST NOT sign the other for that
   round (signing both is equivocation).
@@ -678,7 +679,7 @@ spec for everything else.
 | `T_0`: its encoding and where the shell gets its inputs                     | Published: `keccak256(abi.encode(created, seedHash))`, recomputed from the Snapshot's `proofs` (W-18; W-26, check 5).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | the vectors for the above                                                   | `PlayerAction`, `PlayerCashOut`, and `PlayerCancel`: the signing vectors (since contracts release 1.0.0, with a `PlayerCancel` type hash and a `player-cancel` round); `PlayerCancel` also: the independent signer's `signed-action/coinflip-cancel` Snapshot vector (#41). All are vendored in `contracts`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | the `typedData` bytes the Play API passes to the engine                     | The canonical Protocol v1 encoding of `ActionTypedData`, in base64, as the vendored Play API document states it; the engine accepts only that encoding. Published: the canonical encoding is implemented by `signing`'s `encodeTypedData` and pinned by the vendored `typed-data/` vectors ([The cryptography](./client-kit/the-cryptography.md)).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| the backend's rejections and their stable error codes                       | A refused action changes nothing. The player sees `INVALID_ARGUMENT` (400) for a malformed, wrongly typed, unsigned, non-canonical, wrongly signed, or illegal action. Today both documents answer a wrong `sequence` or `previous` with a 400 `INVALID_ARGUMENT`; the signed-action specification's checks table still names `STALE_ACTION` (409) for those checks, a mapping not yet made. W-19 handles either. A 409 `STALE_ACTION` is sent only when a move or a cash-out comes with another action at a sequence already accepted; a cancel never answers 409. A repeated move or cash-out is answered from the request log; a cancel never is, and a repeat of an accepted cancel is a 422 `FAILED_PRECONDITION`. The kit's rules follow them: after a 400 or a 409 to a signed move or cash-out, the shell reads the Snapshot before it signs anything else for the round (W-19), and after a lost send of a cancel (no answer, or a 503 not marked `retryable: false`) it reads the Snapshot before it sends the same cancel again (W-16, W-25).                              |
+| the backend's rejections and their stable error codes                       | A refused action changes nothing. The player sees `INVALID_ARGUMENT` (400) for a malformed, wrongly typed, unsigned, non-canonical, wrongly signed, or illegal action. The Play API document answers a move or a cash-out signed for a state the round has left (another action at a sequence already accepted, or a wrong `sequence` or `previous`) with a 409 `STALE_ACTION`; a stale cancel is a 400 `INVALID_ARGUMENT`, and a cancel never answers 409. W-19 handles both codes alike. A repeated move or cash-out is answered from the request log; a cancel never is, and a repeat of an accepted cancel is a 422 `FAILED_PRECONDITION`. The kit's rules follow them: after a 400 or a 409 to a signed move or cash-out, the shell reads the Snapshot before it signs anything else for the round (W-19), and after a lost send of a cancel (no answer, or a 503 not marked `retryable: false`) it reads the Snapshot before it sends the same cancel again (W-16, W-25).                                                                                                       |
 
 The shell rules restated in this spec (so the Wrapper can be reviewed without
 the signed-action spec): never sign two actions at one sequence; track `T_n`;

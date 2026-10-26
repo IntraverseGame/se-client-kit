@@ -95,8 +95,9 @@ describe("the read after a lost move (W-16)", () => {
   });
 
   // The backend recognises a repeat by its signed action (sequence and bytes)
-  // in the round's action log; another action at an accepted sequence is a 409
-  // (today's stale refusals still arrive as a 400). Either answer to the
+  // in the round's action log; another action at an accepted sequence, or a wrong
+  // sequence or `previous`, is a 409 (a 400 stays possible: a cancel, or an
+  // engine refusal that is not stale, still answers 400). Either answer to the
   // resend is a refusal (W-19): no further send, and the read decides.
   it.each([
     [409, "STALE_ACTION"],

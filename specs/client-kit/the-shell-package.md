@@ -488,8 +488,9 @@ are in brackets.
     its struct hash), `not-applied`, `closed` (`won`, `lost`, or `canceled`: the
     round takes no more signatures), or `out-of-sync` (progress the shell did
     not sign: it stops).
-  - **A refused move or cash-out (W-19).** After a 400 `INVALID_ARGUMENT` or a
-    409 `STALE_ACTION`, `stale` holds all signing for the round, the resend
+  - **A refused move or cash-out (W-19).** After a 409 `STALE_ACTION` (another
+    action at an accepted sequence, or a wrong `sequence` or `previous`) or a
+    400 `INVALID_ARGUMENT`, `stale` holds all signing for the round, the resend
     included, until the next Snapshot of the round decides (a `resolving` one
     decides nothing): when it shows the shell's own pending action applied, the
     outcome is adopted (`T` advances to it, the phase is `adopted`) and the
@@ -596,9 +597,9 @@ are in brackets.
     out of sync, the round not `active`, or the session ended); it never leads
     to another send or signature, so the session's `checkAgain` (then `read`) is
     a read only.
-  - **Resynchronization (W-19).** A 400 `INVALID_ARGUMENT` or a 409
-    `STALE_ACTION` calls `stale` and reads the Snapshot; when the read fails,
-    the round stays held until a later read decides.
+  - **Resynchronization (W-19).** A 409 `STALE_ACTION` or a 400
+    `INVALID_ARGUMENT` calls `stale` and reads the Snapshot; when the read
+    fails, the round stays held until a later read decides.
   - **The required cancel (W-25, W-26).** When the verdict's `cancel` is set,
     the flow signs `PlayerCancel` once and sends it on `cancelRound` (never
     repeated by the transport); nothing is ever signed at sequence 1 again. The
