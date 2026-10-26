@@ -704,11 +704,12 @@ On acceptance (and not before):
 Additive. The existing three projects, their default, their blocks, and their
 specs do not change, except that each gains a `testIgnore` for `preview/**`, and
 the config reads the preview variables only under the marker. `pending.spec.ts`
-loses its T-12 entry when the fake or the preview row runs (per Q8, the fake row
-ships in a follow-up); the file's comment and its list shrink accordingly. The
-backend job has nothing to migrate: it has no preview run today. After the pin
-exists, the variable names are an interface; a rename is a recorded change in
-the runbook's table and a bump of the pin in the same backend pull request.
+loses its T-12 entry when the fake row runs (per Q8, the fake row waits for the
+backend's vendored Cash or Crash signed chain); the file's comment and its list
+shrink accordingly. The backend job has nothing to migrate: it has no preview
+run today. After the pin exists, the variable names are an interface; a rename
+is a recorded change in the runbook's table and a bump of the pin in the same
+backend pull request.
 
 ## Decisions (2026-10-26)
 
@@ -728,9 +729,28 @@ approval of it as a whole.
 | Q5    | Chromium only.                                                                                                                                                                                                              | Decided.                               |
 | Q6    | The runner hands the stack and the project the same pin (primary check). The hashed-asset comparison is best-effort and optional; a mismatch is reported in the run report and **does not fail** the run.                   | Decided.                               |
 | Q7    | One per-test random action key from Node, scripted into the key draw; never the public vector key.                                                                                                                          | Decided.                               |
-| Q8    | The fake T-12 from the vendored `cashorcrash-*` vectors is a follow-up pull request; `pending.spec.ts` keeps T-12 until then.                                                                                               | Decided.                               |
+| Q8    | The hermetic (fake) T-12 is deferred until the backend's vendored Cash or Crash signed chain lands (see below); `pending.spec.ts` keeps T-12 until then.                                                                    | Decided.                               |
 | Q9    | Preview T-12 is the cash-out only; the last-surviving-move half is not played against the stack.                                                                                                                            | Decided.                               |
 | Q10   | W-29 is confirmed when the `version` helper passes on the backend's run; the documenter then removes the interim limit, citing the evidence.                                                                                | Decided.                               |
+
+Q8, what is missing today: the vendored Cash or Crash `[3,3,4]` Snapshots in
+`valid/` start at step 1, so there is no active Snapshot at step 0. The active
+Snapshot after the first row (`cashorcrash-active-row2`) exists, but its
+`fairnessProof` carries `seedHash` and no `readyHash` (so the shell refuses the
+round at W-26 check 5), and it is not on a signed chain. The resolving and won
+(cash-out) Snapshots exist in `valid/` (`cashorcrash-resolving-row2`,
+`cashorcrash-won-cashout*`), but they are not on one consistent signed chain
+with a `readyHash`. No signed chain (typed-data or signed action) exists for the
+round, and the existing typed-data cash-out and pick-multi-path vectors belong
+to the `signing.json` round, not to the Cash or Crash round, so they do not
+cover it. The set the backend adds, tracked by the backend, must contain the
+step-0 active Snapshot with `readyHash`, the after-first-row active Snapshot
+re-issued with `readyHash`, the resolving and won (cash-out) Snapshots re-issued
+on that one signed chain, typed-data for the pick and the cash-out of the Cash
+or Crash round, and a signed-action cash-out vector with its test key. The
+fake's rule stays: every answer is an unmodified vendored `valid/` vector. Until
+that set is vendored, cash-out is covered only by the preview T-12, which is the
+backend job's.
 
 Confirmed by the backend on 2026-10-26 (answers, not decisions of the human):
 

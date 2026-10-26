@@ -7,9 +7,9 @@
 // `se.operator/1` contract (W-49 to W-49f, #42), runs in the Chromium,
 // Firefox, and WebKit projects (t9a-embedding, t9a-navigations, and
 // t9a-operator-round). What is left is T-12's fake row: the reference game plays
-// any `steps` round now (RFC-002), and the row on the vendored `cashorcrash-*`
-// vectors is a follow-up pull request (RFC-002, Q8). T-12 has its preview row
-// (preview/t12-cash-out.spec.ts), run by the backend's job.
+// any `steps` round now (RFC-002), but the row waits for the backend's Cash or
+// Crash signed chain to be vendored in `contracts` (RFC-002, Q8). T-12 has its
+// preview row (preview/t12-cash-out.spec.ts), run by the backend's job.
 // When a row becomes runnable, it moves to its own spec file with a real body
 // on the harness (fixtures.ts) and leaves this list.
 
@@ -18,7 +18,7 @@ import { test } from "./harness/fixtures.ts";
 const PENDING: readonly (readonly [string, string])[] = [
   [
     "T-12",
-    "a cash-out on a multi-step game, and the last surviving move (the fake row on the vendored cashorcrash-* vectors; follow-up, RFC-002 Q8)",
+    "a cash-out on a multi-step game, and the last surviving move (the fake row is blocked until the backend's vendored Cash or Crash signed chain lands, RFC-002 Q8)",
   ],
 ];
 
