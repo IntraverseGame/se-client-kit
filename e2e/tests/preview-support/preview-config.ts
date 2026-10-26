@@ -30,23 +30,44 @@ export const PREVIEW_PROJECT = "preview";
 export const PREVIEW_SCRIPT = "pnpm test:e2e:preview";
 
 /**
- * Per test: a real stack and a real clock, with a bounded loop of rounds. <!--
- * TODO(preview stack): measure on the first run; 5 minutes is the starting
- * point -->
+ * Per test: a real stack and a real clock, with a bounded loop of rounds. The
+ * first real run took 1.3 to 1.6 s per preview spec, so 2 minutes is about 75
+ * times the slowest, headroom for a cold stack (see the runbook, "Timeouts").
  */
-export const PREVIEW_TEST_TIMEOUT_MS = 5 * 60 * 1000;
+export const PREVIEW_TEST_TIMEOUT_MS = 2 * 60 * 1000;
 
 /**
- * The whole run, in place of the fake projects' CI bound of 10 minutes. <!--
- * TODO(preview stack): measure on the first run -->
+ * The whole run. The first real run took 19 s in all, so 15 minutes is about 47
+ * times that, and above the fake projects' CI bound of 10 minutes, as the RFC
+ * has it (three tests that each use their 2 minutes still fit).
  */
-export const PREVIEW_GLOBAL_TIMEOUT_MS = 30 * 60 * 1000;
+export const PREVIEW_GLOBAL_TIMEOUT_MS = 15 * 60 * 1000;
 
 /** The global setup, relative to `playwright.config.ts`. */
 export const PREVIEW_GLOBAL_SETUP = "./tests/preview-support/global-setup.ts";
 
-/** The preview specs and nothing else, relative to the config's `testDir`. */
-export const PREVIEW_TEST_MATCH = "preview/**/*.spec.ts";
+const escapeForRegExp = (text: string): string =>
+  text.replaceAll(/[$()*+.?[\\\]^{|}]/gu, "\\$&");
+
+/**
+ * The preview specs and nothing else: every `*.spec.ts` under `preview/` of
+ * `testDirectory` (an absolute path). The fake projects ignore the same
+ * pattern, so one definition says which specs are the preview's.
+ *
+ * It is a regular expression anchored to the absolute path of the directory,
+ * not a glob string. Playwright matches a string pattern against the absolute
+ * path of the file with `**` in front of it, so `"preview/**"` also matches any
+ * checkout whose own path has a `preview` directory (a runner may check the kit
+ * out anywhere): every spec would then be a preview spec, and the fake projects
+ * would run none. A path with a glob character in it would be matched wrongly
+ * too. The expression is escaped, and Playwright converts a Windows path to
+ * forward slashes before it tests one.
+ */
+export const previewSpecPattern = (testDirectory: string): RegExp =>
+  new RegExp(
+    `^${escapeForRegExp(testDirectory.replaceAll("\\", "/"))}/preview/.*\\.spec\\.ts$`,
+    "u",
+  );
 
 export type PreviewSetup =
   | { readonly active: false }

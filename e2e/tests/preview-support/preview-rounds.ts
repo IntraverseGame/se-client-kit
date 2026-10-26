@@ -17,10 +17,10 @@ import type { RoundOutcome } from "./round-loop.ts";
 
 /**
  * How long the stack may take to answer a step of a round (the round's
- * preparation, the chain read, the settlement), in real time. <!-- TODO(preview
- * stack): measure on the first run -->
+ * preparation, the chain read, the settlement), in real time: a quarter of a
+ * test's timeout, since a test waits for several steps (runbook, "Timeouts").
  */
-export const STACK_STEP_TIMEOUT_MS = 90_000;
+export const STACK_STEP_TIMEOUT_MS = 30_000;
 
 const stack = { timeout: STACK_STEP_TIMEOUT_MS } as const;
 

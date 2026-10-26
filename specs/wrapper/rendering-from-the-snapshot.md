@@ -19,15 +19,17 @@ Part of the [Wrapper spec](../wrapper.md), section
   object of `se.snapshot/1` is closed (the allow-list), so a new field or status
   reaches the Wrapper only with a kit that has synced the new schema. The
   Wrapper also ignores a Snapshot whose `version` equals the last accepted one
-  (it carries nothing new). **Interim limit.** Until the backend's per-session
-  counter lands, `version` is not yet the monotonic counter the Play API
-  document and the Snapshot schema describe: a later read can carry a lower
-  `version` than the one last shown. The Wrapper drops it as above: it is
-  neither an error nor newer state, and a later read shows the current state.
-  Where a poll runs, a drop delays a newer balance or status by one read; where
-  none runs (an action's answer to an `active` round, or the start's answer from
-  an ended round), the Wrapper reads the Snapshot again until a read is taken
-  (W-35's re-read after a drop), so the state it shows catches up.
+  (it carries nothing new). `version` is the per-session counter the Play API
+  document and the Snapshot schema describe: the first run of the e2e suite's
+  preview mode against a real stack (a win, a loss, and a cash-out) saw no
+  `version` go down among responses that did not overlap in time. A response can
+  still arrive after a newer one when two requests overlap; the Wrapper drops it
+  as above: it is neither an error nor newer state, and a later read shows the
+  current state. Where a poll runs, a drop delays a newer balance or status by
+  one read; where none runs (an action's answer to an `active` round, or the
+  start's answer from an ended round), the Wrapper reads the Snapshot again
+  until a read is taken (W-35's re-read after a drop), so the state it shows
+  catches up.
 - **W-30.** The Wrapper MUST declare its capabilities when the session starts:
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
   six of R3 and `canceled`, which the cancel path needs).

@@ -111,8 +111,7 @@ export const test = base.extend<PreviewFixtures>({
       sources: [keyDrawSecrets(randomDraws)],
     });
     await use(session);
-    // W-29: with the backend's counter, a version never goes down among
-    // responses that did not overlap (the interim limit is removed on this).
+    // W-29: a version never goes down among responses that did not overlap.
     expect(
       versionDecreases(session.versions()),
       "Snapshot versions that went down",

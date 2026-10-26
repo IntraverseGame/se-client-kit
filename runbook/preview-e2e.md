@@ -82,7 +82,7 @@ which credentials, is the backend's.
 - **Called** once per session a test opens, immediately before the navigation,
   with one argument: the game id, `coin-flip` or `cash-or-crash`. These two ids
   are the kit's own labels; the hook maps them to its games. It is run without a
-  shell, with standard input closed and standard error dropped, a timeout of 30
+  shell, with standard input closed and standard error dropped, a timeout of 15
   s (on the timeout the child's whole process group is killed), and a bounded
   output (4 KiB). It receives the runner's environment plus
   `SE_E2E_PREVIEW_ORIGIN`.
@@ -112,9 +112,30 @@ the runner's.
   origin only).
 - `pnpm test:e2e:preview` exits 0 with three specs passed, and the secret scan
   at the end of each is clean. W-29's version helper ran with each: a Snapshot
-  `version` never went down among responses that did not overlap. That passing
-  on the backend's run is the evidence that removes W-29's interim limit (the
-  documenter does it, citing the run).
+  `version` never went down among responses that did not overlap. The first real
+  run (below) showed it, and W-29's interim limit is removed.
+- **The first real run** was the backend's, at kit commit `9c305bbd`, against
+  its preview stack. T-10, T-11, and T-12 passed on the real stack (about 1.6 s,
+  1.3 s, and 1.3 s), and so did the preview-guard specs (the environment
+  document check and the Snapshot version helper). The run took 19.1 s in all.
+  The run was not clean on the first try, for one reason that was not the stack:
+  the checkout path had a `preview` directory in it, and the project's selection
+  of specs was a glob that Playwright matches against the file's absolute path,
+  so every spec of the suite counted as a preview spec and ran under the preview
+  project (a hermetic check then saw the preview browser's `EXCLUDE` argument
+  and failed). The fake projects' ignore of the preview specs had the same flaw,
+  and in such a checkout would have ignored every spec. Both are now one pattern
+  anchored to the tests directory's absolute path, so where the repository is
+  checked out changes nothing. Nothing about T-10 to T-12 changed.
+- **Timeouts.** The numbers are measured, not guessed: the test timeout is 2
+  minutes and the run's is 15 minutes (about 75 times the slowest spec and 47
+  times the whole first run, and above the fake projects' bound of 10 minutes),
+  the launch hook's is 15 s, and the wait for one step of a round is 30 s (a
+  quarter of a test's), so each fits inside the next and a cold stack has
+  generous headroom. Each is one constant: the test and run timeouts in
+  `preview-config.ts`, the hook's in `launch-hook.ts`, the step's in
+  `preview-rounds.ts`. The browser's four names (`PATH`, `HOME`, `TMPDIR`,
+  `LANG`) were enough for a headless Chromium on the backend's runner.
 - The hermetic proof of the mode itself needs no stack: `pnpm test:e2e` runs
   `e2e/tests/preview-guard/`, and `pnpm test` runs `tools/e2e-preview-*.test.ts`
   (the script closure, the config, the import boundary, the launcher, and that
@@ -126,7 +147,13 @@ the runner's.
 once it exists, the release version that commit corresponds to. A branch name or
 a tag alone is not a pin.
 
-<!-- TODO(preview stack): the first pin is the merge commit of the pull request that implements RFC-002, known only after it merges; record it here and hand it to the backend. -->
+The pin is a kit commit at or after the pull request that made the preview
+project select its specs by an anchored pattern (the fix in the **Changes**
+table below). An earlier commit run from a checkout path that has a `preview`
+directory in it runs every spec under the preview project. The runner may place
+the checkout anywhere, a path with a `preview` directory included.
+
+<!-- TODO(preview stack): once that pull request merges, replace this comment with the sentence "The current pin is the merge commit <full 40-character SHA>, which contains the spec-selection fix." and hand the SHA to the backend. -->
 
 What the job does at the pin: check out the SHA; install the pinned toolchain
 and `pnpm install --frozen-lockfile`; install Playwright's Chromium; start or
@@ -147,9 +174,10 @@ Every rename of a variable, every change of the hook's contract, and every
 change of the assertions that needs something new from the stack is recorded
 here with the commit that did it.
 
-| Commit                                                    | Change                                                                                                                                                                                                                                 |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <!-- TODO(preview stack): the merge commit of RFC-002 --> | The mode is added: the `preview` project and `pnpm test:e2e:preview`; `SE_E2E_PREVIEW_ORIGIN`, `SE_E2E_PREVIEW_LAUNCH_COMMAND`, `SE_E2E_PREVIEW_GAME_ORIGIN`, `SE_E2E_PREVIEW_ALLOWED_ORIGINS`; the launch hook; T-10, T-11, and T-12. |
+| Commit                                            | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `9c305bbd` (the merge commit of RFC-002)          | The mode is added: the `preview` project and `pnpm test:e2e:preview`; `SE_E2E_PREVIEW_ORIGIN`, `SE_E2E_PREVIEW_LAUNCH_COMMAND`, `SE_E2E_PREVIEW_GAME_ORIGIN`, `SE_E2E_PREVIEW_ALLOWED_ORIGINS`; the launch hook; T-10, T-11, and T-12.                                                                                                                                                                                                                                                                  |
+| The pull request that anchored the spec selection | The first real run passed T-10 to T-12. The preview project's `testMatch` and the fake projects' `testIgnore` are one regular expression anchored to the tests directory's absolute path, no longer a glob (a checkout path with a `preview` directory matched every spec); the timeouts are tightened to measured values (test 2 minutes, run 15 minutes, hook 15 s, step 30 s). No variable or hook contract changed, apart from the hook's timeout of 15 s. The pin must be at or after this commit. |
 
 ## Troubleshooting
 
@@ -177,7 +205,7 @@ here with the commit that did it.
   sit in an RPC path. Add the origin to the list if it is meant.
 - **`the launch hook failed (<reason>)`.** `start`: the executable could not be
   started (not found, not executable). `exit`: it exited non-zero (the code is
-  given) or was signalled. `timeout`: no answer in 30 s. `output`: more than 4
+  given) or was signalled. `timeout`: no answer in 15 s. `output`: more than 4
   KiB. `line`: the line is not the one launch URL described above (the origin,
   `/`, no query, no credentials, a fragment of 1 to 128 characters). None of
   them shows what the hook printed.

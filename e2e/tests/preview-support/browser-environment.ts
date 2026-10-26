@@ -9,8 +9,9 @@
 import type { EnvironmentSource } from "./preview-environment.ts";
 
 /**
- * The names the browser may receive. <!-- TODO(preview stack): confirm on the
- * first run what a headless Chromium on the runner needs -->
+ * The names the browser may receive. These four were enough for a headless
+ * Chromium to start on the backend's runner in the first real run. A name is
+ * added only for a runner that needs one (runbook, Troubleshooting).
  */
 export const BROWSER_ENVIRONMENT_NAMES: readonly string[] = Object.freeze([
   "PATH",

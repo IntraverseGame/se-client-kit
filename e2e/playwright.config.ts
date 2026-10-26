@@ -1,3 +1,5 @@
+import { join } from "node:path";
+
 import { defineConfig, devices } from "@playwright/test";
 
 import {
@@ -9,8 +11,8 @@ import {
   PREVIEW_GLOBAL_SETUP,
   PREVIEW_GLOBAL_TIMEOUT_MS,
   PREVIEW_PROJECT,
-  PREVIEW_TEST_MATCH,
   PREVIEW_TEST_TIMEOUT_MS,
+  previewSpecPattern,
   previewSetup,
 } from "./tests/preview-support/preview-config.ts";
 
@@ -36,6 +38,13 @@ import {
 const preview = previewSetup(process.env, process.argv);
 const channel = process.env["SE_E2E_BROWSER_CHANNEL"];
 
+// The specs' directory as an absolute path, and the preview specs under it. The
+// project's `testMatch` and the fake projects' `testIgnore` are this one
+// pattern, anchored to the directory, so where the repository is checked out
+// (a path with a `preview` directory in it, say) changes nothing.
+const TEST_DIRECTORY = join(import.meta.dirname, "tests");
+const PREVIEW_SPECS = previewSpecPattern(TEST_DIRECTORY);
+
 // On CI only, the whole run is bounded, so a hang (a test, or its teardown,
 // that outlives its own timeout) fails the job with Playwright's report
 // instead of running until the job's 30-minute timeout. 10 minutes is well
@@ -46,7 +55,7 @@ const CI_GLOBAL_TIMEOUT_MS = 10 * 60 * 1000;
 const onCi = process.env["CI"] !== undefined && process.env["CI"] !== "";
 
 export default defineConfig({
-  testDir: "./tests",
+  testDir: TEST_DIRECTORY,
   forbidOnly: true,
   ...(preview.active
     ? {
@@ -69,7 +78,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: "preview/**",
+      testIgnore: PREVIEW_SPECS,
       use: {
         ...devices["Desktop Chrome"],
         // No host name resolves: traffic outside a route reaches no host.
@@ -79,7 +88,7 @@ export default defineConfig({
     },
     {
       name: "firefox",
-      testIgnore: "preview/**",
+      testIgnore: PREVIEW_SPECS,
       use: {
         ...devices["Desktop Firefox"],
         // Outside a route, a dead proxy; no WebRTC (browser-flags.ts).
@@ -91,7 +100,7 @@ export default defineConfig({
     },
     {
       name: "webkit",
-      testIgnore: "preview/**",
+      testIgnore: PREVIEW_SPECS,
       use: {
         ...devices["Desktop Safari"],
         // Outside a route, a dead proxy (browser-flags.ts).
@@ -102,7 +111,7 @@ export default defineConfig({
       ? [
           {
             name: PREVIEW_PROJECT,
-            testMatch: PREVIEW_TEST_MATCH,
+            testMatch: PREVIEW_SPECS,
             timeout: PREVIEW_TEST_TIMEOUT_MS,
             retries: 0,
             use: {

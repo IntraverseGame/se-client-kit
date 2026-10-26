@@ -631,7 +631,7 @@ backend repository.
 - **The launch hook.** Called once per session a test opens, as
   `<command> <game id>` with `coin-flip` or `cash-or-crash` (the kit's own
   labels for the backend to map), without a shell, with standard input closed
-  and standard error dropped, a timeout (30 s) that kills the child's whole
+  and standard error dropped, a timeout (15 s) that kills the child's whole
   process group, and a bounded output (4 KiB). It receives the runner's
   environment plus `SE_E2E_PREVIEW_ORIGIN`, funds a new player, and prints one
   line: the launch URL, validated exactly (one line, the preview origin, no
@@ -685,8 +685,8 @@ backend repository.
   (OQ-3). The accessibility audit runs on the result state. W-29 is not a row: a
   helper records the `version` of every Snapshot response of a session and,
   among responses that did not overlap another Snapshot response in time,
-  asserts it never decreases; W-29's interim limit is removed when the backend's
-  run passes it.
+  asserts it never decreases. The backend's first real run passed it, and W-29's
+  interim limit is removed.
 - **The secret scan stays on** in every preview test, over every channel it
   reads, with no weaker needle set. The launch code is registered before the
   navigation, the play token when the `sessions:redeem` response is read, and
@@ -717,7 +717,7 @@ backend repository.
   exercises them. `tools/e2e-preview-*.test.ts` (run by `pnpm test`) assert that
   the root `check` script's closure holds neither preview script, that the
   config has no `preview` project without the marker and refuses it, that the
-  fake projects ignore `preview/**` and keep their launch options, that no
+  fake projects ignore the preview specs and keep their launch options, that no
   `harness/` module and no fake-project spec reaches `preview-support/`, and
   that every preview spec awaits a clean secret scan, and that the generic
   routes and the launcher fail as above.
@@ -726,9 +726,24 @@ backend repository.
   alone is not a pin. It moves only by a backend pull request that reads the
   runbook's **Changes** table. The kit records every rename of a variable,
   change of the hook's contract, and change of an assertion that needs something
-  new from the stack. The first pin is the merge commit of the pull request that
-  implements RFC-002, known only after it merges (the runbook records it).
-- **Provisional numbers** (the per-test timeout of 5 minutes, the run timeout of
-  30 minutes, the stack-step timeout of 90 s, the hook timeout, the browser
-  environment names) are marked `TODO(preview stack)` in the code until the
-  first run.
+  new from the stack. The first pin was the merge commit of the pull request
+  that implemented RFC-002; the pin is now a commit at or after the pull request
+  that anchored the spec selection to the tests directory (the runbook records
+  it).
+- **The first real run** (the backend's, at kit commit `9c305bbd`, against its
+  preview stack) passed T-10, T-11, and T-12 and the preview-guard specs in 19.1
+  s in all, each preview spec in 1.3 to 1.6 s. One failure came from the
+  checkout path, which had a `preview` directory in it: Playwright matches a
+  string `testMatch` or `testIgnore` against the file's absolute path, so
+  `preview/**` selected every spec for the preview project (and would have
+  ignored every spec in the fake ones). The project's `testMatch` and the fake
+  projects' `testIgnore` are now one regular expression anchored to the tests
+  directory's absolute path, and `tools/e2e-preview-checkout-path.test.ts` runs
+  Playwright's listing in a copy whose path has a `preview` directory to show
+  the selection is the same wherever the repository is checked out.
+- **The numbers**, set from that run with headroom for a cold stack: the
+  per-test timeout is 2 minutes, the run timeout 15 minutes, the launch hook's
+  15 s, and the wait for one step of a round 30 s; each is one constant
+  (`preview-config.ts`, `launch-hook.ts`, `preview-rounds.ts`). The browser's
+  environment names (`PATH`, `HOME`, `TMPDIR`, `LANG`) were enough on the
+  backend's runner.
