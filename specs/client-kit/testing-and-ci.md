@@ -728,8 +728,8 @@ backend repository.
   change of the hook's contract, and change of an assertion that needs something
   new from the stack. The first pin was the merge commit of the pull request
   that implemented RFC-002; the pin is now a commit at or after the pull request
-  that anchored the spec selection to the tests directory (the runbook records
-  it).
+  that anchored the spec selection to the tests directory, the merge commit
+  `0693bc7961318b500a2fed91f09021128a24b35c` (the runbook records it).
 - **The first real run** (the backend's, at kit commit `9c305bbd`, against its
   preview stack) passed T-10, T-11, and T-12 and the preview-guard specs in 19.1
   s in all, each preview spec in 1.3 to 1.6 s. One failure came from the
