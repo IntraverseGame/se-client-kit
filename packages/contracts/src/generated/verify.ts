@@ -72,7 +72,7 @@ export type components = {
       /** @description The config shape chosen at the start; empty when the terms fix it. */
       shape: number[];
       bet: components["schemas"]["Amount"];
-      /** @description What the round credits the player; set on `won` and `lost` only. */
+      /** @description The game's payout for the round, the value the recomputation reproduces; set on `won` and `lost` only. */
       payout?: components["schemas"]["Amount"];
       commitment?: components["schemas"]["Commitment"];
       entropy?: components["schemas"]["Entropy"];
@@ -102,6 +102,7 @@ export type components = {
        * @description The public vector sets of this kernel version.
        * @example [
        *   "kernel/public/v1/seed",
+       *   "kernel/public/v1/shuffle-draw",
        *   "kernel/public/v1/steps-derive",
        *   "kernel/public/v1/derive"
        * ]

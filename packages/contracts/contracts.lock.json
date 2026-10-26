@@ -19,8 +19,8 @@
       "path": "src/schemas/verify.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "verify/v1 OpenAPI document",
-      "sourceCommit": "af3aab46b98d4d937ab5c32f4d97a6236ccecc6d",
-      "sha256": "93c149e93bde07a2487a43c3ec49460d5d96784d3e1f9c4a49be221f5188a318"
+      "sourceCommit": "9ffdcc0a3f5a3b066916ca0a4653288265db6bb1",
+      "sha256": "c1e50560f40fb2a3ea668d73c3485c52f4d320e4da4525bb1ed04862706ea72f"
     },
     {
       "path": "src/vectors/kernel/v1/derive.json",
