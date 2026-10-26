@@ -158,7 +158,7 @@ jobs:
   e2e-fake:
     name: e2e-fake (${{ matrix.project }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: read
     strategy:
@@ -172,9 +172,33 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      - run:
-          pnpm --filter @intraverse/se-client-e2e exec playwright install
-          --with-deps "$SE_E2E_PROJECT"
+      # Installs finish in under a minute at the median but can take many
+      # minutes on a slow mirror, and a stalled download has hung until the job
+      # timeout (PR #129, firefox). The apt timeouts make a stalled download
+      # fail fast (and apt retries it); the cap bounds the total time of one
+      # attempt. One retry, after clearing what a killed attempt left behind;
+      # a second failure or timeout fails the job. coreutils `timeout`, no
+      # extra action or dependency.
+      - name: Install the browser (bounded, one retry)
+        run: |
+          set -euo pipefail
+          printf '%s\n' \
+            'Acquire::http::Timeout "30";' \
+            'Acquire::https::Timeout "30";' \
+            'Acquire::Retries "3";' \
+            'DPkg::Lock::Timeout "60";' |
+            sudo tee /etc/apt/apt.conf.d/99-ci-timeouts >/dev/null
+          install_browser() {
+            timeout --kill-after=15s 10m \
+              pnpm --filter @intraverse/se-client-e2e exec playwright install \
+              --with-deps "$SE_E2E_PROJECT"
+          }
+          install_browser || {
+            echo "::warning::browser install failed or timed out; retrying once"
+            sudo pkill -x apt-get || true
+            sudo dpkg --configure -a || true
+            install_browser
+          }
       - run: pnpm run test:e2e
 
   audit:

@@ -38,10 +38,10 @@ const channel = process.env["SE_E2E_BROWSER_CHANNEL"];
 
 // On CI only, the whole run is bounded, so a hang (a test, or its teardown,
 // that outlives its own timeout) fails the job with Playwright's report
-// instead of running until the job's 20-minute timeout. 10 minutes is well
+// instead of running until the job's 30-minute timeout. 10 minutes is well
 // above a normal run: the slowest `test:e2e` step in recent CI runs, build
 // included, took 92 s (Firefox), and setup and the browser install leave the
-// rest of the job's 20 minutes for it. A local run is not bounded.
+// rest of the job's 30 minutes for it. A local run is not bounded.
 const CI_GLOBAL_TIMEOUT_MS = 10 * 60 * 1000;
 const onCi = process.env["CI"] !== undefined && process.env["CI"] !== "";
 

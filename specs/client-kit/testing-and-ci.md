@@ -45,7 +45,12 @@ a matrix of three jobs side by side, one per Playwright project (`chromium`,
 `firefox`, `webkit`; their checks are named `e2e-fake (chromium)` and so on),
 all required through `ci-ok`, the one check branch protection names; each
 installs only its own browser (`playwright install --with-deps <project>`, at
-the `@playwright/test` version the lockfile pins) and runs only that project
+the `@playwright/test` version the lockfile pins; before it, apt is set to time
+out a stalled download after 30 seconds and retry it three times, and to wait up
+to a minute for the package lock, because the download has hung until the job's
+timeout; each install attempt is bounded to 10 minutes and retried once, after
+clearing what a killed attempt left behind, and a second failure or timeout
+fails the job; the job's limit is 30 minutes) and runs only that project
 (`SE_E2E_PROJECT`, read by the e2e package's `test` script). Each runs the e2e
 harness's own tests, a smoke run on the Wrapper's release bundle, the browser
 rows of the Wrapper's test plan that run on the fake Play API, and a smoke run
@@ -420,7 +425,7 @@ development-only, so it may import the test-only entry of `contracts`.
   whole Playwright run is bounded too (`globalTimeout`, set only when `CI` is
   set): 10 minutes, well above a normal run (the slowest `test:e2e` step in
   recent runs, build included, took 92 s), so a hang that outlives a test's own
-  timeout fails the job with Playwright's report before the job's 20-minute
+  timeout fails the job with Playwright's report before the job's 30-minute
   timeout. A local run is not bounded.
 - **The network control** (T-15): `goOffline` and `goOnline` toggle the
   browser's offline emulation and cut the fake Play API with it; `cutPlayApi`
