@@ -150,9 +150,11 @@ structure below.
   until the next start (726f0a2), so the Wrapper offers the next bet (bet
   selector and start, from that Snapshot's `bet`) beside a round's result, with
   no separate "new round" step; the ended round's id and verify link go once
-  the round the player started from them shows (W-31, W-40). Until the
-  backend's per-session counter lands, a later read can carry a lower
-  `version` than the one last shown; the Wrapper drops it (W-29). Where a poll
+  the round the player started from them shows (W-31, W-40). A
+  response can arrive carrying a lower `version` than the one last shown (a
+  stale or overlapping one; the preview run on a real stack saw the counter
+  never go down among responses that did not overlap); the Wrapper drops it
+  (W-29). Where a poll
   runs, the next read shows the state; where none runs (an action's answer to
   an `active` round, the start's answer from an ended round), the Wrapper
   re-reads (`snapshot-reread.ts`, W-35): 4 reads at the backoff, then one

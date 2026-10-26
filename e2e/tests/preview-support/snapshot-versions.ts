@@ -1,12 +1,12 @@
-// The W-29 check against the real stack (RFC-002, Q10). Until the backend's
-// per-session counter lands, a Snapshot's `version` is not monotonic: a later
-// read can carry a lower one (the interim limit in W-29). The preview run is the
-// one place that can show the counter has landed. This records the `version` of
-// every Snapshot response of a session with the time the request began and the
-// time its response ended, and finds the decreases among responses that did not
-// overlap another Snapshot response in time: with two requests in flight their
-// answers may arrive in either order, which is not the backend's counter going
-// down. Nothing here is a secret, and nothing is logged.
+// The W-29 check against the real stack (RFC-002, Q10). A Snapshot's `version`
+// is a per-session counter that never goes down; the preview run is the one
+// place that can show it does (it did in the first real run, which removed the
+// interim limit W-29 had). This records the `version` of every Snapshot
+// response of a session with the time the request began and the time its
+// response ended, and finds the decreases among responses that did not overlap
+// another Snapshot response in time: with two requests in flight their answers
+// may arrive in either order, which is not the backend's counter going down.
+// Nothing here is a secret, and nothing is logged.
 
 export type VersionRecord = {
   /** A monotonic time, in milliseconds, when the request began. */

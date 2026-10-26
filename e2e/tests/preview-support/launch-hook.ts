@@ -20,10 +20,10 @@ import type { EnvironmentSource } from "./preview-environment.ts";
 export type GameId = "cash-or-crash" | "coin-flip";
 
 /**
- * How long the hook may run. <!-- TODO(preview stack): 30 s is the starting
- * point -->
+ * How long the hook may run: well within one test's timeout, so a hook that
+ * hangs fails as a hook, before the test's own timeout (runbook, "Timeouts").
  */
-export const HOOK_TIMEOUT_MS = 30_000;
+export const HOOK_TIMEOUT_MS = 15_000;
 
 /**
  * The most standard output kept: a launch line is far shorter (a design

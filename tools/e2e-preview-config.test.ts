@@ -2,7 +2,7 @@
 // entry marker the config has no `preview` project, and it throws the refusal
 // when the project is asked for (a bare `--project=preview`, `--project preview`,
 // or `SE_E2E_PROJECT=preview`); with the marker it defines the project, with a
-// global setup and its own bound; the fake projects ignore `preview/**` and keep
+// global setup and its own bound; the fake projects ignore the preview specs and keep
 // the launch options they had (no `env`, no `EXCLUDE`), marker or not; and the
 // preview browser gets the block, the allow-list's hosts, and a minimal
 // environment.
@@ -20,6 +20,7 @@ import {
   restoreProcess,
   suppliedBrowserNames,
   SPAWN_TIMEOUT_MS,
+  testsDirectory,
 } from "./e2e-preview-support.ts";
 
 afterEach(restoreProcess);
@@ -128,16 +129,33 @@ describe("the Playwright config with the marker", () => {
   );
 
   it(
-    "makes the fake projects ignore preview/** and the preview project match only it",
+    "makes the fake projects ignore the preview specs and the preview project match only them, anchored to the tests directory",
     async () => {
       const config = await loadConfig(ENTERED, ["test"]);
+      const pattern = previewProject(config)?.testMatch;
+      expect(pattern).toBeInstanceOf(RegExp);
       expect(fakeProjects(config).map(project => project.testIgnore)).toEqual([
-        "preview/**",
-        "preview/**",
-        "preview/**",
+        pattern,
+        pattern,
+        pattern,
       ]);
-      expect(previewProject(config)?.testMatch).toBe("preview/**/*.spec.ts");
       expect(previewProject(config)?.testIgnore).toBeUndefined();
+      // Anchored to this checkout's tests directory: the preview specs only,
+      // whatever else the path holds (the checkout-path test runs Playwright).
+      const selects = (path: string): boolean => (pattern as RegExp).test(path);
+      expect(selects(`${testsDirectory}/preview/t12-cash-out.spec.ts`)).toBe(
+        true,
+      );
+      expect(selects(`${testsDirectory}/preview/nested/a.spec.ts`)).toBe(true);
+      expect(selects(`${testsDirectory}/preview/helper.ts`)).toBe(false);
+      expect(selects(`${testsDirectory}/preview-guard/a.spec.ts`)).toBe(false);
+      expect(selects(`${testsDirectory}/preview-support/a.spec.ts`)).toBe(
+        false,
+      );
+      expect(selects(`${testsDirectory}/hermetic.spec.ts`)).toBe(false);
+      expect(selects("/runner/preview/kit/e2e/tests/hermetic.spec.ts")).toBe(
+        false,
+      );
     },
     SPAWN_TIMEOUT_MS,
   );

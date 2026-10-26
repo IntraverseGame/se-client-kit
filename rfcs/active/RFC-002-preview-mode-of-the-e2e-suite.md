@@ -8,9 +8,10 @@
   [`specs/wrapper.md`](../../specs/wrapper.md#test-plan) and so AC1, and a check
   of W-29 against se-backend 5769365 or later
 - Relates to: [OQ-3 and OQ-4](../../specs/wrapper.md#decided-questions) (both
-  decided), the two `TODO(preview stack)` markers in
+  decided), the two `TODO(preview stack)` markers that were in
   [`specs/client-kit/testing-and-ci.md`](../../specs/client-kit/testing-and-ci.md#where-the-preview-stack-e2e-runs)
-  and [`specs/client-kit.md`](../../specs/client-kit.md), and
+  and [`specs/client-kit.md`](../../specs/client-kit.md) (resolved by the first
+  real run), and
   [ADR-005](../../decisions/ADR-005-release-attestation-and-artifact-upload.md)
   (proposed)
 
@@ -53,9 +54,10 @@ the third exists. The backend also needs the hook ids (`coin-flip`,
 - The only end-to-end evidence that the Wrapper works against the real Play API,
   real Snapshots, and a real chain read is the backend job. Until it can run,
   AC1 is open.
-- W-29 carries an interim limit: until the backend's per-session counter lands,
-  a Snapshot's `version` is not monotonic. The preview run is the one place that
-  can show the counter has landed, so the interim text can be removed.
+- W-29 carried an interim limit: until the backend's per-session counter landed,
+  a Snapshot's `version` was not monotonic. The preview run was the one place
+  that could show the counter has landed; the first real run did, and the
+  interim text is removed.
 - The kit must not weaken what makes its own suite trustworthy. The preview mode
   is a second, explicit, narrow mode, not a relaxation of the first.
 
@@ -146,9 +148,12 @@ does. It emits nothing beyond Playwright's report (see
 - **Where it lives.** Three directories under `e2e/tests/`:
   - `preview/` holds only the preview specs (for example `t10-win.spec.ts`,
     `t11-loss.spec.ts`, `t12-cash-out.spec.ts`). The preview project has
-    `testDir`-relative `testMatch: "preview/**/*.spec.ts"`; the three fake
-    projects get `testIgnore: "preview/**"`, so a preview spec is never listed
-    in a fake run.
+    `testMatch` for the specs under `preview/`; the three fake projects get the
+    same pattern as `testIgnore`, so a preview spec is never listed in a fake
+    run. The pattern is a regular expression anchored to the tests directory's
+    absolute path, not a glob: Playwright matches a glob against the absolute
+    path, so a checkout path with a `preview` directory in it (found in the
+    first real run) would select every spec.
   - `preview-support/` holds the modules the preview specs and the hermetic
     tests share: the variable parser, `guardPreview`, the launch hook, the
     launch line validator, the environment document check, the browser
@@ -183,15 +188,14 @@ does. It emits nothing beyond Playwright's report (see
   `output`**, so wireit never caches it, and no other script depends on it, so
   `pnpm check` never reaches it. It lists the variables below as `env` entries
   with `external: true`, like `SE_E2E_PROJECT`.
-- **Timeouts (provisional).** A real stack and a real clock: the project sets a
-  per-test timeout for the bounded loop
-  (<!-- TODO(preview stack): measure on the first run; 5 minutes is the starting point -->)
-  and has no injected clock (`page.clock` is not installed). The config today
-  bounds the whole run on CI at 10 minutes (`globalTimeout`), which a real-stack
-  run of three bounded loops would exceed: when the marker is set the config
-  sets its own, larger `globalTimeout`
-  (<!-- TODO(preview stack): measure on the first run -->) and the 10-minute one
-  stays for the fake projects. `retries` stay 0.
+- **Timeouts.** A real stack and a real clock: the project sets a per-test
+  timeout for the bounded loop (2 minutes, set from the first real run, which
+  took 1.3 to 1.6 s per spec; see the runbook) and has no injected clock
+  (`page.clock` is not installed). The config today bounds the whole run on CI
+  at 10 minutes (`globalTimeout`), which a real-stack run of three bounded loops
+  would exceed: when the marker is set the config sets its own `globalTimeout`
+  (15 minutes, about 47 times the first real run of 19 s, and above the fake
+  projects' 10 minutes) and the fake projects keep theirs. `retries` stay 0.
 
 ### Environment variables (decided, Q1; one change, see Decisions)
 
@@ -241,11 +245,11 @@ Alternatives considered for the names and shape:
 The runner's environment can hold credentials the hook needs (the kit neither
 names nor reads them), so what each process receives is stated:
 
-| Process                                         | Receives                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The Node process that runs the config and tests | The runner's environment, as any Node process does. It reads only the `SE_E2E_*` variables above; it never prints, serializes, or forwards the rest.                                                                                                                                                                                                                                                                                                                                           |
-| The launch hook (a child of the Node process)   | The runner's environment, because whatever it needs to fund a player comes from there, plus `SE_E2E_PREVIEW_ORIGIN`.                                                                                                                                                                                                                                                                                                                                                                           |
-| The browser                                     | **A minimal, explicit environment, not the runner's** (decided 2026-10-26). Playwright gives a browser `process.env` unless `launchOptions.env` is set, so the preview project sets `launchOptions.env` to a fixed allow-list of operating-system names the browser needs to start (a starting point: `PATH`, `HOME`, `TMPDIR`, `LANG`; <!-- TODO(preview stack): confirm on the first run what a headless Chromium on the runner needs -->). No `SE_E2E_*`, no proxy variable, no credential. |
+| Process                                         | Receives                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The Node process that runs the config and tests | The runner's environment, as any Node process does. It reads only the `SE_E2E_*` variables above; it never prints, serializes, or forwards the rest.                                                                                                                                                                                                                                                                                                  |
+| The launch hook (a child of the Node process)   | The runner's environment, because whatever it needs to fund a player comes from there, plus `SE_E2E_PREVIEW_ORIGIN`.                                                                                                                                                                                                                                                                                                                                  |
+| The browser                                     | **A minimal, explicit environment, not the runner's** (decided 2026-10-26). Playwright gives a browser `process.env` unless `launchOptions.env` is set, so the preview project sets `launchOptions.env` to a fixed allow-list of operating-system names the browser needs to start (`PATH`, `HOME`, `TMPDIR`, `LANG`; enough for a headless Chromium on the backend's runner in the first real run). No `SE_E2E_*`, no proxy variable, no credential. |
 
 The backend's runner therefore **must not rely on any environment variable
 reaching the browser**. The function that builds the browser's environment is a
@@ -261,12 +265,11 @@ provides. The kit defines only its interface:
 - **Called** once per session a test opens, immediately before the navigation,
   with one argument: the game id, `coin-flip` or `cash-or-crash`. **These two
   ids are the kit's own labels**; the backend's hook maps them to its games. It
-  is run without a shell, with standard input closed, a timeout
-  (<!-- TODO(preview stack): 30 s is the starting point -->), and a bounded
-  output (`maxBuffer`, 4 KiB; a design choice, a launch line is far shorter).
-  The command must be an **absolute path**: the parser refuses a relative one, a
-  name to be found on `PATH`, and one with a NUL; the unit tests use an absolute
-  path to a fixture script too, never a relative name.
+  is run without a shell, with standard input closed, a timeout (15 s), and a
+  bounded output (`maxBuffer`, 4 KiB; a design choice, a launch line is far
+  shorter). The command must be an **absolute path**: the parser refuses a
+  relative one, a name to be found on `PATH`, and one with a NUL; the unit tests
+  use an absolute path to a fixture script too, never a relative name.
 - **The timeout kills the child's whole process group.** The child is started in
   a group of its own (`detached: true`), and on the timeout the suite signals
   the group (`process.kill(-pid, "SIGKILL")`), so a hook that started its own
@@ -491,8 +494,9 @@ PROVISIONAL, <!-- TODO(hosting): the document's final path -->) and:
     or `test:e2e:preview`;
   - the Playwright config, loaded without the marker, has no `preview` project,
     and throws the refusal when `preview` is requested without it;
-  - the fake projects' `testIgnore` covers `preview/**` while the preview
-    project's `testMatch` covers nothing else;
+  - the fake projects' `testIgnore` and the preview project's `testMatch` are
+    the same pattern, anchored to the tests directory, and select the same specs
+    wherever the repository is checked out;
   - **no module under `e2e/tests/harness/` imports from `preview-support/`
     (directly or through another module), and no fake-project spec imports it
     except those under `preview-guard/`** (the import scan runs over the source,
@@ -507,10 +511,10 @@ The kit supplies the facts; the backend's runbook owns the procedure.
 
 **The pin.** A full 40-character commit SHA of this repository's `main`, plus,
 once it exists, the release version that commit corresponds to. A branch name or
-a tag alone is not a pin. The SHA to pin first is the merge commit of the pull
-request that implements this
-RFC; <!-- TODO(preview stack): the commit, after the implementation merges -->.
-The kit does not name it before it exists.
+a tag alone is not a pin. The first pin was the merge commit of the pull request
+that implemented this RFC. The backend's first real run at it passed T-10, T-11,
+and T-12 with one fix to the spec selection (an anchored pattern), so the pin is
+now a commit at or after that fix (the runbook records it).
 
 **What the job does at the pin** (nothing new, the spec already says it):
 
@@ -702,36 +706,36 @@ On acceptance (and not before):
 ## Migration considerations
 
 Additive. The existing three projects, their default, their blocks, and their
-specs do not change, except that each gains a `testIgnore` for `preview/**`, and
-the config reads the preview variables only under the marker. `pending.spec.ts`
-loses its T-12 entry when the fake row runs (per Q8, the fake row waits for the
-backend's vendored Cash or Crash signed chain); the file's comment and its list
-shrink accordingly. The backend job has nothing to migrate: it has no preview
-run today. After the pin exists, the variable names are an interface; a rename
-is a recorded change in the runbook's table and a bump of the pin in the same
-backend pull request.
+specs do not change, except that each gains a `testIgnore` for the preview
+specs, and the config reads the preview variables only under the marker.
+`pending.spec.ts` loses its T-12 entry when the fake row runs (per Q8, the fake
+row waits for the backend's vendored Cash or Crash signed chain); the file's
+comment and its list shrink accordingly. The backend job has nothing to migrate:
+it has no preview run today. After the pin exists, the variable names are an
+interface; a rename is a recorded change in the runbook's table and a bump of
+the pin in the same backend pull request.
 
 ## Decisions (2026-10-26)
 
 Decided by a human on 2026-10-26. They are decisions about this draft, not an
 approval of it as a whole.
 
-| ID    | Decision                                                                                                                                                                                                                    | Status                                 |
-| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Q1    | **A:** project `preview`; `SE_E2E_PREVIEW_ORIGIN`, `_LAUNCH_COMMAND`, `_ALLOWED_ORIGINS`; script `test:e2e:preview`.                                                                                                        | Decided.                               |
-| Q2    | **A:** an executable that prints one launch URL per session.                                                                                                                                                                | Decided.                               |
-| Q3    | **A:** the suite serves the page from the pinned `dist` by a route at the `gameOrigin` the stack gives.                                                                                                                     | Decided. **Confirmed by the backend.** |
-| Q4    | **A:** generalize `apps/reference-game` to any `steps` configuration; no ADR.                                                                                                                                               | Decided.                               |
-| Q-new | The suite serves **both** games' pages (Coin Flip and Cash or Crash) by route at **one shared game origin**, from a single generalized reference-game build; the stack gives that origin as the `gameOrigin` of both games. | Decided.                               |
-| Name  | `SE_E2E_PREVIEW_ENTRY` is the entry marker, and `_SERVED_GAME_ORIGINS` is renamed `SE_E2E_PREVIEW_GAME_ORIGIN` (singular, required, `https:` only).                                                                         | Decided.                               |
-| Entry | Preview is reachable **only** through the dedicated script (`test:e2e:preview`); the generic routes refuse it unless the marker is set.                                                                                     | Decided.                               |
-| Env   | The browser gets a **minimal explicit `launchOptions.env`**; the backend runner must not rely on any variable reaching the browser.                                                                                         | Decided.                               |
-| Q5    | Chromium only.                                                                                                                                                                                                              | Decided.                               |
-| Q6    | The runner hands the stack and the project the same pin (primary check). The hashed-asset comparison is best-effort and optional; a mismatch is reported in the run report and **does not fail** the run.                   | Decided.                               |
-| Q7    | One per-test random action key from Node, scripted into the key draw; never the public vector key.                                                                                                                          | Decided.                               |
-| Q8    | The hermetic (fake) T-12 is deferred until the backend's vendored Cash or Crash signed chain lands (see below); `pending.spec.ts` keeps T-12 until then.                                                                    | Decided.                               |
-| Q9    | Preview T-12 is the cash-out only; the last-surviving-move half is not played against the stack.                                                                                                                            | Decided.                               |
-| Q10   | W-29 is confirmed when the `version` helper passes on the backend's run; the documenter then removes the interim limit, citing the evidence.                                                                                | Decided.                               |
+| ID    | Decision                                                                                                                                                                                                                                   | Status                                 |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| Q1    | **A:** project `preview`; `SE_E2E_PREVIEW_ORIGIN`, `_LAUNCH_COMMAND`, `_ALLOWED_ORIGINS`; script `test:e2e:preview`.                                                                                                                       | Decided.                               |
+| Q2    | **A:** an executable that prints one launch URL per session.                                                                                                                                                                               | Decided.                               |
+| Q3    | **A:** the suite serves the page from the pinned `dist` by a route at the `gameOrigin` the stack gives.                                                                                                                                    | Decided. **Confirmed by the backend.** |
+| Q4    | **A:** generalize `apps/reference-game` to any `steps` configuration; no ADR.                                                                                                                                                              | Decided.                               |
+| Q-new | The suite serves **both** games' pages (Coin Flip and Cash or Crash) by route at **one shared game origin**, from a single generalized reference-game build; the stack gives that origin as the `gameOrigin` of both games.                | Decided.                               |
+| Name  | `SE_E2E_PREVIEW_ENTRY` is the entry marker, and `_SERVED_GAME_ORIGINS` is renamed `SE_E2E_PREVIEW_GAME_ORIGIN` (singular, required, `https:` only).                                                                                        | Decided.                               |
+| Entry | Preview is reachable **only** through the dedicated script (`test:e2e:preview`); the generic routes refuse it unless the marker is set.                                                                                                    | Decided.                               |
+| Env   | The browser gets a **minimal explicit `launchOptions.env`**; the backend runner must not rely on any variable reaching the browser.                                                                                                        | Decided.                               |
+| Q5    | Chromium only.                                                                                                                                                                                                                             | Decided.                               |
+| Q6    | The runner hands the stack and the project the same pin (primary check). The hashed-asset comparison is best-effort and optional; a mismatch is reported in the run report and **does not fail** the run.                                  | Decided.                               |
+| Q7    | One per-test random action key from Node, scripted into the key draw; never the public vector key.                                                                                                                                         | Decided.                               |
+| Q8    | The hermetic (fake) T-12 is deferred until the backend's vendored Cash or Crash signed chain lands (see below); `pending.spec.ts` keeps T-12 until then. The preview T-12 passed on the backend's first real run; only the fake row waits. | Decided.                               |
+| Q9    | Preview T-12 is the cash-out only; the last-surviving-move half is not played against the stack.                                                                                                                                           | Decided.                               |
+| Q10   | W-29 is confirmed when the `version` helper passes on the backend's run; the documenter then removes the interim limit, citing the evidence. Done: the backend's first real run passed the helper, and the limit is removed.               | Decided.                               |
 
 Q8, what is missing today: the vendored Cash or Crash `[3,3,4]` Snapshots in
 `valid/` start at step 1, so there is no active Snapshot at step 0. The active
@@ -766,7 +770,7 @@ a number to measure, or a fact known later.
 | ID  | Item                                                                                                 | State                                                                                                                                                                                                               |
 | --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Q11 | Release artifacts after ADR-005.                                                                     | Out of this RFC. When ADR-005 is accepted: the stack could serve the Wrapper tar by digest with the suite commit-pinned (the recommended direction), or the suite could also be released (its own ADR), or neither. |
-| Q12 | The numbers: per-test timeout, run timeout, hook timeout, funding margin, browser environment names. | Provisional `TODO(preview stack)` markers until the first run; the funding margin is the backend's to set in the hook.                                                                                              |
+| Q12 | The numbers: per-test timeout, run timeout, hook timeout, funding margin, browser environment names. | Set from the first real run (test 2 minutes, run 15 minutes, hook 15 s, step 30 s; the browser names held); the funding margin is the backend's to set in the hook.                                                 |
 | Q13 | The commit to pin.                                                                                   | Known only after the implementation merges (see Pin). The kit hands the backend the merge commit and the runbook's **Changes** table.                                                                               |
 | Q14 | Stack declares Cash or Crash `[3,3,4]` ([OQ-3](../../specs/wrapper.md#decided-questions)).           | **Confirmed by the backend, 2026-10-26**: the stack declares Cash or Crash `[3,3,4]`.                                                                                                                               |
 | Q15 | Whether 40 rounds suffice at the stack's odds.                                                       | **Confirmed by the backend, 2026-10-26**: 40 rounds suffice. A run that does not see the outcome still fails, which is the intended signal.                                                                         |

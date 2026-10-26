@@ -104,7 +104,17 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `EXCLUDE` (IPv6 without brackets). Playwright 1.64.0 loads the config in the
   runner and in every worker. Preview specs never import the fake Play API, the
   fake verify API, the fake RPC, or the round checks; no `harness/` module
-  imports `preview-support/`. Runbook: `runbook/preview-e2e.md`.
+  imports `preview-support/`. The backend's first real run (kit commit `9c305bbd`)
+  passed T-10, T-11, and T-12 and the preview-guard specs in 19.1 s; its one
+  failure was the checkout path having a `preview` directory in it: Playwright
+  matches a string `testMatch`/`testIgnore` against the absolute path, so
+  `preview/**` selected every spec under the preview project (and would have
+  ignored every spec in the fake ones). The config now uses one regular expression
+  anchored to the tests directory (`previewSpecPattern`), and
+  `tools/e2e-preview-checkout-path.test.ts` lists specs with the real Playwright
+  in a copy whose path has a `preview` directory. Timeouts are set from that run
+  (test 2 minutes, run 15 minutes, hook 15 s, step 30 s). Runbook:
+  `runbook/preview-e2e.md`.
   The harness is `e2e/tests/harness/` (spec: testing-and-ci.md, "The e2e
   harness"); import `test` and `expect` from `harness/fixtures.ts`, never from
   `@playwright/test`. Every test is hermetic automatically (all origins are
