@@ -343,7 +343,7 @@
     "jsdom": "30.1.2",
     "json-schema-to-typescript": "16.0.0",
     "openapi-typescript": "6.7.6",
-    "oxfmt": "0.72.0",
+    "oxfmt": "0.73.0",
     "oxlint": "1.87.0",
     "stylelint": "17.16.0",
     "tsdown": "0.23.1",
