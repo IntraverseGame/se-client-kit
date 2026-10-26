@@ -182,9 +182,12 @@ else.
   `prefers-reduced-motion`, and the Snapshot's `context.theme.appearance` and
   `context.device` as `data-theme` and `data-device` on the root. The text is
   English only; `context.language` is not used. On a board, focus moves to the
-  heading when the player's own pick is answered while a tile held focus, and
-  when no row takes a pick while a tile held focus, under the same rule
-  (`document.hasFocus()`).
+  heading when a **Snapshot** answers the player's own pick while a tile held
+  focus (the row locks), and when no row takes a pick while a tile held focus,
+  under the same rule (`document.hasFocus()`). A **`reject`** also answers the
+  pick, but it leaves the row open for another pick, so a tile that holds focus
+  keeps it, as Coin Flip's calls do. A reject for a pick that a Snapshot already
+  answered is ignored (the game answers a pick once), so it moves nothing.
 - **Observability.** The game logs nothing, stores nothing, and sends nothing
   but its `hello` and `action` messages to its parent.
 - **Tests.** Unit and component tests (Vitest, jsdom) cover the origin and

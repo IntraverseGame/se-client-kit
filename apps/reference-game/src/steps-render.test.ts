@@ -183,6 +183,37 @@ describe("focus on the board", () => {
     restore();
   });
 
+  it("stays on the tile when the pick is rejected and the row is still open", () => {
+    const restore = setDocumentFocus(true);
+    const { parent, host } = mount();
+    parent.send(snapshotMessage(CASH_OR_CRASH.active));
+    tile(host, 1, 0).focus();
+    tile(host, 1, 0).click();
+    const count = headingFocusCount(host);
+    parent.send(rejectMessage("pick-1", "not_legal"));
+    expect(tile(host, 1, 0).getAttribute("aria-disabled")).toBe("false");
+    expect(count()).toBe(0);
+    expect(document.activeElement).toBe(tile(host, 1, 0));
+    restore();
+  });
+
+  it("ignores a reject for a pick a Snapshot already answered, and focus stays on the heading", () => {
+    const restore = setDocumentFocus(true);
+    const { parent, host } = mount();
+    parent.send(snapshotMessage(CASH_OR_CRASH.active));
+    tile(host, 1, 0).focus();
+    tile(host, 1, 0).click();
+    parent.send(snapshotMessage(CASH_OR_CRASH.resolving));
+    const count = headingFocusCount(host);
+    expect(document.activeElement).toBe(host.querySelector("#rg-heading"));
+    parent.send(rejectMessage("pick-1", "busy"));
+    // Ignored: no alert, no second focus call, and focus has not moved.
+    expect(alertText(host)).toBe("");
+    expect(count()).toBe(0);
+    expect(document.activeElement).toBe(host.querySelector("#rg-heading"));
+    restore();
+  });
+
   it("does not move when the game's document has no focus", () => {
     const restore = setDocumentFocus(false);
     const { parent, host } = mount();

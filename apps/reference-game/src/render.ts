@@ -118,15 +118,23 @@ export const createPage = (doc: Document, host: HTMLElement): GamePage => {
         String(round?.pending === button.dataset["side"]),
       );
     }
-    // On a board, focus leaves a tile once its row locks: when the player's
-    // own pick was answered, or when no row takes a pick, the heading takes it
-    // (as it does when Coin Flip's calls hide).
+    // On a board, focus leaves a tile once its row locks: when a Snapshot
+    // answers the player's own pick, or when no row takes a pick, the heading
+    // takes it (as it does when Coin Flip's calls hide). A `reject` also answers
+    // the pick (cause `answered`) but leaves the row open for another pick, so a
+    // tile that holds focus keeps it, as Coin Flip's calls do. A reject for a
+    // pick a Snapshot already answered never reaches here (game.ts ignores it).
+    // Coin Flip's own rule below applies to every view but a board, whose calls
+    // are always hidden.
+    const rejected = rows?.rejected !== undefined;
     const boardNeedsHeading =
       rows !== undefined &&
-      ((boardFocused && (cause === "answered" || !rowsOpen)) ||
+      ((boardFocused && ((cause === "answered" && !rejected) || !rowsOpen)) ||
         (!rowsOpen && cause === "answered"));
     if (
-      ((calls.hidden && (cause === "answered" || callFocused)) ||
+      ((rows === undefined &&
+        calls.hidden &&
+        (cause === "answered" || callFocused)) ||
         boardNeedsHeading) &&
       doc.hasFocus()
     ) {
