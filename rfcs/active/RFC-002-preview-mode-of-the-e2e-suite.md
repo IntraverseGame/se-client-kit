@@ -410,11 +410,12 @@ narrow, explicit allow-list; it never switches them off.
 - **Browser flags.** The Chromium project's `--host-resolver-rules` becomes
   `MAP * ~NOTFOUND, EXCLUDE <host>` for exactly the hosts of the allow-list;
   every other name still resolves to nothing, which is what stops traffic that
-  no route sees (workers, WebRTC). An IP-literal host in the allow-list needs no
-  rule (it is not a name) and is held by the route alone, as the fake runs
-  already say. The flags are computed in `playwright.config.ts` from the same
-  validated object, **in the `preview` project only**, when the marker is set;
-  the three fake projects keep the constants they have.
+  no route sees (workers, WebRTC). An IP-literal host in the allow-list gets an
+  `EXCLUDE` rule too (IPv6 without brackets), because Chromium applies the rules
+  to IP literals as well as to names (found while implementing). The flags are
+  computed in `playwright.config.ts` from the same validated object, **in the
+  `preview` project only**, when the marker is set; the three fake projects keep
+  the constants they have.
 - **Requests the test makes itself** (the verify API read, the environment
   document) go through the same allow-list check on the URL's origin; an origin
   off the list is refused before the request is sent, and the refusal names the
@@ -747,8 +748,8 @@ a number to measure, or a fact known later.
 | Q11 | Release artifacts after ADR-005.                                                                     | Out of this RFC. When ADR-005 is accepted: the stack could serve the Wrapper tar by digest with the suite commit-pinned (the recommended direction), or the suite could also be released (its own ADR), or neither. |
 | Q12 | The numbers: per-test timeout, run timeout, hook timeout, funding margin, browser environment names. | Provisional `TODO(preview stack)` markers until the first run; the funding margin is the backend's to set in the hook.                                                                                              |
 | Q13 | The commit to pin.                                                                                   | Known only after the implementation merges (see Pin). The kit hands the backend the merge commit and the runbook's **Changes** table.                                                                               |
-| Q14 | Stack declares Cash or Crash `[3,3,4]` ([OQ-3](../../specs/wrapper.md#decided-questions)).           | **Backend to confirm** that the stack declares Cash or Crash `[3,3,4]` before the pin. T-12 cannot pass until it does.                                                                                              |
-| Q15 | Whether 40 rounds suffice at the stack's odds.                                                       | **Backend to confirm** that 40 rounds suffice at the stack's odds. A run that does not see the outcome fails, which is the intended signal.                                                                         |
+| Q14 | Stack declares Cash or Crash `[3,3,4]` ([OQ-3](../../specs/wrapper.md#decided-questions)).           | **Confirmed by the backend, 2026-10-26**: the stack declares Cash or Crash `[3,3,4]`.                                                                                                                               |
+| Q15 | Whether 40 rounds suffice at the stack's odds.                                                       | **Confirmed by the backend, 2026-10-26**: 40 rounds suffice. A run that does not see the outcome still fails, which is the intended signal.                                                                         |
 
 Hand-off to the implementer waits for the human's approval of the RFC as a
 whole.

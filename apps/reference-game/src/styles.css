@@ -113,6 +113,34 @@ body {
   display: none;
 }
 
+.rg-board {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rg-board[hidden] {
+  display: none;
+}
+
+.rg-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rg-row-label {
+  margin: 0;
+  color: var(--rg-muted);
+  font-weight: 600;
+}
+
+.rg-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .rg-button {
   min-width: 2.75rem;
   min-height: 2.75rem;
@@ -146,6 +174,11 @@ body {
   border-color: var(--rg-accent);
   background: var(--rg-bg);
   color: var(--rg-fg);
+}
+
+.rg-tile {
+  flex: 1 1 5rem;
+  padding-inline: 0.75rem;
 }
 
 :focus-visible {

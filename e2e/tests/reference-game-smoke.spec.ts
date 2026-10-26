@@ -168,7 +168,7 @@ test.describe("the reference game", () => {
   test("talks to nobody when it is not framed", async ({ page }) => {
     await page.goto(`${GAME_ORIGIN}/`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "Coin Flip runs inside the SuperEngine Wrapper",
+      "This game runs inside the SuperEngine Wrapper",
     );
     expect(await auditAccessibility(page)).toEqual([]);
   });

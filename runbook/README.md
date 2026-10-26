@@ -20,4 +20,7 @@ steps, verification, troubleshooting, escalation, references.
   find a kit package's `dist/` (a wireit cache restore that failed, #53).
 - [`client-kit-release.md`](./client-kit-release.md) — releasing the packages
   and the Wrapper bundle.
+- [`preview-e2e.md`](./preview-e2e.md) — running the e2e suite's preview mode
+  against a stack: the variables, the launch hook, the pin and bump recipe, and
+  troubleshooting (the backend's job runs it; never part of `pnpm check`).
 - Planned: the response to a compromised dependency or publishing credential.

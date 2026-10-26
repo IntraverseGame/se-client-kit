@@ -96,6 +96,21 @@ describe("the reference game's build", () => {
       expect(file.text).not.toContain("createControllerBridge");
     }
   }, 30_000);
+
+  it("builds the board of rows that plays any steps round, Cash or Crash included", async () => {
+    const result = await build({
+      root: appRoot,
+      logLevel: "silent",
+      build: { write: false },
+    });
+    const files = outputsOf(result);
+    const script = files.find(file => file.fileName.endsWith(".js"))?.text;
+    const style = files.find(file => file.fileName.endsWith(".css"))?.text;
+    expect(script).toContain("rg-tile");
+    expect(script).toContain("Pick a tile in row");
+    expect(style).toContain(".rg-board");
+    expect(style).toContain(".rg-tile");
+  }, 30_000);
 });
 
 describe("the package-import guard", () => {

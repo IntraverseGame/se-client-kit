@@ -86,7 +86,10 @@ equivalent; Node and pnpm are pinned in `.node-version` and `packageManager`.
   typecheck, unit tests, the dependency allow-list, the contracts check, then a
   build, the build-output check, and the Wrapper's size budget)
 - `pnpm test` (unit and component) · `pnpm test:e2e` (Playwright, against the
-  in-repo fake Play API)
+  in-repo fake Play API) · `pnpm test:e2e:preview` (the `preview` project
+  against a real stack, for the backend's job; needs the variables of
+  [`runbook/preview-e2e.md`](./runbook/preview-e2e.md); never part of
+  `pnpm check`)
 - `pnpm lint` (oxlint and stylelint; also `pnpm lint:ts` and `pnpm lint:css`) ·
   `pnpm format` (writes) · `pnpm format:check` · `pnpm typecheck` · `pnpm build`
   (tsdown for packages, Vite for the Wrapper and the reference game) ·

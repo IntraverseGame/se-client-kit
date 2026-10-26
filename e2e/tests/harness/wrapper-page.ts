@@ -18,6 +18,7 @@ export const TEXT = {
   active: "Your round is in play",
   resolving: "Resolving",
   start: "Start round",
+  cashOut: "Cash out",
   sessionEnded: "Your session has ended",
   otherTab: "This session is open in another tab",
   unsupported: "This browser cannot keep your session safe",

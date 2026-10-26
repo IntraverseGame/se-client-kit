@@ -28,7 +28,13 @@ const rootManifest = JSON.parse(
 ) as Manifest;
 
 /** Scripts that have a command and no `files`, so they run every time. */
-const ALWAYS_RUN = ["check:readmes", "e2e#test", "format", "release:dry-run"];
+const ALWAYS_RUN = [
+  "check:readmes",
+  "e2e#test",
+  "e2e#test:preview",
+  "format",
+  "release:dry-run",
+];
 
 describe("the matcher", () => {
   it.each([

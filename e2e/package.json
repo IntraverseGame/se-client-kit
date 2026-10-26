@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "wireit",
+    "test:preview": "wireit",
     "typecheck": "wireit"
   },
   "wireit": {
@@ -13,6 +14,34 @@
       "command": "tsx ../tools/check-kit-dist.ts test ../apps/wrapper/dist/index.html ../apps/reference-game/dist/index.html && playwright test --project=\"${SE_E2E_PROJECT:-chromium}\"",
       "env": {
         "SE_E2E_PROJECT": {
+          "external": true
+        },
+        "SE_E2E_BROWSER_CHANNEL": {
+          "external": true
+        },
+        "CI": {
+          "external": true
+        }
+      },
+      "dependencies": [
+        "../apps/wrapper:build",
+        "../apps/reference-game:build",
+        "../packages/contracts:build"
+      ]
+    },
+    "test:preview": {
+      "command": "tsx ../tools/check-kit-dist.ts test:preview ../apps/wrapper/dist/index.html ../apps/reference-game/dist/index.html && tsx ./tests/preview-support/run-preview.ts",
+      "env": {
+        "SE_E2E_PREVIEW_ORIGIN": {
+          "external": true
+        },
+        "SE_E2E_PREVIEW_LAUNCH_COMMAND": {
+          "external": true
+        },
+        "SE_E2E_PREVIEW_GAME_ORIGIN": {
+          "external": true
+        },
+        "SE_E2E_PREVIEW_ALLOWED_ORIGINS": {
           "external": true
         },
         "SE_E2E_BROWSER_CHANNEL": {

@@ -15,6 +15,7 @@
     "test": "wireit",
     "test:tools": "wireit",
     "test:e2e": "wireit",
+    "test:e2e:preview": "wireit",
     "check:deps": "wireit",
     "check:contracts": "wireit",
     "changeset": "changeset",
@@ -176,6 +177,11 @@
     "test:e2e": {
       "dependencies": [
         "./e2e:test"
+      ]
+    },
+    "test:e2e:preview": {
+      "dependencies": [
+        "./e2e:test:preview"
       ]
     },
     "check:deps": {

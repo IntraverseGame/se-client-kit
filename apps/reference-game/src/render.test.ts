@@ -81,20 +81,17 @@ describe("rendering per status", () => {
 
   it("shows that it runs only inside the Wrapper when it is not framed", () => {
     const { host } = mount(false);
-    expect(heading(host)).toBe("Coin Flip runs inside the SuperEngine Wrapper");
+    expect(heading(host)).toBe("This game runs inside the SuperEngine Wrapper");
     expect(callsShown(host)).toBe(false);
   });
 
-  it("shows that a round is not Coin Flip", () => {
+  it("shows that a round with no rows has nothing to play", () => {
     const { parent, host } = mount();
-    const dice = withFields(SNAPSHOTS.active, {
-      config: {
-        kind: "steps",
-        steps: [{ index: 0, optionCount: 6, multiplier: 5.8 }],
-      },
+    const noRows = withFields(SNAPSHOTS.active, {
+      config: { kind: "steps", steps: [] },
     });
-    parent.send(snapshotMessage(dice));
-    expect(heading(host)).toBe("Not a Coin Flip round");
+    parent.send(snapshotMessage(noRows));
+    expect(heading(host)).toBe("Nothing to play");
     expect(callsShown(host)).toBe(false);
   });
 

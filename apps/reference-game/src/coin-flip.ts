@@ -1,8 +1,8 @@
 // Coin Flip, read from the game's copy of a Snapshot. The round is one step with
 // two options: option 0 is heads and option 1 is tails. What the player called
 // is the step's `selectedIndex`; the side that lost is its `losingIndex`, so the
-// coin landed on the other one. Any other configuration is not Coin Flip, and
-// this sample does not play it.
+// coin landed on the other one. Any other configuration is not Coin Flip: it is
+// played as rows of tiles (steps-round.ts).
 
 import type {
   GameSnapshot,

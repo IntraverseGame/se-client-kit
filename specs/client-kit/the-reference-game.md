@@ -3,10 +3,12 @@
 Part of the [Client kit spec](../client-kit.md), section
 [Contract](../client-kit.md#contract).
 
-`apps/reference-game` is a minimal Coin Flip game: the target of the e2e suite
-and a sample for game developers. It is not a production game, is never
-published, and holds no key, no token, and no amount. It speaks the game's side
-of `se.controller/1`
+`apps/reference-game` is a minimal `steps` game: the target of the e2e suite and
+a sample for game developers. It plays Coin Flip (one step of two options, as
+heads or tails) and any other `steps` round as rows of tiles; Cash or Crash
+`[3,3,4]` is the second configuration it is tested on (RFC-002). It is not a
+production game, is never published, and holds no key, no token, and no amount.
+It speaks the game's side of `se.controller/1`
 ([W-38](../wrapper/the-game-iframe-and-the-controller-boundary.md)) and nothing
 else.
 
@@ -129,18 +131,30 @@ else.
   to 64 characters from `[A-Za-z0-9_-]` and a `reason` from the closed list.
   Anything else is ignored. A Snapshot with a lower `version` than the latest is
   ignored (W-29).
-- **Coin Flip only.** A round is Coin Flip when its config has exactly one step,
-  index 0, with two options: option 0 is heads, option 1 is tails. Any other
-  config shows "not a Coin Flip round" and takes no pick. What the player called
-  is the step's `selectedIndex`; the coin landed on the side that is not the
-  `losingIndex` (on a win with no `losingIndex`, on the called side).
+- **Coin Flip, and rows of tiles.** A round is Coin Flip when its config has
+  exactly one step, index 0, with two options: option 0 is heads, option 1 is
+  tails. What the player called is the step's `selectedIndex`; the coin landed
+  on the side that is not the `losingIndex` (on a win with no `losingIndex`, on
+  the called side). Coin Flip keeps its own page, the two calls. Any other
+  `steps` config with at least one step is played as a **board** (`board.ts`): a
+  labelled group per step (`Row <n>`, from the step's position, with its display
+  multiplier) holding a button per option (`Tile <n>`, from 1; the tile that
+  ended a revealed row says `(crash)` in its text). A picked tile is
+  `aria-pressed`. A tile takes a pick only in the row the Snapshot's `step`
+  names, while the round is `active` and that row has no `selectedIndex`; every
+  other tile is held (`aria-disabled`). A config with no step shows "nothing to
+  play" and takes no pick. The cash-out is the Wrapper's control (W-24), not the
+  game's: the game sends no message for it, and the page says the Wrapper offers
+  it. The same build plays both, so the preview run serves one build at one game
+  origin for both games.
 - **Statuses.** Every status the bridge forwards is shown: `idle` (place a bet
   in the Wrapper), `starting`, `active` (the two calls), `resolving`, `won`,
   `lost`, and `canceled` (with `closeReason: expired` said, and the reveal when
   there is one). The calls are shown only while the round is `active`, on its
   current step, and not called yet.
 - **A pick.** A click sends one `action` (`verb: pick`,
-  `args: { step, option }`, `id` `pick-<n>` from a counter) and holds both calls
+  `args: { step, option }`, where `step` is the row's `index`, `id` `pick-<n>`
+  from a counter shared by both pages) and holds both calls (or every tile)
   (`aria-disabled`, styled as held: a grey fill, muted text, and a dashed
   border, within WCAG AA on both themes; the chosen call stays pressed) until it
   is answered. The next Snapshot with a higher `version` answers it (the Wrapper
@@ -167,22 +181,31 @@ else.
   44 by 44 CSS pixel targets, visible focus, no motion under
   `prefers-reduced-motion`, and the Snapshot's `context.theme.appearance` and
   `context.device` as `data-theme` and `data-device` on the root. The text is
-  English only; `context.language` is not used.
+  English only; `context.language` is not used. On a board, focus moves to the
+  heading when a **Snapshot** answers the player's own pick while a tile held
+  focus (the row locks), and when no row takes a pick while a tile held focus,
+  under the same rule (`document.hasFocus()`). A **`reject`** also answers the
+  pick, but it leaves the row open for another pick, so a tile that holds focus
+  keeps it, as Coin Flip's calls do. A reject for a pick that a Snapshot already
+  answered is ignored (the game answers a pick once), so it moves nothing.
 - **Observability.** The game logs nothing, stores nothing, and sends nothing
   but its `hello` and `action` messages to its parent.
 - **Tests.** Unit and component tests (Vitest, jsdom) cover the origin and
   source checks, the schema refusal (accessor properties, accessor and sparse
-  array items included), the rendering per status and per reject reason, focus,
-  and the stylesheet's rules and contrast; a build test runs the real Vite build
-  with the guard, checks its CSP, and proves the guard fails a runtime import of
-  a kit or a third-party package in a build (a `vite/` subpath that is not a
-  helper included), fails a kit package's file copied as an asset by
-  `new URL(..., import.meta.url)`, a CSS `url()`, or an HTML `<img src>` (and
+  array items included), the rendering per status and per reject reason (Coin
+  Flip, and Cash or Crash `[3,3,4]` on hand-written copies of the vendored
+  `valid/cashorcrash-*` Snapshots: row 2 active, resolving, lost, won by
+  cash-out, and won by the time limit), the board's rows, tiles, marks, and
+  focus, and the stylesheet's rules and contrast; a build test runs the real
+  Vite build with the guard, checks its CSP, and proves the guard fails a
+  runtime import of a kit or a third-party package in a build (a `vite/` subpath
+  that is not a helper included), fails a kit package's file copied as an asset
+  by `new URL(..., import.meta.url)`, a CSS `url()`, or an HTML `<img src>` (and
   one under 4 KiB, which the game does not inline, and one behind a symlink),
   fails a worker that imports a kit package's file or a third-party package, all
   with the game's own configuration, and lets the dev server resolve a
   third-party one. The e2e suite serves the build at
   `https://game.e2e-games.test` and runs a smoke test of the game page in a
   stand-in host page ([The e2e harness](./testing-and-ci.md#the-e2e-harness)); a
-  whole round through the Wrapper is T-10 and T-11, pending a fake round in the
-  e2e harness that passes the shell's verification (W-26), tracked in #11.
+  whole round through the Wrapper is T-10 and T-11 on the fake round (Coin
+  Flip), and T-10 to T-12 in the preview run (T-12 on Cash or Crash).
