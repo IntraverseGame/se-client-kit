@@ -119,6 +119,11 @@ one shape (a move at the cash-out route), and a type test keeps it so.
 | `cancelRound`      | `POST /rounds:cancel`    | `never`      | play token | the round's Snapshot, `unknown`                                                         |
 | `getSnapshot`      | `GET /snapshot`          | `idempotent` | play token | the session's Snapshot, `unknown`                                                       |
 
+`PLAY_ROUTES` lists every operation of the document, so it also holds
+`listGrants` (`GET /grants`, the free-bet grants). The kit has no function for
+it: free bets are out of scope, and nothing in the shell or the Wrapper reads or
+sends a grant.
+
 - **Answers.** Each resolves with `{ body, receivedAtMs, clockOffsetMs }` (the
   last two for the token schedule, W-6). A Snapshot answer is the parsed body,
   unread and `unknown`: only the `snapshot` package's validator types it. The

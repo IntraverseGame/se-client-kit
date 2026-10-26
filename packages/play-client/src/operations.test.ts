@@ -103,6 +103,7 @@ describe("the routes", () => {
       cashOutRound: { method: "POST", path: "/rounds:cashOut" },
       cancelRound: { method: "POST", path: "/rounds:cancel" },
       getSnapshot: { method: "GET", path: "/snapshot" },
+      listGrants: { method: "GET", path: "/grants" },
     });
   });
 });

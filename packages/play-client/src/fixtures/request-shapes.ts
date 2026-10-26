@@ -29,6 +29,7 @@ export const REQUEST_SHAPES: RequestShapes = {
     bet: "required",
     actionKey: "required",
     shape: "optional",
+    grantId: "optional",
   },
   continueRound: {
     idempotencyKey: "required",
@@ -49,6 +50,7 @@ export const REQUEST_SHAPES: RequestShapes = {
     signature: "required",
   },
   getSnapshot: undefined,
+  listGrants: undefined,
 };
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>

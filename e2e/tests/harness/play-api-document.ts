@@ -24,6 +24,7 @@ export const PLAY_ROUTES: PlayApiOperationRoutes = {
   cashOutRound: { path: "/play/v1/rounds:cashOut", method: "post" },
   cancelRound: { path: "/play/v1/rounds:cancel", method: "post" },
   getSnapshot: { path: "/play/v1/snapshot", method: "get" },
+  listGrants: { path: "/play/v1/grants", method: "get" },
 };
 
 export const PLAY_OPERATIONS = Object.keys(
@@ -52,6 +53,7 @@ export const LISTED_STATUSES = {
   cashOutRound: [200, 400, 401, 404, 409, 422, 500, 503],
   cancelRound: [200, 400, 401, 404, 422, 500, 503],
   getSnapshot: [200, 401, 404, 422, 500, 503],
+  listGrants: [200, 400, 401, 404, 500, 503],
 } as const satisfies ListedStatuses;
 
 /** A status the document lists that `LISTED_STATUSES` leaves out: `never`. */
@@ -123,6 +125,7 @@ const REQUEST_SHAPES: RequestShapes = {
     bet: "required",
     actionKey: "required",
     shape: "optional",
+    grantId: "optional",
   },
   continueRound: {
     idempotencyKey: "required",
@@ -143,6 +146,7 @@ const REQUEST_SHAPES: RequestShapes = {
     signature: "required",
   },
   getSnapshot: undefined,
+  listGrants: undefined,
 };
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>

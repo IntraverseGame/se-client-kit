@@ -32,6 +32,8 @@ tags:
     description: The play token of a session.
   - name: rounds
     description: The session's rounds, and the Snapshot the game renders.
+  - name: grants
+    description: The free bets the player can use.
 paths:
   /play/v1/sessions:redeem:
     post:
@@ -104,6 +106,18 @@ paths:
         address the shell signs the round's actions with: it is sealed with the
         round and cannot change during it.
 
+        **Free bets.** With a `grantId` from `GET /play/v1/grants` the round is
+        a free bet: the grant's stake is the bet, nothing is debited from the
+        player, and a win credits the winnings only, the payout less the stake
+        (the Snapshot's `payout` is that credit). The `bet` must equal the
+        grant's `stake`. A grant that cannot be used (it is not the player's,
+        is for another game, or has expired or run out) voids the round before
+        it starts, like a debit the operator refuses: the answer is
+        `FAILED_PRECONDITION`, never a Snapshot. `grantId` is part of the
+        request: the same key with another `grantId`, or with and without one,
+        is `CONFLICT`. A game that cannot be played free is
+        `FAILED_PRECONDITION`.
+
         After a lost response, `UNAVAILABLE` or `INTERNAL`, the round may
         already have been started: the same key and body answer it, so sending
         them again is safe. A resend may fail the same way;
@@ -137,8 +151,8 @@ paths:
         terminal status the move led to. The API passes the action through
         unread: only the engine verifies it. Repeating an accepted action
         answers the round; another action signed at an accepted sequence
-        number is `STALE_ACTION`. For now, the engine's own stale refusals (a
-        wrong `sequence` or `previous`) answer `INVALID_ARGUMENT`.
+        number, or one with a wrong `sequence` or `previous`, is
+        `STALE_ACTION`: resync from the Snapshot.
 
         After a lost response, `UNAVAILABLE` or `INTERNAL`, the move may
         already have been taken: the same request (key and signed action)
@@ -249,6 +263,50 @@ paths:
         "422": { $ref: "#/components/responses/Unprocessable" }
         "500": { $ref: "#/components/responses/InternalError" }
         "503": { $ref: "#/components/responses/Unavailable" }
+  /play/v1/grants:
+    get:
+      operationId: listGrants
+      summary: List the free bets the player can use
+      description: |
+        Answers the free-bet grants the session's player can use now, for the
+        session's game and currency, soonest expiry first: the ones with a use
+        left and not past their `expiresAt`. Offer one, then send its `grantId`
+        on `rounds:start`. The session, and through it the player, the game,
+        and the currency, come from the play token: a request cannot ask for
+        another player's grants. A demo session has none.
+
+        The list is advice, not a reservation: a grant listed may be used by
+        another round before this player starts, and the start is the
+        authority. Reading does not reset the session's idle timeout. Pages are
+        read with `nextPageToken`; a page boundary never repeats or skips a
+        grant that does not change meanwhile.
+      tags: [grants]
+      parameters:
+        - name: pageSize
+          in: query
+          required: false
+          description: How many grants a page holds, 1 to 100. Default 50.
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: pageToken
+          in: query
+          required: false
+          description: The `nextPageToken` of the previous page. Opaque.
+          schema: { type: string, minLength: 1, maxLength: 512 }
+      responses:
+        "200":
+          description: The usable grants.
+          headers:
+            Cache-Control:
+              description: Always `no-store`.
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GrantList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
   /play/v1/snapshot:
     get:
       operationId: getSnapshot
@@ -357,6 +415,49 @@ components:
             type: integer
             minimum: 1
             maximum: 25
+        grantId:
+          $ref: "#/components/schemas/GrantId"
+    GrantId:
+      type: string
+      description: The id of a free-bet grant, a UUIDv7 in lowercase. Send one of `GET /play/v1/grants` to play the round as a free bet; leave it out for a round paid from the balance.
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      example: 01927c5e-8b3a-7f21-9c4d-5e6f7a8b9c0d
+    GrantList:
+      type: object
+      additionalProperties: false
+      required: [grants]
+      properties:
+        grants:
+          type: array
+          description: The usable grants, soonest `expiresAt` first, then by `grantId`. Empty when there are none.
+          items: { $ref: "#/components/schemas/PlayGrant" }
+        nextPageToken:
+          type: string
+          description: Present when there is another page; absent on the last. Pass it as `pageToken`.
+          minLength: 1
+          maxLength: 512
+    PlayGrant:
+      type: object
+      additionalProperties: false
+      required: [grantId, stake, usesRemaining, usesTotal, expiresAt]
+      properties:
+        grantId:
+          $ref: "#/components/schemas/GrantId"
+        stake:
+          description: The fixed bet of every round the grant funds. The `bet` of the start must equal it.
+          allOf: [{ $ref: "#/components/schemas/Amount" }]
+        usesRemaining:
+          type: integer
+          minimum: 1
+          description: How many free rounds are left.
+        usesTotal:
+          type: integer
+          minimum: 1
+          description: How many free rounds the grant started with.
+        expiresAt:
+          type: string
+          format: date-time
+          description: The grant can start a round only before this time.
     RoundActionRequest:
       type: object
       additionalProperties: false
@@ -891,11 +992,11 @@ components:
       description: |
         `ROUND_ACTIVE` (a round is open: resume it from the problem's
         `snapshot`), `CONFLICT` (the key was used with another body), or
-        `STALE_ACTION` (another action at an accepted sequence number: the
-        action was signed for a state the round has left; resync from the
-        Snapshot). For now, `STALE_ACTION` is sent only for that case: the
-        engine's own stale refusals (a wrong `sequence` or `previous`) answer
-        `INVALID_ARGUMENT` (400).
+        `STALE_ACTION` (a move or a cash-out signed for a state the round has
+        left: another action at an accepted sequence number, or a wrong
+        `sequence` or `previous`; resync from the Snapshot). `rounds:cancel`
+        never answers `STALE_ACTION`: a stale cancel is `INVALID_ARGUMENT`
+        (400).
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/PlayProblem" }

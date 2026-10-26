@@ -13,7 +13,7 @@ import {
   refreshPlayToken,
   startRound,
 } from "../operations.ts";
-import type { PlayOperationId } from "../play-api.ts";
+import { PLAY_ROUTES, type PlayOperationId } from "../play-api.ts";
 import { DEFAULT_RETRY_CONFIG } from "../retry.ts";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "../transport.ts";
 import type { Answer, ListedStatus } from "./fake-play-server.ts";
@@ -152,6 +152,13 @@ export const PROBLEMS = {
     [500, "INTERNAL"],
     [503, "UNAVAILABLE"],
   ],
+  listGrants: [
+    [400, "INVALID_ARGUMENT"],
+    [401, "UNAUTHENTICATED"],
+    [404, "NOT_FOUND"],
+    [500, "INTERNAL"],
+    [503, "UNAVAILABLE"],
+  ],
 } as const;
 
 const snapshotAnswer = { kind: "success", body: idleSnapshot } as const;
@@ -225,6 +232,20 @@ export const CASES: readonly Case[] = [
     x => getSnapshot(x.transport, { ...x.auth, signal: x.cancel.signal }),
     PROBLEMS.getSnapshot,
     snapshotAnswer,
+  ),
+  // The kit has no `listGrants` call (free bets are out of scope): the case
+  // sends the document's route through the transport, as `getSnapshot` does.
+  operation(
+    "listGrants",
+    x =>
+      x.transport.send({
+        ...PLAY_ROUTES.listGrants,
+        authorization: x.auth.authorization,
+        retry: "idempotent",
+        signal: x.cancel.signal,
+      }),
+    PROBLEMS.listGrants,
+    { kind: "success", body: { grants: [] } },
   ),
 ];
 

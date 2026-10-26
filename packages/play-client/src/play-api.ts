@@ -112,4 +112,5 @@ export const PLAY_ROUTES: Readonly<Record<PlayOperationId, PlayRoute>> =
     cashOutRound: playRoute("cashOutRound", "post", "/play/v1/rounds:cashOut"),
     cancelRound: playRoute("cancelRound", "post", "/play/v1/rounds:cancel"),
     getSnapshot: playRoute("getSnapshot", "get", "/play/v1/snapshot"),
+    listGrants: playRoute("listGrants", "get", "/play/v1/grants"),
   });

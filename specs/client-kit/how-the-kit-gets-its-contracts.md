@@ -150,6 +150,19 @@ Rules:
    after a 500 `INTERNAL`, or a 503 marked `retryable: false`, it resends
    nothing, the action stays pending, and the reads decide.
 
+   **A stale action is a 409, and free-bet grants** (the Play API document,
+   synced from se-backend `9ffdcc0`; no Snapshot schema, vector, error code, or
+   existing response status changed): a move or a cash-out with a wrong
+   `sequence` or `previous` is now answered 409 `STALE_ACTION`, like another
+   action at an accepted sequence, where it was a 400 `INVALID_ARGUMENT`; a
+   cancel still answers 400. The shell already resynchronizes after either code
+   (W-19), and the Wrapper maps `STALE_ACTION` to out-of-sync, so no behavior
+   changed. The document also gained `GET /play/v1/grants` (`listGrants`), its
+   `GrantList` and `PlayGrant` schemas, and an optional `grantId` on the
+   `rounds:start` request. The kit uses none of it (free bets are out of scope):
+   the generated types carry them, `PLAY_ROUTES` lists the route, and no client
+   function, shell use case, or Wrapper screen reads or sends a grant.
+
    **The payout** (the Snapshot schema, the Play API document, and the `payout`
    vectors, synced from se-backend `f8cc92b`): an additive change, a new
    optional top-level `payout`, an `Amount` computed by the server and never

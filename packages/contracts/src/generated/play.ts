@@ -36,6 +36,18 @@ export type paths = {
      * address the shell signs the round's actions with: it is sealed with the
      * round and cannot change during it.
      *
+     * **Free bets.** With a `grantId` from `GET /play/v1/grants` the round is
+     * a free bet: the grant's stake is the bet, nothing is debited from the
+     * player, and a win credits the winnings only, the payout less the stake
+     * (the Snapshot's `payout` is that credit). The `bet` must equal the
+     * grant's `stake`. A grant that cannot be used (it is not the player's,
+     * is for another game, or has expired or run out) voids the round before
+     * it starts, like a debit the operator refuses: the answer is
+     * `FAILED_PRECONDITION`, never a Snapshot. `grantId` is part of the
+     * request: the same key with another `grantId`, or with and without one,
+     * is `CONFLICT`. A game that cannot be played free is
+     * `FAILED_PRECONDITION`.
+     *
      * After a lost response, `UNAVAILABLE` or `INTERNAL`, the round may
      * already have been started: the same key and body answer it, so sending
      * them again is safe. A resend may fail the same way;
@@ -51,8 +63,8 @@ export type paths = {
      * terminal status the move led to. The API passes the action through
      * unread: only the engine verifies it. Repeating an accepted action
      * answers the round; another action signed at an accepted sequence
-     * number is `STALE_ACTION`. For now, the engine's own stale refusals (a
-     * wrong `sequence` or `previous`) answer `INVALID_ARGUMENT`.
+     * number, or one with a wrong `sequence` or `previous`, is
+     * `STALE_ACTION`: resync from the Snapshot.
      *
      * After a lost response, `UNAVAILABLE` or `INTERNAL`, the move may
      * already have been taken: the same request (key and signed action)
@@ -112,6 +124,24 @@ export type paths = {
      */
     post: operations["cancelRound"];
   };
+  "/play/v1/grants": {
+    /**
+     * List the free bets the player can use
+     * @description Answers the free-bet grants the session's player can use now, for the
+     * session's game and currency, soonest expiry first: the ones with a use
+     * left and not past their `expiresAt`. Offer one, then send its `grantId`
+     * on `rounds:start`. The session, and through it the player, the game,
+     * and the currency, come from the play token: a request cannot ask for
+     * another player's grants. A demo session has none.
+     *
+     * The list is advice, not a reservation: a grant listed may be used by
+     * another round before this player starts, and the start is the
+     * authority. Reading does not reset the session's idle timeout. Pages are
+     * read with `nextPageToken`; a page boundary never repeats or skips a
+     * grant that does not change meanwhile.
+     */
+    get: operations["listGrants"];
+  };
   "/play/v1/snapshot": {
     /**
      * Read the Snapshot
@@ -169,6 +199,32 @@ export type components = {
       actionKey: string;
       /** @description The config shape, the number of options of each step, for a game whose package does not fix it. Leave it out for a game that does (Coin Flip, Cash or Crash). */
       shape?: number[];
+      grantId?: components["schemas"]["GrantId"];
+    };
+    /**
+     * @description The id of a free-bet grant, a UUIDv7 in lowercase. Send one of `GET /play/v1/grants` to play the round as a free bet; leave it out for a round paid from the balance.
+     * @example 01927c5e-8b3a-7f21-9c4d-5e6f7a8b9c0d
+     */
+    GrantId: string;
+    GrantList: {
+      /** @description The usable grants, soonest `expiresAt` first, then by `grantId`. Empty when there are none. */
+      grants: components["schemas"]["PlayGrant"][];
+      /** @description Present when there is another page; absent on the last. Pass it as `pageToken`. */
+      nextPageToken?: string;
+    };
+    PlayGrant: {
+      grantId: components["schemas"]["GrantId"];
+      /** @description The fixed bet of every round the grant funds. The `bet` of the start must equal it. */
+      stake: components["schemas"]["Amount"];
+      /** @description How many free rounds are left. */
+      usesRemaining: number;
+      /** @description How many free rounds the grant started with. */
+      usesTotal: number;
+      /**
+       * Format: date-time
+       * @description The grant can start a round only before this time.
+       */
+      expiresAt: string;
     };
     RoundActionRequest: {
       /** @description The client's key of this call, 1 to 128 characters. For a move or a cash-out, the signed action's sequence number is what makes a repeat safe; a cancel is not repeated (see `rounds:cancel`). The key is accepted for every transport's sake. */
@@ -442,11 +498,11 @@ export type components = {
     /**
      * @description `ROUND_ACTIVE` (a round is open: resume it from the problem's
      * `snapshot`), `CONFLICT` (the key was used with another body), or
-     * `STALE_ACTION` (another action at an accepted sequence number: the
-     * action was signed for a state the round has left; resync from the
-     * Snapshot). For now, `STALE_ACTION` is sent only for that case: the
-     * engine's own stale refusals (a wrong `sequence` or `previous`) answer
-     * `INVALID_ARGUMENT` (400).
+     * `STALE_ACTION` (a move or a cash-out signed for a state the round has
+     * left: another action at an accepted sequence number, or a wrong
+     * `sequence` or `previous`; resync from the Snapshot). `rounds:cancel`
+     * never answers `STALE_ACTION`: a stale cancel is `INVALID_ARGUMENT`
+     * (400).
      */
     Conflict: {
       content: {
@@ -547,6 +603,18 @@ export type operations = {
    * address the shell signs the round's actions with: it is sealed with the
    * round and cannot change during it.
    *
+   * **Free bets.** With a `grantId` from `GET /play/v1/grants` the round is
+   * a free bet: the grant's stake is the bet, nothing is debited from the
+   * player, and a win credits the winnings only, the payout less the stake
+   * (the Snapshot's `payout` is that credit). The `bet` must equal the
+   * grant's `stake`. A grant that cannot be used (it is not the player's,
+   * is for another game, or has expired or run out) voids the round before
+   * it starts, like a debit the operator refuses: the answer is
+   * `FAILED_PRECONDITION`, never a Snapshot. `grantId` is part of the
+   * request: the same key with another `grantId`, or with and without one,
+   * is `CONFLICT`. A game that cannot be played free is
+   * `FAILED_PRECONDITION`.
+   *
    * After a lost response, `UNAVAILABLE` or `INTERNAL`, the round may
    * already have been started: the same key and body answer it, so sending
    * them again is safe. A resend may fail the same way;
@@ -581,8 +649,8 @@ export type operations = {
    * terminal status the move led to. The API passes the action through
    * unread: only the engine verifies it. Repeating an accepted action
    * answers the round; another action signed at an accepted sequence
-   * number is `STALE_ACTION`. For now, the engine's own stale refusals (a
-   * wrong `sequence` or `previous`) answer `INVALID_ARGUMENT`.
+   * number, or one with a wrong `sequence` or `previous`, is
+   * `STALE_ACTION`: resync from the Snapshot.
    *
    * After a lost response, `UNAVAILABLE` or `INTERNAL`, the move may
    * already have been taken: the same request (key and signed action)
@@ -700,6 +768,48 @@ export type operations = {
     };
   };
   /**
+   * List the free bets the player can use
+   * @description Answers the free-bet grants the session's player can use now, for the
+   * session's game and currency, soonest expiry first: the ones with a use
+   * left and not past their `expiresAt`. Offer one, then send its `grantId`
+   * on `rounds:start`. The session, and through it the player, the game,
+   * and the currency, come from the play token: a request cannot ask for
+   * another player's grants. A demo session has none.
+   *
+   * The list is advice, not a reservation: a grant listed may be used by
+   * another round before this player starts, and the start is the
+   * authority. Reading does not reset the session's idle timeout. Pages are
+   * read with `nextPageToken`; a page boundary never repeats or skips a
+   * grant that does not change meanwhile.
+   */
+  listGrants: {
+    parameters: {
+      query?: {
+        /** @description How many grants a page holds, 1 to 100. Default 50. */
+        pageSize?: number;
+        /** @description The `nextPageToken` of the previous page. Opaque. */
+        pageToken?: string;
+      };
+    };
+    responses: {
+      /** @description The usable grants. */
+      200: {
+        headers: {
+          /** @description Always `no-store`. */
+          "Cache-Control"?: string;
+        };
+        content: {
+          "application/json": components["schemas"]["GrantList"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
+      500: components["responses"]["InternalError"];
+      503: components["responses"]["Unavailable"];
+    };
+  };
+  /**
    * Read the Snapshot
    * @description Answers the session's Snapshot of its most recent round, ended rounds
    * included, until the next `rounds:start` creates another: an open
@@ -737,5 +847,6 @@ export type operationRoutes = {
   continueRound: { path: "/play/v1/rounds:continue"; method: "post" };
   cashOutRound: { path: "/play/v1/rounds:cashOut"; method: "post" };
   cancelRound: { path: "/play/v1/rounds:cancel"; method: "post" };
+  listGrants: { path: "/play/v1/grants"; method: "get" };
   getSnapshot: { path: "/play/v1/snapshot"; method: "get" };
 };
