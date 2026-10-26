@@ -252,6 +252,14 @@ export const cleanEnvironment = (
   ...extra,
 });
 
+/**
+ * The time a test that spawns Playwright, `tsx`, or loads the config may take:
+ * above vitest's 5 s default, which a runner under load exceeded (a `playwright
+ * test --list` took about 3 s there), and not above the 60 s each spawn is
+ * itself bounded by (`run`).
+ */
+export const SPAWN_TIMEOUT_MS = 60_000;
+
 export type Outcome = {
   readonly status: number | null;
   readonly output: string;

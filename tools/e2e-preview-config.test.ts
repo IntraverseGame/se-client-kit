@@ -19,6 +19,7 @@ import {
   previewProject,
   restoreProcess,
   suppliedBrowserNames,
+  SPAWN_TIMEOUT_MS,
 } from "./e2e-preview-support.ts";
 
 afterEach(restoreProcess);
@@ -36,23 +37,31 @@ const FAKE_LAUNCH_OPTIONS = [
 ];
 
 describe("the Playwright config without the marker", () => {
-  it("has no preview project, whatever the variables", async () => {
-    const config = await loadConfig(PREVIEW_VARIABLES, ["test"]);
-    expect(config.projects.map(project => project.name)).toEqual([
-      "chromium",
-      "firefox",
-      "webkit",
-    ]);
-    expect(config.globalSetup).toBeUndefined();
-  });
+  it(
+    "has no preview project, whatever the variables",
+    async () => {
+      const config = await loadConfig(PREVIEW_VARIABLES, ["test"]);
+      expect(config.projects.map(project => project.name)).toEqual([
+        "chromium",
+        "firefox",
+        "webkit",
+      ]);
+      expect(config.globalSetup).toBeUndefined();
+    },
+    SPAWN_TIMEOUT_MS,
+  );
 
-  it("does not read the variables", async () => {
-    const config = await loadConfig(
-      { SE_E2E_PREVIEW_ORIGIN: "not an origin" },
-      ["test", "--project=chromium"],
-    );
-    expect(config.projects).toHaveLength(3);
-  });
+  it(
+    "does not read the variables",
+    async () => {
+      const config = await loadConfig(
+        { SE_E2E_PREVIEW_ORIGIN: "not an origin" },
+        ["test", "--project=chromium"],
+      );
+      expect(config.projects).toHaveLength(3);
+    },
+    SPAWN_TIMEOUT_MS,
+  );
 
   it.each([
     ["a bare --project=preview", {}, ["test", "--project=preview"]],
@@ -67,70 +76,102 @@ describe("the Playwright config without the marker", () => {
       PREVIEW_VARIABLES,
       ["test", "--project=preview"],
     ],
-  ])("throws the refusal for %s", async (_name, environment, argv) => {
-    await expect(loadConfig(environment, argv)).rejects.toThrow(
-      "pnpm test:e2e:preview",
-    );
-  });
+  ])(
+    "throws the refusal for %s",
+    async (_name, environment, argv) => {
+      await expect(loadConfig(environment, argv)).rejects.toThrow(
+        "pnpm test:e2e:preview",
+      );
+    },
+    SPAWN_TIMEOUT_MS,
+  );
 
-  it("has the fake projects' launch options as they were", async () => {
-    const config = await loadConfig({}, ["test"]);
-    expect(launchOptionsOf(fakeProjects(config))).toEqual(FAKE_LAUNCH_OPTIONS);
-  });
+  it(
+    "has the fake projects' launch options as they were",
+    async () => {
+      const config = await loadConfig({}, ["test"]);
+      expect(launchOptionsOf(fakeProjects(config))).toEqual(
+        FAKE_LAUNCH_OPTIONS,
+      );
+    },
+    SPAWN_TIMEOUT_MS,
+  );
 });
 
 describe("the Playwright config with the marker", () => {
-  it("defines the preview project, with a global setup and its own bound", async () => {
-    const config = await loadConfig(ENTERED, ["test", "--project=preview"]);
-    expect(config.projects.map(project => project.name)).toEqual([
-      "chromium",
-      "firefox",
-      "webkit",
-      "preview",
-    ]);
-    expect(config.globalSetup).toBe("./tests/preview-support/global-setup.ts");
-    expect(config.globalTimeout).toBeGreaterThan(10 * 60 * 1000);
-  });
+  it(
+    "defines the preview project, with a global setup and its own bound",
+    async () => {
+      const config = await loadConfig(ENTERED, ["test", "--project=preview"]);
+      expect(config.projects.map(project => project.name)).toEqual([
+        "chromium",
+        "firefox",
+        "webkit",
+        "preview",
+      ]);
+      expect(config.globalSetup).toBe(
+        "./tests/preview-support/global-setup.ts",
+      );
+      expect(config.globalTimeout).toBeGreaterThan(10 * 60 * 1000);
+    },
+    SPAWN_TIMEOUT_MS,
+  );
 
-  it("fails, before any browser, naming the variable that is missing", async () => {
-    await expect(
-      loadConfig({ SE_E2E_PREVIEW_ENTRY: "script" }, ["test"]),
-    ).rejects.toThrow("SE_E2E_PREVIEW_ORIGIN");
-  });
+  it(
+    "fails, before any browser, naming the variable that is missing",
+    async () => {
+      await expect(
+        loadConfig({ SE_E2E_PREVIEW_ENTRY: "script" }, ["test"]),
+      ).rejects.toThrow("SE_E2E_PREVIEW_ORIGIN");
+    },
+    SPAWN_TIMEOUT_MS,
+  );
 
-  it("makes the fake projects ignore preview/** and the preview project match only it", async () => {
-    const config = await loadConfig(ENTERED, ["test"]);
-    expect(fakeProjects(config).map(project => project.testIgnore)).toEqual([
-      "preview/**",
-      "preview/**",
-      "preview/**",
-    ]);
-    expect(previewProject(config)?.testMatch).toBe("preview/**/*.spec.ts");
-    expect(previewProject(config)?.testIgnore).toBeUndefined();
-  });
+  it(
+    "makes the fake projects ignore preview/** and the preview project match only it",
+    async () => {
+      const config = await loadConfig(ENTERED, ["test"]);
+      expect(fakeProjects(config).map(project => project.testIgnore)).toEqual([
+        "preview/**",
+        "preview/**",
+        "preview/**",
+      ]);
+      expect(previewProject(config)?.testMatch).toBe("preview/**/*.spec.ts");
+      expect(previewProject(config)?.testIgnore).toBeUndefined();
+    },
+    SPAWN_TIMEOUT_MS,
+  );
 
-  it("keeps the fake projects' launch options the constants they were", async () => {
-    const config = await loadConfig(ENTERED, ["test"]);
-    const options = launchOptionsOf(fakeProjects(config));
-    expect(options).toEqual(FAKE_LAUNCH_OPTIONS);
-    expect(JSON.stringify(options)).not.toContain("EXCLUDE");
-    expect(JSON.stringify(options)).not.toContain('"env"');
-  });
+  it(
+    "keeps the fake projects' launch options the constants they were",
+    async () => {
+      const config = await loadConfig(ENTERED, ["test"]);
+      const options = launchOptionsOf(fakeProjects(config));
+      expect(options).toEqual(FAKE_LAUNCH_OPTIONS);
+      expect(JSON.stringify(options)).not.toContain("EXCLUDE");
+      expect(JSON.stringify(options)).not.toContain('"env"');
+    },
+    SPAWN_TIMEOUT_MS,
+  );
 
-  it("gives the preview browser the block, the allow-list's hosts, and a minimal environment", async () => {
-    process.env["SECRET_RUNNER_CREDENTIAL"] = "SENTINEL";
-    const config = await loadConfig(
-      { ...ENTERED, HTTPS_PROXY: "http://proxy.example.test" },
-      ["test"],
-    );
-    const options = previewProject(config)?.use?.launchOptions;
-    expect(options?.args).toEqual([
-      "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE preview.example.test, EXCLUDE rpc.example.test",
-    ]);
-    expect(browserNamesOf(previewProject(config))).toEqual(
-      suppliedBrowserNames(),
-    );
-    expect(JSON.stringify(options?.env)).not.toContain("SENTINEL");
-    expect(JSON.stringify(options?.env)).not.toContain("proxy.example.test");
-  });
+  it(
+    "gives the preview browser the block, the allow-list's hosts, and a minimal environment",
+    async () => {
+      process.env["SECRET_RUNNER_CREDENTIAL"] = "SENTINEL";
+      const config = await loadConfig(
+        { ...ENTERED, HTTPS_PROXY: "http://proxy.example.test" },
+        ["test"],
+      );
+      const options = previewProject(config)?.use?.launchOptions;
+      expect(options?.args).toEqual([
+        "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE preview.example.test, EXCLUDE rpc.example.test",
+      ]);
+      expect(browserNamesOf(previewProject(config))).toEqual(
+        suppliedBrowserNames(),
+      );
+      expect(JSON.stringify(options?.env)).not.toContain("SENTINEL");
+      expect(JSON.stringify(options?.env)).not.toContain("proxy.example.test");
+    },
+    SPAWN_TIMEOUT_MS,
+  );
 });
