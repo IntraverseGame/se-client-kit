@@ -216,7 +216,7 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   unexplained hang after a `runFor` was seen once in 58 Chrome runs of
   t15-unconfirmed. On CI (`CI` set) `playwright.config.ts` also sets
   `globalTimeout` to 10 minutes (a normal `test:e2e` step takes at most about
-  92 s, build included; the job's own timeout is 20 minutes); a local run has
+  92 s, build included; the job's own timeout is 30 minutes); a local run has
   none. Tracing stays off (the key's bytes are an init-script argument; the
   round fixture fails a traced test). In T-15 offline, read the attempts from `network.sent(id)` (the context's
   `request` event), not from `fakePlayApi.served`: Chromium and WebKit route
