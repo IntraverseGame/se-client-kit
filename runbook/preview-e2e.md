@@ -113,7 +113,8 @@ the runner's.
 - `pnpm test:e2e:preview` exits 0 with three specs passed, and the secret scan
   at the end of each is clean. W-29's version helper ran with each: a Snapshot
   `version` never went down among responses that did not overlap. The first real
-  run (below) showed it, and W-29's interim limit is removed.
+  run (below) showed it, and W-29's interim limit is removed; the run at the pin
+  showed it again.
 - **The first real run** was the backend's, at kit commit `9c305bbd`, against
   its preview stack. T-10, T-11, and T-12 passed on the real stack (about 1.6 s,
   1.3 s, and 1.3 s), and so did the preview-guard specs (the environment
@@ -127,6 +128,11 @@ the runner's.
   and in such a checkout would have ignored every spec. Both are now one pattern
   anchored to the tests directory's absolute path, so where the repository is
   checked out changes nothing. Nothing about T-10 to T-12 changed.
+- **The run at the pin** was the backend's, on 2026-10-26, at kit commit
+  `0693bc79`, against a freshly started preview stack, outside the backend's CI
+  job. The suite selected exactly T-10, T-11, and T-12, and all three passed in
+  about 1.5 s. This is the first run with the anchored spec selection, and it
+  confirms it. The backend's job has not run the mode in CI yet.
 - **Timeouts.** The numbers are measured, not guessed: the test timeout is 2
   minutes and the run's is 15 minutes (about 75 times the slowest spec and 47
   times the whole first run, and above the fake projects' bound of 10 minutes),
@@ -134,8 +140,14 @@ the runner's.
   quarter of a test's), so each fits inside the next and a cold stack has
   generous headroom. Each is one constant: the test and run timeouts in
   `preview-config.ts`, the hook's in `launch-hook.ts`, the step's in
-  `preview-rounds.ts`. The browser's four names (`PATH`, `HOME`, `TMPDIR`,
-  `LANG`) were enough for a headless Chromium on the backend's runner.
+  `preview-rounds.ts`. The run at the pin (about 1.5 s) is far inside them, so
+  they stay; they are revisited only if a run in the backend's job comes close.
+- **The browser's environment names** (`PATH`, `HOME`, `TMPDIR`, `LANG`) are not
+  yet measured on the backend's job runner. Neither run so far was in the
+  backend's CI job, and a headless Chromium started with these four names alone
+  on the machines they ran on. Whether the job's runner needs another name is
+  known only after the job's first run (Troubleshooting, "A browser fails to
+  start on the runner").
 - The hermetic proof of the mode itself needs no stack: `pnpm test:e2e` runs
   `e2e/tests/preview-guard/`, and `pnpm test` runs `tools/e2e-preview-*.test.ts`
   (the script closure, the config, the import boundary, the launcher, and that
@@ -211,6 +223,11 @@ here with the commit that did it.
   KiB. `line`: the line is not the one launch URL described above (the origin,
   `/`, no query, no credentials, a fragment of 1 to 128 characters). None of
   them shows what the hook printed.
+- **Every spec fails, each round showing `This round failed verification`.**
+  Seen when the stack's services were recreated without a full re-seed of the
+  stack's state. The Wrapper refusing those rounds is the intended behavior, not
+  a defect in the suite. Re-seed the stack completely (or start a fresh one)
+  from the same pin, then run again; nothing changes on the kit's side.
 - **A browser fails to start on the runner.** The browser's environment is only
   `PATH`, `HOME`, `TMPDIR`, and `LANG`. If a headless Chromium needs another
   name on the runner, that is a change to `browser-environment.ts` and a row in

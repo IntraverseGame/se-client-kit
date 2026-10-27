@@ -686,7 +686,7 @@ backend repository.
   helper records the `version` of every Snapshot response of a session and,
   among responses that did not overlap another Snapshot response in time,
   asserts it never decreases. The backend's first real run passed it, and W-29's
-  interim limit is removed.
+  interim limit is removed; the run at the pin passed it again.
 - **The secret scan stays on** in every preview test, over every channel it
   reads, with no weaker needle set. The launch code is registered before the
   navigation, the play token when the `sessions:redeem` response is read, and
@@ -741,9 +741,16 @@ backend repository.
   directory's absolute path, and `tools/e2e-preview-checkout-path.test.ts` runs
   Playwright's listing in a copy whose path has a `preview` directory to show
   the selection is the same wherever the repository is checked out.
-- **The numbers**, set from that run with headroom for a cold stack: the
+- **The run at the pin** (the backend's, on 2026-10-26, at kit commit
+  `0693bc79`, against a freshly started preview stack, outside the backend's CI
+  job) selected exactly T-10, T-11, and T-12, and all three passed in about 1.5
+  s. The backend's job has not run the mode in CI yet.
+- **The numbers**, set from the first run with headroom for a cold stack: the
   per-test timeout is 2 minutes, the run timeout 15 minutes, the launch hook's
   15 s, and the wait for one step of a round 30 s; each is one constant
-  (`preview-config.ts`, `launch-hook.ts`, `preview-rounds.ts`). The browser's
-  environment names (`PATH`, `HOME`, `TMPDIR`, `LANG`) were enough on the
-  backend's runner.
+  (`preview-config.ts`, `launch-hook.ts`, `preview-rounds.ts`). The run at the
+  pin is far inside them, so they stay. The browser's environment names (`PATH`,
+  `HOME`, `TMPDIR`, `LANG`) are not yet measured on the backend's job runner:
+  neither run was in the backend's CI job; where they ran, a headless Chromium
+  started with these four alone, and the job has not run. A name is added only
+  when a runner needs one (the runbook's Troubleshooting).

@@ -9,9 +9,10 @@
 import type { EnvironmentSource } from "./preview-environment.ts";
 
 /**
- * The names the browser may receive. These four were enough for a headless
- * Chromium to start on the backend's runner in the first real run. A name is
- * added only for a runner that needs one (runbook, Troubleshooting).
+ * The names the browser may receive. A headless Chromium started with only
+ * these four in the preview runs so far, none of which was in the backend's CI
+ * job; they are not yet measured on that job's runner. A name is added only for
+ * a runner that needs one (runbook, Troubleshooting).
  */
 export const BROWSER_ENVIRONMENT_NAMES: readonly string[] = Object.freeze([
   "PATH",
