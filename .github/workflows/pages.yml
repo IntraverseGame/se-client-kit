@@ -24,14 +24,15 @@ name: Pages
 #     documents), and uploads them, unbundled, with the `wrangler` the lockfile
 #     pins.
 # A later production deploy is a second environment (`pages-prod`) and a
-# second deploy job with its own gate and project names (ADR-008).
-# Every job runs only when the repository variable PAGES_STAGE_DEPLOY_ENABLED
-# is `true`, which the infrastructure owner sets once the environment, its
-# secrets and variables exist. Until then every run skips every job and the
-# environment is never referenced (naming it before it exists would create it
-# unprotected). The site origins, the RPC endpoints, and the origin lists are
-# secrets of the environment, so the logs mask them. The
-# proxy's upstream (SE_API_UPSTREAM_ORIGIN) is a variable of each Pages
+# second deploy job with its own trigger and project names (ADR-008): it runs
+# when the changesets version pull request is merged (not built yet, #133).
+# Every push to `main` deploys staging; there is no switch (the human,
+# 2026-10-27). Every job runs only from `main`, and the `pages-stage`
+# environment must exist, protected, before this runs (a run that names an
+# environment that does not exist creates it unprotected). To hold a Pages
+# rollback, disable this workflow (runbook). The site origins, the RPC
+# endpoints, and the origin lists are secrets of the environment, so the logs
+# mask them. The proxy's upstream (SE_API_UPSTREAM_ORIGIN) is a variable of each Pages
 # project, set there by the infrastructure owner; it is never in this
 # repository or in CI.
 on:
@@ -52,9 +53,7 @@ concurrency:
 jobs:
   build:
     name: build
-    if:
-      github.ref == 'refs/heads/main' && vars.PAGES_STAGE_DEPLOY_ENABLED ==
-      'true'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -135,9 +134,7 @@ jobs:
   # deployed (each site serves its own); the upload is kept one day.
   config-stage:
     name: config-stage
-    if:
-      github.ref == 'refs/heads/main' && vars.PAGES_STAGE_DEPLOY_ENABLED ==
-      'true'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: pages-stage
@@ -191,9 +188,7 @@ jobs:
   deploy-stage:
     name: deploy-stage
     needs: [build, config-stage]
-    if:
-      github.ref == 'refs/heads/main' && vars.PAGES_STAGE_DEPLOY_ENABLED ==
-      'true'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: pages-stage

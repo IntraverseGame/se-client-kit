@@ -245,6 +245,11 @@ the tarball check refuses any lifecycle script in a published manifest).
 4. Record in the release notes the contracts the release was built against: the
    Play API prefix, the Snapshot schema id, and the signing vector set, and the
    Wrapper artifact's digest.
+5. **Deploy.** Merging the version pull request (step 2) deploys `main` to the
+   staging Pages projects, as every push does, and is the decided trigger of the
+   production deploy (the human, 2026-10-27; ADR-008), which is not built yet
+   (#133; [Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages),
+   Production).
 
 ### Dry run
 
@@ -386,7 +391,12 @@ Three jobs:
   configuration documents), and runs `wrangler pages deploy --no-bundle` (pinned
   by the lockfile) once per project. It runs no repository script.
 
-Every job is skipped until `PAGES_STAGE_DEPLOY_ENABLED` is set.
+**Every push to `main` deploys staging.** There is no switch: no repository
+variable gates a job (the human, 2026-10-27), and every job runs only from
+`main`. The setup below must therefore be complete before a push reaches `main`;
+a run that names an environment that does not exist creates it unprotected. To
+stop deploying (to hold a rollback, or while something is fixed), disable the
+workflow (below).
 
 **Setup, once, by the infrastructure owner** (names only here; the values never
 enter this repository, an issue, or a log):
@@ -402,10 +412,12 @@ enter this repository, an issue, or a log):
      answers a bare 502. Done by the infrastructure owner (2026-10-27).
    - **`SE_API_PATH_PREFIXES`**: the site's API prefixes, whitespace-separated:
      `/play/v1/ /verify/v1/` on `se-wrapper-stage`, `/verify/v1/` on
-     `se-verifier-stage`. Without it, every API call answers a bare 502. To set.
+     `se-verifier-stage`. Without it, every API call answers a bare 502. Done by
+     the infrastructure owner (2026-10-27).
    - The project's **compatibility date** must be on or after 2024-11-11 (the
      proxy's `fetch` asks for `cache: "no-store"`, which older dates refuse;
-     every API call would then answer a bare 502).
+     every API call would then answer a bare 502). Confirmed by the
+     infrastructure owner (2026-10-27).
 3. In GitHub, the environment **`pages-stage`**, deployment branches restricted
    to `main`. Done by the infrastructure owner.
 4. Its secrets (no variables; every value is read with `secrets.`):
@@ -432,12 +444,11 @@ enter this repository, an issue, or a log):
      `{"<source>":[{"provider":"…","url":"…"}]}`, keyed by the same entropy
      source as the pins' `entropyChainId` and `tipLagMargin`;
      `PAGES_RPC_ORIGINS` must list exactly the origins of its URLs. Set.
-5. Last, the repository variable **`PAGES_STAGE_DEPLOY_ENABLED`** = `true`.
 
-A run with the variable set and the token or the account id missing fails in its
-first deploy step, naming what is missing. A configuration value that is missing
-or makes an invalid document fails the config job, naming the input or the field
-and the issue, never a value.
+No repository variable is needed. A run with the token or the account id missing
+fails in its first deploy step, naming what is missing. A configuration value
+that is missing or makes an invalid document fails the config job, naming the
+input or the field and the issue, never a value.
 
 **Staging has no browser-reachable RPC yet** (#137). Until an RPC is provided,
 `PAGES_RPC_ENDPOINTS` can name only a placeholder endpoint (with `minRpcQuorum`
@@ -449,9 +460,17 @@ no round can be started, and the verify page's chain read (check 6) fails ("this
 round could not be verified against the chain", V-7). This is the specified
 behavior for an unreachable RPC, not a fault of the deploy.
 
-A production deploy later is a second environment (`pages-prod`, with the same
-names inside), a second gate (`PAGES_PROD_DEPLOY_ENABLED`), and second config
-and deploy jobs with the production project names (ADR-008).
+**Production (not built yet, #133).** A production deploy runs when the
+changesets version pull request is merged into `main` (the versions bumped and
+the changelogs written; [Release](#release), step 2): that release is then
+deployed to the production projects too (the human, 2026-10-27; ADR-008). It is
+a second deploy environment (`pages-prod`, with the same names inside), a
+configuration environment with no deploy credential, and second config and
+deploy jobs with the production project names (ADR-008). Nothing reacts to that
+merge today beyond the staging deploy every push gets: the release workflow
+pushes the version branch and publishes only by hand, and the merge itself
+triggers nothing else.
+<!-- TODO(#133): the production deploy, triggered by the merge of the changesets version pull request into `main`. -->
 
 **After the first deploy** (the real test: zone-wide settings can still answer
 with a 403 or a challenge page), on each site:
@@ -472,7 +491,7 @@ with a 403 or a challenge page), on each site:
    `Content-Security-Policy` (the Wrapper's on `/`, the verify page's on
    `/verify/` and everywhere on the verifier's site), plus `Referrer-Policy` and
    `Permissions-Policy`. Two policies mean Pages merged the rules: stop
-   deploying (unset `PAGES_STAGE_DEPLOY_ENABLED`) and fix the headers step.
+   deploying (`gh workflow disable pages.yml`) and fix the headers step.
 
 Check them again after any change to `headers.json`, the proxy, the
 configuration, or the projects' settings.
@@ -486,9 +505,18 @@ deployment, with an API token of the infrastructure owner's (not the CI token's
 value, which is never copied out of the environment). Roll back each project
 that needs it; a rollback serves that deployment's own files, worker, and
 configuration at once. The next merge to `main` deploys again, so fix forward
-(or unset `PAGES_STAGE_DEPLOY_ENABLED` to hold the rollback) before merging.
-Each deployment records the commit (`--commit-hash`) it came from, and its run
-logs every digest.
+before merging, or hold the rollback by disabling the workflow
+(`gh workflow disable pages.yml`, or Actions, Pages, Disable workflow) and
+re-enable it (`gh workflow enable pages.yml`) once the fix is merged; a push
+while it is disabled deploys nothing, so redeploy `main` by hand after
+re-enabling it. Disabling the workflow does not cancel a run that has not
+finished (queued, pending in the `pages` concurrency group, waiting, or
+running), which would deploy over the rollback: before rolling back, list every
+unfinished Pages run
+(`gh run list --workflow pages.yml --all --json databaseId,status --jq '.[] | select(.status != "completed") | .databaseId'`;
+`--all` because `gh run list` leaves out a disabled workflow's runs without it)
+and cancel each (`gh run cancel <id>`). Each deployment records the commit
+(`--commit-hash`) it came from, and its run logs every digest.
 
 **Rotate the Pages token:** the infrastructure owner creates a replacement with
 the same scope, writes it into the `pages-stage` environment's

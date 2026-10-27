@@ -2,7 +2,9 @@
 
 - Status: accepted
 - Date: 2026-10-27 (proposed and accepted the same day, in the pull request that
-  builds it)
+  builds it; amended 2026-10-27 by the human's deploy policy: staging deploys on
+  every push to `main` with no gate, and production deploys when the changesets
+  version pull request is merged)
 - Deciders: the TPO (Pages hosting, the push model, the kit-owned proxy, the
   verify page on its own site), the human maintainer (the deploy tool, the
   secrets, the proxy hardening, acceptance), the infrastructure owner (the
@@ -81,6 +83,15 @@ workflow is safe to merge first: until then every job is skipped and the
 that does not exist creates it, unprotected). One run at a time, never cancelled
 half-way (`concurrency: pages`).
 
+Amendment note (2026-10-27, the human's deploy policy): **staging deploys on
+every push to `main`, always.** The `PAGES_STAGE_DEPLOY_ENABLED` gate is
+removed: every job runs only from `main` (`github.ref == 'refs/heads/main'`),
+and the workflow reads no repository variable. The `pages-stage` environment,
+its secrets, and the projects' variables exist before this lands (runbook), so
+no run creates the environment unprotected. To hold a Pages rollback, the
+workflow is disabled (`gh workflow disable pages.yml`) and re-enabled once the
+fix is merged, instead of unsetting the variable.
+
 - **`build`**: `contents: read`, no environment, no secret, no cache. It runs
   the release dry run (`tools/release-dry-run.ts`: the Wrapper artifact built
   twice in two scratch copies, one digest required, held to its size budget),
@@ -125,6 +136,19 @@ environment that holds no deploy credential ([Risks accepted](#risks-accepted)),
 a second gate (`PAGES_PROD_DEPLOY_ENABLED`), and second config and deploy jobs
 with the production project names; the build job is shared. If that duplication
 grows, the jobs move to a reusable workflow.
+
+Amendment note (2026-10-27, the human's deploy policy): **the production trigger
+is decided.** A production deploy runs when the changesets version pull request
+is merged into `main` (the versions bumped and the changelogs written): that
+release, the merge commit, is deployed to the production projects as well as to
+staging. It replaces the second gate (`PAGES_PROD_DEPLOY_ENABLED`) above:
+production gets its own trigger, not a repository variable. Not built yet
+(#133). Today the release workflow (`.github/workflows/release.yml`) pushes the
+version branch (`changeset-release/main`) and publishes only when started by
+hand; a person opens the version pull request, and its merge runs nothing but
+the staging deploy. How the production job recognizes that merge (for example, a
+push to `main` whose changes are those `changeset version` makes) is #133's to
+specify.
 
 ### 3. The two sites
 
@@ -301,7 +325,8 @@ Wrapper's boot rule already enforces (W-26a). Recorded in
 - **The deployed bytes**: the reproducible artifact, the worker, and the two
   configuration documents, each digest-checked and printed, and the generated
   `_headers` and `_routes.json`.
-- **Rollback is a Pages rollback** of each project. A later merge deploys again.
+- **Rollback is a Pages rollback** of each project. A later merge deploys again
+  (amended 2026-10-27: unless the workflow is disabled to hold the rollback).
 - **The release workflow is unchanged.** A released Wrapper keeps its tag,
   digest, and (ADR-005) attestation; Pages serves `main`.
 - **Follow-ups**: the Actions allow-list of ADR-005 lists `download-artifact`
@@ -330,6 +355,10 @@ Wrapper's boot rule already enforces (W-26a). Recorded in
   human, 2026-10-27; Risks accepted).
 - Staging runs as `preview` with `minRpcQuorum` 1 until it has a
   browser-reachable RPC (decision 8).
+- Staging deploys on every push to `main`, with no gate; a rollback is held by
+  disabling the workflow (the human, 2026-10-27; decision 2, amendment note).
+- Production deploys when the changesets version pull request is merged (the
+  human, 2026-10-27; decision 2, amendment note); not built yet (#133).
 - The origin lists, the site origins, and the account id are secrets (decisions
   2 and 5).
 - Two projects, the verify page on its own site (decision 3).

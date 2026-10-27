@@ -237,7 +237,15 @@ another origin.
    ([ADR-008](../decisions/ADR-008-pages-deploy-with-wrangler.md), which
    supersedes ADR-001 decision 9; `.github/workflows/pages.yml`), to two staging
    projects on two hostnames: the Wrapper's (`se-wrapper-stage`) and the
-   verifier's (`se-verifier-stage`). Staging only; production is to come.
+   verifier's (`se-verifier-stage`). **Every push to `main` deploys staging**,
+   with no switch (no repository variable gates a job; the human, 2026-10-27).
+   **Production** is decided but not built yet (#133): the production projects
+   are deployed when the changesets version pull request is merged into `main`
+   (the versions bumped and the changelogs written), from that commit, in a
+   deploy environment of their own (`pages-prod`) with their configuration built
+   in an environment with no deploy credential (ADR-008). Nothing triggers it
+   today: the release workflow pushes the version branch and publishes only when
+   started by hand, and the merge runs only the staging deploy.
    - A build job with a read-only token and no secret builds the Wrapper
      artifact twice (the release dry run) and requires one digest, and builds
      the [API proxy](#the-pages-api-proxy) worker with `tsc`.
@@ -269,7 +277,9 @@ another origin.
    them masked. The API's origin is a variable of each Pages project, never in
    this repository or CI. No hostname is written in this repository.
 4. A rollback is a Pages rollback to an earlier deployment, per project
-   ([runbook](../runbook/client-kit-release.md#deploy-to-cloudflare-pages)).
+   ([runbook](../runbook/client-kit-release.md#deploy-to-cloudflare-pages)). The
+   next push to `main` deploys again; to hold a rollback, the workflow is
+   disabled until the fix is merged.
 
 #### The Pages API proxy
 

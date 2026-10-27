@@ -125,12 +125,12 @@ the attack surface a player cannot see. The rules:
   out the two sites, and writes `_headers` and `_routes.json`), and
   `wrangler pages deploy --no-bundle` (nothing is bundled next to the token),
   pinned by the lockfile, from an empty working directory with metrics off.
-  Every job runs only when the repository variable `PAGES_STAGE_DEPLOY_ENABLED`
-  is `true`. The workflow uses `actions/upload-artifact` and
-  `actions/download-artifact`, pinned by full SHA (ADR-008, decision 7). The
-  proxy (`apps/pages-proxy`) has no dependency and no import; its upstream
-  origin and path prefixes are variables of each Pages project, never in the
-  repository or CI.
+  Every job runs on every push to `main` (and by hand from `main`), with no
+  repository variable gating it; the workflow reads no `vars.` at all. The
+  workflow uses `actions/upload-artifact` and `actions/download-artifact`,
+  pinned by full SHA (ADR-008, decision 7). The proxy (`apps/pages-proxy`) has
+  no dependency and no import; its upstream origin and path prefixes are
+  variables of each Pages project, never in the repository or CI.
 - **Bundling.** A package's own source is the only thing in its `dist/`; nothing
   from `node_modules` is ever bundled (`deps` in `tsdown.base.ts`). A kit
   package stays an import (`neverBundle` for the `@intraverse/` scope), a

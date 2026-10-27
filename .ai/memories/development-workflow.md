@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-27 (#133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
+last-verified: 2026-10-27 (deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
 ---
 
 # Development workflow
@@ -102,8 +102,16 @@ Several agents and people work in one clone at once. Rules:
   `.github/workflows/pages.yml`, on push to `main` and by hand from `main`,
   staging only, to `se-wrapper-stage` (the artifact: Wrapper at `/`, verify
   page at `/verify/`) and `se-verifier-stage` (the artifact's `verify/` plus a
-  root copy of its page; a round is `<verifier>/verify/rounds/{id}`). Every job
-  only when the repository variable `PAGES_STAGE_DEPLOY_ENABLED == 'true'`.
+  root copy of its page; a round is `<verifier>/verify/rounds/{id}`). Every
+  push to `main` deploys staging, always (the human, 2026-10-27): every job's
+  only condition is `github.ref == 'refs/heads/main'`, and the workflow reads no
+  `vars.` (the test asserts both, and the `push: branches: [main]` trigger).
+  To hold a Pages rollback: `gh workflow disable pages.yml` and cancel every
+  unfinished Pages run (queued, pending, waiting, or in progress:
+  `gh run list --workflow pages.yml --all --json databaseId,status --jq '.[] | select(.status != "completed") | .databaseId'`
+  (`--all`: without it `gh run list` skips a disabled workflow's runs), then `gh run cancel <id>` for each; disabling does not cancel them)
+  before rolling back, then
+  `gh workflow enable pages.yml` and a manual run once the fix is merged.
   Three jobs:
   - `build` (`contents: read`, no secret): the release dry run, the `.sha256`
     check, the proxy worker (`tsc -p apps/pages-proxy/tsconfig.build.json
@@ -133,9 +141,14 @@ Several agents and people work in one clone at once. Rules:
   `https://invalid.example`), and `PAGES_WRAPPER_ORIGIN`,
   `PAGES_VERIFIER_ORIGIN`, `PAGES_CHAIN_PINS`, `PAGES_RPC_ENDPOINTS` (to set).
   Each Pages project: `SE_API_UPSTREAM_ORIGIN` (set), `SE_API_PATH_PREFIXES`
-  (to set), compatibility date 2024-11-11 or later. Staging has no
-  browser-reachable RPC (#137); its `tipLagMargin` is #135. Production later:
-  `pages-prod`, `PAGES_PROD_DEPLOY_ENABLED`, second config and deploy jobs.
+  (set), compatibility date 2024-11-11 or later (confirmed). Staging has no
+  browser-reachable RPC (#137); its `tipLagMargin` is #135. Production
+  (decided, not built, #133; ADR-008 amendment): deploys when the changesets
+  version pull request is merged into `main`, to `pages-prod` with config built
+  in an environment without the token, second config and deploy jobs; no
+  repository-variable gate. release.yml does not do that flow end to end yet:
+  its `version` job (manual dispatch) force-pushes `changeset-release/main`, a
+  person opens the PR, and nothing reacts to its merge but the staging deploy.
   `wrangler` is a root devDependency at an exact version; `workerd`'s install
   script is denied. Tests: `tools/pages-workflow.test.ts`,
   `tools/pages-headers.test.ts` (reads `apps/wrapper/dist/headers.json`, so
