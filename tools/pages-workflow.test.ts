@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  blockEnd,
   jobNames,
   jobRange,
   keyLine,
@@ -54,8 +55,16 @@ const stepEnv = (job: string, name: string): string[] => {
   return mappingAt(pages, keyLine(pages, from, to, 8, "env"));
 };
 
-const GATE =
-  "github.ref == 'refs/heads/main' && vars.PAGES_STAGE_DEPLOY_ENABLED == 'true'";
+// Every push to main deploys staging, with no repository-variable switch
+// (the human, 2026-10-27; ADR-008).
+const GATE = "github.ref == 'refs/heads/main'";
+
+/** The lines at `indent` inside the block of line `index`, comments left out. */
+const keysIn = (index: number, indent: number): string[] =>
+  pages
+    .slice(index + 1, blockEnd(pages, index))
+    .filter(line => line.indent === indent && !line.text.startsWith("#"))
+    .map(line => line.text);
 
 /** The one `run:` script of job `job` that contains `text`. */
 const runWith = (job: string, text: string): string => {
@@ -75,7 +84,14 @@ describe("the Pages workflow", () => {
     );
   });
 
-  it("runs every job only from main with PAGES_STAGE_DEPLOY_ENABLED set", () => {
+  it("runs on every push to main, and by hand", () => {
+    const on = keyLine(pages, 0, pages.length, 0, "on");
+    expect(keysIn(on, 2)).toEqual(["push:", "workflow_dispatch:"]);
+    const push = keyLine(pages, on, blockEnd(pages, on), 2, "push");
+    expect(keysIn(push, 4)).toEqual(["branches: [main]"]);
+  });
+
+  it("runs every job only from main, with no other condition", () => {
     expect(valuesOf(pages, "if")).toEqual([GATE, GATE, GATE]);
   });
 
@@ -189,12 +205,8 @@ describe("the Pages workflow", () => {
     );
   });
 
-  it("reads every pages-stage value as a secret, never a variable", () => {
-    expect(
-      pages.filter(line =>
-        /\bvars\.(?!PAGES_STAGE_DEPLOY_ENABLED)/u.test(line.text),
-      ),
-    ).toEqual([]);
+  it("reads every pages-stage value as a secret, and no variable at all", () => {
+    expect(pages.filter(line => /\bvars\./u.test(line.text))).toEqual([]);
   });
 
   it("never names the proxy's upstream in CI", () => {
