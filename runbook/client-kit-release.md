@@ -359,7 +359,7 @@ After publishing:
 
 The Pages workflow (`.github/workflows/pages.yml`,
 [ADR-008](../decisions/ADR-008-pages-deploy-with-wrangler.md)) deploys `main` on
-every push to it, to two staging Pages projects (Direct Upload, production
+every push to it, to three staging Pages projects (Direct Upload, production
 branch `main`), each on its own hostname. Staging only; production is to come.
 
 - `se-wrapper-stage`: the Wrapper at `/`, with its copy of the verify page at
@@ -369,26 +369,42 @@ branch `main`), each on its own hostname. Staging only; production is to come.
   configuration's `verifyBaseUrl`), and a round's page is that base plus
   `/rounds/{roundId}`: `https://<verifier host>/verify/rounds/{roundId}`, the
   URL the Wrapper's verify link opens. A link from elsewhere to a round uses the
-  same base and suffix.
+  same base and suffix;
+- `se-games-stage`: the reference game, at the root of
+  `https://se-games-stage.pages.dev` (no custom domain; this origin is public),
+  where the Wrapper frames it (`<game origin>/?parentOrigin=...`). The backend's
+  catalog names this origin for `coin-flip-v1`, `cash-or-crash-v1`, and
+  `book-slot-v1`. Coin Flip and Cash or Crash play; **a `book-slot-v1` launch is
+  not playable yet** (the Wrapper refuses book rounds in the first release,
+  W-26, and the reference game plays `steps` only; a separate issue covers it).
 
-Each site carries the same-origin API proxy (`apps/pages-proxy`) as its
-`_worker.js`, its own `environment-config.json`, a `_routes.json` that sends
-only its API paths to the proxy (`/play/v1/*` and `/verify/v1/*` on the
-Wrapper's, `/verify/v1/*` on the verifier's), and its `_headers`
-([specs/client-kit.md](../specs/client-kit.md#the-pages-api-proxy)).
+The Wrapper's and the verifier's sites carry the same-origin API proxy
+(`apps/pages-proxy`) as their `_worker.js`, their own `environment-config.json`,
+and a `_routes.json` that sends only their API paths to the proxy (`/play/v1/*`
+and `/verify/v1/*` on the Wrapper's, `/verify/v1/*` on the verifier's)
+([specs/client-kit.md](../specs/client-kit.md#the-pages-api-proxy)). The game's
+site is static: the game's build and nothing else
+([The game's site](../specs/client-kit.md#the-games-site)). Every site has its
+`_headers`; the game's `frame-ancestors` is the Wrapper's origin and the
+operator origins (every ancestor of the game), from the Wrapper's configuration
+document. It cannot stop a listed operator from framing the game directly; the
+game's own parent check and the Wrapper's bridge keep such a frame from playing.
 
 Three jobs:
 
 - `build`: the release dry run (the Wrapper artifact built twice, one digest
-  required) and the proxy worker (`tsc`), with a read-only token and no secret.
+  required), the reference game's artifact, `se-client-reference-game.tar`, from
+  the dry run's two kept builds (one digest required), and the proxy worker
+  (`tsc`), with a read-only token and no secret.
 - `config-stage`: the two sites' configuration documents, built from the
   `pages-stage` configuration secrets and validated with the Wrapper's own
   validator (`apps/wrapper/pages-config-cli.ts`). It references only those
   secrets, never the token, but it runs in the same environment: an accepted
   risk for staging only (ADR-008, Risks accepted).
-- `deploy-stage`: checks every download against its digest, lays out the two
-  sites, writes their `_routes.json` and `_headers` (the CSP lists read from the
-  configuration documents), and runs `wrangler pages deploy --no-bundle` (pinned
+- `deploy-stage`: checks every download against its digest, lays out the three
+  sites, writes the Wrapper's and the verifier's `_routes.json` and every site's
+  `_headers` (the CSP lists and the Wrapper's origin read from the configuration
+  documents), and runs `wrangler pages deploy --no-bundle --branch main` (pinned
   by the lockfile) once per project. It runs no repository script.
 
 **Every push to `main` deploys staging.** There is no switch: no repository
@@ -401,12 +417,15 @@ workflow (below).
 **Setup, once, by the infrastructure owner** (names only here; the values never
 enter this repository, an issue, or a log):
 
-1. In Cloudflare: the two projects, their custom hostnames in the shared zone,
-   and an API token with Pages edit on that account and nothing else. Done by
-   the infrastructure owner.
-2. In each Pages project, two plain production environment variables. They take
-   effect only on a deployment made after they are set, so set them before the
-   first deploy, or redeploy after changing them.
+1. In Cloudflare: the three projects, the Wrapper's and the verifier's custom
+   hostnames in the shared zone (`se-games-stage` has none: it is served at its
+   `pages.dev` origin), and an API token with Pages edit on that account and
+   nothing else. Done by the infrastructure owner (`se-games-stage` created
+   2026-10-27).
+2. In the Wrapper's and the verifier's Pages projects, two plain production
+   environment variables (`se-games-stage` needs none: it has no proxy). They
+   take effect only on a deployment made after they are set, so set them before
+   the first deploy, or redeploy after changing them.
    - **`SE_API_UPSTREAM_ORIGIN`**: the API's origin only (`https://host`, no
      path, no trailing slash). Without it, every API call through the proxy
      answers a bare 502. Done by the infrastructure owner (2026-10-27).
@@ -427,10 +446,12 @@ enter this repository, an issue, or a log):
      **`PAGES_OPERATOR_ORIGINS`**: whitespace-separated lists of bare `https`
      origins (no path, no trailing slash), feeding both the configuration
      documents and the CSP's `connect-src`, `frame-src`, and `frame-ancestors`.
-     Set (the infrastructure owner, 2026-10-27), today to placeholders: the
-     configuration's disjoint-origins rule (W-49) refuses an origin that is both
-     a game origin and an operator origin, so `PAGES_OPERATOR_ORIGINS` holds a
-     placeholder distinct from the others.
+     `PAGES_GAME_ORIGINS` holds `https://se-games-stage.pages.dev`, the staging
+     game origin (the infrastructure owner, 2026-10-27). Set (the infrastructure
+     owner, 2026-10-27), today to placeholders: the configuration's
+     disjoint-origins rule (W-49) refuses an origin that is both a game origin
+     and an operator origin, so `PAGES_OPERATOR_ORIGINS` holds a placeholder
+     distinct from the others.
    - **`PAGES_WRAPPER_ORIGIN`**, **`PAGES_VERIFIER_ORIGIN`**: the two sites'
      origins (`https://host`). Set.
    - **`PAGES_CHAIN_PINS`**: JSON with exactly `environment`, `runtimeSigner`,
@@ -473,7 +494,8 @@ triggers nothing else.
 <!-- TODO(#133): the production deploy, triggered by the merge of the changesets version pull request into `main`. -->
 
 **After the first deploy** (the real test: zone-wide settings can still answer
-with a 403 or a challenge page), on each site:
+with a 403 or a challenge page), on each site (the API checks on the Wrapper's
+and the verifier's sites only):
 
 1. A `/play/v1` call through the proxy on the Wrapper's site, and a `/verify/v1`
    call on each site, return the API's JSON (an API error in JSON is fine), with
@@ -492,9 +514,18 @@ with a 403 or a challenge page), on each site:
    `/verify/` and everywhere on the verifier's site), plus `Referrer-Policy` and
    `Permissions-Policy`. Two policies mean Pages merged the rules: stop
    deploying (`gh workflow disable pages.yml`) and fix the headers step.
+5. On the game's site, `/` answers the game page with one
+   `Content-Security-Policy` whose `frame-ancestors` is the Wrapper's origin
+   followed by the operator origins (the Wrapper's alone when there are none),
+   plus the Wrapper's `Permissions-Policy`, `Referrer-Policy`, and
+   `X-Content-Type-Options`. A launch of `coin-flip-v1` through the Wrapper
+   loads `<game origin>/?parentOrigin=...` in its frame with a 200 and no
+   `frame-ancestors` or `frame-src` violation in the browser console (the frame
+   stays hidden until a round is ready, W-31, which staging cannot reach without
+   an RPC, #137).
 
 Check them again after any change to `headers.json`, the proxy, the
-configuration, or the projects' settings.
+configuration, the reference game, or the projects' settings.
 
 **Redeploy** `main` without a commit: run the Pages workflow by hand on `main`
 (Actions, Pages, Run workflow). Needed after changing a Pages project variable.

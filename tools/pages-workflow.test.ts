@@ -124,10 +124,11 @@ describe("the Pages workflow", () => {
     );
   });
 
-  it("deploys to the two staging projects by their public names", () => {
+  it("deploys to the three staging projects by their public names", () => {
     expect(mappingAt(pages, jobKey("deploy-stage", "env"))).toEqual([
       "WRAPPER_PROJECT: se-wrapper-stage",
       "VERIFIER_PROJECT: se-verifier-stage",
+      "GAME_PROJECT: se-games-stage",
     ]);
   });
 
@@ -238,6 +239,7 @@ describe("the Pages workflow", () => {
   it("checks every download against its job's digest", () => {
     const unpack = runWith("deploy-stage", "tar -x");
     expect(unpack).toContain('"$actual" != "$WRAPPER_DIGEST"');
+    expect(unpack).toContain('"se-client-reference-game.tar:$GAME_DIGEST"');
     expect(unpack).toContain('"_worker.js:$WORKER_DIGEST"');
     expect(unpack).toContain(
       '"wrapper-environment-config.json:$WRAPPER_CONFIG_DIGEST"',
@@ -281,6 +283,8 @@ describe("the Pages workflow", () => {
       'WRANGLER_SEND_METRICS: "false"',
     );
     const deploy = runWith("deploy-stage", "wrangler");
+    expect(deploy).toContain("for site in wrapper verifier game; do");
+    expect(deploy).toContain('game) project="$GAME_PROJECT" ;;');
     expect(deploy).toContain('pages deploy "$site"');
     expect(deploy).toContain('--project-name "$project"');
     expect(deploy).toContain("--no-bundle");
