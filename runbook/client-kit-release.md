@@ -435,9 +435,10 @@ enter this repository, an issue, or a log):
    nothing else. Done by the infrastructure owner (`se-games-stage` created
    2026-10-27).
 2. In the Wrapper's and the verifier's Pages projects, two plain production
-   environment variables (`se-games-stage` needs none: it has no proxy). They
-   take effect only on a deployment made after they are set, so set them before
-   the first deploy, or redeploy after changing them.
+   environment variables (`se-games-stage` needs none: it has no proxy), set by
+   the infrastructure owner in their code (below). They take effect only on a
+   deployment made after they are set, so they were set before the first deploy,
+   and a change needs a redeploy (below).
    - **`SE_API_UPSTREAM_ORIGIN`**: the API's origin only (`https://host`, no
      path, no trailing slash). Without it, every API call through the proxy
      answers a bare 502. Done by the infrastructure owner (2026-10-27).
@@ -477,6 +478,15 @@ enter this repository, an issue, or a log):
      `{"<source>":[{"provider":"…","url":"…"}]}`, keyed by the same entropy
      source as the pins' `entropyChainId` and `tipLagMargin`;
      `PAGES_RPC_ORIGINS` must list exactly the origins of its URLs. Set.
+
+**The three Pages projects are managed as code by the infrastructure owner**
+(since 2026-10-28): their environment variables, bindings, and compatibility
+date. Nothing changed for the kit's deploys. Ask the infrastructure owner for
+any change to a project setting; never make it in the Cloudflare dashboard,
+because their next apply removes a setting added outside their code. A setting
+reaches a site only with its next deployment, so after such a change, when the
+infrastructure owner asks, redeploy `main` (**Redeploy**, below) or push to
+`main`.
 
 No repository variable is needed. A run with the token or the account id missing
 fails in its first deploy step, naming what is missing. A configuration value
@@ -541,7 +551,8 @@ Check them again after any change to `headers.json`, the proxy, the
 configuration, the reference game, or the projects' settings.
 
 **Redeploy** `main` without a commit: run the Pages workflow by hand on `main`
-(Actions, Pages, Run workflow). Needed after changing a Pages project variable.
+(Actions, Pages, Run workflow). Needed after a change to a Pages project
+setting.
 
 **Rollback:** in the Cloudflare dashboard, the project's Deployments, choose the
 last good production deployment and Rollback; or the Pages API's rollback of a

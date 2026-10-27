@@ -151,8 +151,11 @@ Several agents and people work in one clone at once. Rules:
   `https://invalid.example`), and `PAGES_WRAPPER_ORIGIN`,
   `PAGES_VERIFIER_ORIGIN`, `PAGES_CHAIN_PINS`, `PAGES_RPC_ENDPOINTS` (to set).
   Each Pages project: `SE_API_UPSTREAM_ORIGIN` (set), `SE_API_PATH_PREFIXES`
-  (set), compatibility date 2024-11-11 or later (confirmed). Staging has no
-  browser-reachable RPC (#137); its `tipLagMargin` is #135. Production
+  (set), compatibility date 2024-11-11 or later (confirmed). Since 2026-10-28
+  the infrastructure owner manages the three projects' settings as code: ask
+  them for a change (never the dashboard; their apply removes it), and redeploy
+  when they ask. Staging has no browser-reachable RPC (#137); its
+  `tipLagMargin` is #135. Production
   (decided, not built, #133; ADR-008 amendment): deploys when the changesets
   version pull request is merged into `main`, to `pages-prod` with config built
   in an environment without the token, second config and deploy jobs; no
