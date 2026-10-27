@@ -59,36 +59,47 @@ org owners apply the settings; ask them for each.
    (`.github/workflows/release.yml`) and the release dry run landed with the
    publishing work (#12); its publish job stays off until steps 5 to 8 are done.
 
-   `.github/CODEOWNERS` stays comment-only until the org owners give their
-   handles; branch protection (below) is the interim control.
+   `.github/CODEOWNERS` names the two org owners for `*` and, explicitly, for
+   every path that can reach the supply chain or a credential (#3).
 
-2. **Branch protection or a ruleset** on `main`: require a pull request and
-   approvals; require review from code owners; block direct and force pushes; no
-   self-approval; do not allow administrators to bypass; require the `ci-ok`
-   check; dismiss stale approvals when new commits are pushed (the `version` job
-   force-pushes its branch, so an approval must not outlive the commit it saw).
-   Also a **tag ruleset** that blocks creating, updating, and deleting tags for
+2. **The `main` ruleset** (in place; decided by the org owners, 2026-10-27): a
+   pull request is required, with review from code owners and every review
+   thread resolved; stale approvals are dismissed when new commits are pushed
+   (the `version` job force-pushes its branch, so an approval must not outlive
+   the commit it saw); force-pushes and deletion are blocked. Decided
+   deliberately: the required approval count is 0 (the code owner's approval is
+   the required review), no status check is required (keep `ci-ok` green before
+   merging; the ruleset does not enforce it), and organization admins may bypass
+   the ruleset. GitHub never lets an author approve their own pull request, so
+   without a bypass a change by one org owner needs the other's approval. Also a
+   **tag ruleset** that blocks creating, updating, and deleting tags for
    everyone but the org owners, so a workflow token (such as the `version` job's
    `contents: write`) cannot create a tag.
-   <!-- TODO(org owners, #3): the tag ruleset that blocks tag creation by Actions (bypass for the org owners only), and "dismiss stale pull request approvals when new commits are pushed" on `main`. -->
-3. **Secret scanning and push protection** on. Dependabot alerts and security
-   updates on.
+   <!-- TODO(org owners, #134): the tag ruleset that blocks tag creation by Actions (bypass for the org owners only); needed before the release job tags a release. -->
+3. **Secret scanning and push protection** on (they are). Dependabot alerts and
+   security updates on. **Private vulnerability reporting** on, so a reporter
+   can open a private advisory from the Security tab
+   ([SECURITY.md](../SECURITY.md)).
 4. **Actions settings:** read-only default workflow token; Actions may not
    create or approve pull requests; first-time and outside contributors'
    workflows need approval (GitHub's "Fork pull request workflows" setting).
-5. **The publishing environment `release`** (#3): required reviewers designated
-   by the org owners, a deployment-branch restriction to `main`, and no
-   self-review. Create it **before** anyone sets the variable in step 8: GitHub
-   creates an environment that a running job names and that does not exist yet,
-   without any protection. The publishing credential, if one is needed at all,
-   is a secret of this environment only, never a repository-level secret.
-   <!-- TODO(org owners, #3): create the protected `release` environment. -->
-   <!-- TODO(infrastructure owner, #3): deferred to #3 (owner: TPO, with the org owners; reason: the npm scope is not claimed yet). The form of the npm credential. Preferred: npm trusted publishing (OIDC) for each of the five packages, trusting this repository, the workflow `release.yml`, and the environment `release`, so no npm token is stored anywhere. Confirm that the pinned pnpm exchanges the OIDC token itself; if it does not, the publish step moves to the npm CLI, which needs a recorded decision. -->
-6. **npm:** claim the `intraverse` organization (scope `@intraverse`, packages
-   `@intraverse/se-client-<name>`, decided in ADR-001; issue #3 still carries
-   the older working name `@superengine`). It is not claimed yet. It is owned by
-   the org owners, not a person; two-factor required.
-   <!-- TODO(org owners, #3): claim the npm organization `intraverse` and the five package names. -->
+5. **The publishing environment `release`** (decided by the org owners,
+   2026-10-27): required reviewers are the two org owners, self-review is
+   allowed (an org owner may approve a deployment they started), and deployments
+   are restricted to `main`. It must exist **before** anyone sets the variable
+   in step 8: GitHub creates an environment that a running job names and that
+   does not exist yet, without any protection. No publishing credential is
+   stored in it (step 6).
+6. **npm:** the `intraverse` organization is claimed (scope `@intraverse`,
+   packages `@intraverse/se-client-<name>`, decided in ADR-001). It is owned by
+   the org owners, not a person; two-factor required. The publish credential is
+   **npm trusted publishing (OIDC)** from `release.yml` in the `release`
+   environment (decided by the org owners, 2026-10-27): no npm token is stored
+   anywhere. Trusted publishing is configured per package on npmjs.com, for each
+   of the five packages, trusting this repository, the workflow `release.yml`,
+   and the environment `release` (the environment is required: ADR-005's
+   precondition).
+   <!-- TODO(release, #134): configure the npm trusted publisher of each of the five packages (repository, `release.yml`, environment `release`), and confirm that the pinned pnpm exchanges the OIDC token itself; if it does not, the publish step moves to the npm CLI, which needs a recorded decision. -->
 7. **Split the publish job (required before step 8; decided by the human).**
    Stripping token-like variables from a child's environment is hygiene, not
    isolation: a process of the same user can read its parent's environment (on
@@ -102,7 +113,7 @@ org owners apply the settings; ask them for each.
    verifies their digests against the build job's outputs, and runs
    `pnpm publish <tarball>`. It needs the artifact upload and download Action
    that ADR-005 (to come) proposes, and is built after that ADR is accepted.
-   <!-- TODO(release, #134): deferred to #134 (owner: TPO). Split the publish job into a build job without `id-token` and a publish-only job that runs no repository tooling. Must be merged before RELEASE_PUBLISH_ENABLED is ever set. Reason: it waits on ADR-005's acceptance, and no real publish happens before #3. -->
+   <!-- TODO(release, #134): deferred to #134 (owner: TPO). Split the publish job into a build job without `id-token` and a publish-only job that runs no repository tooling. Must be merged before RELEASE_PUBLISH_ENABLED is ever set. Reason: it waits on ADR-005's acceptance. -->
 8. **Turn the publish job on**, only after steps 5 to 7 and the trusted
    publishers exist:
    - a reviewed pull request removes `"private": true` from the five libraries'
@@ -112,7 +123,7 @@ org owners apply the settings; ask them for each.
      `RELEASE_PUBLISH_ENABLED` to `true`. Until it is `true`, the workflow's
      `publish` job is skipped and the `release` environment is never named by a
      run. Setting it back to anything else turns publishing off again.
-   <!-- TODO(org owners, #3): set RELEASE_PUBLISH_ENABLED once the environment and the trusted publishers exist. -->
+   <!-- TODO(org owners, #134): set RELEASE_PUBLISH_ENABLED once steps 5 to 7 are done and the trusted publishers exist. -->
 
 ### Sync a contract into the kit
 
@@ -218,8 +229,8 @@ the tarball check refuses any lifecycle script in a published manifest).
    `changeset version` loads runs with the job's `contents: write` token in its
    environment, so it could push to any branch no rule protects, create tags,
    and create releases; the push guard only limits what the job itself pushes.
-   Branch protection on `main` and the tag ruleset (Bootstrap step 2) bound it
-   until the job is split
+   The `main` ruleset and the tag ruleset (Bootstrap step 2) bound it until the
+   job is split
    ([ADR-005](../decisions/ADR-005-release-attestation-and-artifact-upload.md),
    Follow-ups).
    <!-- TODO(release, #134): deferred to #134 (owner: TPO). Split the version job once actions/upload-artifact is allowed: `changeset version` with a read-only token, the push in a job that runs no repository tooling. Reason: it waits on ADR-005's acceptance. -->
@@ -241,7 +252,7 @@ the tarball check refuses any lifecycle script in a published manifest).
    registry's `dist.integrity` equals the local tarball's SHA-512; other bytes
    under the same version fail the job. (This job layout is temporary: Bootstrap
    step 7.)
-   <!-- TODO(release, #134): deferred to #134 (owner: TPO; reason: it waits on #3 and on ADR-005's acceptance). Tag the release and attach the Wrapper artifact, its `.sha256`, and its build-provenance attestation to a GitHub release, and upload the dry run's artifact from CI. This needs `contents: write` and `attestations: write`; an ADR to come proposes `actions/attest-build-provenance` and `actions/upload-artifact` for it (decided; not added before that ADR is accepted). -->
+   <!-- TODO(release, #134): deferred to #134 (owner: TPO; reason: it waits on ADR-005's acceptance). Tag the release and attach the Wrapper artifact, its `.sha256`, and its build-provenance attestation to a GitHub release, and upload the dry run's artifact from CI. This needs `contents: write` and `attestations: write`; an ADR to come proposes `actions/attest-build-provenance` and `actions/upload-artifact` for it (decided; not added before that ADR is accepted). -->
 4. Record in the release notes the contracts the release was built against: the
    Play API prefix, the Snapshot schema id, and the signing vector set, and the
    Wrapper artifact's digest.
@@ -575,11 +586,14 @@ revokes the old token. Record the date (the secret name and date only).
 - **A contract mismatch** (the backend moved): sync the contract, release a
   patch or minor, promote; until then keep the previous Wrapper digest in place.
 
-<!-- TODO(#3, #134): deferred to #134 (owner: TPO; reason: it waits on #3). Verify the npm deprecation and dist-tag steps once, on the first published version, and the Pages rollback once. The npm steps cannot be exercised before the npm organization and the `release` environment exist; the dry run covers everything up to the publish. -->
+<!-- TODO(release, #134): deferred to #134 (owner: TPO; reason: nothing is published yet). Verify the npm deprecation and dist-tag steps once, on the first published version, and the Pages rollback once. The npm steps cannot be exercised before the first publish; the dry run covers everything up to the publish. -->
 
 ### Rotate the npm credential
 
-If the release uses a stored npm token (rather than trusted publishing):
+The release uses npm trusted publishing (Bootstrap step 6), so there is no
+stored npm token to rotate: each publish exchanges the job's short-lived OIDC
+token. These steps apply only if a later, recorded decision moves to a stored
+token:
 
 1. An org owner creates the replacement credential in npm with the narrowest
    scope (publish for the kit's packages only), and writes it into the `release`
@@ -589,14 +603,14 @@ If the release uses a stored npm token (rather than trusted publishing):
 4. Record the date (the secret **name** and date only) with the org owners'
    access notes.
 
-<!-- TODO(infrastructure owner, #3): deferred to #3 (owner: TPO, with the org owners). The rotation schedule, and whether a stored token is used at all. Reason: the npm scope and the credential form are not settled yet. -->
-
 ## Verification
 
 - The settings in Bootstrap read back correctly: use the read-only `gh api`
   calls for rulesets, environments, collaborators, and CODEOWNERS errors against
   this repository.
-- A test pull request cannot be merged without code-owner review and `ci-ok`.
+- A test pull request cannot be merged without a code owner's approval and every
+  review thread resolved (except by an organization admin's bypass). `ci-ok` is
+  not enforced by the ruleset; check it is green before merging.
 - `pnpm release:dry-run` prints no problem and two equal Wrapper digests.
 - A release's packages show provenance, and the bundle matches its manifest.
 
@@ -615,7 +629,7 @@ If the release uses a stored npm token (rather than trusted publishing):
 
 - **A pull request cannot merge: code-owner review missing.** The two org owners
   are the owners; an author cannot approve their own change, so the other org
-  owner reviews.
+  owner reviews. An unresolved review thread blocks the merge too.
 - **`contracts` job fails on a hash.** A file differs from the lock: re-run the
   sync, or the file was edited by hand; restore it from its source.
 - **`contracts` job fails on a generated file.** A vendored document and the

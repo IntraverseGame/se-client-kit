@@ -94,13 +94,18 @@ the attack surface a player cannot see. The rules:
   Follow-ups), it is split so that the tooling runs with `contents: read` and
   only a job that runs no repository tooling holds `contents: write` and pushes.
   <!-- TODO(release, #134): deferred to #134 (owner: TPO). Split the version job (tooling with a read-only token, push without tooling) once actions/upload-artifact is allowed. Reason: it waits on ADR-005's acceptance. -->
-  <!-- TODO(release, #134): deferred to #134 (owner: TPO). The split into a build job and a publish-only job; required before RELEASE_PUBLISH_ENABLED is set (runbook, Bootstrap step 7). Reason: it waits on ADR-005's acceptance, and no real publish happens before the protected `release` environment and the npm scope exist (#3). -->
-  <!-- TODO(release, #134): deferred to #134 (owner: TPO). The attestation and the GitHub release that carries the artifact; ADR-005 (proposed) adds `actions/attest-build-provenance` and `actions/upload-artifact`. Reason: it waits on #3 and on ADR-005's acceptance. -->
+  <!-- TODO(release, #134): deferred to #134 (owner: TPO). The split into a build job and a publish-only job; required before RELEASE_PUBLISH_ENABLED is set (runbook, Bootstrap step 7). Reason: it waits on ADR-005's acceptance. -->
+  <!-- TODO(release, #134): deferred to #134 (owner: TPO). The attestation and the GitHub release that carries the artifact; ADR-005 (proposed) adds `actions/attest-build-provenance` and `actions/upload-artifact`. Reason: it waits on ADR-005's acceptance. -->
 - **Credentials.** The publishing credential is never in the repository. The
-  preferred form is npm trusted publishing from the release workflow (no
-  long-lived token); otherwise a token in a protected GitHub environment with
-  required
-  reviewers. <!-- TODO(infrastructure owner, #3): deferred to #3 (owner: TPO, with the org owners). Which form the npm organization supports, and the rotation procedure. Reason: the npm scope is not claimed yet. -->
+  packages publish to the `intraverse` npm organization (scope `@intraverse`,
+  claimed, owned by the org owners) through **npm trusted publishing (OIDC)**
+  from `release.yml` in the protected `release` environment (decided by the org
+  owners, 2026-10-27): no npm token is stored anywhere, so there is none to
+  rotate. Each package's trusted publisher is to be configured on npmjs.com,
+  requiring the environment `release` (#134). The environment's required
+  reviewers are the two org owners, self-review allowed, deployments from `main`
+  only.
+  <!-- TODO(release, #134): configure the trusted publisher of each of the five packages on npmjs.com (runbook, Bootstrap step 6). -->
 - **The Pages deploy**
   ([ADR-008](../../decisions/ADR-008-pages-deploy-with-wrangler.md),
   `.github/workflows/pages.yml`). The Cloudflare API token and the account id

@@ -106,11 +106,12 @@ none, and the root `test` runs the Wrapper's tests and the `tools/` tests
 (`test:tools`). The pull request that adds a package's first test adds its
 `test` script and its entry in the root `test` dependencies.
 
-Directories are `packages/<name>` and `apps/<name>`. The intended npm names are
+Directories are `packages/<name>` and `apps/<name>`. The npm names are
 `@intraverse/se-client-<name>` (scope `@intraverse`, decided in
 [ADR-001](../decisions/ADR-001-toolchain-and-signing.md)); the two apps keep the
-prefix and are never published. The npm organization and the names are not
-claimed on npm yet: that is an org-owner item (#3).
+prefix and are never published. The `intraverse` npm organization is claimed and
+owned by the org owners; nothing is published yet, and the packages publish
+through npm trusted publishing ([Supply chain](./client-kit/supply-chain.md)).
 
 ### Packages
 
@@ -232,7 +233,7 @@ another origin.
    file; the release dry run requires two builds of the same commit to give the
    same digest ([Supply chain](./client-kit/supply-chain.md), Reproducible
    build).
-   <!-- TODO(release, #134): deferred to #134 (owner: TPO). Attaching the artifact and its attestation to a GitHub release; ADR-005 (proposed) adds `actions/attest-build-provenance` and `actions/upload-artifact`. Reason: it waits on the protected `release` environment and the npm scope (#3), and on ADR-005's acceptance. -->
+   <!-- TODO(release, #134): deferred to #134 (owner: TPO). Attaching the artifact and its attestation to a GitHub release; ADR-005 (proposed) adds `actions/attest-build-provenance` and `actions/upload-artifact`. Reason: it waits on ADR-005's acceptance. -->
 2. This repository's CI **deploys `main` to Cloudflare Pages**
    ([ADR-008](../decisions/ADR-008-pages-deploy-with-wrangler.md), which
    supersedes ADR-001 decision 9; `.github/workflows/pages.yml`), to three
@@ -547,10 +548,10 @@ layer: the workspace, the six packages and apps (`contracts`, `signing`,
 and format configuration, the CI workflows, the CODEOWNERS file, and the pinned
 versions (ADR-001's table). The toolchain pull request landed the workspace, the
 empty skeletons, the lint and format configuration, the CI workflows,
-dependabot, changesets, and the pinned versions; CODEOWNERS stays comment-only
-until the org owners name themselves. Its checklist, and the repository settings
-the org owners apply (branch protection, secret scanning with push protection,
-the publishing environment), are in the
+dependabot, changesets, and the pinned versions; CODEOWNERS names the two org
+owners. Its checklist, and the repository settings the org owners apply (the
+`main` ruleset, secret scanning with push protection, private vulnerability
+reporting, the publishing environment), are in the
 [release runbook](../runbook/client-kit-release.md#bootstrap-the-toolchain).
 
 ## Errors and edge cases
@@ -584,10 +585,7 @@ workflow's logs are public and hold no secret.
 
 | Item                                                                                                                                                                                                                                                                                                                                                                                | Owner                                               | Marker                                                                                                                                                                                              |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CODEOWNERS (comment-only until the org owners give their handles; branch protection, with a required pull request and no self-approval, is the interim control), branch protection, secret scanning, and the publishing environment of this repository                                                                                                                              | the two org owners                                  | <!-- TODO(org owners): CODEOWNERS = the two org owners, branch protection, secret scanning with push protection, the publishing environment -->                                                     |
-| Claiming the `intraverse` npm organization and the `@intraverse/se-client-*` names (decided; not claimed yet)                                                                                                                                                                                                                                                                       | the org owners (#3)                                 | <!-- TODO(org owners, #3): claim the npm organization `intraverse` and the package names -->                                                                                                        |
-| The rest of the release workflow (#134): the tag and GitHub release that carry the Wrapper artifact, and its build-provenance attestation (decided: ADR-005 (proposed) adds `actions/attest-build-provenance` and `actions/upload-artifact`). The version pull request job is built (the workflow's `version` job pushes `changeset-release/main`; a person opens the pull request) | TPO, with the publishing work (#134)                | <!-- TODO(release, #134): deferred; GitHub release, attestation; waits on #3 and ADR-005 -->                                                                                                        |
-| License                                                                                                                                                                                                                                                                                                                                                                             | TPO                                                 | MIT today (set at creation); confirmed by the TPO in review. Not blocking                                                                                                                           |
+| The rest of the release workflow (#134): the tag and GitHub release that carry the Wrapper artifact, and its build-provenance attestation (decided: ADR-005 (proposed) adds `actions/attest-build-provenance` and `actions/upload-artifact`). The version pull request job is built (the workflow's `version` job pushes `changeset-release/main`; a person opens the pull request) | TPO, with the publishing work (#134)                | <!-- TODO(release, #134): deferred; GitHub release, attestation; waits on ADR-005 -->                                                                                                               |
 | Hosting of the released Wrapper and its deploy credentials (decided for staging: ADR-008's push to Cloudflare Pages; the account, projects, token, and DNS stay the infrastructure owner's)                                                                                                                                                                                         | infrastructure owner                                | <!-- TODO(hosting, #133): deferred to #133; production hosting and environment, `frame-ancestors` source. Reason: staging only; production is to come. -->                                          |
 | Publication of the backend's contracts and vectors (later step; not a blocker, OQ-6 decided)                                                                                                                                                                                                                                                                                        | backend maintainers                                 | <!-- TODO(contract publication, #138): deferred until go-live; where and when -->                                                                                                                   |
 | The preview-stack pin and job                                                                                                                                                                                                                                                                                                                                                       | backend repository                                  | the kit's side is the preview mode of the e2e suite ([testing-and-ci.md](./client-kit/testing-and-ci.md), [runbook](../runbook/preview-e2e.md)); the pin and the job live in the backend repository |

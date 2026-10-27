@@ -1,33 +1,27 @@
-# Code owners for se-client-kit. GitHub requests a review from the owners of
-# every changed path, and branch protection can require their approval.
-# The last matching pattern wins.
+# Code owners for se-client-kit: the two organization owners. GitHub requests
+# their review on every pull request, and the `main` ruleset requires a code
+# owner's approval. The last matching pattern wins.
 #
-# TODO: name the owners. The decision for this public repository is that the two
-# organization owners are the code owners, and an author never approves their own
-# change. Add the real GitHub handles here once the owners provide them; do not
-# guess them. Until then no rule is active, so no review is auto-requested.
-#
-# Intended shape once the handles are known (replace <owner-1> and <owner-2>):
-#
-#   *                         @<owner-1> @<owner-2>
-#
-# Paths that can reach the supply chain or a credential should never be left to
-# the default silently. List them explicitly even when the owners are the same:
-#
-#   /.github/                 @<owner-1> @<owner-2>
-#   /.ai/                     @<owner-1> @<owner-2>
-#   /.claude/                 @<owner-1> @<owner-2>
-#   /.opencode/               @<owner-1> @<owner-2>
-#   /.agents/                 @<owner-1> @<owner-2>
-#   /AGENTS.md                @<owner-1> @<owner-2>
-#   /CLAUDE.md                @<owner-1> @<owner-2>
-#   /package.json             @<owner-1> @<owner-2>
-#   /pnpm-lock.yaml           @<owner-1> @<owner-2>
-#   /pnpm-workspace.yaml      @<owner-1> @<owner-2>
-#   /.npmrc                   @<owner-1> @<owner-2>
-#   /.node-version            @<owner-1> @<owner-2>
-#   /packages/contracts/      @<owner-1> @<owner-2>
-#   /specs/                   @<owner-1> @<owner-2>
-#   /decisions/               @<owner-1> @<owner-2>
-#   /runbook/                 @<owner-1> @<owner-2>
-#   /SECURITY.md              @<owner-1> @<owner-2>
+# Paths that can reach the supply chain or a credential are listed explicitly,
+# even though the owners are the same as the default, so that none of them is
+# left to the default silently.
+
+*                         @mimshins @intrabod
+
+/.github/                 @mimshins @intrabod
+/.ai/                     @mimshins @intrabod
+/.claude/                 @mimshins @intrabod
+/.opencode/               @mimshins @intrabod
+/.agents/                 @mimshins @intrabod
+/AGENTS.md                @mimshins @intrabod
+/CLAUDE.md                @mimshins @intrabod
+/package.json             @mimshins @intrabod
+/pnpm-lock.yaml           @mimshins @intrabod
+/pnpm-workspace.yaml      @mimshins @intrabod
+/.npmrc                   @mimshins @intrabod
+/.node-version            @mimshins @intrabod
+/packages/contracts/      @mimshins @intrabod
+/specs/                   @mimshins @intrabod
+/decisions/               @mimshins @intrabod
+/runbook/                 @mimshins @intrabod
+/SECURITY.md              @mimshins @intrabod
