@@ -229,7 +229,8 @@ jobs:
           persist-credentials: false
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
 
-  # The one required check (branch protection requires `ci-ok`).
+  # The one aggregate check to keep green before merging (the `main` ruleset
+  # requires no status check).
   ci-ok:
     name: ci-ok
     if: always()

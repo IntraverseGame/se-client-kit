@@ -1,6 +1,6 @@
 ---
 description: What se-client-kit is, why it is public, the package map, and its boundary to the backend. Read first on any task.
-last-verified: 2026-10-27 (open-marker deferrals: the npm claim is an org-owner item, #3; hosting is #133; verify page states pull request: `verify` takes `contracts`' runtime entry and holds its checks, states, and view; verify kernel pull request: the `verify` app; the signed-action specification is used by name, not copied; fairness kernel vectors pull request: the public kernel vector bundle joins the shared contracts; play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
+last-verified: 2026-10-27 (#3: CODEOWNERS names the org owners, the npm org `intraverse` is claimed, trusted publishing; open-marker deferrals: hosting is #133; verify page states pull request: `verify` takes `contracts`' runtime entry and holds its checks, states, and view; verify kernel pull request: the `verify` app; the signed-action specification is used by name, not copied; fairness kernel vectors pull request: the public kernel vector bundle joins the shared contracts; play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
 ---
 
 # Overview
@@ -35,8 +35,8 @@ world-readable and cannot be taken back, so what may be committed is limited
 
 Dependency direction: `contracts` ← `snapshot` and `play-client` ← `shell` ←
 `wrapper`; `signing` ← `shell`; `signing` and `contracts`' runtime entry ← `verify` (never `shell`); tests
-read vectors from `contracts`' test-only entry. The intended npm names are `@intraverse/se-client-<name>` (not claimed on
-npm yet; that is an org-owner item, #3).
+read vectors from `contracts`' test-only entry. The npm names are `@intraverse/se-client-<name>` (the `intraverse` npm
+organization is claimed; nothing is published yet).
 
 Details: [architecture.md](./architecture.md).
 

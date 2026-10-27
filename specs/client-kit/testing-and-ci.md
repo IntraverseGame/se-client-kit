@@ -43,11 +43,12 @@ no-vector content check, now over the vendored vectors),
 `pnpm check:package-files`, and `pnpm check:size-budget` (below). `e2e-fake` is
 a matrix of three jobs side by side, one per Playwright project (`chromium`,
 `firefox`, `webkit`; their checks are named `e2e-fake (chromium)` and so on),
-all required through `ci-ok`, the one check branch protection names; each
-installs only its own browser (`playwright install --with-deps <project>`, at
-the `@playwright/test` version the lockfile pins; before it, apt is set to time
-out a stalled download after 30 seconds and retry it three times, and to wait up
-to a minute for the package lock, because the download has hung until the job's
+all aggregated by `ci-ok` (the `main` ruleset requires no status check, so
+`ci-ok` is the one check to keep green before merging); each installs only its
+own browser (`playwright install --with-deps <project>`, at the
+`@playwright/test` version the lockfile pins; before it, apt is set to time out
+a stalled download after 30 seconds and retry it three times, and to wait up to
+a minute for the package lock, because the download has hung until the job's
 timeout; each install attempt is bounded to 10 minutes and retried once, after
 clearing what a killed attempt left behind, and a second failure or timeout
 fails the job; the job's limit is 30 minutes) and runs only that project

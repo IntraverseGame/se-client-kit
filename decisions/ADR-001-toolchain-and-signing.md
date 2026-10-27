@@ -7,7 +7,9 @@
   pinned versions recorded, `prettier` removed, `tsx`, `stylelint` and `tsdown`
   added, and the npm scope decided; amended 2026-10-17 by the reference game
   pull request: Vite and stylelint cover both apps; amended 2026-10-27 by
-  ADR-008: `wrangler` added to the dependency table, and decision 9 superseded)
+  ADR-008: `wrangler` added to the dependency table, and decision 9 superseded;
+  amended 2026-10-27 (#3): the `intraverse` npm organization claimed, trusted
+  publishing from the `release` environment)
 
 Amendment note (2026-10-16, toolchain pull request): decision 3 and the
 dependency table named `prettier` for Markdown and YAML because `oxfmt` did not
@@ -62,11 +64,16 @@ Amendment note (2026-10-16, decided by the human): the npm scope is
 (`contracts`, `signing`, `snapshot`, `play-client`, `shell`; the apps `wrapper`
 and `reference-game` use the same prefix, are never published, and stay
 `private`). The `contracts` test-only entry is
-`@intraverse/se-client-contracts/testing`. These are the intended names:
-claiming the `intraverse` npm organization and the names is part of the
-publishing work (#3), and nothing here says they are reserved or registered. The
-earlier working scope `@superengine` is not a kit scope any more; lint and the
-dependency allow-list reject it.
+`@intraverse/se-client-contracts/testing`. The earlier working scope
+`@superengine` is not a kit scope any more; lint and the dependency allow-list
+reject it.
+
+Amendment note (2026-10-27, decided by the org owners, #3): the `intraverse` npm
+organization is claimed and owned by the org owners. The packages publish
+through npm trusted publishing (OIDC) from `release.yml` in the protected
+`release` environment, with no stored npm token; each package's trusted
+publisher is to be configured on npmjs.com, requiring the environment `release`
+(#134).
 
 Amendment note (2026-10-16, toolchain pull request):
 `@changesets/changelog-github` is added as a development dependency, at the root

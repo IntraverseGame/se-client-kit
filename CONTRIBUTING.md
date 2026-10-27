@@ -268,10 +268,12 @@ the main checkout stays on `main`. Procedure:
 5. **Approval gate before staging/committing:** a human reviews and approves,
    then the reviewer agent approves. Agents never `git add`/`commit`/`push`
    without both approvals (see [Using the role agents](#using-the-role-agents)),
-   and open a pull request (`gh pr create`) only after a human confirms it.
-   **Interim control:** `.github/CODEOWNERS` stays comment-only until the org
-   owners give their handles, so the control on `main` is branch protection: a
-   pull request is required and nobody approves their own change.
+   and open a pull request (`gh pr create`) only after a human confirms it. **On
+   `main`:** `.github/CODEOWNERS` names the two org owners, and the `main`
+   ruleset requires a pull request with a code owner's approval and every review
+   thread resolved, dismisses stale approvals on a push, and blocks force-pushes
+   and deletion. It sets no extra approval count and no required status check
+   (keep `ci-ok` green anyway), and organization admins may bypass it.
 6. Fill in the [PR template](./.github/PULL_REQUEST_TEMPLATE.md) and complete
    the **mandatory Spec-Driven Development actions** listed in
    [`AGENTS.md`](./AGENTS.md).

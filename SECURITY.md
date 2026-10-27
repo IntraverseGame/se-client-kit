@@ -10,7 +10,6 @@ privately and give us time to fix it before you disclose it.
 Use **GitHub private vulnerability reporting**: open the Security tab of this
 repository and choose "Report a vulnerability". Your report is visible only to
 the maintainers.
-<!-- TODO: org owners enable private vulnerability reporting. -->
 
 **Do not** put exploit details, proof-of-concept code, keys, tokens, or other
 secrets in a public issue, pull request, or comment. This repository is public:

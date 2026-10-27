@@ -8,8 +8,7 @@ name: Release
 # result to the `changeset-release/main` branch, from which a person opens the
 # version pull request (Actions never open one here). It publishes nothing and
 # names no environment. The `publish` job runs only when
-# all of these hold, so it cannot run before the org owners' settings exist
-# (#3):
+# all of these hold, so it cannot run before the org owners' settings exist:
 #   - it was dispatched from `main` with `publish` set and `version` not set;
 #   - the repository variable RELEASE_PUBLISH_ENABLED is `true` (set by an org
 #     owner once the protected `release` environment and the npm trusted

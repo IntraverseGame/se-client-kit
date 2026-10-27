@@ -131,7 +131,7 @@ The workflow keeps `permissions: {}` at the top. Each job asks for its own.
     (`repo:IntraverseGame/se-client-kit:environment:attest`). It can therefore
     never match a binding that requires the `release` environment. The `attest`
     environment holds no secret, and deployments to it are restricted to `main`.
-    An org owner creates it, as a Bootstrap step of the release runbook (#3).
+    An org owner creates it, as a Bootstrap step of the release runbook (#134).
 
 The `publish` job keeps its own permissions (`contents: read`,
 `id-token: write`) and its `release` environment.
@@ -286,8 +286,10 @@ in the public transparency log.
   could publish a release with any tar and its matching digest. The attestation
   does not fully close that gap either. A credential that can push to `main` can
   change `release.yml`, or the build it runs, and get a genuine attestation for
-  any bytes. Branch protection on `main` (required review, no direct or force
-  push, no bypass) is what keeps the attestation meaningful.
+  any bytes. The `main` ruleset (a pull request with a code owner's approval, no
+  force push or deletion) is what keeps the attestation meaningful; organization
+  admins may bypass it (decided by the org owners, 2026-10-27), so the
+  attestation is only as strong as the org owners' accounts.
 - **Sigstore `cosign` directly.** Install `cosign`, sign the tar keylessly with
   the job's OIDC token, and verify with `cosign verify-blob`. Rejected: it adds
   a binary download and an installer Action (or a hand-written download and
@@ -351,7 +353,7 @@ in the public transparency log.
     [client-kit.md](../specs/client-kit.md#how-the-wrapper-reaches-the-superengine-origin)
     step 2 says the deploy verifies with the flags of decision 4.
   - **Runbook**: [client-kit-release.md](../runbook/client-kit-release.md).
-    - Bootstrap gets two settings, both for an org owner (#3): the `attest`
+    - Bootstrap gets two settings, both for an org owner (#134): the `attest`
       environment (no secret, deployments restricted to `main`), and the check
       that every npm trusted publisher, and any other OIDC consumer, requires
       `environment: release`. The check comes before `RELEASE_PUBLISH_ENABLED`

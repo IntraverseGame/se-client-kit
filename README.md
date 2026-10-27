@@ -26,8 +26,8 @@ See [`AGENTS.md`](./AGENTS.md#public-repository). To report a vulnerability, see
 
 ## Planned packages
 
-The intended npm names are `@intraverse/se-client-<name>` (scope `@intraverse`);
-claiming them on npm is an org-owner item (#3).
+The npm names are `@intraverse/se-client-<name>`, in the `intraverse` npm
+organization (scope `@intraverse`). Nothing is published yet.
 
 | Project          | Kind    | Role                                                                        |
 | ---------------- | ------- | --------------------------------------------------------------------------- |
@@ -70,7 +70,6 @@ change updates its spec in the same pull request. Read
 ## License
 
 MIT, see [`LICENSE`](./LICENSE).
-<!-- TODO: the license is confirmed by the maintainers. -->
 
 ## AI tool adapters and symlinks
 

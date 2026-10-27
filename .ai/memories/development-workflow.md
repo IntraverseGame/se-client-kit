@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-27 (deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
+last-verified: 2026-10-27 (#3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
 ---
 
 # Development workflow
@@ -69,8 +69,8 @@ Several agents and people work in one clone at once. Rules:
   loads holds the `contents: write` token, which can push to unprotected
   branches and create tags and releases; once `actions/upload-artifact` is
   allowed (ADR-005 Follow-ups) the job is split so only a no-tooling job holds
-  `contents: write`. Org owners (#3): a tag ruleset and "dismiss stale
-  approvals". Tests: `tools/release-workflow.test.ts` (whole `if:` values,
+  `contents: write`. The `main` ruleset dismisses stale approvals on a push;
+  the tag ruleset is still to come (#134). Tests: `tools/release-workflow.test.ts` (whole `if:` values,
   permissions, job set, refspec, checkouts, pins, no `${{` in `run:`, via the
   block-style reader `tools/workflow-text.ts`; no YAML parser in the
   repository) and `tools/release-version-guard.test.ts` (runs the guard
@@ -91,9 +91,10 @@ Several agents and people work in one clone at once. Rules:
   only when the registry's `dist.integrity` equals the local SHA-512. Both
   release jobs call the setup action with `cache: "false"` (no wireit cache
   helper, no pnpm store cache). The five libraries are still `private: true`
-  on purpose: removing it is a reviewed change made after the org owners'
-  settings (#3). No npm token exists; trusted publishing (OIDC) is the intended
-  form. **Before any real publish** (decided by the human; runbook Bootstrap
+  on purpose: removing it is a reviewed change made after the trusted
+  publishers exist (#134). No npm token exists: the credential is npm trusted
+  publishing (OIDC) from `release.yml` in the `release` environment (decided
+  2026-10-27; the `intraverse` npm organization is claimed). **Before any real publish** (decided by the human; runbook Bootstrap
   step 7, after ADR-005), the publish job is split: a build job without
   `id-token`, and a publish-only job that runs no repository tooling and only
   verifies digests and publishes the downloaded tarballs.
