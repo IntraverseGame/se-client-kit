@@ -99,6 +99,14 @@ export const cashOrCrashReadyHash: Bytes32 = readyHashOf(
   "cashorcrash-cash-out-active-step0",
 );
 
+/**
+ * `T_0` of the Cash or Crash round of
+ * `valid/cashorcrash-last-row-active-step0`, played through its last row.
+ */
+export const lastRowReadyHash: Bytes32 = readyHashOf(
+  "cashorcrash-last-row-active-step0",
+);
+
 /** The `roundId` (UUID text) of the `valid/` Snapshot vector `name`. */
 export const roundIdOf = (name: string): string => {
   const where = `valid/${name}`;

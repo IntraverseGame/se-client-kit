@@ -19,7 +19,11 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   package. The `signed-action/` vectors (`snapshotVectors.signedAction`) are
   replayed by `signing`'s and the shell's `cancel-vector.test.ts` (the Coin
   Flip `PlayerCancel`) and `cash-out-vector.test.ts` (the Cash or Crash
-  `PlayerCashOut`, with its pick's chain from the round's `readyHash`);
+  `PlayerCashOut`, with its pick's chain from the round's `readyHash`). The
+  Cash or Crash round won on its last row has no `signed-action/` vector (nothing
+  is signed after its last pick): `signing`'s and the shell's
+  `last-row-vector.test.ts` replay its three `typed-data/` picks and their chain,
+  and the shell's also that nothing is offered or signed after the last;
   `tools/contracts-signed-action.test.ts` checks their pairing with `typed-data/` and `valid/` and that their embedded
   key is signing's `PLAYER_KEY`. The fairness kernel's public vectors
   (`kernelVectors.v1`) are replayed by the verify page's unit tests
@@ -218,9 +222,14 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   start answers `active` step 0, the pick (row 1 tile 3) `active` step 1, and
   the cash-out `won`, each read moved to the same vector before the click; its
   `resolving` vector is never answered (the Play API answers `resolving` only
-  to a cancel). The fake checks bodies through an answer's `expect`
+  to a cancel). The same file's second test plays the round won on its last
+  row (`LAST_ROW`, checked at load the same way): three picks (row 1 tile 1,
+  row 2 tile 3, row 3 tile 2), each answered with the next vector, the last
+  `won`; it asserts the payout is the Snapshot's own `formatted`, three
+  `continueRound` calls, and no `cashOutRound` or any other call but reads
+  after the last pick. The fake checks bodies through an answer's `expect`
   (`startCheck`, `pickCheck`, `cancelCheck`, `cashOrCrashPickCheck`,
-  `cashOutCheck`). Mind W-29: the vectors'
+  `cashOutCheck`, `lastRowPickCheck(row)`). Mind W-29: the vectors'
   versions are fixed, so never answer a later read with an equal version
   (`coinflip-canceled` after `coinflip-resolving-cancel`, both v3, is
   ignored). One round per session (the transcript refuses a second open of the
@@ -297,7 +306,8 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `referrerpolicy="no-referrer"` Playwright 1.64's Firefox masks the entry,
   its WebKit and an installed Chrome 155 (`SE_E2E_BROWSER_CHANNEL=chrome`) do
   not (the test annotates it per run). Rows that cannot run yet stay `test.fixme` in
-  `pending.spec.ts`, never a body that passes. The reference game's build is
+  `pending.spec.ts`, never a body that passes; it lists none now (T-12's
+  last surviving move was the last). The reference game's build is
   served at D, `https://game.e2e-games.test` (`GAME_ORIGIN`, origins.ts), for
   every test (`serve-origins.ts`): the fake's redeem answers it as `gameOrigin`
   and it is the configuration's only `gameOrigins` entry, so every Wrapper

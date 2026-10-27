@@ -176,56 +176,78 @@ export const CASH_OR_CRASH = {
 } as const;
 
 const cashOrCrashInput = validVector(CASH_OR_CRASH.step0, "Snapshot").input;
-const cashOrCrashAuth = at(at(cashOrCrashInput, "proofs"), "createRoundAuth");
 
 /** The Cash or Crash round's id. */
 export const CASH_OR_CRASH_ROUND_ID = text(cashOrCrashInput, "roundId");
 
-const cashOrCrashRandomness = at(
-  at(cashOrCrashInput, "proofs"),
-  "randomnessProof",
-);
+/**
+ * The vendored Cash or Crash `[3,3,4]` round played through its last row
+ * (T-12): one round on one signed chain, `active` at steps 0, 1, and 2 with
+ * `T_0` settled, each step after a pick that survived (`T_1`, `T_2`), and `won`
+ * by the last pick (`T_3`) with its payout. Nothing is signed after the last
+ * pick, so no vector of this round holds a cash-out or a signature.
+ */
+export const LAST_ROW = {
+  step0: "cashorcrash-last-row-active-step0",
+  step1: "cashorcrash-last-row-active-step1",
+  step2: "cashorcrash-last-row-active-step2",
+  won: "cashorcrash-last-row-won",
+} as const;
+
+const lastRowInput = validVector(LAST_ROW.step0, "Snapshot").input;
+
+/** The last-row round's id. */
+export const LAST_ROW_ROUND_ID = text(lastRowInput, "roundId");
 
 /**
- * What the round tests reuse from the Coin Flip round, as the Cash or Crash
- * round has it: the key draw (its action key), the configuration (its signer,
- * domain, entropy source, and entropy chain id), and the fake RPC endpoints'
- * tip (its randomness block). The names of the values that differ.
+ * What the round tests reuse from the Coin Flip round, as the Snapshot `input`
+ * has it: the key draw (its action key), the configuration (its signer, domain,
+ * entropy source, and entropy chain id), and the fake RPC endpoints' tip (its
+ * randomness block). The names of the values that differ.
  */
-const cashOrCrashMismatches = (): readonly string[] => {
+const mismatchesWithCoinFlip = (
+  input: Readonly<Record<string, unknown>>,
+): readonly string[] => {
+  const roundProofs = at(input, "proofs");
+  const roundAuth = at(roundProofs, "createRoundAuth");
+  const roundRandomness = at(roundProofs, "randomnessProof");
   const checks: readonly (readonly [string, boolean])[] = [
     [
       "actionKey",
-      text(at(cashOrCrashAuth, "newRound"), "actionKey").toLowerCase() ===
+      text(at(roundAuth, "newRound"), "actionKey").toLowerCase() ===
         ROUND.actionKey,
     ],
-    ["signer", text(cashOrCrashAuth, "signer") === ROUND_PINS.signer],
+    ["signer", text(roundAuth, "signer") === ROUND_PINS.signer],
     [
       "domain",
-      JSON.stringify(at(cashOrCrashAuth, "domain")) === JSON.stringify(domain),
+      JSON.stringify(at(roundAuth, "domain")) === JSON.stringify(domain),
     ],
-    ["source", text(cashOrCrashRandomness, "source") === ROUND_PINS.source],
+    ["source", text(roundRandomness, "source") === ROUND_PINS.source],
     [
       "entropyChainId",
-      number(cashOrCrashAuth, "entropyChainId") === ROUND_PINS.entropyChainId,
+      number(roundAuth, "entropyChainId") === ROUND_PINS.entropyChainId,
     ],
     [
       "blockNumber",
-      BigInt(number(cashOrCrashRandomness, "blockNumber")) ===
-        ROUND.blockNumber,
+      BigInt(number(roundRandomness, "blockNumber")) === ROUND.blockNumber,
     ],
   ];
   return checks.filter(([, same]) => !same).map(([name]) => name);
 };
 
 // The round tests' key draw, configuration, and fake RPC endpoints are the Coin
-// Flip round's, so the Cash or Crash round must agree with it on every value
+// Flip round's, so each Cash or Crash round must agree with it on every value
 // they read; checked once, when the module loads.
-const mismatches = cashOrCrashMismatches();
-if (mismatches.length > 0) {
-  throw new Error(
-    `${CASH_OR_CRASH.step0} differs from ${ROUND_VECTOR} in ${mismatches.join(", ")}: the round tests cannot play it with the Coin Flip round's key, configuration, and RPC tip`,
-  );
+for (const [name, input] of [
+  [CASH_OR_CRASH.step0, cashOrCrashInput],
+  [LAST_ROW.step0, lastRowInput],
+] as const) {
+  const mismatches = mismatchesWithCoinFlip(input);
+  if (mismatches.length > 0) {
+    throw new Error(
+      `${name} differs from ${ROUND_VECTOR} in ${mismatches.join(", ")}: the round tests cannot play it with the Coin Flip round's key, configuration, and RPC tip`,
+    );
+  }
 }
 
 /**
@@ -254,3 +276,18 @@ export const cashOutCheck: BodyCheck = actionCheck(
     value.toLowerCase() ===
     signedActionSignature(CASH_OR_CRASH.cashOut).toLowerCase(),
 );
+
+/**
+ * A pick of the last-row round: the bytes of
+ * `typed-data/cashorcrash-last-row-pick-row<row>` (sequence `row + 1`,
+ * `previous` T_0 for row 0, else the struct hash of the pick before it), with a
+ * 65-byte signature. No vector holds these signatures; the shell's own tests
+ * prove them.
+ */
+export const lastRowPickCheck = (row: 0 | 1 | 2): BodyCheck =>
+  actionCheck(
+    `the pick on row ${String(row)}`,
+    LAST_ROW_ROUND_ID,
+    `cashorcrash-last-row-pick-row${String(row)}`,
+    value => SIGNATURE.test(value),
+  );

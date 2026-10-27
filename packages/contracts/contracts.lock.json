@@ -681,6 +681,27 @@
       "sha256": "9916db2cc4a46883da7bbdce4916d2806261f50b499f0c4884df8994088a6b33"
     },
     {
+      "path": "src/vectors/snapshot/typed-data/cashorcrash-last-row-pick-row0.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/typed-data/cashorcrash-last-row-pick-row0.json",
+      "sourceCommit": "71edfbe5cfb66de1667c3443706fa2188abaa54c",
+      "sha256": "b3bae7c22876ce64a8507224bc3e2fd2b47a4d7b80e2206d1be7db4f3af1beb6"
+    },
+    {
+      "path": "src/vectors/snapshot/typed-data/cashorcrash-last-row-pick-row1.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/typed-data/cashorcrash-last-row-pick-row1.json",
+      "sourceCommit": "71edfbe5cfb66de1667c3443706fa2188abaa54c",
+      "sha256": "770452eee8b83b0ed5194d8cd6d76f3df3b20c04cafc04b55d2852bf12e978d0"
+    },
+    {
+      "path": "src/vectors/snapshot/typed-data/cashorcrash-last-row-pick-row2.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/typed-data/cashorcrash-last-row-pick-row2.json",
+      "sourceCommit": "71edfbe5cfb66de1667c3443706fa2188abaa54c",
+      "sha256": "e258772dd57578e829d21b8b04b45577c0df0655ef0884820228624ea5d07f75"
+    },
+    {
       "path": "src/vectors/snapshot/typed-data/cashorcrash-pick.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 vectors/typed-data/cashorcrash-pick.json",
@@ -784,6 +805,34 @@
       "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-cash-out-won.json",
       "sourceCommit": "6afc690e85904155f88f09607155889f6c5beb47",
       "sha256": "5befa23c5a2f9ec5ece9c7549e5e95b2e382b8775c91ee1ab9d71bb99a240c5f"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-last-row-active-step0.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-last-row-active-step0.json",
+      "sourceCommit": "71edfbe5cfb66de1667c3443706fa2188abaa54c",
+      "sha256": "16e93a9e934d58e47631602d22de7043bf2f02510f0220756e1190790b130ec7"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-last-row-active-step1.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-last-row-active-step1.json",
+      "sourceCommit": "71edfbe5cfb66de1667c3443706fa2188abaa54c",
+      "sha256": "adb379bda220fb4b41c1ccaa49c7f42f75ac358afc13bdcfccd227d52949077f"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-last-row-active-step2.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-last-row-active-step2.json",
+      "sourceCommit": "71edfbe5cfb66de1667c3443706fa2188abaa54c",
+      "sha256": "daf83950b31ad6a9ff2c5b11845a3ebb76c49274746be3e49f2787307cc9b807"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-last-row-won.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-last-row-won.json",
+      "sourceCommit": "71edfbe5cfb66de1667c3443706fa2188abaa54c",
+      "sha256": "6f1949ee0621cda49fdb56c00f6f3821c172a027e8bf65789f4b6e93814bf9a7"
     },
     {
       "path": "src/vectors/snapshot/valid/cashorcrash-lost-row2.json",

@@ -1,0 +1,148 @@
+{
+  "vector": "snapshot/valid/cashorcrash-last-row-active-step1",
+  "description": "Cash or Crash [3,3,4], the round of snapshot/valid/cashorcrash-last-row-active-step0 after its first pick (row 0 tile 0, snapshot/typed-data/cashorcrash-last-row-pick-row0) survived: row 0 pick and loser shown, rows 1 and 2 blind. Its next move is snapshot/typed-data/cashorcrash-last-row-pick-row1.",
+  "definition": "Snapshot",
+  "expected": "valid",
+  "input": {
+    "schema": "se.snapshot/1",
+    "version": 3,
+    "presentation": "steps",
+    "model": "config",
+    "context": {
+      "sessionId": "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N",
+      "language": "de",
+      "country": "DE",
+      "device": "mobile",
+      "links": {
+        "lobby": "https://luckybet.example.com/lobby",
+        "deposit": "https://luckybet.example.com/cashier"
+      },
+      "theme": {
+        "appearance": "dark"
+      },
+      "view": {
+        "playerName": "Kai",
+        "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png"
+      }
+    },
+    "status": "active",
+    "roundId": "01927c60-3c4d-7e5f-8a6b-7c8d9e0f1a2b",
+    "bet": {
+      "balance": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "minBet": {
+        "value": "10",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 0.1,
+        "formatted": "€0.10"
+      },
+      "maxBet": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "suggestedBets": [
+        {
+          "value": "100",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 1.0,
+          "formatted": "€1.00"
+        },
+        {
+          "value": "500",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 5.0,
+          "formatted": "€5.00"
+        },
+        {
+          "value": "1000",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 10.0,
+          "formatted": "€10.00"
+        }
+      ],
+      "defaultBet": {
+        "value": "100",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 1.0,
+        "formatted": "€1.00"
+      }
+    },
+    "step": 1,
+    "currentMultiplier": 1.455,
+    "proofs": {
+      "randomnessProof": {
+        "source": "ethereum:block",
+        "blockNumber": 21000123,
+        "roundSecretHash": "0x2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "createRoundAuth": {
+        "newRound": {
+          "roundId": "0x01927c603c4d7e5f8a6b7c8d9e0f1a2b00000000000000000000000000000000",
+          "playerRef": "0x224b3963a9d633c8a70f3531142532fa45ac05555b3ec98d7972080d07e7433d",
+          "currency": "EUR",
+          "betAmount": "100",
+          "gameId": 2,
+          "gameVersion": 1,
+          "circuitVersion": 0,
+          "roundSecretHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+          "randomnessTarget": "0xf8438024e074642bb4ed5ddb8c1d6e2884a471ede3e80e1751b3058045412ebd",
+          "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+          "payoutTermsHash": "0x7777777777777777777777777777777777777777777777777777777777777777"
+        },
+        "entropyChainId": 1,
+        "prepareWindow": 120,
+        "expiry": "1800000600",
+        "domain": {
+          "name": "SuperEngine",
+          "version": "1",
+          "chainId": 31337,
+          "verifyingContract": "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+        },
+        "signer": "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc",
+        "signature": "0x1342e1d1e3b3dbc74a2a84a43645ca606b9a3e8c9c97cf411823bf2e41571ec97dd0b8f1f4e25520fe4bbe9a14465b3d456e179f7ace222c26d38b15662f2c171b"
+      },
+      "fairnessProof": {
+        "seedHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "readyHash": "0xc86d8b90204359a49c0ee536f5e775cd9b3707d4375d5c4cc29f4119102ddd6d",
+        "zkProof": {
+          "status": "pending"
+        }
+      }
+    },
+    "config": {
+      "kind": "steps",
+      "steps": [
+        {
+          "index": 0,
+          "optionCount": 3,
+          "multiplier": 1.455,
+          "selectedIndex": 0,
+          "losingIndex": 2
+        },
+        {
+          "index": 1,
+          "optionCount": 3,
+          "multiplier": 2.182
+        },
+        {
+          "index": 2,
+          "optionCount": 4,
+          "multiplier": 2.909
+        }
+      ]
+    }
+  }
+}

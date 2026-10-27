@@ -190,8 +190,8 @@ Rules:
    four Snapshots of that round (one `roundId`, `CreateRoundAuth`, and
    `readyHash`): `active` at step 0 (`version` 2), `active` after the first pick
    survived (3), `resolving` (4), and `won` by the cash-out (5) with `payout`
-   145, `floor(100 × 1.455)`. `typed-data/cashorcrash-pick` (row 0 tile 2,
-   sequence 1, `previous` the round's `readyHash`, T_0) and
+   145 (€1.45), the Snapshot's own value. `typed-data/cashorcrash-pick` (row 0
+   tile 2, sequence 1, `previous` the round's `readyHash`, T_0) and
    `typed-data/cashorcrash-cash-out` (`cash out`, path `[0]`, sequence 2,
    `previous` the pick's struct hash, T_1) are its actions, and
    `signed-action/cashorcrash-cash-out` is that cash-out as a `PlayerCashOut`
@@ -214,6 +214,28 @@ Rules:
    validates it as the schema gives it and does not use it yet: the shell
    forwards no `playback` Snapshot's copy to the game (W-38), and the Wrapper
    does not show the RTP (the book game's page and playback are #146).
+
+   **A Cash or Crash round won on its last row** (the Snapshot vectors synced
+   from se-backend `71edfbe`; the Snapshot schema stays at `13bcee0` and the
+   Play and verify documents at `9ffdcc0`, unchanged there; no vendored vector
+   changed): the vectors add a second Cash or Crash `[3,3,4]` round, played
+   through its last row on one signed chain. `valid/cashorcrash-last-row-*` are
+   four Snapshots of that round (one `roundId`, `CreateRoundAuth`, and
+   `readyHash`): `active` at steps 0, 1, and 2 (`version` 2 to 4), each after
+   the pick before it survived, and `won` at step 3 (5) with no `closeReason`,
+   the seed, `roundSecret`, and whole board revealed, and `payout` 289 (€2.89).
+   The kit takes that payout as the Snapshot gives it and computes none.
+   `typed-data/cashorcrash-last-row-pick-row0` (row 0 tile 0, sequence 1,
+   `previous` the round's `readyHash`, T_0), `-row1` (row 1 tile 2, sequence 2,
+   `previous` T_1, the struct hash of row 0's pick on that round), and `-row2`
+   (row 2 tile 1, sequence 3, `previous` T_2) are its actions. The last pick
+   ends the round `won`, so no cash-out follows it and no signed-action vector
+   belongs to this round. The round was issued for the same action key, registry
+   signer, and domain as the vendored Coin Flip round. `signing` replays the
+   three picks and their chain (`last-row-vector.test.ts`), the shell signs them
+   through its round flow and signs nothing after the last
+   (`last-row-vector.test.ts`), and the Wrapper's T-12 plays the round against
+   the fake Play API ([Testing and CI](./testing-and-ci.md)).
 
    **The signing vectors of contracts release 1.0.0**
    (`test/vectors/signing.json`, synced from the contracts repository at release

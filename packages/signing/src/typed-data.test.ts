@@ -53,6 +53,9 @@ describe("the typed-data vectors", () => {
     expect(all.map(vector => vector.name).toSorted()).toEqual([
       "cash-out",
       "cashorcrash-cash-out",
+      "cashorcrash-last-row-pick-row0",
+      "cashorcrash-last-row-pick-row1",
+      "cashorcrash-last-row-pick-row2",
       "cashorcrash-pick",
       "coinflip-cancel",
       "coinflip-pick",
