@@ -109,16 +109,20 @@ export const startCheck: BodyCheck = body => {
 
 const SIGNATURE = /^0x[0-9a-f]{130}$/iu;
 
-/** A signed action of the round with `typedData` of the `typed-data/` vector. */
+/**
+ * A signed action of the round `roundId` with `typedData` of the `typed-data/`
+ * vector.
+ */
 const actionCheck =
   (
     what: string,
+    roundId: string,
     typedDataVector: string,
     signature: (value: string) => boolean,
   ): BodyCheck =>
   body => {
     const fields = bodyOf(body);
-    if (fields["roundId"] !== ROUND.roundId) return `${what}: another round`;
+    if (fields["roundId"] !== roundId) return `${what}: another round`;
     if (fields["typedData"] !== typedDataBase64(typedDataVector)) {
       return `${what}: typedData is not ${typedDataVector}'s`;
     }
@@ -138,6 +142,7 @@ const actionCheck =
  */
 export const pickCheck: BodyCheck = actionCheck(
   "the move",
+  ROUND.roundId,
   "coinflip-pick",
   value => SIGNATURE.test(value),
 );
@@ -149,7 +154,103 @@ export const pickCheck: BodyCheck = actionCheck(
  */
 export const cancelCheck: BodyCheck = actionCheck(
   "the cancel",
+  ROUND.roundId,
   "coinflip-cancel",
   value =>
     value.toLowerCase() === signedActionSignature(KEY_VECTOR).toLowerCase(),
+);
+
+/**
+ * The vendored Cash or Crash `[3,3,4]` round played to a cash-out (T-12): one
+ * round on one signed chain, `active` at step 0 with `T_0` settled, `active`
+ * after the first pick survived (`T_1`), and `won` by the cash-out (`T_2`) with
+ * its payout. The `resolving` Snapshot of the same round is not answered: the
+ * Play API answers `resolving` only to a cancel.
+ */
+export const CASH_OR_CRASH = {
+  step0: "cashorcrash-cash-out-active-step0",
+  step1: "cashorcrash-cash-out-active-step1",
+  won: "cashorcrash-cash-out-won",
+  /** The signed-action vector of the cash-out. */
+  cashOut: "cashorcrash-cash-out",
+} as const;
+
+const cashOrCrashInput = validVector(CASH_OR_CRASH.step0, "Snapshot").input;
+const cashOrCrashAuth = at(at(cashOrCrashInput, "proofs"), "createRoundAuth");
+
+/** The Cash or Crash round's id. */
+export const CASH_OR_CRASH_ROUND_ID = text(cashOrCrashInput, "roundId");
+
+const cashOrCrashRandomness = at(
+  at(cashOrCrashInput, "proofs"),
+  "randomnessProof",
+);
+
+/**
+ * What the round tests reuse from the Coin Flip round, as the Cash or Crash
+ * round has it: the key draw (its action key), the configuration (its signer,
+ * domain, entropy source, and entropy chain id), and the fake RPC endpoints'
+ * tip (its randomness block). The names of the values that differ.
+ */
+const cashOrCrashMismatches = (): readonly string[] => {
+  const checks: readonly (readonly [string, boolean])[] = [
+    [
+      "actionKey",
+      text(at(cashOrCrashAuth, "newRound"), "actionKey").toLowerCase() ===
+        ROUND.actionKey,
+    ],
+    ["signer", text(cashOrCrashAuth, "signer") === ROUND_PINS.signer],
+    [
+      "domain",
+      JSON.stringify(at(cashOrCrashAuth, "domain")) === JSON.stringify(domain),
+    ],
+    ["source", text(cashOrCrashRandomness, "source") === ROUND_PINS.source],
+    [
+      "entropyChainId",
+      number(cashOrCrashAuth, "entropyChainId") === ROUND_PINS.entropyChainId,
+    ],
+    [
+      "blockNumber",
+      BigInt(number(cashOrCrashRandomness, "blockNumber")) ===
+        ROUND.blockNumber,
+    ],
+  ];
+  return checks.filter(([, same]) => !same).map(([name]) => name);
+};
+
+// The round tests' key draw, configuration, and fake RPC endpoints are the Coin
+// Flip round's, so the Cash or Crash round must agree with it on every value
+// they read; checked once, when the module loads.
+const mismatches = cashOrCrashMismatches();
+if (mismatches.length > 0) {
+  throw new Error(
+    `${CASH_OR_CRASH.step0} differs from ${ROUND_VECTOR} in ${mismatches.join(", ")}: the round tests cannot play it with the Coin Flip round's key, configuration, and RPC tip`,
+  );
+}
+
+/**
+ * The first pick, row 0 tile 2: `typed-data/cashorcrash-pick`'s bytes (sequence
+ * 1, `previous` T_0), with a 65-byte signature. No vector holds this signature;
+ * the shell's own tests prove it.
+ */
+export const cashOrCrashPickCheck: BodyCheck = actionCheck(
+  "the pick",
+  CASH_OR_CRASH_ROUND_ID,
+  "cashorcrash-pick",
+  value => SIGNATURE.test(value),
+);
+
+/**
+ * The cash-out after that pick: `typed-data/cashorcrash-cash-out`'s bytes
+ * (sequence 2, `previous` T_1) and `signed-action/cashorcrash-cash-out`'s
+ * signature, byte for byte (the independent signer's, with the same key and
+ * message).
+ */
+export const cashOutCheck: BodyCheck = actionCheck(
+  "the cash-out",
+  CASH_OR_CRASH_ROUND_ID,
+  "cashorcrash-cash-out",
+  value =>
+    value.toLowerCase() ===
+    signedActionSignature(CASH_OR_CRASH.cashOut).toLowerCase(),
 );

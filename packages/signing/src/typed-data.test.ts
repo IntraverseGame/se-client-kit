@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { actionVector, codeOf } from "./fixtures/helpers.ts";
 import {
+  cashOrCrashReadyHash,
   coinflipReadyHash,
   type TypedDataVector,
   typedDataVectors as all,
@@ -48,9 +49,11 @@ const base: TypedDataFields = {
 };
 
 describe("the typed-data vectors", () => {
-  it("holds a move, a multi-row move, a cash-out, and a cancel", () => {
+  it("holds moves, a multi-row move, cash-outs, and a cancel", () => {
     expect(all.map(vector => vector.name).toSorted()).toEqual([
       "cash-out",
+      "cashorcrash-cash-out",
+      "cashorcrash-pick",
       "coinflip-cancel",
       "coinflip-pick",
       "pick-multi-path",
@@ -82,6 +85,12 @@ describe("the typed-data vectors", () => {
   it("links the Coin Flip move and cancel to the ready hash of their Snapshot", () => {
     expect(byName("coinflip-pick").fields.previous).toBe(coinflipReadyHash);
     expect(byName("coinflip-cancel").fields.previous).toBe(coinflipReadyHash);
+  });
+
+  it("links the Cash or Crash pick to the ready hash of its Snapshot", () => {
+    expect(byName("cashorcrash-pick").fields.previous).toBe(
+      cashOrCrashReadyHash,
+    );
   });
 
   // `signing.json`'s actions are T_1..T_4: the third pick links to T_2, the

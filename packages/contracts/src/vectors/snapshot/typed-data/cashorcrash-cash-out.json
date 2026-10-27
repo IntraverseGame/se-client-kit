@@ -1,0 +1,20 @@
+{
+  "vector": "snapshot/typed-data/cashorcrash-cash-out",
+  "description": "Cash or Crash, a cash-out after the first pick survived, on the round in snapshot/valid/cashorcrash-cash-out-active-step1: action \"cash out\", path [0], sequence 2, previous T_1, the structHash of the pick in snapshot/typed-data/cashorcrash-pick on that round. The typedData the shell sends to rounds:cashOut; snapshot/signed-action/cashorcrash-cash-out signs it.",
+  "fields": {
+    "kind": {
+      "name": "ACTION_KIND_CASH_OUT",
+      "number": 2
+    },
+    "action": "cash out",
+    "path": [
+      0
+    ],
+    "sequence": 2,
+    "previous": "0x120e27acfca41d0da897bbfab40a7b70d5360d172d3e15d15736ef0be5bec9be"
+  },
+  "typedData": {
+    "hex": "0x0802120863617368206f75741a010020022a20120e27acfca41d0da897bbfab40a7b70d5360d172d3e15d15736ef0be5bec9be",
+    "base64": "CAISCGNhc2ggb3V0GgEAIAIqIBIOJ6z8pB0NqJe7+rQKe3DVNg0XLT4V0Vc27wvlvsm+"
+  }
+}

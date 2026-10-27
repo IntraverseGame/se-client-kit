@@ -90,3 +90,21 @@ const readyHashOf = (name: string): Bytes32 => {
 export const coinflipReadyHash: Bytes32 = readyHashOf(
   "coinflip-active-ready-hash",
 );
+
+/**
+ * `T_0` of the Cash or Crash round of
+ * `valid/cashorcrash-cash-out-active-step0`.
+ */
+export const cashOrCrashReadyHash: Bytes32 = readyHashOf(
+  "cashorcrash-cash-out-active-step0",
+);
+
+/** The `roundId` (UUID text) of the `valid/` Snapshot vector `name`. */
+export const roundIdOf = (name: string): string => {
+  const where = `valid/${name}`;
+  const input = record(
+    at(record(snapshotVectors.valid[name], where), "input", where),
+    where,
+  );
+  return text(input, "roundId", where);
+};

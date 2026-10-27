@@ -182,6 +182,39 @@ Rules:
    The `snapshot` package's per-status types say `payout?: never` on every other
    status, as the schema does.
 
+   **The Cash or Crash cash-out, and a book game's RTP** (the Snapshot vectors
+   synced from se-backend `6afc690`, and the Snapshot schema with them, last
+   touched at `13bcee0`; the Play and verify documents stay at `9ffdcc0`; no
+   vendored vector changed): the vectors add one Cash or Crash `[3,3,4]` round
+   played to a cash-out, on one signed chain. `valid/cashorcrash-cash-out-*` are
+   four Snapshots of that round (one `roundId`, `CreateRoundAuth`, and
+   `readyHash`): `active` at step 0 (`version` 2), `active` after the first pick
+   survived (3), `resolving` (4), and `won` by the cash-out (5) with `payout`
+   145, `floor(100 × 1.455)`. `typed-data/cashorcrash-pick` (row 0 tile 2,
+   sequence 1, `previous` the round's `readyHash`, T_0) and
+   `typed-data/cashorcrash-cash-out` (`cash out`, path `[0]`, sequence 2,
+   `previous` the pick's struct hash, T_1) are its actions, and
+   `signed-action/cashorcrash-cash-out` is that cash-out as a `PlayerCashOut`
+   signed by Foundry `cast` with the same public test key as
+   `signed-action/coinflip-cancel` (rule 5). The round was issued for the same
+   action key, registry signer, and domain as the vendored Coin Flip round. The
+   `resolving` Snapshot is a valid shape, but the Play API answers `resolving`
+   only to a cancel, so the fake Play API never answers it on a cash-out. The
+   older `typed-data/cash-out` vector (path `[0, 1, 2]`, sequence 4) stays the
+   cash-out of `signing.json`'s worked round; the two do not overlap. `signing`
+   replays the new signed action (`cash-out-vector.test.ts`), the shell signs
+   the same cash-out through its round flow (`cash-out-vector.test.ts`), and the
+   Wrapper's T-12 plays the round against the fake Play API
+   ([Testing and CI](./testing-and-ci.md)). The same sync brought the book
+   game's RTP, since the vectors' directories are synced at one commit: an
+   additive change, a new optional `rtp` on a book game's `config` (`BookRtp`:
+   `fraction`, the exact RTP as a reduced fraction of 1, and `decimal`, its
+   display value rounded down to 4 places, never computed with), with
+   `valid/book-playback-won-rtp` and five `invalid/book-rtp-*` vectors. The kit
+   validates it as the schema gives it and does not use it yet: the shell
+   forwards no `playback` Snapshot's copy to the game (W-38), and the Wrapper
+   does not show the RTP (the book game's page and playback are #146).
+
    **The signing vectors of contracts release 1.0.0**
    (`test/vectors/signing.json`, synced from the contracts repository at release
    `1.0.0`, commit `2f060eb`; the lock records `b9c1556`, the last commit that

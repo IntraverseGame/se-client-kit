@@ -149,7 +149,13 @@ Part of the [Client kit spec](../client-kit.md), section
   test-only entry of the `contracts` package, where they are copied with their
   source commit noted. The signed-action specification publishes no separate
   player-facing vector file: its independent vectors for `PlayerAction` and
-  `PlayerCashOut` are these signing vectors. `PlayerCancel`'s independent
+  `PlayerCashOut` are these signing vectors. `PlayerCashOut` also has the
+  backend's `signed-action/cashorcrash-cash-out` Snapshot vector (Foundry cast,
+  the same `PLAYER_KEY`), the cash-out of the vendored Cash or Crash round after
+  its first pick, replayed the same way as the cancel below
+  (`cash-out-vector.test.ts`), with its chain: the pick
+  (`typed-data/cashorcrash-pick`) links to the round's `readyHash`, and the
+  cash-out's `previous` is the pick's struct hash. `PlayerCancel`'s independent
   signature is the backend's `signed-action/coinflip-cancel` Snapshot vector,
   vendored and read through the same entry
   (`snapshotVectors.signedAction["coinflip-cancel"]`, signed with `PLAYER_KEY`)
@@ -157,20 +163,21 @@ Part of the [Client kit spec](../client-kit.md), section
   hash, and digest, sign the digest with the `player` key (its test key, the
   same public account) to its exact bytes, and recover both that signature and
   the vector's to its address (#41). That vector file carries its test key
-  (`testKey`): the tests read its address, a contracts test checks that it is
-  the same public key as `PLAYER_KEY`, and the tests sign with the fixture
-  below, not with it. The signing vector file names its two signing keys (the
-  action key `player` and the admin `engine`) as the well-known local
-  development accounts but does not carry them, so the tests hold those two keys
-  in a test fixture (`packages/signing/src/fixtures/keys.ts`). They are the
-  vectors' test keys (the AGENTS.md exception): public by design, the default
-  accounts of the local Ethereum development node, holding nothing and never
-  used outside tests. The tests prove each derives the address the vectors give.
-  **Since contracts release 1.0.0** (`1.0.0`, vendored by the re-vendor of the
-  signing vectors; the file keeps its older fields as they were and adds three
-  things) the file also holds a `PlayerCancel` entry in `types`, `payoutTerms`
-  (six named terms with their hashes), and `closes` (nine full rounds on the
-  same domain and keys, one per way a round ends, each ending in `closed`, or in
+  (`testKey`), as the cash-out's does: the tests read its address, a contracts
+  test checks that each is the same public key as `PLAYER_KEY`, and the tests
+  sign with the fixture below, not with it. The signing vector file names its
+  two signing keys (the action key `player` and the admin `engine`) as the
+  well-known local development accounts but does not carry them, so the tests
+  hold those two keys in a test fixture
+  (`packages/signing/src/fixtures/keys.ts`). They are the vectors' test keys
+  (the AGENTS.md exception): public by design, the default accounts of the local
+  Ethereum development node, holding nothing and never used outside tests. The
+  tests prove each derives the address the vectors give. **Since contracts
+  release 1.0.0** (`1.0.0`, vendored by the re-vendor of the signing vectors;
+  the file keeps its older fields as they were and adds three things) the file
+  also holds a `PlayerCancel` entry in `types`, `payoutTerms` (six named terms
+  with their hashes), and `closes` (nine full rounds on the same domain and
+  keys, one per way a round ends, each ending in `closed`, or in
   `canceled = keccak256(abi.encode(ready, T_1))` for the `player-cancel` round).
   `close-vectors.test.ts` replays every round of `closes` with the kit's own
   encoders: `created`, `T_0`, each action's struct hash (a move, a cash-out, or

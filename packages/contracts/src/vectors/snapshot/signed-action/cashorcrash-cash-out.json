@@ -1,0 +1,75 @@
+{
+  "vector": "snapshot/signed-action/cashorcrash-cash-out",
+  "description": "Cash or Crash, a signed cash-out after the first pick survived: the PlayerCashOut EIP-712 message of the round in snapshot/valid/cashorcrash-cash-out-active-step1 (its domain, its roundId as round, and as previous T_1, the structHash of the pick in snapshot/typed-data/cashorcrash-pick, which chains on the round's readyHash T_0), whose typedData is snapshot/typed-data/cashorcrash-cash-out, signed by the round's action key. structHash is T_2. The hashes, digest and signature were made with Foundry cast alone (generatedWith), not with the engine's own EIP-712 code, so a shell that reproduces them agrees with an independent signer. testKey is a public test key: never use it for anything of value.",
+  "sources": {
+    "round": "snapshot/valid/cashorcrash-cash-out-active-step1",
+    "typedData": "snapshot/typed-data/cashorcrash-cash-out"
+  },
+  "typedData": {
+    "hex": "0x0802120863617368206f75741a010020022a20120e27acfca41d0da897bbfab40a7b70d5360d172d3e15d15736ef0be5bec9be",
+    "base64": "CAISCGNhc2ggb3V0GgEAIAIqIBIOJ6z8pB0NqJe7+rQKe3DVNg0XLT4V0Vc27wvlvsm+"
+  },
+  "eip712": {
+    "types": {
+      "EIP712Domain": [
+        { "name": "name", "type": "string" },
+        { "name": "version", "type": "string" },
+        { "name": "chainId", "type": "uint256" },
+        { "name": "verifyingContract", "type": "address" }
+      ],
+      "PlayerCashOut": [
+        { "name": "action", "type": "string" },
+        { "name": "path", "type": "uint8[]" },
+        { "name": "sequence", "type": "uint32" },
+        { "name": "round", "type": "bytes32" },
+        { "name": "previous", "type": "bytes32" }
+      ]
+    },
+    "primaryType": "PlayerCashOut",
+    "domain": {
+      "name": "SuperEngine",
+      "version": "1",
+      "chainId": 31337,
+      "verifyingContract": "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+    },
+    "message": {
+      "action": "cash out",
+      "path": [0],
+      "sequence": 2,
+      "round": "0x01927c5f1a2b7c3d8e4f5a6b7c8d9e0f00000000000000000000000000000000",
+      "previous": "0x120e27acfca41d0da897bbfab40a7b70d5360d172d3e15d15736ef0be5bec9be"
+    }
+  },
+  "encodeType": "PlayerCashOut(string action,uint8[] path,uint32 sequence,bytes32 round,bytes32 previous)",
+  "typeHash": "0x4fcc4e30bede285e8cd1551115aee2f18030095285175588103a130a1b118c04",
+  "domainSeparator": "0xa198bbd7e02bac6b3c31ac524252d3e7dbbd0d56cb09d904b955de4948d15299",
+  "structHash": "0x4fec1be6b68a7279a3875e97e5ce67e635cc31f55fa2aaa067bb1942a0633379",
+  "digest": "0xb87fbbd3f495caab317eca6037ed2f8250604521f862e9d25016450b7a8c992c",
+  "testKey": {
+    "note": "TEST KEY ONLY. The well-known account at index 3 of the default anvil and Hardhat test mnemonic, public by design; never fund it or use it outside tests. Its address is the round's actionKey.",
+    "privateKey": "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
+    "address": "0x90f79bf6eb2c4f870365e785982e1f101e93b906"
+  },
+  "signature": {
+    "hex": "0x9ce55c8004b8c0405b4b25617effac23abf6e88b26c9a675cdf91772f4ba8edb1652dc4e8b819812bef20cc02dc90de800599244676cee90ad0492f1e98bd5891c",
+    "r": "0x9ce55c8004b8c0405b4b25617effac23abf6e88b26c9a675cdf91772f4ba8edb",
+    "s": "0x1652dc4e8b819812bef20cc02dc90de800599244676cee90ad0492f1e98bd589",
+    "v": 28
+  },
+  "generatedWith": {
+    "tool": "Foundry cast",
+    "version": "1.3.6-v1.3.6 (commit d2415887096b10226d13af9240b5bef5e6b0d815)",
+    "image": "ghcr.io/foundry-rs/foundry:v1.3.6",
+    "input": "player-cash-out.json holds the eip712 member of this vector.",
+    "commands": [
+      "cast wallet address --private-key 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
+      "cast keccak 'PlayerCashOut(string action,uint8[] path,uint32 sequence,bytes32 round,bytes32 previous)'",
+      "cast keccak $(cast abi-encode 'f(bytes32,bytes32,bytes32,uint256,address)' $(cast keccak 'EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)') $(cast keccak SuperEngine) $(cast keccak 1) 31337 0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e)",
+      "cast keccak $(cast abi-encode 'f(bytes32,bytes32,bytes32,uint32,bytes32,bytes32)' 0x4fcc4e30bede285e8cd1551115aee2f18030095285175588103a130a1b118c04 $(cast keccak 'cash out') $(cast keccak $(cast abi-encode 'f(uint8)' 0)) 2 0x01927c5f1a2b7c3d8e4f5a6b7c8d9e0f00000000000000000000000000000000 0x120e27acfca41d0da897bbfab40a7b70d5360d172d3e15d15736ef0be5bec9be)",
+      "cast keccak $(cast concat-hex 0x1901 0xa198bbd7e02bac6b3c31ac524252d3e7dbbd0d56cb09d904b955de4948d15299 0x4fec1be6b68a7279a3875e97e5ce67e635cc31f55fa2aaa067bb1942a0633379)",
+      "cast wallet sign --data --from-file player-cash-out.json --private-key 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
+      "cast wallet sign --no-hash 0xb87fbbd3f495caab317eca6037ed2f8250604521f862e9d25016450b7a8c992c --private-key 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"
+    ],
+    "outputs": "The commands print, in order: the address (EIP-55 cased), typeHash, domainSeparator, structHash, digest, and the signature twice. Both signing commands print the same signature, so cast's own EIP-712 digest of the input equals digest. The path [0] is hashed as the keccak256 of its one element's 32-byte encoding, abi-encode of f(uint8) 0."
+  }
+}

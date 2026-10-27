@@ -17,7 +17,9 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   vector files (signing vectors, Snapshot `valid/`, `invalid/`, `signature/`,
   and `typed-data/` vectors) read through the test-only entry of the `contracts`
   package. The `signed-action/` vectors (`snapshotVectors.signedAction`) are
-  replayed by `signing`'s and the shell's `cancel-vector.test.ts`;
+  replayed by `signing`'s and the shell's `cancel-vector.test.ts` (the Coin
+  Flip `PlayerCancel`) and `cash-out-vector.test.ts` (the Cash or Crash
+  `PlayerCashOut`, with its pick's chain from the round's `readyHash`);
   `tools/contracts-signed-action.test.ts` checks their pairing with `typed-data/` and `valid/` and that their embedded
   key is signing's `PLAYER_KEY`. The fairness kernel's public vectors
   (`kernelVectors.v1`) are replayed by the verify page's unit tests
@@ -208,8 +210,17 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `behave` fails the tip check on purpose). Script it with `scriptRound` /
   `toReady` / `callTails` (the move is tails, the vector's), or `scriptCancel`
   for the cancel (the start answers the round `active`, so the cancel's reads
-  are the next reads, in order). The fake checks bodies through an answer's
-  `expect` (`startCheck`, `pickCheck`, `cancelCheck`). Mind W-29: the vectors'
+  are the next reads, in order). T-12 (`t12-cash-out.spec.ts`) plays the
+  vendored Cash or Crash round (`CASH_OR_CRASH` in `round-vector.ts`, issued for
+  the same action key, signer, domain, entropy source, entropy chain id, and
+  randomness block, which the module checks at load and names any value that
+  differs): the
+  start answers `active` step 0, the pick (row 1 tile 3) `active` step 1, and
+  the cash-out `won`, each read moved to the same vector before the click; its
+  `resolving` vector is never answered (the Play API answers `resolving` only
+  to a cancel). The fake checks bodies through an answer's `expect`
+  (`startCheck`, `pickCheck`, `cancelCheck`, `cashOrCrashPickCheck`,
+  `cashOutCheck`). Mind W-29: the vectors'
   versions are fixed, so never answer a later read with an equal version
   (`coinflip-canceled` after `coinflip-resolving-cancel`, both v3, is
   ignored). One round per session (the transcript refuses a second open of the

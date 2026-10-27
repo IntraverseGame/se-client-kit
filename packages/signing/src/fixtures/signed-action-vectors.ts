@@ -1,5 +1,6 @@
 // Test-only: the vendored `signed-action/` Snapshot vectors (a `PlayerCancel`
-// signed by an independent signer, Foundry cast), read through the `contracts`
+// and a `PlayerCashOut`, each signed by an independent signer, Foundry cast),
+// read through the `contracts`
 // test-only entry and narrowed to what the tests use. The file's test key is
 // the public development key `player` (fixtures/keys.ts): the tests sign with
 // that fixture and check its address against the file's, so no key is read
@@ -110,11 +111,21 @@ export const signedActionVectors: readonly SignedActionVector[] =
     signedActionVector(name, file),
   );
 
-/** The independent signer's `PlayerCancel` of the Coin Flip round. */
-export const coinflipCancel = (): SignedActionVector => {
-  const vector = signedActionVectors.find(v => v.name === "coinflip-cancel");
+const named = (name: string): SignedActionVector => {
+  const vector = signedActionVectors.find(v => v.name === name);
   if (vector === undefined) {
-    throw new TypeError("signed-action/coinflip-cancel: not vendored");
+    throw new TypeError(`signed-action/${name}: not vendored`);
   }
   return vector;
 };
+
+/** The independent signer's `PlayerCancel` of the Coin Flip round. */
+export const coinflipCancel = (): SignedActionVector =>
+  named("coinflip-cancel");
+
+/**
+ * The independent signer's `PlayerCashOut` of the Cash or Crash round, after
+ * its first pick survived.
+ */
+export const cashOrCrashCashOut = (): SignedActionVector =>
+  named("cashorcrash-cash-out");

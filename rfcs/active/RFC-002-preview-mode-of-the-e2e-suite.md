@@ -756,6 +756,13 @@ fake's rule stays: every answer is an unmodified vendored `valid/` vector. Until
 that set is vendored, cash-out is covered only by the preview T-12, which is the
 backend job's.
 
+Q8, landed (kit #139): the set was published at se-backend `6afc690` and
+vendored (`valid/cashorcrash-cash-out-*`, `typed-data/cashorcrash-pick` and
+`cashorcrash-cash-out`, `signed-action/cashorcrash-cash-out`). The fake T-12
+cash-out runs (`e2e/tests/t12-cash-out.spec.ts`) on all three fake projects.
+`pending.spec.ts` keeps one T-12 entry, the last-surviving-move half of the fake
+row (wrapper.md T-12), since no vendored round ends on its last row.
+
 Confirmed by the backend on 2026-10-26 (answers, not decisions of the human):
 
 - The Wrapper's page is served at the origin root on the preview stack, so the
