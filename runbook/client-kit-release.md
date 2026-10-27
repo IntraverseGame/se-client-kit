@@ -494,20 +494,21 @@ triggers nothing else.
 <!-- TODO(#133): the production deploy, triggered by the merge of the changesets version pull request into `main`. -->
 
 **After the first deploy** (the real test: zone-wide settings can still answer
-with a 403 or a challenge page), on each site (the API checks on the Wrapper's
-and the verifier's sites only):
+with a 403 or a challenge page), checks 1 to 4 on the Wrapper's and the
+verifier's sites and check 5 on the game's site:
 
 1. A `/play/v1` call through the proxy on the Wrapper's site, and a `/verify/v1`
-   call on each site, return the API's JSON (an API error in JSON is fine), with
-   `Content-Type: application/json`, not an HTML challenge page, a 403 from the
-   edge, or the proxy's bare 502 (a missing project variable, an old
-   compatibility date, or an unreachable API). For example
+   call on each of those two sites, return the API's JSON (an API error in JSON
+   is fine), with `Content-Type: application/json`, not an HTML challenge page,
+   a 403 from the edge, or the proxy's bare 502 (a missing project variable, an
+   old compatibility date, or an unreachable API). For example
    `curl -s -i -X POST <the Wrapper's site>/play/v1/sessions:redeem -H 'Content-Type: application/json' --data '{}'`.
    The answer carries the proxy's `Content-Security-Policy` and
    `X-Content-Type-Options: nosniff`.
 2. On the verifier's site, a `/play/v1` path is not forwarded (the site's static
    page or a 405, never the API's JSON).
-3. `<site>/environment-config.json` on each site is that site's document.
+3. On the Wrapper's and the verifier's sites, `<site>/environment-config.json`
+   is that site's document (the game's site has none).
 4. The response headers of `/` and `/verify/` on the Wrapper's site, and of `/`
    and `/verify/rounds/<a round id>` on the verifier's: each has exactly one
    `Content-Security-Policy` (the Wrapper's on `/`, the verify page's on
