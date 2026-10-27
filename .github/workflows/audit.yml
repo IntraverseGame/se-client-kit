@@ -8,7 +8,8 @@ on:
 permissions: {}
 
 env:
-  WIREIT_CACHE: github
+  # No task cache in CI (#53; ci.yml).
+  WIREIT_CACHE: none
 
 jobs:
   audit:

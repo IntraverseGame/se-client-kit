@@ -166,14 +166,17 @@ Several agents and people work in one clone at once. Rules:
   `tools/wireit-edges.test.ts` holds the edges and the declarations, and its
   scan of `process.env["X"]` relies on `noPropertyAccessFromIndexSignature`.
   If a result looks stale, `pnpm clean:cache`.
-- **CI cache.** Workflows set `WIREIT_CACHE=github` and the local composite
-  action `.github/actions/setup` starts `google/wireit`'s caching helper (pinned
-  by commit SHA) and installs with `--frozen-lockfile --ignore-scripts`, so no
-  lifecycle script runs in CI, a workspace project's own included (`allowBuilds`
-  covers dependencies only); the e2e job installs Playwright's browser with its
-  own step. It uses the job's own Actions cache credentials, which are not
-  a repository secret; there is no remote cache. A cache hit may only replace a
-  run whose inputs are all declared, so the gating scripts (`check:deps`,
+- **CI cache.** None for tasks: every workflow sets `WIREIT_CACHE=none` (#53:
+  wireit 0.14.13's GitHub Actions cache reports a failed tarball download as a
+  restore with no output; google/wireit#1536, fixed in 0.15.0). Turning it back
+  on is a maintainers' decision, after a wireit upgrade. The local composite
+  action `.github/actions/setup` caches only the pnpm store (not in a release
+  job), runs no wireit cache helper, and installs with
+  `--frozen-lockfile --ignore-scripts`, so no lifecycle script runs in CI, a
+  workspace project's own included (`allowBuilds` covers dependencies only);
+  the e2e job installs Playwright's browser with its own step. There is no
+  remote cache. Locally the `.wireit/` cache still applies: a cache hit may only
+  replace a run whose inputs are all declared, so the gating scripts (`check:deps`,
   `check:contracts`, `lint`, `test:tools`) list every file they read; add to
   `files` whenever a check reads a new file. `tools/wireit-inputs.test.ts` holds
   every script's `files` to the files on disk and to probes (a schema or vector
@@ -183,14 +186,14 @@ Several agents and people work in one clone at once. Rules:
   file, so `test:tools` lists `packages/*/**`, `apps/*/**`, and `e2e/**` (minus
   build output and build state); keep that when you touch its `files`. Use
   `src/**` (not `src/**/*.ts`) so JSON, CSS and assets count.
-- **A cache restore can leave no output (likely cause of #53: reproduced
-  locally, not yet seen in a CI log; #53 stays open, the PR says "Refs #53").**
-  wireit 0.14.13 deletes a
+- **A cache restore can leave no output (#53, logged in CI on #102; CI now runs
+  with `WIREIT_CACHE=none`).** wireit 0.14.13 deletes a
   script's output, then downloads its GitHub Actions cache tarball; when the
   download fails it logs a `cache-info` line and still reports "Restored from
-  cache", with no `dist/`. CI sets `WIREIT_LOGGER=simple` so that line is in the
-  log (the default CI logger drops it). wireit also records the build as
-  fresh, so locally only `pnpm clean:cache && pnpm build` recovers. Every
+  cache", with no `dist/` (google/wireit#1536, fixed in 0.15.0). wireit also
+  records the build as fresh, so locally only `pnpm clean:cache && pnpm build`
+  recovers. The guard below stays: a missing wireit dependency fails the same
+  way. Every
   `typecheck`, `test`, and `build` of a workspace with a kit dependency runs
   `tsx <up>/tools/check-kit-dist.ts <script> [path...] && <tool>` and lists the
   three guard files (`check-kit-dist.ts`, `kit-dist.ts`, `kit-dist-fs.ts`) in

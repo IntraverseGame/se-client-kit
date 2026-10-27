@@ -106,22 +106,25 @@ outputs restored from the cache.
 
 - **Local:** `.wireit/` in each worktree (git-ignored; like `node_modules`, it
   is per worktree). `pnpm clean:cache` empties it.
-- **CI:** `WIREIT_CACHE=github`, using the GitHub Actions cache through
-  `google/wireit`'s `setup-github-actions-caching` action (pinned by commit SHA,
-  in `.github/actions/setup`). It hands the job's own Actions cache credentials
-  to wireit on the runner; no repository secret is involved. There is no remote
-  cache service (ADR-001 rejected one because it needs a credential). CI sets
-  `WIREIT_LOGGER=simple`, so the log shows each script's run, restore, or skip
-  and every `cache-info` message.
-- **A restored build is not trusted to have left its output.** wireit 0.14.13
-  reports a script as restored from the GitHub Actions cache even when the
-  tarball download failed, after it has deleted the output, and records it as
-  fresh. This is the likely cause of #53: reproduced locally, not yet seen in a
-  CI log (#53 stays open). So every script that reads a kit package's `dist/`
-  runs `tools/check-kit-dist.ts <script> [path...]` before its tool: each
-  workspace's `typecheck` and `test`, the Wrapper's Vite `build`, and the e2e
-  suite's `test`, which also names the apps' `dist/index.html` it serves by
-  path. The guard follows the workspace's `workspace:` dependencies (its own
+- **CI:** no task cache. Every workflow sets `WIREIT_CACHE=none`, so each job
+  runs its scripts from a clean checkout, and no wireit cache helper runs
+  (`.github/actions/setup` caches only the pnpm store, and not in a release
+  job). There is no remote cache service (ADR-001 rejected one because it needs
+  a credential). CI sets `WIREIT_LOGGER=simple`, so the log shows each script's
+  run or skip. The GitHub Actions cache mode (`WIREIT_CACHE=github`) was turned
+  off for #53: wireit 0.14.13 reports a script as restored from that cache even
+  when the tarball download failed, after it has deleted the output, and records
+  it as fresh (logged in CI on #102; google/wireit#1536, fixed in wireit
+  0.15.0). The `release-dry-run` job, which already built with no cache, takes
+  about 35s.
+- **A restored build is not trusted to have left its output.** Whatever left a
+  kit package's `dist/` missing (a failed cache restore as above, a missing
+  wireit dependency), the tool that reads it must not fail with an error that
+  names no cause. So every script that reads a kit package's `dist/` runs
+  `tools/check-kit-dist.ts <script> [path...]` before its tool: each workspace's
+  `typecheck` and `test`, the Wrapper's Vite `build`, and the e2e suite's
+  `test`, which also names the apps' `dist/index.html` it serves by path. The
+  guard follows the workspace's `workspace:` dependencies (its own
   `devDependencies` included, then each package's `dependencies` and
   `peerDependencies`) through its `node_modules` links and fails, naming each
   file, when a kit package is not linked, its manifest cannot be read, it has no

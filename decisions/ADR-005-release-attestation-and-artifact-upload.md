@@ -40,6 +40,9 @@ but keeps **no list of allowed Actions**: its allow-list
 only. An Action runs in the release job, which holds the job's OIDC token, so
 adding one is a supply-chain decision (CONTRIBUTING, Route).
 
+Amendment note (2026-10-27, #53): `google/wireit` is no longer used; the kit now
+uses four external Actions.
+
 The human chose to propose these two Actions through this ADR. The other option
 was to attach the artifact with the `gh` CLI and drop the attestation.
 

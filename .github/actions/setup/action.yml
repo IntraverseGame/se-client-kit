@@ -1,15 +1,14 @@
 name: Set up the toolchain
 description: >-
-  Install the pinned pnpm and Node, turn on wireit's GitHub Actions cache, and
-  install the dependencies from the lockfile with lifecycle scripts off. Run
-  actions/checkout first.
+  Install the pinned pnpm and Node and install the dependencies from the
+  lockfile with lifecycle scripts off. Run actions/checkout first.
 inputs:
   cache:
     description: >-
-      "true" (the default) turns on wireit's GitHub Actions cache helper and the
-      pnpm store cache. The release jobs pass "false": a release build restores
-      nothing from a cache, and no long-lived helper holding cache credentials
-      runs next to a job's other credentials.
+      "true" (the default) turns on the pnpm store cache. The release jobs pass
+      "false": a release job restores nothing from a cache. wireit's task cache
+      is off in every workflow (WIREIT_CACHE=none, #53), so no wireit cache
+      helper runs.
     required: false
     default: "true"
 runs:
@@ -23,12 +22,6 @@ runs:
       with:
         node-version-file: .node-version
         cache: ${{ inputs.cache == 'true' && 'pnpm' || '' }}
-    # Starts a local helper that hands the job's Actions cache credentials to
-    # wireit (WIREIT_CACHE=github, set by each workflow). It reads no repository
-    # secret and the credentials never leave the runner.
-    - name: Enable wireit caching in GitHub Actions
-      if: inputs.cache == 'true'
-      uses: google/wireit@9d7c2e5346f8ef1b1ab6014c4e96c74e234f7ed5 # setup-github-actions-caching/v2.0.4
     # --ignore-scripts: no lifecycle script runs, a workspace project's own
     # included (allowBuilds covers dependencies only). Nothing in CI needs one:
     # the e2e job installs Playwright's browser with an explicit step.
