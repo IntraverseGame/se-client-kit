@@ -16,6 +16,8 @@
     "release-files.ts",
     "release-output-check.ts",
     "release-sri.ts",
-    "release-verify.ts"
+    "release-verify.ts",
+    "pages-config.ts",
+    "pages-config-cli.ts"
   ]
 }

@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-19 (wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
+last-verified: 2026-10-27 (#133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
 ---
 
 # Development workflow
@@ -97,6 +97,65 @@ Several agents and people work in one clone at once. Rules:
   step 7, after ADR-005), the publish job is split: a build job without
   `id-token`, and a publish-only job that runs no repository tooling and only
   verifies digests and publishes the downloaded tarballs.
+- **Pages deploy** (#133, ADR-008, accepted, which supersedes ADR-001
+  decision 9; [runbook](../../runbook/client-kit-release.md#deploy-to-cloudflare-pages)):
+  `.github/workflows/pages.yml`, on push to `main` and by hand from `main`,
+  staging only, to `se-wrapper-stage` (the artifact: Wrapper at `/`, verify
+  page at `/verify/`) and `se-verifier-stage` (the artifact's `verify/` plus a
+  root copy of its page; a round is `<verifier>/verify/rounds/{id}`). Every job
+  only when the repository variable `PAGES_STAGE_DEPLOY_ENABLED == 'true'`.
+  Three jobs:
+  - `build` (`contents: read`, no secret): the release dry run, the `.sha256`
+    check, the proxy worker (`tsc -p apps/pages-proxy/tsconfig.build.json
+    --sourceMap false`), both uploaded (`archive: false`, one day) with their
+    digests as outputs;
+  - `config-stage` (`environment: pages-stage`, configuration secrets only,
+    never the token or account id; running repo code in the token's
+    environment is an accepted staging-only risk, ADR-008 Risks accepted;
+    production gets a separate config environment): builds the shell, runs
+    `apps/wrapper/pages-config-cli.ts` (pure builder `apps/wrapper/pages-config.ts`,
+    validated with the Wrapper's own `validateEnvironmentConfig` per site
+    origin; issues name inputs or fields, never values), uploads
+    `wrapper-environment-config.json` and `verifier-environment-config.json`;
+  - `deploy-stage` (`environment: pages-stage`, project names in its `env`):
+    fails first on a missing token or account id, checkout, setup composite
+    (scripts off), four downloads checked against their digests, lays out the
+    sites with `_worker.js`, `environment-config.json`, `_routes.json` per site,
+    writes `_headers` with bash and `jq` (CSP lists read from the Wrapper's
+    configuration document: RPC endpoints' origins, an empty RPC list leaves
+    `connect-src 'self'`; game and operator origins, `'none'` when empty), and
+    `wrangler pages deploy <site> --no-bundle` per project. No repository
+    script.
+
+  `pages-stage` holds secrets only (read with `secrets.`):
+  `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PAGES_RPC_ORIGINS`,
+  `PAGES_GAME_ORIGINS`, `PAGES_OPERATOR_ORIGINS` (set; placeholders
+  `https://invalid.example`), and `PAGES_WRAPPER_ORIGIN`,
+  `PAGES_VERIFIER_ORIGIN`, `PAGES_CHAIN_PINS`, `PAGES_RPC_ENDPOINTS` (to set).
+  Each Pages project: `SE_API_UPSTREAM_ORIGIN` (set), `SE_API_PATH_PREFIXES`
+  (to set), compatibility date 2024-11-11 or later. Staging has no
+  browser-reachable RPC (#137); its `tipLagMargin` is #135. Production later:
+  `pages-prod`, `PAGES_PROD_DEPLOY_ENABLED`, second config and deploy jobs.
+  `wrangler` is a root devDependency at an exact version; `workerd`'s install
+  script is denied. Tests: `tools/pages-workflow.test.ts`,
+  `tools/pages-headers.test.ts` (reads `apps/wrapper/dist/headers.json`, so
+  `test:tools` depends on the Wrapper's build), and
+  `apps/wrapper/src/pages-config.test.ts`.
+- **Pages API proxy** (`apps/pages-proxy`, spec: client-kit.md, The Pages API
+  proxy): one module, `src/worker.ts`, no import, no dependency, emitted by
+  `tsc` and deployed as `_worker.js` (advanced mode). The Pages runtime treats
+  every named export as an entry point, so it exports only functions and types
+  (an exported constant made `wrangler pages dev` refuse it). Rules: the site's
+  prefixes from `SE_API_PATH_PREFIXES` (narrowing `/play/v1/`, `/verify/v1/`);
+  400 for `%2f`/`%5c`/`%2e` or an empty segment; hop-by-hop and
+  address/host/scheme/path/method-override request headers dropped;
+  `X-Forwarded-For` replaced by `CF-Connecting-IP`; `cache: "no-store"`; every
+  answer (and its own 400/502) gets `Content-Security-Policy: default-src
+  'none'; frame-ancestors 'none'; sandbox` and `nosniff`; a failed asset read
+  is a 502. Local smoke: `wrangler pages dev <site> --binding
+  SE_API_UPSTREAM_ORIGIN=... --binding SE_API_PATH_PREFIXES=...` (the worker
+  accepts only `https`, so a local echo upstream needs an edited copy; workerd
+  resolves `%2e%2e` before the worker sees it).
 - **Release dry run** (`tools/release-dry-run.ts`): copies the working tree
   (`git ls-files -co --exclude-standard`) twice into `--out` (outside the
   repository, empty), installs offline with `--ignore-scripts` and

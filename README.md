@@ -39,6 +39,7 @@ claiming them on npm is part of the publishing work (#12).
 | `wrapper`        | app     | the UI, built into a release bundle                                         |
 | `reference-game` | app     | a minimal sandboxed game for tests and as a sample                          |
 | `verify`         | app     | the verify page; today the fairness kernel's derivations only               |
+| `pages-proxy`    | app     | the Pages sites' same-origin API proxy (a worker; imports nothing)          |
 
 Dependencies point one way: `contracts` (data only) ← `snapshot` and
 `play-client` ← `shell` ← `wrapper`; `signing` ← `shell`; `signing` ← `verify`,

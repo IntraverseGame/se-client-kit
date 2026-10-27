@@ -28,9 +28,11 @@ public, the tests and CI jobs, and who owns what.
 
 Out of scope: the Wrapper's behavior ([wrapper.md](./wrapper.md)) and the verify
 page's ([verify-page.md](./verify-page.md)); the signed-action grammar (the
-backend's signed-action spec); the hosting and the deploy credentials of the
-released Wrapper, an [open item](#open-items) for the infrastructure owner; the
-procedure to release ([runbook](../runbook/client-kit-release.md)).
+backend's signed-action spec); the Cloudflare account, the Pages project, its
+token, and the DNS, which the infrastructure owner creates (the kit's deploy job
+is in scope:
+[How the Wrapper reaches the SuperEngine origin](#how-the-wrapper-reaches-the-superengine-origin));
+the procedure to release ([runbook](../runbook/client-kit-release.md)).
 
 ## Boundary
 
@@ -75,6 +77,7 @@ se-client-kit/
     wrapper/        the Wrapper UI (Vite)
     reference-game/ a minimal sandboxed game for tests and as a sample
     verify/         the verify page (today its fairness-kernel derivations only)
+    pages-proxy/    the Pages sites' same-origin API proxy (one worker module)
   e2e/              Playwright suite and the fake Play API
   tools/            repository checks and their tests (allow-list, test-only entry)
   .changeset/       pending release notes
@@ -93,12 +96,15 @@ on the Wrapper's bundle,
 [The e2e harness](./client-kit/testing-and-ci.md#the-e2e-harness)) and no
 `build`; `apps/verify` (`@intraverse/se-client-verify`, private) has `typecheck`
 and `test` (Vitest) and no `build` until its page is built
-([Verify page](./verify-page.md#build-and-release-v-15-to-v-17)). **A package
-gets a `test` script with its first real test**, not before: a `test` script
-that passes with no tests would be a green check that checks nothing, so the
-empty skeletons have none, and the root `test` runs the Wrapper's tests and the
-`tools/` tests (`test:tools`). The pull request that adds a package's first test
-adds its `test` script and its entry in the root `test` dependencies.
+([Verify page](./verify-page.md#build-and-release-v-15-to-v-17));
+`apps/pages-proxy` (`@intraverse/se-client-pages-proxy`, private) has `build`
+(`tsc`, its one worker module), `typecheck`, and `test` (Vitest)
+([The Pages API proxy](#the-pages-api-proxy)). **A package gets a `test` script
+with its first real test**, not before: a `test` script that passes with no
+tests would be a green check that checks nothing, so the empty skeletons have
+none, and the root `test` runs the Wrapper's tests and the `tools/` tests
+(`test:tools`). The pull request that adds a package's first test adds its
+`test` script and its entry in the root `test` dependencies.
 
 Directories are `packages/<name>` and `apps/<name>`. The intended npm names are
 `@intraverse/se-client-<name>` (scope `@intraverse`, decided in
@@ -227,14 +233,128 @@ another origin.
    same digest ([Supply chain](./client-kit/supply-chain.md), Reproducible
    build).
    <!-- TODO(#12): attaching the artifact and its attestation to a GitHub release; an ADR to come proposes `actions/attest-build-provenance` and `actions/upload-artifact`. -->
-2. A deploy job **on the SuperEngine side** pulls a released version by its tag
-   and digest, verifies the attestation and the manifest, and uploads it to the
-   public, content-addressed artifact store behind the CDN. The environment's
-   configuration document points at that version.
-3. The **deploy credentials stay on the SuperEngine side**, in a protected
-   environment. This repository holds none: it only publishes artifacts anyone
-   can read.
-4. A rollback is repointing the environment to the previous released digest.
+2. This repository's CI **deploys `main` to Cloudflare Pages**
+   ([ADR-008](../decisions/ADR-008-pages-deploy-with-wrangler.md), which
+   supersedes ADR-001 decision 9; `.github/workflows/pages.yml`), to two staging
+   projects on two hostnames: the Wrapper's (`se-wrapper-stage`) and the
+   verifier's (`se-verifier-stage`). Staging only; production is to come.
+   - A build job with a read-only token and no secret builds the Wrapper
+     artifact twice (the release dry run) and requires one digest, and builds
+     the [API proxy](#the-pages-api-proxy) worker with `tsc`.
+   - A config job, in the same environment, referencing only its configuration
+     secrets and never the token, builds and validates the
+     [sites' configuration documents](#the-pages-sites-configuration). It runs
+     repository code in the environment that holds the token: accepted for
+     staging only (ADR-008, Risks accepted); production builds its configuration
+     in a separate environment with no deploy credential.
+   - A deploy job that runs no repository script downloads all of them, refuses
+     any whose SHA-256 is not its job's digest, and lays out the sites from the
+     unchanged artifact. The Wrapper's site is the artifact: the Wrapper at `/`,
+     and its copy of the verify page at `/verify/`. The verifier's site is the
+     artifact's `verify/` directory plus a copy of its page at the root (the
+     page's files are referenced under `/verify/`, its build base, and Pages
+     serves the root page for every path that is not a file).
+
+   Each site also gets the proxy as its `_worker.js`, its own
+   `environment-config.json`, a `_routes.json` that sends only its API paths to
+   the proxy, and its `_headers` (below). The job uploads each site, unbundled,
+   with the `wrangler` the lockfile pins, and logs every digest. A released
+   version keeps its tag, digest, and attestation (step 1); Pages serves `main`.
+
+3. The **deploy credential** (a Cloudflare API token scoped to Pages) exists
+   only as a secret of the protected GitHub environment `pages-stage`,
+   restricted to `main`, and is used by the deploy step alone; it is never in a
+   file or a log. The account id, the site origins, the RPC endpoints, and the
+   origin lists are secrets of the same environment, so the public logs show
+   them masked. The API's origin is a variable of each Pages project, never in
+   this repository or CI. No hostname is written in this repository.
+4. A rollback is a Pages rollback to an earlier deployment, per project
+   ([runbook](../runbook/client-kit-release.md#deploy-to-cloudflare-pages)).
+
+#### The Pages API proxy
+
+The two sites' hostnames are not the API's, and the API sends no CORS headers.
+Each site reaches the API through its own origin instead: a Cloudflare Pages
+advanced-mode worker (`apps/pages-proxy`, one module with no import and no
+dependency, emitted by `tsc`) deployed as the site's `_worker.js`. It is on the
+path of every signed action.
+
+- **Routes.** The site's `_routes.json` sends only the API paths its pages call
+  to the worker: `/play/v1/*` and `/verify/v1/*` on the Wrapper's site (the
+  Wrapper and its copy of the verify page), `/verify/v1/*` on the verifier's.
+  Every other path is a static asset of the site, with its `_headers`.
+- **The site's prefixes.** The worker forwards a request only when its path (as
+  `URL` normalizes it, so a dot segment cannot leave the prefix) starts with one
+  of the site's prefixes: the Pages project's variable `SE_API_PATH_PREFIXES`, a
+  whitespace-separated list of `/play/v1/` and `/verify/v1/` (the Wrapper's site
+  both, the verifier's `/verify/v1/` only). A missing or empty list, or one with
+  any other entry, is a 502 for every API path. Any other path goes to the
+  static assets. `/operator/v1/*` is never forwarded: no page calls it (the
+  launch code is redeemed with `POST /play/v1/sessions:redeem`).
+- **Refused paths.** A path that holds `%2f`, `%5c`, or `%2e` (in any case), an
+  empty segment (`//`), or, under an API prefix, a trailing `/`, is answered 400
+  with no body and never forwarded. (A runtime that resolves `%2e%2e` before the
+  worker sees the path leaves a path outside the prefixes, which goes to the
+  static assets: it is never forwarded either.)
+- **Pass-through.** The method, the path, the query, and the body are forwarded
+  unchanged to the upstream origin. The body is the incoming stream, never read,
+  parsed, or re-encoded, so a signed action arrives byte for byte. A redirect is
+  returned to the page, not followed. The upstream request asks for no caching
+  (`cache: "no-store"`).
+- **Request headers.** Every header is forwarded unchanged except these, which
+  are dropped: `Host` (the upstream URL's), the incoming `CF-Connecting-IP`
+  (Cloudflare sets its own on the forwarded request), the hop-by-hop headers
+  (`Connection` and every header it names, `Keep-Alive`, `TE`, `Trailer`,
+  `Transfer-Encoding`, `Upgrade`, and every `Proxy-*` header), and `Forwarded`,
+  `X-Real-IP`, `True-Client-IP`, `X-Forwarded-Host`, `X-Forwarded-Proto`,
+  `X-Original-URL`, `X-Rewrite-URL`, and `X-HTTP-Method-Override`.
+- **The client IP.** The proxy forwards the client IP in `X-Forwarded-For`: it
+  replaces any incoming `X-Forwarded-For` (which the client could have written)
+  with the incoming `CF-Connecting-IP`, and drops it when there is none. The
+  header is trustworthy only if the upstream authenticates the proxy; without
+  that, any client can send its own.
+- **The answer.** The upstream's status, headers, and body are returned, with
+  `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; sandbox`
+  and `X-Content-Type-Options: nosniff` set, replacing the upstream's own.
+  Nothing is cached, and no caching header is added or changed.
+- **The upstream.** The origin is the Pages project's production variable
+  `SE_API_UPSTREAM_ORIGIN`, exactly an `https` origin (no path, query,
+  credentials, or trailing slash), set by the infrastructure owner in each
+  project and never in this repository or CI. When it is missing or malformed,
+  when the upstream cannot be reached, or when reading a static asset fails, the
+  answer is a 502 with no body and no detail.
+- **Its own answers** (400, 502) carry the same two security headers.
+- **It logs nothing** and emits no telemetry.
+
+With the proxy, the APIs are same-origin: `'self'` in each page's `connect-src`
+covers them.
+
+#### The Pages sites' configuration
+
+Each site serves its own environment configuration document
+([wrapper.md](./wrapper.md#configuration), and the verify page's V-3),
+`environment-config.json` next to its page, written by the deploy; the
+artifact's bytes and digest are unchanged. The config job builds both from the
+`pages-stage` secrets (`PAGES_WRAPPER_ORIGIN`, `PAGES_VERIFIER_ORIGIN`,
+`PAGES_CHAIN_PINS`, `PAGES_RPC_ENDPOINTS`, `PAGES_RPC_ORIGINS`,
+`PAGES_GAME_ORIGINS`, `PAGES_OPERATOR_ORIGINS`) with
+`apps/wrapper/pages-config.ts`, and validates each with the Wrapper's own
+validator for its site's origin; any issue fails the job, naming an input or a
+field, never a value.
+
+- `PAGES_CHAIN_PINS` holds the chain pins only (`environment`, `runtimeSigner`,
+  `registryDomain`, `entropyChainId`, `minRpcQuorum`, `tipLagMargin`);
+  `PAGES_RPC_ORIGINS` must list exactly the origins of `PAGES_RPC_ENDPOINTS`'
+  URLs.
+- `playApiBaseUrl` is the Wrapper's origin plus `/play/v1` in both documents;
+  `verifyApiBaseUrl` is each site's own origin plus `/verify/v1` (its own
+  proxy); `verifyBaseUrl` is the verifier's origin plus `/verify` in both, so
+  the Wrapper's verify link opens `<verifier origin>/verify/rounds/{roundId}` on
+  the verifier's site.
+- The same documents feed the sites' policies: the deploy reads the RPC
+  endpoints' origins, the game origins, and the operator origins for `_headers`
+  from the Wrapper's document, so the policy and the configuration cannot
+  disagree.
 
 The Wrapper's build produces these files itself (`apps/wrapper`,
 `release-integrity.ts` and `release-headers.ts`), and fails closed if the page
@@ -257,12 +377,19 @@ would need a looser policy:
   could not reach a verify API on another origin. The hosting step therefore
   excludes `/verify/*` from `/*`, or serves the Wrapper's rule only with headers
   safe on every path, and checks the real response headers of a preview deploy.
-  No hosting step exists yet. The Wrapper's policy is `default-src 'none'`,
-  `'self'` for scripts, styles, images, and fonts, `base-uri`, `form-action`,
-  and `object-src` `'none'`, Trusted Types required, and three placeholders the
-  deploy side fills from the environment's document:
-  `connect-src 'self' {{connectOrigins}}` (the Play API's and the RPC endpoints'
-  origins), `frame-src {{gameOrigins}}`, and
+  Pages merges every matching rule, so the Pages deploy writes each more
+  specific rule as a detach (`! Name`) of every header of the broader rules,
+  then its own headers: `/verify/*` then carries only the verify page's. The
+  verifier's site gets the `/verify/*` rule's headers on `/*`. The Wrapper's
+  policy is `default-src 'none'`, `'self'` for scripts, styles, images, and
+  fonts, `base-uri`, `form-action`, and `object-src` `'none'`, Trusted Types
+  required, and three placeholders the deploy side fills from the environment's
+  document (the Pages deploy fills them from each site's configuration document:
+  the RPC endpoints' origins, the game origins, and the operator origins, each
+  sorted and unique; an empty RPC list leaves `connect-src 'self'`, an empty
+  game or operator list is `'none'`; the Play and verify APIs are same-origin
+  there, through the proxy): `connect-src 'self' {{connectOrigins}}` (the Play
+  API's and the RPC endpoints' origins), `frame-src {{gameOrigins}}`, and
   `frame-ancestors {{operatorOrigins}}` (`'none'` when the list is empty).
   `contentSecurityPolicyFor` computes the filled policy for a validated
   document; `verifyContentSecurityPolicyFor` does the same for the verify page's
@@ -389,7 +516,7 @@ workflow's logs are public and hold no secret.
 | Claiming the `intraverse` npm organization and the `@intraverse/se-client-*` names (decided; not claimed yet)                                                                                                                                                                                                                                                                      | the org owners, with the publishing work (#12)      | <!-- TODO(org owners): claim the npm organization `intraverse` and the package names -->                                                                                                            |
 | The rest of the release workflow (#12): the tag and GitHub release that carry the Wrapper artifact, and its build-provenance attestation (decided: an ADR to come proposes `actions/attest-build-provenance` and `actions/upload-artifact`). The version pull request job is built (the workflow's `version` job pushes `changeset-release/main`; a person opens the pull request) | TPO, with the publishing work (#12)                 | <!-- TODO(#12): GitHub release, attestation -->                                                                                                                                                     |
 | License                                                                                                                                                                                                                                                                                                                                                                            | TPO                                                 | MIT today (set at creation); confirmed by the TPO in review. Not blocking                                                                                                                           |
-| Hosting of the released Wrapper and its deploy credentials                                                                                                                                                                                                                                                                                                                         | infrastructure owner                                | <!-- TODO(infrastructure owner): hosting, deploy repository and environment, `frame-ancestors` source -->                                                                                           |
+| Hosting of the released Wrapper and its deploy credentials (decided for staging: ADR-008's push to Cloudflare Pages; the account, projects, token, and DNS stay the infrastructure owner's)                                                                                                                                                                                        | infrastructure owner                                | <!-- TODO(infrastructure owner): hosting, deploy repository and environment, `frame-ancestors` source -->                                                                                           |
 | Publication of the backend's contracts and vectors (later step; not a blocker, OQ-6 decided)                                                                                                                                                                                                                                                                                       | backend maintainers                                 | <!-- TODO(contract publication): where and when -->                                                                                                                                                 |
 | The preview-stack pin and job                                                                                                                                                                                                                                                                                                                                                      | backend repository                                  | the kit's side is the preview mode of the e2e suite ([testing-and-ci.md](./client-kit/testing-and-ci.md), [runbook](../runbook/preview-e2e.md)); the pin and the job live in the backend repository |
 | Type-aware lint (`oxlint-tsgolint`, for rules such as `no-floating-promises`)                                                                                                                                                                                                                                                                                                      | follow-up pull request (needs an ADR-001 amendment) | <!-- TODO(follow-up): add `oxlint-tsgolint` to the allow-list and enable the type-aware rules -->                                                                                                   |

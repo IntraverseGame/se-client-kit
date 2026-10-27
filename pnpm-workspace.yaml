@@ -14,6 +14,11 @@ allowBuilds:
   # prebuilt binary, which is delivered by a platform package and works without
   # it. Denied explicitly so `strictDepBuilds` stays on.
   esbuild: false
+  # wrangler's workerd (the local Workers runtime) has an install script that
+  # only checks the prebuilt binary its platform package delivers. The kit runs
+  # wrangler only for `wrangler pages deploy` of static files, which never
+  # starts workerd (ADR-008). Denied explicitly so `strictDepBuilds` stays on.
+  workerd: false
 strictDepBuilds: true
 # Refuse a version whose trust evidence is weaker than an earlier one's.
 trustPolicy: no-downgrade

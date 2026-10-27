@@ -6,10 +6,11 @@ Procedures for this repository, `se-client-kit`
 ([specs/client-kit.md](../specs/client-kit.md),
 [ADR-001](../decisions/ADR-001-toolchain-and-signing.md)): scaffolding the
 toolchain, syncing a contract, releasing the packages and the Wrapper bundle,
-checking a release, and rolling back or deprecating one. They hold **procedures
-only**: this repository is public, so no credential, token, hostname, or account
-identifier appears here, and none may be added. Where a value is needed, this
-runbook says which secret or setting holds it, by name.
+checking a release, deploying `main` to Cloudflare Pages, and rolling back or
+deprecating one. They hold **procedures only**: this repository is public, so no
+credential, token, hostname, or account identifier appears here, and none may be
+added. Where a value is needed, this runbook says which secret or setting holds
+it, by name.
 
 Repository settings are the org owners' to apply. GitHub's own settings are the
 source of truth for what is configured.
@@ -337,24 +338,170 @@ After publishing:
 4. **Compatibility:** the release notes' contract versions match what the
    backend serves in the target environment. Do not promote a Wrapper whose Play
    prefix or Snapshot schema the backend does not serve.
-5. **Promotion** to an environment is done on the SuperEngine side, by its
-   deploy job, which pulls the released digest
-   <!-- TODO(infrastructure owner): the repository, protected environment, and procedure of the deploy job; the hosting. -->
-   After it, play one round in that environment from a test launch (the launch
-   page URL, then `#`, then the bare launch code), and check there is no console
-   error, the address bar no longer shows the code once the page has loaded, and
-   a reload shows "Your session has ended" (the code is single use). Until the
-   Play API's redeem answer carries `gameOrigin` and the kit vendors it, the
-   Wrapper mounts no game, so a round cannot be played to its end there.
+5. **Promotion** is a push from this repository, to staging only (production is
+   to come): a merge to `main` deploys `main`'s Wrapper artifact to the staging
+   Cloudflare Pages projects (the Pages workflow; see
+   [Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages)), and its deploy
+   job logs the digest it deployed. After it, play one round in that environment
+   from a test launch (the launch page URL, then `#`, then the bare launch
+   code), and check there is no console error, the address bar no longer shows
+   the code once the page has loaded, and a reload shows "Your session has
+   ended" (the code is single use). Until the Play API's redeem answer carries
+   `gameOrigin` and the kit vendors it, the Wrapper mounts no game, so a round
+   cannot be played to its end there.
+
+### Deploy to Cloudflare Pages
+
+The Pages workflow (`.github/workflows/pages.yml`,
+[ADR-008](../decisions/ADR-008-pages-deploy-with-wrangler.md)) deploys `main` on
+every push to it, to two staging Pages projects (Direct Upload, production
+branch `main`), each on its own hostname. Staging only; production is to come.
+
+- `se-wrapper-stage`: the Wrapper at `/`, with its copy of the verify page at
+  `/verify/`;
+- `se-verifier-stage`: the verify page (the artifact's `verify/` directory plus
+  a root copy of its page). Its base is `<verifier origin>/verify` (the
+  configuration's `verifyBaseUrl`), and a round's page is that base plus
+  `/rounds/{roundId}`: `https://<verifier host>/verify/rounds/{roundId}`, the
+  URL the Wrapper's verify link opens. A link from elsewhere to a round uses the
+  same base and suffix.
+
+Each site carries the same-origin API proxy (`apps/pages-proxy`) as its
+`_worker.js`, its own `environment-config.json`, a `_routes.json` that sends
+only its API paths to the proxy (`/play/v1/*` and `/verify/v1/*` on the
+Wrapper's, `/verify/v1/*` on the verifier's), and its `_headers`
+([specs/client-kit.md](../specs/client-kit.md#the-pages-api-proxy)).
+
+Three jobs:
+
+- `build`: the release dry run (the Wrapper artifact built twice, one digest
+  required) and the proxy worker (`tsc`), with a read-only token and no secret.
+- `config-stage`: the two sites' configuration documents, built from the
+  `pages-stage` configuration secrets and validated with the Wrapper's own
+  validator (`apps/wrapper/pages-config-cli.ts`). It references only those
+  secrets, never the token, but it runs in the same environment: an accepted
+  risk for staging only (ADR-008, Risks accepted).
+- `deploy-stage`: checks every download against its digest, lays out the two
+  sites, writes their `_routes.json` and `_headers` (the CSP lists read from the
+  configuration documents), and runs `wrangler pages deploy --no-bundle` (pinned
+  by the lockfile) once per project. It runs no repository script.
+
+Every job is skipped until `PAGES_STAGE_DEPLOY_ENABLED` is set.
+
+**Setup, once, by the infrastructure owner** (names only here; the values never
+enter this repository, an issue, or a log):
+
+1. In Cloudflare: the two projects, their custom hostnames in the shared zone,
+   and an API token with Pages edit on that account and nothing else. Done by
+   the infrastructure owner.
+2. In each Pages project, two plain production environment variables. They take
+   effect only on a deployment made after they are set, so set them before the
+   first deploy, or redeploy after changing them.
+   - **`SE_API_UPSTREAM_ORIGIN`**: the API's origin only (`https://host`, no
+     path, no trailing slash). Without it, every API call through the proxy
+     answers a bare 502. Done by the infrastructure owner (2026-10-27).
+   - **`SE_API_PATH_PREFIXES`**: the site's API prefixes, whitespace-separated:
+     `/play/v1/ /verify/v1/` on `se-wrapper-stage`, `/verify/v1/` on
+     `se-verifier-stage`. Without it, every API call answers a bare 502. To set.
+   - The project's **compatibility date** must be on or after 2024-11-11 (the
+     proxy's `fetch` asks for `cache: "no-store"`, which older dates refuse;
+     every API call would then answer a bare 502).
+3. In GitHub, the environment **`pages-stage`**, deployment branches restricted
+   to `main`. Done by the infrastructure owner.
+4. Its secrets (no variables; every value is read with `secrets.`):
+   - **`CLOUDFLARE_API_TOKEN`**: the token. Set.
+   - **`CLOUDFLARE_ACCOUNT_ID`**: the account. Set.
+   - **`PAGES_RPC_ORIGINS`**, **`PAGES_GAME_ORIGINS`**,
+     **`PAGES_OPERATOR_ORIGINS`**: whitespace-separated lists of bare `https`
+     origins (no path, no trailing slash), feeding both the configuration
+     documents and the CSP's `connect-src`, `frame-src`, and `frame-ancestors`.
+     Set (the infrastructure owner, 2026-10-27), today to placeholders: the
+     configuration's disjoint-origins rule (W-49) refuses an origin that is both
+     a game origin and an operator origin, so `PAGES_OPERATOR_ORIGINS` holds a
+     placeholder distinct from the others.
+   - **`PAGES_WRAPPER_ORIGIN`**, **`PAGES_VERIFIER_ORIGIN`**: the two sites'
+     origins (`https://host`). Set.
+   - **`PAGES_CHAIN_PINS`**: JSON with exactly `environment`, `runtimeSigner`,
+     `registryDomain`, `entropyChainId`, `minRpcQuorum`, and `tipLagMargin`
+     ([wrapper.md](../specs/wrapper.md#configuration)). Set. Staging is
+     `environment: "preview"` with `minRpcQuorum` 1 until it has a
+     browser-reachable RPC (#137; ADR-008, decision 8); production must be
+     `"production"` with `minRpcQuorum` of at least 2.
+     <!-- TODO(#135): staging's `tipLagMargin` in `PAGES_CHAIN_PINS`: the value #135 settles. -->
+   - **`PAGES_RPC_ENDPOINTS`**: JSON of `rpcEndpoints`,
+     `{"<source>":[{"provider":"…","url":"…"}]}`, keyed by the same entropy
+     source as the pins' `entropyChainId` and `tipLagMargin`;
+     `PAGES_RPC_ORIGINS` must list exactly the origins of its URLs. Set.
+5. Last, the repository variable **`PAGES_STAGE_DEPLOY_ENABLED`** = `true`.
+
+A run with the variable set and the token or the account id missing fails in its
+first deploy step, naming what is missing. A configuration value that is missing
+or makes an invalid document fails the config job, naming the input or the field
+and the issue, never a value.
+
+**Staging has no browser-reachable RPC yet** (#137). Until an RPC is provided,
+`PAGES_RPC_ENDPOINTS` can name only a placeholder endpoint (with `minRpcQuorum`
+1, which `environment: preview` allows; the Wrapper then shows its
+non-dismissable "chain check not independent (development)" indicator, W-26a),
+and the on-chain checks cannot pass in the browser: the Wrapper's tip check
+before a round's first signature fails ("could not verify the chain", W-26a), so
+no round can be started, and the verify page's chain read (check 6) fails ("this
+round could not be verified against the chain", V-7). This is the specified
+behavior for an unreachable RPC, not a fault of the deploy.
+
+A production deploy later is a second environment (`pages-prod`, with the same
+names inside), a second gate (`PAGES_PROD_DEPLOY_ENABLED`), and second config
+and deploy jobs with the production project names (ADR-008).
+
+**After the first deploy** (the real test: zone-wide settings can still answer
+with a 403 or a challenge page), on each site:
+
+1. A `/play/v1` call through the proxy on the Wrapper's site, and a `/verify/v1`
+   call on each site, return the API's JSON (an API error in JSON is fine), with
+   `Content-Type: application/json`, not an HTML challenge page, a 403 from the
+   edge, or the proxy's bare 502 (a missing project variable, an old
+   compatibility date, or an unreachable API). For example
+   `curl -s -i -X POST <the Wrapper's site>/play/v1/sessions:redeem -H 'Content-Type: application/json' --data '{}'`.
+   The answer carries the proxy's `Content-Security-Policy` and
+   `X-Content-Type-Options: nosniff`.
+2. On the verifier's site, a `/play/v1` path is not forwarded (the site's static
+   page or a 405, never the API's JSON).
+3. `<site>/environment-config.json` on each site is that site's document.
+4. The response headers of `/` and `/verify/` on the Wrapper's site, and of `/`
+   and `/verify/rounds/<a round id>` on the verifier's: each has exactly one
+   `Content-Security-Policy` (the Wrapper's on `/`, the verify page's on
+   `/verify/` and everywhere on the verifier's site), plus `Referrer-Policy` and
+   `Permissions-Policy`. Two policies mean Pages merged the rules: stop
+   deploying (unset `PAGES_STAGE_DEPLOY_ENABLED`) and fix the headers step.
+
+Check them again after any change to `headers.json`, the proxy, the
+configuration, or the projects' settings.
+
+**Redeploy** `main` without a commit: run the Pages workflow by hand on `main`
+(Actions, Pages, Run workflow). Needed after changing a Pages project variable.
+
+**Rollback:** in the Cloudflare dashboard, the project's Deployments, choose the
+last good production deployment and Rollback; or the Pages API's rollback of a
+deployment, with an API token of the infrastructure owner's (not the CI token's
+value, which is never copied out of the environment). Roll back each project
+that needs it; a rollback serves that deployment's own files, worker, and
+configuration at once. The next merge to `main` deploys again, so fix forward
+(or unset `PAGES_STAGE_DEPLOY_ENABLED` to hold the rollback) before merging.
+Each deployment records the commit (`--commit-hash`) it came from, and its run
+logs every digest.
+
+**Rotate the Pages token:** the infrastructure owner creates a replacement with
+the same scope, writes it into the `pages-stage` environment's
+`CLOUDFLARE_API_TOKEN`, runs the workflow by hand on `main` to prove it, and
+revokes the old token. Record the date (the secret name and date only).
 
 ### Roll back or deprecate
 
-- **A bad Wrapper release:** the SuperEngine side repoints the environment to
-  the previous released digest (the digest in that release's notes and
-  `.sha256`). The bundle store is content-addressed, so the old digest is still
-  there. Then fix forward here: a changeset, a patch release, and a new digest.
-  Nothing in this repository is rolled back; a released artifact is never
-  rebuilt in place.
+- **A bad Wrapper deploy:** roll the Pages projects back to the previous
+  deployment ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages),
+  Rollback). Then fix forward here: a changeset, a patch release, and a new
+  digest. Nothing in this repository is rolled back; a released artifact is
+  never rebuilt in place.
 - **A bad npm version:** do not unpublish a version others may depend on. An org
   owner, signed in to npm with two-factor (never from CI, never with a token in
   a file), runs
@@ -480,8 +627,9 @@ A compromised publishing credential, a published version that contains a secret
 or malicious code, a bundle that does not match its manifest, or a leaked file
 in this public repository is a **security incident**: tell the two org owners
 and the infrastructure owner at once; deprecate the affected versions; revoke
-and rotate the credential; have the SuperEngine side repoint environments to a
-known-good digest; and consider anything that was committed as published (it
+and rotate the credential (for the Pages token: revoke it in Cloudflare and
+replace the `pages-stage` environment secret); roll the Pages projects back to a
+known-good deployment; and consider anything that was committed as published (it
 cannot be taken back once cloned). An outside finding is reported through
 `SECURITY.md`.
 
@@ -489,4 +637,5 @@ cannot be taken back once cloned). An outside finding is reported through
 
 - [specs/client-kit.md](../specs/client-kit.md),
   [specs/wrapper.md](../specs/wrapper.md),
-  [ADR-001](../decisions/ADR-001-toolchain-and-signing.md).
+  [ADR-001](../decisions/ADR-001-toolchain-and-signing.md),
+  [ADR-008](../decisions/ADR-008-pages-deploy-with-wrangler.md).
