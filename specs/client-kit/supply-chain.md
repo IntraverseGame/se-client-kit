@@ -93,14 +93,14 @@ the attack surface a player cannot see. The rules:
   ([ADR-005](../../decisions/ADR-005-release-attestation-and-artifact-upload.md),
   Follow-ups), it is split so that the tooling runs with `contents: read` and
   only a job that runs no repository tooling holds `contents: write` and pushes.
-  <!-- TODO(#12, ADR-005): split the version job (tooling with a read-only token, push without tooling) once actions/upload-artifact is allowed. -->
-  <!-- TODO(#12, ADR-005): the split into a build job and a publish-only job; required before RELEASE_PUBLISH_ENABLED is set (runbook, Bootstrap step 7). -->
-  <!-- TODO(#12): the attestation and the GitHub release that carries the artifact; an ADR to come proposes `actions/attest-build-provenance` and `actions/upload-artifact`. -->
+  <!-- TODO(release, #134): deferred to #134 (owner: TPO). Split the version job (tooling with a read-only token, push without tooling) once actions/upload-artifact is allowed. Reason: it waits on ADR-005's acceptance. -->
+  <!-- TODO(release, #134): deferred to #134 (owner: TPO). The split into a build job and a publish-only job; required before RELEASE_PUBLISH_ENABLED is set (runbook, Bootstrap step 7). Reason: it waits on ADR-005's acceptance, and no real publish happens before the protected `release` environment and the npm scope exist (#3). -->
+  <!-- TODO(release, #134): deferred to #134 (owner: TPO). The attestation and the GitHub release that carries the artifact; ADR-005 (proposed) adds `actions/attest-build-provenance` and `actions/upload-artifact`. Reason: it waits on #3 and on ADR-005's acceptance. -->
 - **Credentials.** The publishing credential is never in the repository. The
   preferred form is npm trusted publishing from the release workflow (no
   long-lived token); otherwise a token in a protected GitHub environment with
   required
-  reviewers. <!-- TODO(infrastructure owner): which form the npm organization supports, and the rotation procedure. -->
+  reviewers. <!-- TODO(infrastructure owner, #3): deferred to #3 (owner: TPO, with the org owners). Which form the npm organization supports, and the rotation procedure. Reason: the npm scope is not claimed yet. -->
 - **The Pages deploy**
   ([ADR-008](../../decisions/ADR-008-pages-deploy-with-wrangler.md),
   `.github/workflows/pages.yml`). The Cloudflare API token and the account id

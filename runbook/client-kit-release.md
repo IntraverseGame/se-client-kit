@@ -83,7 +83,7 @@ org owners apply the settings; ask them for each.
    without any protection. The publishing credential, if one is needed at all,
    is a secret of this environment only, never a repository-level secret.
    <!-- TODO(org owners, #3): create the protected `release` environment. -->
-   <!-- TODO(infrastructure owner, #3): the form of the npm credential. Preferred: npm trusted publishing (OIDC) for each of the five packages, trusting this repository, the workflow `release.yml`, and the environment `release`, so no npm token is stored anywhere. Confirm that the pinned pnpm exchanges the OIDC token itself; if it does not, the publish step moves to the npm CLI, which needs a recorded decision. -->
+   <!-- TODO(infrastructure owner, #3): deferred to #3 (owner: TPO, with the org owners; reason: the npm scope is not claimed yet). The form of the npm credential. Preferred: npm trusted publishing (OIDC) for each of the five packages, trusting this repository, the workflow `release.yml`, and the environment `release`, so no npm token is stored anywhere. Confirm that the pinned pnpm exchanges the OIDC token itself; if it does not, the publish step moves to the npm CLI, which needs a recorded decision. -->
 6. **npm:** claim the `intraverse` organization (scope `@intraverse`, packages
    `@intraverse/se-client-<name>`, decided in ADR-001; issue #3 still carries
    the older working name `@superengine`). It is not claimed yet. It is owned by
@@ -102,7 +102,7 @@ org owners apply the settings; ask them for each.
    verifies their digests against the build job's outputs, and runs
    `pnpm publish <tarball>`. It needs the artifact upload and download Action
    that ADR-005 (to come) proposes, and is built after that ADR is accepted.
-   <!-- TODO(#12, ADR-005): split the publish job into a build job without `id-token` and a publish-only job that runs no repository tooling. Must be merged before RELEASE_PUBLISH_ENABLED is ever set. -->
+   <!-- TODO(release, #134): deferred to #134 (owner: TPO). Split the publish job into a build job without `id-token` and a publish-only job that runs no repository tooling. Must be merged before RELEASE_PUBLISH_ENABLED is ever set. Reason: it waits on ADR-005's acceptance, and no real publish happens before #3. -->
 8. **Turn the publish job on**, only after steps 5 to 7 and the trusted
    publishers exist:
    - a reviewed pull request removes `"private": true` from the five libraries'
@@ -222,7 +222,7 @@ the tarball check refuses any lifecycle script in a published manifest).
    until the job is split
    ([ADR-005](../decisions/ADR-005-release-attestation-and-artifact-upload.md),
    Follow-ups).
-   <!-- TODO(#12, ADR-005): split the version job once actions/upload-artifact is allowed: `changeset version` with a read-only token, the push in a job that runs no repository tooling. -->
+   <!-- TODO(release, #134): deferred to #134 (owner: TPO). Split the version job once actions/upload-artifact is allowed: `changeset version` with a read-only token, the push in a job that runs no repository tooling. Reason: it waits on ADR-005's acceptance. -->
 
 3. **Publish.** After the version pull request is merged, start the release
    workflow from `main` with **publish** ticked. The `dry-run` job runs first
@@ -241,7 +241,7 @@ the tarball check refuses any lifecycle script in a published manifest).
    registry's `dist.integrity` equals the local tarball's SHA-512; other bytes
    under the same version fail the job. (This job layout is temporary: Bootstrap
    step 7.)
-   <!-- TODO(#12): tag the release and attach the Wrapper artifact, its `.sha256`, and its build-provenance attestation to a GitHub release, and upload the dry run's artifact from CI. This needs `contents: write` and `attestations: write`; an ADR to come proposes `actions/attest-build-provenance` and `actions/upload-artifact` for it (decided; not added before that ADR is accepted). -->
+   <!-- TODO(release, #134): deferred to #134 (owner: TPO; reason: it waits on #3 and on ADR-005's acceptance). Tag the release and attach the Wrapper artifact, its `.sha256`, and its build-provenance attestation to a GitHub release, and upload the dry run's artifact from CI. This needs `contents: write` and `attestations: write`; an ADR to come proposes `actions/attest-build-provenance` and `actions/upload-artifact` for it (decided; not added before that ADR is accepted). -->
 4. Record in the release notes the contracts the release was built against: the
    Play API prefix, the Snapshot schema id, and the signing vector set, and the
    Wrapper artifact's digest.
@@ -515,7 +515,7 @@ revokes the old token. Record the date (the secret name and date only).
 - **A contract mismatch** (the backend moved): sync the contract, release a
   patch or minor, promote; until then keep the previous Wrapper digest in place.
 
-<!-- TODO(#3, #12): verify the npm deprecation and dist-tag steps once, on the first published version, and the Wrapper repoint once the SuperEngine deploy job exists. Neither can be exercised before the npm organization, the `release` environment, and the deploy job exist; the dry run covers everything up to the publish. -->
+<!-- TODO(#3, #134): deferred to #134 (owner: TPO; reason: it waits on #3). Verify the npm deprecation and dist-tag steps once, on the first published version, and the Pages rollback once. The npm steps cannot be exercised before the npm organization and the `release` environment exist; the dry run covers everything up to the publish. -->
 
 ### Rotate the npm credential
 
@@ -529,7 +529,7 @@ If the release uses a stored npm token (rather than trusted publishing):
 4. Record the date (the secret **name** and date only) with the org owners'
    access notes.
 
-<!-- TODO(infrastructure owner): the rotation schedule, and whether a stored token is used at all. -->
+<!-- TODO(infrastructure owner, #3): deferred to #3 (owner: TPO, with the org owners). The rotation schedule, and whether a stored token is used at all. Reason: the npm scope and the credential form are not settled yet. -->
 
 ## Verification
 

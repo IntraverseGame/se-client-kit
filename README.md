@@ -27,7 +27,7 @@ See [`AGENTS.md`](./AGENTS.md#public-repository). To report a vulnerability, see
 ## Planned packages
 
 The intended npm names are `@intraverse/se-client-<name>` (scope `@intraverse`);
-claiming them on npm is part of the publishing work (#12).
+claiming them on npm is an org-owner item (#3).
 
 | Project          | Kind    | Role                                                                        |
 | ---------------- | ------- | --------------------------------------------------------------------------- |

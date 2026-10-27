@@ -458,12 +458,12 @@ document is fetched with no credentials, no cache, and no redirect, and times
 out after 15 s (W-43). It is read from `./environment-config.json`, relative to
 the Wrapper's page, until hosting decides the path (provisional).
 
-<!-- TODO(hosting): who serves the document and its path; this repository owns the schema, the SuperEngine side serves the values. -->
+<!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). The document's path in production; this repository owns the schema, and the values are configuration, never in this repository. On staging each Pages site serves its own `environment-config.json` next to its page, written by the deploy ([client-kit.md](./client-kit.md#the-pages-sites-configuration)). Reason: ADR-008 deploys staging only; production is to come. -->
 
 The list of RPC providers is owned by the infrastructure owner: which providers
 are used, their CORS behavior, and the matching `connect-src` entries of the
 Content Security Policy.
-<!-- TODO(infrastructure owner): the RPC provider list per entropy source, with CORS and `connect-src`. -->
+<!-- TODO(infrastructure owner, #137): deferred to #137 (owner: infrastructure owner). The RPC provider list per entropy source, with CORS and `connect-src`. Reason: the infrastructure owner has not published the list yet. -->
 
 ## Errors and edge cases
 

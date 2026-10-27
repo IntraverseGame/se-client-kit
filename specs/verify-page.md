@@ -20,10 +20,10 @@ with its browser rows VT-5 to VT-8
 ([The e2e fake](#the-e2e-fake-of-the-verify-api-built)). The verify API document
 is vendored into `contracts` (`schemas/verify.v1.openapi.yaml`, with its
 generated types); what it does not yet carry (the on-chain record and the
-proofs) is still marked `TODO(verify API)`. The request is `play-client`'s
-`getRoundVerification` (A-1). Its four design decisions were made by the human
-on 2026-10-18, and five more on the kernel derivations on 2026-10-19
-([Decisions](#decisions)).
+proofs) is still marked `TODO(verify API)`, deferred to #136. The request is
+`play-client`'s `getRoundVerification` (A-1). Its four design decisions were
+made by the human on 2026-10-18, and five more on the kernel derivations on
+2026-10-19 ([Decisions](#decisions)).
 
 ## Purpose
 
@@ -106,7 +106,7 @@ Out of scope:
   for every path that is not a file, so this URL loads it; a path outside
   `/verify/` (such as `/rounds/{roundId}`) loads the page too, but it is not
   under `verifyBaseUrl`, so the page shows the empty form.
-  <!-- TODO(infrastructure owner): the Wrapper's hosting origin in each environment, so the production and preview values of `verifyBaseUrl`. -->
+  <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). The production verifier site's origin, so production's `verifyBaseUrl`; a configuration value, never written in this repository. Reason: ADR-008 deploys staging only; production is to come. -->
   A round's page is `<verifyBaseUrl>/rounds/{roundId}`, the round id in the
   path, in its canonical form. The Wrapper's verify link builds exactly this URL
   (W-39).
@@ -131,7 +131,8 @@ Out of scope:
     the Wrapper is served from the backend's origin, as in preview (b6e1e48);
     otherwise the verify API is on another origin and needs the backend's CORS
     decision first, before a configuration document may name it.
-  <!-- TODO(infrastructure owner): carry out the two edge rules on the CDN (the route of `/verify/v1/` and the rewrite of `/verify/rounds/*`, with the page's headers) once the Wrapper's hosting origin is known. -->
+  <!-- TODO(verify API, #136): deferred to #136 (owner: backend). The CORS decision for a cross-origin `verifyApiBaseUrl`. Reason: undecided; the verify API answers with no CORS headers today, so a same-origin read is the only supported path (the edge route in preview, each Pages site's API proxy on staging). -->
+  <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). The same `/verify/v1/` route and `/verify/rounds/*` serving, with the page's headers, on production's sites. Reason: ADR-008 deploys staging only (done there by each site's proxy and Pages' fallback); production is to come. -->
 
 ### Configuration (V-3)
 
@@ -421,7 +422,7 @@ alone, and the payout is shown, not recomputed (V-13).
   Links from the evidence (`blockExplorerUrl`, `explorerUrl`, `proofLink`) are
   shown as text, not as links, in the first release: they come from the API the
   page does not trust.
-  <!-- TODO(verify API): the on-chain record and the proofs, when the document carries them (its `onchain_record` and `proofs` checks). -->
+  <!-- TODO(verify API, #136): deferred to #136 (owner: backend). The on-chain record and the proofs, when the document carries them (its `onchain_record` and `proofs` checks). Reason: the vendored verify API document does not carry them yet. -->
 - **Which package does what.** `signing` for every keccak256 hash and the
   signature recovery (it has no kit dependency at run time); Web Crypto for
   SHA-256; `apps/verify` for StepsDerive and the kernel's rules; the vendored

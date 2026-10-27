@@ -51,7 +51,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   - **Until then the Wrapper fails closed.** A status outside the schema fails
     validation (W-28), and a presentation the Wrapper does not render
     (`playback`) is valid but never forwarded to the game.
-  <!-- TODO(Play API): vendor the Play API document once it carries the optional `capabilities` object of the `sessions:redeem` request (specified at b6e1e48, not built), then send W-30's declaration in it. -->
+  <!-- TODO(Play API, #69): deferred to #69 (owner: backend; the issue is closed as deferred and reopened when the field ships). Vendor the Play API document once it carries the optional `capabilities` object of the `sessions:redeem` request (specified at b6e1e48, not built), then send W-30's declaration in it. Reason: the field is specified but not built and not scheduled. -->
 - **W-31.** Statuses. The Wrapper MUST handle each as follows:
 
   | `status`                                   | The Wrapper shows                                                                                                                                                                                                                                                                                                           | Input                                                                       |
