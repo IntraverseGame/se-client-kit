@@ -18,8 +18,8 @@ source of truth for what is configured.
 ## Prerequisites
 
 - Write access to this repository; for settings and secrets, an org owner.
-- The change reviewed and approved by CODEOWNERS (the two org owners), because
-  this repository is public.
+- The change reviewed and approved by the code owner in CODEOWNERS, because this
+  repository is public.
 - Node and `pnpm` at the versions the repository pins (`.node-version` and
   `packageManager`).
 - For a contract sync: access to the private source of the contract (a person,
@@ -49,7 +49,7 @@ org owners apply the settings; ask them for each.
      full commit SHA and `permissions` set per job), the local setup action
      under `.github/actions/setup`, `.github/dependabot.yml` (github-actions and
      `npm`, each with a 7-day cooldown that matches `minimumReleaseAge`),
-     `.github/CODEOWNERS` naming the two org owners;
+     `.github/CODEOWNERS` naming the code owner;
    - the real script list in `AGENTS.md`, `CONTRIBUTING.md`, and the memories.
 
    Landed by the toolchain pull request: everything above except the release
@@ -59,8 +59,8 @@ org owners apply the settings; ask them for each.
    (`.github/workflows/release.yml`) and the release dry run landed with the
    publishing work (#12); its publish job stays off until steps 5 to 8 are done.
 
-   `.github/CODEOWNERS` names the two org owners for `*` and, explicitly, for
-   every path that can reach the supply chain or a credential (#3).
+   `.github/CODEOWNERS` names one code owner for `*` and, explicitly, for every
+   path that can reach the supply chain or a credential (#3).
 
 2. **The `main` ruleset** (in place; decided by the org owners, 2026-10-27): a
    pull request is required, with review from code owners and every review
@@ -69,9 +69,10 @@ org owners apply the settings; ask them for each.
    the commit it saw); force-pushes and deletion are blocked. Decided
    deliberately: the required approval count is 0 (the code owner's approval is
    the required review), no status check is required (keep `ci-ok` green before
-   merging; the ruleset does not enforce it), and organization admins may bypass
-   the ruleset. GitHub never lets an author approve their own pull request, so
-   without a bypass a change by one org owner needs the other's approval. Also a
+   merging; the ruleset does not enforce it), and organization admins and
+   repository admins may bypass the ruleset. GitHub never lets an author approve
+   their own pull request, and there is one code owner, so a pull request the
+   code owner authors merges only through the repository-admin bypass. Also a
    **tag ruleset** that blocks creating, updating, and deleting tags for
    everyone but the org owners, so a workflow token (such as the `version` job's
    `contents: write`) cannot create a tag.
@@ -84,12 +85,12 @@ org owners apply the settings; ask them for each.
    create or approve pull requests; first-time and outside contributors'
    workflows need approval (GitHub's "Fork pull request workflows" setting).
 5. **The publishing environment `release`** (decided by the org owners,
-   2026-10-27): required reviewers are the two org owners, self-review is
-   allowed (an org owner may approve a deployment they started), and deployments
-   are restricted to `main`. It must exist **before** anyone sets the variable
-   in step 8: GitHub creates an environment that a running job names and that
-   does not exist yet, without any protection. No publishing credential is
-   stored in it (step 6).
+   2026-10-27): there are two required reviewers, self-review is allowed (a
+   reviewer may approve a deployment they started), and deployments are
+   restricted to `main`. It must exist **before** anyone sets the variable in
+   step 8: GitHub creates an environment that a running job names and that does
+   not exist yet, without any protection. No publishing credential is stored in
+   it (step 6).
 6. **npm:** the `intraverse` organization is claimed (scope `@intraverse`,
    packages `@intraverse/se-client-<name>`, decided in ADR-001). It is owned by
    the org owners, not a person; two-factor required. The publish credential is
@@ -627,9 +628,10 @@ token:
   (`minimumReleaseAge`); wait, or pick the previous version. Do not lower the
   age.
 
-- **A pull request cannot merge: code-owner review missing.** The two org owners
-  are the owners; an author cannot approve their own change, so the other org
-  owner reviews. An unresolved review thread blocks the merge too.
+- **A pull request cannot merge: code-owner review missing.** There is one code
+  owner; they review. An author cannot approve their own change, so a pull
+  request the code owner authors merges through the repository-admin bypass. An
+  unresolved review thread blocks the merge too.
 - **`contracts` job fails on a hash.** A file differs from the lock: re-run the
   sync, or the file was edited by hand; restore it from its source.
 - **`contracts` job fails on a generated file.** A vendored document and the

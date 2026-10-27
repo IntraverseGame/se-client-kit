@@ -288,8 +288,9 @@ in the public transparency log.
   change `release.yml`, or the build it runs, and get a genuine attestation for
   any bytes. The `main` ruleset (a pull request with a code owner's approval, no
   force push or deletion) is what keeps the attestation meaningful; organization
-  admins may bypass it (decided by the org owners, 2026-10-27), so the
-  attestation is only as strong as the org owners' accounts.
+  admins and repository admins may bypass it (decided by the org owners,
+  2026-10-27; repository admins added 2026-10-28), so the attestation is only as
+  strong as those accounts.
 - **Sigstore `cosign` directly.** Install `cosign`, sign the tar keylessly with
   the job's OIDC token, and verify with `cosign verify-blob`. Rejected: it adds
   a binary download and an installer Action (or a hand-written download and

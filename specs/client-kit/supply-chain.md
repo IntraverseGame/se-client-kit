@@ -102,9 +102,8 @@ the attack surface a player cannot see. The rules:
   from `release.yml` in the protected `release` environment (decided by the org
   owners, 2026-10-27): no npm token is stored anywhere, so there is none to
   rotate. Each package's trusted publisher is to be configured on npmjs.com,
-  requiring the environment `release` (#134). The environment's required
-  reviewers are the two org owners, self-review allowed, deployments from `main`
-  only.
+  requiring the environment `release` (#134). The environment has two required
+  reviewers, self-review allowed, deployments from `main` only.
   <!-- TODO(release, #134): configure the trusted publisher of each of the five packages on npmjs.com (runbook, Bootstrap step 6). -->
 - **The Pages deploy**
   ([ADR-008](../../decisions/ADR-008-pages-deploy-with-wrangler.md),
