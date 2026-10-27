@@ -64,9 +64,9 @@ and `reference-game` use the same prefix, are never published, and stay
 `private`). The `contracts` test-only entry is
 `@intraverse/se-client-contracts/testing`. These are the intended names:
 claiming the `intraverse` npm organization and the names is part of the
-publishing work (#12), and nothing here says they are reserved or registered.
-The earlier working scope `@superengine` is not a kit scope any more; lint and
-the dependency allow-list reject it.
+publishing work (#3), and nothing here says they are reserved or registered. The
+earlier working scope `@superengine` is not a kit scope any more; lint and the
+dependency allow-list reject it.
 
 Amendment note (2026-10-16, toolchain pull request):
 `@changesets/changelog-github` is added as a development dependency, at the root

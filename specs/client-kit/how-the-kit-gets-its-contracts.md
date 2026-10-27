@@ -63,7 +63,7 @@ Rules:
    published source exists, a `contracts-drift` job compares each lock entry
    with it and reports a difference as a warning for an additive change and a
    failure for a breaking one.
-   <!-- TODO(contract publication): the published locations; then the drift job and its severity. -->
+   <!-- TODO(contract publication, #138): deferred to #138 until go-live (owner: backend maintainers). The published locations; then the drift job and its severity. Reason: there is no public location before the first release; until then the kit vendors each document byte for byte from a pinned commit, with the source commit and a SHA-256 per file in the lock. -->
 4. **Additive changes are synced.** Within `/play/v1` and `se.snapshot/1`
    changes are additive. Clients are tolerant readers only within what the
    schema they were built against allows (absent optional fields, members of the

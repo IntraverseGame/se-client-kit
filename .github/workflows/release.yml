@@ -212,7 +212,7 @@ jobs:
             echo "Open the pull request into \`main\` (or close and reopen an"
             echo "open one so its checks run on the new commit)."
           } >> "$GITHUB_STEP_SUMMARY"
-      # TODO(#12, ADR-005): split this job once actions/upload-artifact is
+      # TODO(release, #134): split this job once actions/upload-artifact is
       # allowed: `changeset version` in a job with `contents: read` and
       # `pull-requests: read` that uploads the result, and the push in a job
       # with `contents: write` that runs no repository tooling. Until then the
@@ -251,11 +251,11 @@ jobs:
         run: >-
           pnpm exec tsx tools/release-publish.ts --out "$RUNNER_TEMP/publish"
           --expect-wrapper-digest "$WRAPPER_DIGEST" --publish
-      # TODO(#12): tag the release, attach the Wrapper artifact and its
+      # TODO(release, #134): tag the release, attach the Wrapper artifact and its
       # build-provenance attestation to a GitHub release (needs
       # `contents: write` and `attestations: write`; an ADR to come proposes
       # actions/attest-build-provenance and actions/upload-artifact).
-      # TODO(#12, ADR-005): split this job into a build job without
+      # TODO(release, #134): split this job into a build job without
       # `id-token` and a publish-only job that runs no repository tooling
       # (verify the downloaded tarballs' and artifact's digests, then
       # `pnpm publish <tarball>`). Required before any real publish.

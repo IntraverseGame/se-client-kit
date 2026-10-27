@@ -442,7 +442,7 @@ Part of the [Wrapper spec](../wrapper.md), section
     schema also refuses an entropy source whose configured endpoint count is
     below `minRpcQuorum`, so a quorum can never be unreachable by configuration,
     and an entropy source without its pinned `entropyChainId`.
-  <!-- TODO(backend entropy spec): the lag margin in blocks per chain, from the measured RPC lag; it is the `tipLagMargin` configuration value. -->
+  <!-- TODO(backend entropy spec, #135): deferred to #135 (owner: backend). The lag margin in blocks per chain for staging and production, from the measured RPC lag; it is the `tipLagMargin` configuration value. Reason: there are no staging or production values yet; they wait on measurement. Until then the local chain uses 0 and preview uses 2 blocks (anvil). -->
 - **W-27.** The shell SHOULD keep each round's evidence (its `CreateRoundAuth`,
   the tip-check answers, and every signed action) in memory for the page's life
   and SHOULD offer it as a JSON download after the round ends, started by the

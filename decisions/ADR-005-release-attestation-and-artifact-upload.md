@@ -332,7 +332,7 @@ in the public transparency log.
     - the `attest` job, with exactly `contents: read`, `id-token: write` and
       `attestations: write`, and `environment: attest` (decision 2);
     - the `TODO`s that wait on this ADR, resolved;
-    - the split of the `version` job (#12). Today it runs `changeset version`,
+    - the split of the `version` job (#134). Today it runs `changeset version`,
       which is repository tooling, with a `contents: write` token in its
       environment; the human accepted that for now (2026-10-18). Once
       `actions/upload-artifact` is allowed, a job with `contents: read` and
@@ -342,7 +342,7 @@ in the public transparency log.
       write token.
 
     Attaching the tar to a GitHub release (`contents: write`, with `gh`, no new
-    Action) stays with #12.
+    Action) stays with #134.
 
   - **Spec**: [supply-chain.md](../specs/client-kit/supply-chain.md)
     (Provenance) names the attestation's subject (the tar's digest), the signer
@@ -363,7 +363,7 @@ in the public transparency log.
       release". It is corrected: the attestation is made by the `attest` job and
       is stored on the repository (GitHub's attestations API) and in the public
       Sigstore transparency log. It is not a release asset. Only the tar and its
-      `.sha256` are attached to the release (#12).
+      `.sha256` are attached to the release (#134).
   - **The Actions allow-list** (decided by the human, 2026-10-17). The list
     lives in [supply-chain.md](../specs/client-kit/supply-chain.md), as a table
     of every Action the workflows use: the five in use today plus these two,
@@ -389,10 +389,10 @@ in the public transparency log.
 2. **Retention of the dry run's upload: 14 days?** Alternatives are 30 days, or
    the repository default.
 3. **The durable home of the released tar** for the pull-deploy. The spec
-   assumes a GitHub release asset (with #12). The infrastructure owner confirms
+   assumes a GitHub release asset (with #134). The infrastructure owner confirms
    it.
 
-<!-- TODO(infrastructure owner): where the deploy pulls the released Wrapper from -->
+<!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). Where the released Wrapper is deployed from in production. Reason: ADR-008 decides the push to Cloudflare Pages for staging only; production is to come. -->
 
 Decided by the human on 2026-10-17, and folded into the decision above:
 
