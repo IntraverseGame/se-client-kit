@@ -33,6 +33,7 @@ export type {
   BookConfig,
   BookDraw,
   BookEvent,
+  BookRtp,
   CreateRoundAuth,
   ErrorCode,
   FairnessContext,

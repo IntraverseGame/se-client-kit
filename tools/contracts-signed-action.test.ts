@@ -5,7 +5,8 @@
 // public development key of `packages/signing/src/fixtures/keys.ts`, the only
 // one the AGENTS.md exception allows, compared as text. A sync that brought one
 // vector without the other, a pair that drifted apart, or another key fails
-// here. The replay of the hashes and the signature is pending (#41).
+// here. `signing` replays the hashes and the signatures
+// (cancel-vector.test.ts, cash-out-vector.test.ts).
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -71,8 +72,8 @@ const roundBytes32 = (roundId: string): string =>
   `0x${roundId.replaceAll("-", "")}${"0".repeat(32)}`;
 
 describe("the signed-action vectors", () => {
-  it("are vendored", () => {
-    expect(signedActions).toContain("coinflip-cancel");
+  it("are vendored: the Coin Flip cancel and the Cash or Crash cash-out", () => {
+    expect(signedActions).toEqual(["cashorcrash-cash-out", "coinflip-cancel"]);
   });
 
   it.each(signedActions)("%s signs its typed-data vector's action", name => {

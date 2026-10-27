@@ -6,11 +6,13 @@
 // and T-19 have their own spec files. T-9a's operator embedding, the built
 // `se.operator/1` contract (W-49 to W-49f, #42), runs in the Chromium,
 // Firefox, and WebKit projects (t9a-embedding, t9a-navigations, and
-// t9a-operator-round). What is left is T-12's fake (hermetic) row: the
-// reference game plays any `steps` round now (RFC-002), but only that row still
-// waits, for the backend's Cash or Crash signed chain to be vendored in
-// `contracts` (RFC-002, Q8). T-12's preview row (preview/t12-cash-out.spec.ts)
-// passes on a real stack (the backend's first run) and is not pending.
+// t9a-operator-round). T-12's cash-out runs on the vendored Cash or Crash
+// round (t12-cash-out.spec.ts). What is left is the other half of T-12's fake
+// (hermetic) row: the last surviving move, after which the round is `won` and
+// nothing is signed. No vendored round ends on its last row (the Cash or Crash
+// vectors end by a cash-out after the first row), and the fake answers only
+// from vendored vectors. T-12's preview row (preview/t12-cash-out.spec.ts)
+// plays the cash-out only, too.
 // When a row becomes runnable, it moves to its own spec file with a real body
 // on the harness (fixtures.ts) and leaves this list.
 
@@ -19,7 +21,7 @@ import { test } from "./harness/fixtures.ts";
 const PENDING: readonly (readonly [string, string])[] = [
   [
     "T-12",
-    "the hermetic (fake) row: a cash-out on a multi-step game, and the last surviving move; only this row waits, for the backend's vendored Cash or Crash signed chain (RFC-002 Q8); the preview row passes on a real stack",
+    "the hermetic (fake) row's last surviving move, after which the round is won and nothing is signed; waits for a vendored round that ends on its last row (the cash-out runs in t12-cash-out.spec.ts)",
   ],
 ];
 

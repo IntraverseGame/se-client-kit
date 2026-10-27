@@ -211,7 +211,7 @@ selectedIndex?: number
 losingIndex?: number
 }
 /**
- * playback presentation. Placeholder in se.snapshot/1: the shape is frozen; its details are not specified yet.
+ * playback presentation of a book game: its Stake package and mode, the mode's exact RTP, and, on won and lost only, the draw with the drawn book's events.
  */
 export type BookConfig = {
 kind: "book"
@@ -220,7 +220,21 @@ packageHash: Hash32
  * Stake mode name from the package's index.json.
  */
 model: string
+rtp?: BookRtp
 draw?: BookDraw
+}
+/**
+ * The mode's exact return to player per unit wagered, computed from its table by the certifier (the signed verdict covers the package's RTP bound, not this value): shown before the first bet. Optional in /1 (added 2026-10-26); the server sends it on every book game whose version stores it.
+ */
+export type BookRtp = {
+/**
+ * The exact RTP, a reduced fraction of 1: "n" or "n/d" ("24/25"). The value to verify against.
+ */
+fraction: string
+/**
+ * Display only: the fraction rounded down to 4 decimal places ("0.9600"). Never compute with it.
+ */
+decimal: string
 }
 export type BookDraw = {
 index: number

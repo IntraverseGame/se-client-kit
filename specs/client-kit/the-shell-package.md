@@ -925,35 +925,39 @@ are in brackets.
   and cancel through the round flow with no encoder passed, on
   `valid/coinflip-active-ready-hash` (the cancel's struct hash and digest are
   the `signed-action/coinflip-cancel` vector's, and its signature recovers to
-  the session's key), and the multi-path pick and the cash-out through the
-  request builder, on the worked round of `signing.json`. The Snapshot reader's
-  tests cover each outcome (`snapshot`, `problem`, `rejected`, `network`) and
-  that it prints `[redacted]`. The guards of a new signature are pinned each on
-  its own: in the flow, nothing is signed while the tip check runs or after it
-  rejects (its error kept), nor after a failed verdict whose cancel could not be
-  sent, a sent cancel, or a refused one (the phase is then `failed`); with
-  stand-ins for the tracking and the transcript state, a verdict that is not
-  `ready`, a phase that takes no signature, a step already signed with no
-  pending action, and a resendable action that is not the one recorded are each
-  refused alone; `legalMove` refuses a Snapshot off the shell's own progress; a
-  signed message that differs from the encoded one (a cash-out whose path is a
-  prefix of the other included) is never sent and fails the round; `toBase64`
-  matches RFC 4648's values and `typedData` keeps to 1 to 4096 characters; the
-  `failed` phase holds from `open`, `stale`, and `adopted`, even after a
-  Snapshot shows an action applied; and a second refused move after an adopted
-  resync holds the round again. The session's tests (T-4a, T-7, T-17's shell
-  half) run against the scripted Play API and a manual wall clock
-  (`fixtures/wall-clock.ts`): the fragment is removed before the first request;
-  no fragment, an empty one, 129 characters, or a code only in the query string
-  sends nothing, and 128 raw characters pass; a lost, refused, or 503 redeem is
-  not repeated; a second tab on one lock manager opens nothing (no read, no
-  timer); the refresh point comes from the fixture's `tokenExpiresAt` and the
-  offset, nothing is sent before it, the old token is presented and stays in use
-  until the answer, one refresh is in flight, a lost answer is retried with the
-  same token after backoff, the session-ending codes and the deadline end the
-  session, and a refusal that does not end it waits for the deadline; the open
-  session reads with the token, starts a round with the key's address (issued
-  for the session's own key, so W-26 passes) and reports it `ready`, shows a
-  `ROUND_ACTIVE` round it does not hold, mounts the game and signs a pick
-  through it, ends on each session-ending code and then sends nothing, prints
-  `[redacted]`; and the public options type carries no `encodeTypedData`.
+  the session's key), the Cash or Crash pick and cash-out through the round
+  flow, on `valid/cashorcrash-cash-out-active-step0` (the cash-out's struct
+  hash, digest, and typedData are the `signed-action/cashorcrash-cash-out`
+  vector's, and its signature recovers to the session's key), and the multi-path
+  pick and the cash-out through the request builder, on the worked round of
+  `signing.json`. The Snapshot reader's tests cover each outcome (`snapshot`,
+  `problem`, `rejected`, `network`) and that it prints `[redacted]`. The guards
+  of a new signature are pinned each on its own: in the flow, nothing is signed
+  while the tip check runs or after it rejects (its error kept), nor after a
+  failed verdict whose cancel could not be sent, a sent cancel, or a refused one
+  (the phase is then `failed`); with stand-ins for the tracking and the
+  transcript state, a verdict that is not `ready`, a phase that takes no
+  signature, a step already signed with no pending action, and a resendable
+  action that is not the one recorded are each refused alone; `legalMove`
+  refuses a Snapshot off the shell's own progress; a signed message that differs
+  from the encoded one (a cash-out whose path is a prefix of the other included)
+  is never sent and fails the round; `toBase64` matches RFC 4648's values and
+  `typedData` keeps to 1 to 4096 characters; the `failed` phase holds from
+  `open`, `stale`, and `adopted`, even after a Snapshot shows an action applied;
+  and a second refused move after an adopted resync holds the round again. The
+  session's tests (T-4a, T-7, T-17's shell half) run against the scripted Play
+  API and a manual wall clock (`fixtures/wall-clock.ts`): the fragment is
+  removed before the first request; no fragment, an empty one, 129 characters,
+  or a code only in the query string sends nothing, and 128 raw characters pass;
+  a lost, refused, or 503 redeem is not repeated; a second tab on one lock
+  manager opens nothing (no read, no timer); the refresh point comes from the
+  fixture's `tokenExpiresAt` and the offset, nothing is sent before it, the old
+  token is presented and stays in use until the answer, one refresh is in
+  flight, a lost answer is retried with the same token after backoff, the
+  session-ending codes and the deadline end the session, and a refusal that does
+  not end it waits for the deadline; the open session reads with the token,
+  starts a round with the key's address (issued for the session's own key, so
+  W-26 passes) and reports it `ready`, shows a `ROUND_ACTIVE` round it does not
+  hold, mounts the game and signs a pick through it, ends on each session-ending
+  code and then sends nothing, prints `[redacted]`; and the public options type
+  carries no `encodeTypedData`.

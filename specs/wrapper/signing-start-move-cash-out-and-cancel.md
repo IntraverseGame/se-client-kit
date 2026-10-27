@@ -18,11 +18,14 @@ Part of the [Wrapper spec](../wrapper.md), section
   independent signer (`signed-action/coinflip-cancel`, vendored in `contracts`)
   pins the type: `signing` reproduces its type hash, domain separator, struct
   hash, digest, and signature bytes, and recovers both signatures to its test
-  key's address, before the shell signs a cancel (#41). The contracts
-  repository's signing vectors (release 1.0.0) pin the same type hash and a
-  `player-cancel` round (a `PlayerCancel` at sequence 1 on `T_0`, whose
-  `canceled` hash is `keccak256(abi.encode(ready, T_1))`), which `signing`
-  replays too.
+  key's address, before the shell signs a cancel (#41). The `PlayerCashOut`
+  vector from the same signer (`signed-action/cashorcrash-cash-out`, the
+  cash-out of a vendored Cash or Crash round after its first pick) is replayed
+  the same way, and the shell's round flow signs that cash-out to its struct
+  hash, digest, and typedData. The contracts repository's signing vectors
+  (release 1.0.0) pin the same type hash and a `player-cancel` round (a
+  `PlayerCancel` at sequence 1 on `T_0`, whose `canceled` hash is
+  `keccak256(abi.encode(ready, T_1))`), which `signing` replays too.
 - **W-21.** Every signature MUST be canonical: 65 bytes `r ‖ s ‖ v`, `v` in
   `{27, 28}`, low `s`, deterministic (RFC 6979). The shell MUST reject any other
   length, `v`, or high `s`, and a recovered zero address, when it checks a

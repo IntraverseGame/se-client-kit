@@ -12,8 +12,8 @@
       "path": "src/schemas/se.snapshot.v1.schema.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 schema",
-      "sourceCommit": "f8cc92b8efd38c79fe7bf0e524b9e84d2a9a568a",
-      "sha256": "16b2a8e79453126fd6e01faaf2ab1c4d89b95ac6322341799ca532f17f282458"
+      "sourceCommit": "13bcee0c65afb99c97dcfc02f1443818e8ac25e0",
+      "sha256": "f2b6e1ab0ec8f914032402d6c708f58e3373fb7bb5cc102de52f1a993bd036f7"
     },
     {
       "path": "src/schemas/verify.v1.openapi.yaml",
@@ -245,6 +245,41 @@
       "sourceName": "se.snapshot/1 vectors/invalid/blindness-seed-before-end.json",
       "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
       "sha256": "2418c7f0ab6ae63241035dddc28ce506e1a160eeb656cfab94293896fa0dffcd"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/book-rtp-decimal-above-one.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/book-rtp-decimal-above-one.json",
+      "sourceCommit": "13bcee0c65afb99c97dcfc02f1443818e8ac25e0",
+      "sha256": "cd610c58bb3194d989100ee1c08b85857a8fa90ee12ca67eebe657c761703273"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/book-rtp-decimal-missing.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/book-rtp-decimal-missing.json",
+      "sourceCommit": "13bcee0c65afb99c97dcfc02f1443818e8ac25e0",
+      "sha256": "ac5060559f928023c61158010dd1e984dd679a4bb5313a72066aa8f8a4cdf54f"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/book-rtp-decimal-number.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/book-rtp-decimal-number.json",
+      "sourceCommit": "13bcee0c65afb99c97dcfc02f1443818e8ac25e0",
+      "sha256": "68019424d4eb71d28be906c739090aae5b589d30a65be92b18dd1479f05219e7"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/book-rtp-decimal-two-places.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/book-rtp-decimal-two-places.json",
+      "sourceCommit": "13bcee0c65afb99c97dcfc02f1443818e8ac25e0",
+      "sha256": "181ac2407b9e90d9b312d62ac0e1e37e7d4a691b4bf955a611e1e4c82c5f4fc1"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/book-rtp-fraction-decimal.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/book-rtp-fraction-decimal.json",
+      "sourceCommit": "13bcee0c65afb99c97dcfc02f1443818e8ac25e0",
+      "sha256": "61aff227749f06b02b7285bada44a7983555c5ea3ebf7a7e4828ce7f9eede1f8"
     },
     {
       "path": "src/vectors/snapshot/invalid/close-reason-on-active.json",
@@ -618,6 +653,13 @@
       "sha256": "9828bf962e62f6db854087ef4aeddc2b5bb6b569f776b3b0eaf66c50778fe693"
     },
     {
+      "path": "src/vectors/snapshot/signed-action/cashorcrash-cash-out.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/signed-action/cashorcrash-cash-out.json",
+      "sourceCommit": "6afc690e85904155f88f09607155889f6c5beb47",
+      "sha256": "33474eb03c460bc431c157e5e3a168204f176f088323dfd0c422bb4cc7ebdbaa"
+    },
+    {
       "path": "src/vectors/snapshot/signed-action/coinflip-cancel.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 vectors/signed-action/coinflip-cancel.json",
@@ -630,6 +672,20 @@
       "sourceName": "se.snapshot/1 vectors/typed-data/cash-out.json",
       "sourceCommit": "56c5e9cfa94ce44707bbdd00c3f183932679cbbf",
       "sha256": "9dde3847a09f6f811dba759c2fb6d28f5e5012cbd1c7a26256151727f5cc8acd"
+    },
+    {
+      "path": "src/vectors/snapshot/typed-data/cashorcrash-cash-out.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/typed-data/cashorcrash-cash-out.json",
+      "sourceCommit": "6afc690e85904155f88f09607155889f6c5beb47",
+      "sha256": "9916db2cc4a46883da7bbdce4916d2806261f50b499f0c4884df8994088a6b33"
+    },
+    {
+      "path": "src/vectors/snapshot/typed-data/cashorcrash-pick.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/typed-data/cashorcrash-pick.json",
+      "sourceCommit": "6afc690e85904155f88f09607155889f6c5beb47",
+      "sha256": "a0b9e6f09b634fc019ead8bee3b4e051681f754bd5c5f74ed80fcacd8430aa2d"
     },
     {
       "path": "src/vectors/snapshot/typed-data/coinflip-cancel.json",
@@ -688,11 +744,46 @@
       "sha256": "7c4969c01d5367939a4b3d5d5b96094caad336c36c6c82b6ce2e5b63a6c397a1"
     },
     {
+      "path": "src/vectors/snapshot/valid/book-playback-won-rtp.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/book-playback-won-rtp.json",
+      "sourceCommit": "13bcee0c65afb99c97dcfc02f1443818e8ac25e0",
+      "sha256": "c6de239751c48449829ac1b59bdd2bd7bf9adba210a76fa8b0ae93030741a8b3"
+    },
+    {
       "path": "src/vectors/snapshot/valid/cashorcrash-active-row2.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-active-row2.json",
       "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
       "sha256": "e5998fa814e825039c57f92a756058205da90624be37199898e007383725c735"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-cash-out-active-step0.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-cash-out-active-step0.json",
+      "sourceCommit": "6afc690e85904155f88f09607155889f6c5beb47",
+      "sha256": "0e9ed946d940a96998640b0aab522b885b7ba4087e514c1ebc30191c0393183d"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-cash-out-active-step1.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-cash-out-active-step1.json",
+      "sourceCommit": "6afc690e85904155f88f09607155889f6c5beb47",
+      "sha256": "5719fdea10fb099bdd0518f271e4b990b67656e42e1e0dac913c7f63719591d6"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-cash-out-resolving.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-cash-out-resolving.json",
+      "sourceCommit": "6afc690e85904155f88f09607155889f6c5beb47",
+      "sha256": "cdcd3be9b138a921f6133569450cfc86149b8d34d8a833531b9b3044423928a1"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-cash-out-won.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-cash-out-won.json",
+      "sourceCommit": "6afc690e85904155f88f09607155889f6c5beb47",
+      "sha256": "5befa23c5a2f9ec5ece9c7549e5e95b2e382b8775c91ee1ab9d71bb99a240c5f"
     },
     {
       "path": "src/vectors/snapshot/valid/cashorcrash-lost-row2.json",
