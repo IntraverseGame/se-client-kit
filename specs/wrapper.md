@@ -408,6 +408,17 @@ only public values; the Wrapper refuses to start on an invalid document.
 | `gameOrigins`      | the allow-list of game origins D                                                                                                                                                                                                                                                                     |
 | `operatorOrigins`  | the allow-list of operator page origins A                                                                                                                                                                                                                                                            |
 
+**Staging runs as `preview`** (decided 2026-10-27: the human confirms staging
+moves no real money, and the TPO accepts it; ADR-008, decision 8). Until staging
+has a browser-reachable RPC (#137), its document sets `environment: "preview"`
+and `minRpcQuorum` 1, so W-26a's local or preview exception applies (the
+non-dismissable "chain check not independent (development)" indicator,
+`tipCheck: "degraded"`), and while no endpoint answers, the tip check fails
+("could not verify the chain", W-26a). Production MUST set
+`environment: "production"` with `minRpcQuorum` of at least 2 (W-26a's boot rule
+refuses less). The staging documents are written by the Pages deploy
+([client-kit.md](./client-kit.md#the-pages-sites-configuration)).
+
 The schema, as the Wrapper validates it at boot (`apps/wrapper`,
 `validateEnvironmentConfig`; the chain fields through the shell's
 `validateChainConfig`). Proposed with the Wrapper's first implementation, for

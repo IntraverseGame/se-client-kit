@@ -12,7 +12,10 @@
 The kit already promises an attestation for the Wrapper.
 [ADR-001](./ADR-001-toolchain-and-signing.md) decision 9 says the Wrapper bundle
 is released with an integrity manifest and an attestation, and that a deploy job
-on the SuperEngine side pulls a released version by digest and verifies it. The
+on the SuperEngine side pulls a released version by digest and verifies it (that
+pull deploy is superseded by [ADR-008](./ADR-008-pages-deploy-with-wrangler.md):
+this repository's CI pushes `main` to Cloudflare Pages; the release and its
+attestation stay as here). The
 [supply-chain spec](../specs/client-kit/supply-chain.md) says the bundle is
 released "with a build-provenance attestation". The
 [release runbook](../runbook/client-kit-release.md#verify-before-and-after) says
@@ -219,10 +222,11 @@ configuration) is uploaded.
 **Retention: `retention-days: 14`, set explicitly.** The workflow artifact is a
 convenience for review: someone can download the dry run's Wrapper and compare
 it with a local rebuild before deciding to publish. It is not the released
-artifact. The deploy pulls a released version, and its trust comes from the
-digest and the attestation, never from where the file was kept. Fourteen days
-covers a release review. The repository default (up to 90 days) would only keep
-stale builds.
+artifact. A deploy of a released version takes it by its digest and the
+attestation, never from where the file was kept (the staging Pages deploy of
+ADR-008 builds `main` itself and checks its own digests). Fourteen days covers a
+release review. The repository default (up to 90 days) would only keep stale
+builds.
 
 Workflow artifacts of a public repository can be downloaded by any signed-in
 GitHub user. The tar holds only the public Wrapper bundle, so that is

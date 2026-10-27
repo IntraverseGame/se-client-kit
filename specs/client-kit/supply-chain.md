@@ -17,11 +17,12 @@ the attack surface a player cannot see. The rules:
   accepted (pnpm's minimum release age). The age is **7 days**
   (`minimumReleaseAge: 10080` minutes, strict, in `pnpm-workspace.yaml`), no
   lifecycle script is allowed (`allowBuilds` has no `true` entry; `esbuild`,
-  brought by `tsx`, is denied explicitly so the strict check passes), the trust
-  policy is `no-downgrade`, and dependencies are saved at an exact version.
-  There is no install hook (`.pnpmfile.cjs`) and one TypeScript: the generator
-  of the Play API document's types is `openapi-typescript` 6.7.6, the last major
-  without a TypeScript compiler-API dependency, since 7.x needs TypeScript 5's
+  brought by `tsx`, and `workerd`, brought by `wrangler`, are denied explicitly
+  so the strict check passes), the trust policy is `no-downgrade`, and
+  dependencies are saved at an exact version. There is no install hook
+  (`.pnpmfile.cjs`) and one TypeScript: the generator of the Play API document's
+  types is `openapi-typescript` 6.7.6, the last major without a TypeScript
+  compiler-API dependency, since 7.x needs TypeScript 5's
   ([ADR-004](../../decisions/ADR-004-openapi-typescript-6.md)). One override
   exists (`overrides` in `pnpm-workspace.yaml`, checked by `check:deps` like any
   other): the `undici` of `openapi-typescript` 6.7.6, which it declares as
@@ -100,6 +101,36 @@ the attack surface a player cannot see. The rules:
   long-lived token); otherwise a token in a protected GitHub environment with
   required
   reviewers. <!-- TODO(infrastructure owner): which form the npm organization supports, and the rotation procedure. -->
+- **The Pages deploy**
+  ([ADR-008](../../decisions/ADR-008-pages-deploy-with-wrangler.md),
+  `.github/workflows/pages.yml`). The Cloudflare API token and the account id
+  are secrets of the protected `pages-stage` environment (deployments from
+  `main` only), passed to the deploy step alone; the configuration values are
+  secrets there too, so the public logs mask them, and only the config job reads
+  them. The job that uses the token runs no repository code: the build job
+  (`contents: read`, no secret) builds the Wrapper artifact twice with one
+  digest, and the API proxy worker with `tsc` alone; the config job
+  (`contents: read`, referencing only the configuration secrets) builds the
+  shell and runs the Wrapper's configuration builder and validator. **Accepted
+  risk** (the human, 2026-10-27, staging only): the config job runs in the same
+  `pages-stage` environment that holds the token. GitHub does not document that
+  secrets a job does not reference are withheld from its runner, and a job's
+  code has `sudo` on a hosted runner. Before production, configuration moves to
+  a separate environment with no deploy credential (ADR-008, Risks accepted).
+  The deploy job (`contents: read`) runs `actions/checkout`, the local setup
+  composite (`pnpm/action-setup`, `actions/setup-node`, and
+  `pnpm install --frozen-lockfile --ignore-scripts`),
+  `actions/download-artifact`, the runner's shell with `sha256sum`, `tar`, `cp`,
+  and `jq` (it refuses any download whose SHA-256 is not its job's digest, lays
+  out the two sites, and writes `_headers` and `_routes.json`), and
+  `wrangler pages deploy --no-bundle` (nothing is bundled next to the token),
+  pinned by the lockfile, from an empty working directory with metrics off.
+  Every job runs only when the repository variable `PAGES_STAGE_DEPLOY_ENABLED`
+  is `true`. The workflow uses `actions/upload-artifact` and
+  `actions/download-artifact`, pinned by full SHA (ADR-008, decision 7). The
+  proxy (`apps/pages-proxy`) has no dependency and no import; its upstream
+  origin and path prefixes are variables of each Pages project, never in the
+  repository or CI.
 - **Bundling.** A package's own source is the only thing in its `dist/`; nothing
   from `node_modules` is ever bundled (`deps` in `tsdown.base.ts`). A kit
   package stays an import (`neverBundle` for the `@intraverse/` scope), a

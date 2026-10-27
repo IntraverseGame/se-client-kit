@@ -37,7 +37,9 @@
               "@intraverse/se-client-reference-game",
               "@intraverse/se-client-reference-game/**",
               "@intraverse/se-client-verify",
-              "@intraverse/se-client-verify/**"
+              "@intraverse/se-client-verify/**",
+              "@intraverse/se-client-pages-proxy",
+              "@intraverse/se-client-pages-proxy/**"
             ],
             "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
           },
@@ -51,7 +53,7 @@
             "message": "public entry points only (ADR-001)"
           },
           {
-            "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|verify|apps|packages)(/|$)",
+            "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
             "message": "no relative import into another package (ADR-001)"
           },
           {
@@ -157,7 +159,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -178,7 +182,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(signing|snapshot|play-client|shell|wrapper|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(signing|snapshot|play-client|shell|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -219,7 +223,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -240,7 +246,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(signing|snapshot|play-client|shell|wrapper|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(signing|snapshot|play-client|shell|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -274,7 +280,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -288,7 +296,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|snapshot|play-client|shell|wrapper|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|snapshot|play-client|shell|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -327,7 +335,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -341,7 +351,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|snapshot|play-client|shell|wrapper|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|snapshot|play-client|shell|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -373,7 +383,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -394,7 +406,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|play-client|shell|wrapper|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|play-client|shell|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -433,7 +445,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -447,7 +461,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|play-client|shell|wrapper|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|play-client|shell|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -479,7 +493,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -500,7 +516,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|shell|wrapper|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|shell|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -539,7 +555,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -560,7 +578,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|shell|wrapper|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|shell|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -588,7 +606,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -602,7 +622,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|wrapper|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -635,7 +655,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -649,7 +671,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|wrapper|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -681,7 +703,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -695,7 +719,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -732,7 +756,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -746,7 +772,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -785,7 +811,9 @@
                   "@intraverse/se-client-wrapper",
                   "@intraverse/se-client-wrapper/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -799,7 +827,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -846,7 +874,9 @@
                   "@intraverse/se-client-wrapper",
                   "@intraverse/se-client-wrapper/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -860,7 +890,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -916,7 +946,9 @@
                   "@intraverse/se-client-wrapper",
                   "@intraverse/se-client-wrapper/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -930,7 +962,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -964,7 +996,9 @@
                   "@intraverse/se-client-wrapper",
                   "@intraverse/se-client-wrapper/**",
                   "@intraverse/se-client-reference-game",
-                  "@intraverse/se-client-reference-game/**"
+                  "@intraverse/se-client-reference-game/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: verify takes signing, snapshot, play-client, and contracts' runtime entry, never shell or another app (specs/client-kit/packages.md)"
               },
@@ -985,7 +1019,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -1018,7 +1052,9 @@
                   "@intraverse/se-client-wrapper",
                   "@intraverse/se-client-wrapper/**",
                   "@intraverse/se-client-reference-game",
-                  "@intraverse/se-client-reference-game/**"
+                  "@intraverse/se-client-reference-game/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: verify takes signing, snapshot, play-client, and contracts' runtime entry, never shell or another app (specs/client-kit/packages.md)"
               },
@@ -1032,7 +1068,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -1066,7 +1102,9 @@
                   "@intraverse/se-client-reference-game",
                   "@intraverse/se-client-reference-game/**",
                   "@intraverse/se-client-verify",
-                  "@intraverse/se-client-verify/**"
+                  "@intraverse/se-client-verify/**",
+                  "@intraverse/se-client-pages-proxy",
+                  "@intraverse/se-client-pages-proxy/**"
                 ],
                 "message": "dependency direction: contracts <- snapshot, play-client; signing, snapshot, play-client <- shell <- wrapper (specs/client-kit/packages.md)"
               },
@@ -1080,7 +1118,7 @@
                 "message": "public entry points only (ADR-001)"
               },
               {
-                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|verify|apps|packages)(/|$)",
+                "regex": "^(\\.\\./)+(contracts|signing|snapshot|play-client|shell|wrapper|reference-game|verify|pages-proxy|apps|packages)(/|$)",
                 "message": "no relative import into another package (ADR-001)"
               },
               {
@@ -1112,6 +1150,12 @@
             "includeExports": false
           }
         ]
+      }
+    },
+    {
+      "files": ["apps/pages-proxy/src/**"],
+      "rules": {
+        "eslint/no-console": "error"
       }
     }
   ],

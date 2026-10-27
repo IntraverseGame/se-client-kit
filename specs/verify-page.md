@@ -91,12 +91,21 @@ Out of scope:
 
 ### The URL and where the page is served (V-1, V-2)
 
-- **V-1.** The page is a set of static files served next to the built Wrapper,
-  under the path `/verify/` of the Wrapper's origin. `verifyBaseUrl` (the
-  environment configuration's field) is that origin plus `/verify`, with no
-  trailing slash; in preview it is the Wrapper's origin plus `/verify` (decided
-  by the backend's TPO, 2026-10-18, and recorded in the backend's documentation
-  at b6e1e48, which names `verifyBaseUrl` as this configuration field).
+- **V-1.** The page is a set of static files under the path `/verify/` of the
+  origin that serves it. `verifyBaseUrl` (the environment configuration's field)
+  is that origin plus `/verify`, with no trailing slash. In preview the page is
+  served next to the built Wrapper, on the Wrapper's origin, and `verifyBaseUrl`
+  is the Wrapper's origin plus `/verify` (decided by the backend's TPO,
+  2026-10-18, and recorded in the backend's documentation at b6e1e48, which
+  names `verifyBaseUrl` as this configuration field). On staging the page lives
+  on its own site, the verifier's Pages project (TPO, 2026-10-27;
+  [client-kit.md](./client-kit.md#how-the-wrapper-reaches-the-superengine-origin)),
+  not on the Wrapper's origin: `verifyBaseUrl` is the verifier site's origin
+  plus `/verify`, and a round's page is
+  `https://<verifier host>/verify/rounds/{roundId}`. That site serves the page
+  for every path that is not a file, so this URL loads it; a path outside
+  `/verify/` (such as `/rounds/{roundId}`) loads the page too, but it is not
+  under `verifyBaseUrl`, so the page shows the empty form.
   <!-- TODO(infrastructure owner): the Wrapper's hosting origin in each environment, so the production and preview values of `verifyBaseUrl`. -->
   A round's page is `<verifyBaseUrl>/rounds/{roundId}`, the round id in the
   path, in its canonical form. The Wrapper's verify link builds exactly this URL
@@ -111,6 +120,11 @@ Out of scope:
     to the verify API. The edge rewrites `/verify/rounds/*` to
     `/verify/index.html`. The page's files use only other paths under `/verify/`
     and never `/verify/v1/`.
+  - On staging's verifier site there is no rewrite rule: Pages serves the same
+    page, copied to the site's root, for every path that is not a file
+    (`/verify/rounds/*` included), with the page's headers, and the site's API
+    proxy forwards `/verify/v1/` to the verify API
+    ([client-kit.md](./client-kit.md#the-pages-api-proxy)).
   - The rewritten path is served with the same headers as the page (this spec's
     rule, V-16 and Security).
   - The verify API is on the page's own origin, a read that needs no CORS, when
@@ -685,16 +699,17 @@ The page around them is built too:
 - **No credential.** The page holds no key, no play token, and no launch code,
   and it touches none: it never imports `shell` and never reads the Wrapper's
   session. The round id is public.
-- **It shares the Wrapper's origin.** The page is served under `/verify/` on the
-  Wrapper's origin, so it shares that origin's Web Locks (the shell's W-14
-  signing lock), BroadcastChannel, and storage with the code that holds the key,
-  and a script injection on the page is a script injection on that origin. So
-  the page is part of that origin's trusted code: it is held to the same review
-  and supply-chain bar as the Wrapper (reviewed source, the dependency
-  allow-list, SRI, the reproducible build). It MUST NOT use `navigator.locks`,
-  `BroadcastChannel`, any storage (`localStorage`, `sessionStorage`, IndexedDB,
-  the Cache API, cookies), or workers (dedicated, shared, or service); a source
-  check enforces it (VT-10).
+- **It shares the Wrapper's origin** where it is served there (preview; on
+  staging it is on its own site, V-1, and the rules below hold all the same).
+  The page is served under `/verify/` on the Wrapper's origin, so it shares that
+  origin's Web Locks (the shell's W-14 signing lock), BroadcastChannel, and
+  storage with the code that holds the key, and a script injection on the page
+  is a script injection on that origin. So the page is part of that origin's
+  trusted code: it is held to the same review and supply-chain bar as the
+  Wrapper (reviewed source, the dependency allow-list, SRI, the reproducible
+  build). It MUST NOT use `navigator.locks`, `BroadcastChannel`, any storage
+  (`localStorage`, `sessionStorage`, IndexedDB, the Cache API, cookies), or
+  workers (dedicated, shared, or service); a source check enforces it (VT-10).
 - **Policy as strict as the Wrapper's.** A `<meta>` policy with the
   environment-independent part
   (`script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'`),

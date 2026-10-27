@@ -100,6 +100,22 @@ export const cases: readonly Case[] = [
   ),
   importing(src("apps/wrapper"), "@intraverse/se-client-reference-game", true),
 
+  // pages-proxy (app): one self-contained worker; it imports no kit package.
+  ...["contracts", "signing", "snapshot", "play-client", "shell"].map(p =>
+    importing(src("apps/pages-proxy"), `@intraverse/se-client-${p}`, true),
+  ),
+  importing(src("apps/pages-proxy"), "@intraverse/se-client-wrapper", true),
+  // ...and nothing imports it.
+  ...["packages/shell", "apps/wrapper", "apps/verify"].map(dir =>
+    importing(src(dir), "@intraverse/se-client-pages-proxy", true),
+  ),
+  // ...not even by a relative path into its sources.
+  using(
+    src("apps/wrapper"),
+    'import { proxyRequest } from "../../pages-proxy/src/worker.ts";',
+    true,
+  ),
+
   // reference-game imports no kit package at run time.
   ...["contracts", "signing", "snapshot", "play-client", "shell"].map(p =>
     importing(src("apps/reference-game"), `@intraverse/se-client-${p}`, true),

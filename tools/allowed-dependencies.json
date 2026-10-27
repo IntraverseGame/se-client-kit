@@ -22,6 +22,7 @@
     "undici",
     "vite",
     "vitest",
-    "wireit"
+    "wireit",
+    "wrangler"
   ]
 }

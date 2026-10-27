@@ -1,0 +1,62 @@
+{
+  "name": "@intraverse/se-client-pages-proxy",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The same-origin API proxy of the Cloudflare Pages sites: a Pages advanced-mode worker.",
+  "type": "module",
+  "scripts": {
+    "build": "wireit",
+    "typecheck": "wireit",
+    "test": "wireit"
+  },
+  "wireit": {
+    "build": {
+      "command": "tsc -p tsconfig.build.json",
+      "files": [
+        "src/**",
+        "!src/**/*.test.ts",
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.build.json",
+        "../../tsconfig.base.json"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "clean": true,
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json",
+      "files": [
+        "src/**",
+        "package.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "test": {
+      "command": "vitest run",
+      "files": [
+        "src/**",
+        "*.ts",
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.build.json",
+        "../../tsconfig.base.json",
+        "../../package.json",
+        "../../pnpm-workspace.yaml"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
+  }
+}

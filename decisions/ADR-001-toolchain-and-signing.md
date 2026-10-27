@@ -1,11 +1,13 @@
 # ADR-001 — Pure TypeScript on a pnpm workspace, and hand-written EIP-712 signing over `@noble`
 
-- Status: accepted
+- Status: accepted; decision 9 superseded by
+  [ADR-008](./ADR-008-pages-deploy-with-wrangler.md)
 - Date: 2026-10-16 (proposed 2026-10-15; amended 2026-10-16 by the toolchain
   pull request: `wireit` and `@types/node` added to the dependency table, the
   pinned versions recorded, `prettier` removed, `tsx`, `stylelint` and `tsdown`
   added, and the npm scope decided; amended 2026-10-17 by the reference game
-  pull request: Vite and stylelint cover both apps)
+  pull request: Vite and stylelint cover both apps; amended 2026-10-27 by
+  ADR-008: `wrangler` added to the dependency table, and decision 9 superseded)
 
 Amendment note (2026-10-16, toolchain pull request): decision 3 and the
 dependency table named `prettier` for Markdown and YAML because `oxfmt` did not
@@ -219,7 +221,11 @@ from here). This ADR records the kit's own technical decisions.
    attestation. A deploy job on the SuperEngine side pulls a released version by
    digest, verifies it, and serves it from the SuperEngine origin. Hosting and
    the deploy credentials are an open item for the infrastructure owner; this
-   repository holds no deploy credential.
+   repository holds no deploy credential. **Superseded by
+   [ADR-008](./ADR-008-pages-deploy-with-wrangler.md) (2026-10-27):** this
+   repository's CI deploys the Wrapper to Cloudflare Pages from `main`, with the
+   token only as a secret of a protected GitHub environment. The release bundle,
+   its manifest, and its attestation stay as above.
 10. **Three TypeScript rules** (accepted with this ADR; `AGENTS.md` and the
     conventions memory point here):
     - **named exports only** in libraries; no default exports;
@@ -289,15 +295,17 @@ from here). This ADR records the kit's own technical decisions.
 - **Open items** (each with a `TODO` marker in the specs): the license, MIT
   today, confirmed in review (the TPO); the npm publishing credential form (the
   infrastructure owner); hosting and deploy of the released Wrapper (the
-  infrastructure owner); where the backend later publishes its contracts (a
-  later step, not a blocker).
+  infrastructure owner; decided by ADR-008, the push to Cloudflare Pages); where
+  the backend later publishes its contracts (a later step, not a blocker).
 - **Accepted as proposals (TPO, 2026-10-15):** the hand-written Snapshot
   validator instead of `ajv` (decision 6); `@axe-core/playwright` and
   `openapi-typescript` as development dependencies; GitHub Actions pinned by
   full commit SHA; a pull deploy, so deploy credentials never enter this public
-  repository (decision 9); and the kit's end-to-end suite run from a job owned
-  by the backend repository at a pinned kit commit. The ADR as a whole was
-  accepted on 2026-10-16.
+  repository (decision 9, superseded by
+  [ADR-008](./ADR-008-pages-deploy-with-wrangler.md), the push to Cloudflare
+  Pages); and the kit's end-to-end suite run from a job owned by the backend
+  repository at a pinned kit commit. The ADR as a whole was accepted on
+  2026-10-16.
 
 ### Dependency table
 
@@ -313,6 +321,7 @@ from here). This ADR records the kit's own technical decisions.
 | `tsx`                                                                                                                                                                                | development only             | runs the TypeScript scripts under `tools/` with one behavior across Node versions; no lifecycle script (its `esbuild` install script is denied)                                                                                                                                      |
 | `stylelint`                                                                                                                                                                          | development only             | lints the CSS of both apps (the Wrapper and the reference game, amended 2026-10-17) for correctness and the CSP-driven constraints; hand-written config, no shared config package or plugin                                                                                          |
 | `undici`                                                                                                                                                                             | development only, transitive | the HTTP client `openapi-typescript` 6.x depends on; never used by the generator, and held at 6.29.0 for the generator only (the scoped pnpm override `openapi-typescript>undici`) because its 5.x releases have published advisories ([ADR-004](./ADR-004-openapi-typescript-6.md)) |
+| `wrangler`                                                                                                                                                                           | development only             | the Cloudflare Pages deploy (`wrangler pages deploy`) in the Pages workflow's deploy job only; its `workerd` install script is denied ([ADR-008](./ADR-008-pages-deploy-with-wrangler.md))                                                                                           |
 
 Exact versions are pinned by the lockfile, the `packageManager` field, and
 `.node-version`; the dependencies are saved at an exact version, and a version
@@ -342,6 +351,7 @@ must be at least seven days old when it is resolved (pnpm's
 | `openapi-typescript`           | 6.7.6 (not 7.x: see the note below)                        |
 | `json-schema-to-typescript`    | 16.0.0                                                     |
 | `undici`                       | 6.29.0 for the generator (a scoped pnpm override, ADR-004) |
+| `wrangler`                     | 4.151.2 (ADR-008)                                          |
 
 Note (2026-10-17): `json-schema-to-typescript` is pinned at 16.0.0 and
 `openapi-typescript` at 6.7.6, for the `contracts` package's generated types.

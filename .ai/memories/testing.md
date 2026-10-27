@@ -379,7 +379,22 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   refspec, checkouts, pins) and checks ci.yml's `check:size-budget` step;
   `tools/release-version-guard.test.ts` extracts the version job's guard
   script and runs it with bash in temporary git repositories (no user or
-  system git configuration). Both workflows are `test:tools` inputs.
+  system git configuration). `tools/pages-workflow.test.ts` checks
+  `pages.yml` (gates, permissions, the `pages-stage` environment, the project
+  names, pins, which steps see the token, the worker build and digests, the
+  routes, `--no-bundle`, the config job's secrets, no repository script in
+  `deploy-stage`), and
+  `tools/pages-headers.test.ts` runs its headers step's script with bash and
+  `jq` (both needed locally; macOS ships `jq` since 15). The three workflows are
+  `test:tools` inputs. The Pages API proxy's unit tests
+  (`apps/pages-proxy/src/*.test.ts`) call its handler with an injected `fetch`
+  and a fake `ASSETS` binding: byte-exact streamed bodies and `duplex`, the
+  path allow-list, each site's prefixes, refused paths, dropped request
+  headers, `X-Forwarded-For`, the security headers on every answer, the
+  upstream origin, and the 502s. `tools/pages-headers.test.ts` reads the built
+  `apps/wrapper/dist/headers.json` (tools may not import an app's source; the
+  lint forbids it), and the Pages configuration builder is tested in the
+  Wrapper app (`apps/wrapper/src/pages-config.test.ts`).
 - **Release dry run:** `pnpm release:dry-run` (and the `release-dry-run` CI
   job; not part of `pnpm check`, it takes about 15 seconds) packs the five
   libraries in a scratch copy and checks the tarballs

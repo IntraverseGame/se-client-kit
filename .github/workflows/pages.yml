@@ -1,0 +1,467 @@
+name: Pages
+
+# Deploys `main` to the staging Cloudflare Pages projects (ADR-008;
+# runbook/client-kit-release.md, Deploy to Cloudflare Pages): the Wrapper to
+# `se-wrapper-stage` and the verify page to `se-verifier-stage`, each on its
+# own hostname, each with the same-origin API proxy (apps/pages-proxy) as its
+# `_worker.js` and its own `environment-config.json`. Three jobs, split like the
+# release (ADR-005): the job that uses the token runs no repository code.
+#   - `build` (`contents: read`, no environment, no secret) runs the release
+#     dry run, which builds the Wrapper artifact twice and requires one digest,
+#     builds the proxy worker with `tsc`, and hands both files, with their
+#     digests, to the deploy job;
+#   - `config-stage` (environment `pages-stage`; it references only the
+#     configuration secrets, never the token: an accepted risk for staging,
+#     ADR-008, Risks accepted) builds the
+#     two sites' environment configuration documents from the environment's
+#     values and validates them with the Wrapper's own validator
+#     (apps/wrapper/pages-config-cli.ts), and hands them on with their digests;
+#   - `deploy-stage` (environment `pages-stage`) runs no repository script and
+#     no build: it checks every download against its digest, unpacks the
+#     artifact, lays out the two sites, adds the worker, each site's
+#     configuration document and `_routes.json`, and its `_headers` (from the
+#     artifact's `headers.json`, with the CSP lists read from the configuration
+#     documents), and uploads them, unbundled, with the `wrangler` the lockfile
+#     pins.
+# A later production deploy is a second environment (`pages-prod`) and a
+# second deploy job with its own gate and project names (ADR-008).
+# Every job runs only when the repository variable PAGES_STAGE_DEPLOY_ENABLED
+# is `true`, which the infrastructure owner sets once the environment, its
+# secrets and variables exist. Until then every run skips every job and the
+# environment is never referenced (naming it before it exists would create it
+# unprotected). The site origins, the RPC endpoints, and the origin lists are
+# secrets of the environment, so the logs mask them. The
+# proxy's upstream (SE_API_UPSTREAM_ORIGIN) is a variable of each Pages
+# project, set there by the infrastructure owner; it is never in this
+# repository or in CI.
+on:
+  push:
+    branches: [main]
+  # A redeploy of `main` (runbook). A rollback is a Pages rollback, not a run.
+  workflow_dispatch:
+
+# No job gets a token unless it asks for one below.
+permissions: {}
+
+# One deploy at a time, never cancelled half-way; a newer pending run replaces
+# an older pending one, so the last commit of `main` is the one deployed.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build
+    if:
+      github.ref == 'refs/heads/main' && vars.PAGES_STAGE_DEPLOY_ENABLED ==
+      'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      wrapper-digest: ${{ steps.dry-run.outputs.wrapper-digest }}
+      wrapper-file-name: ${{ steps.artifact.outputs.wrapper-file-name }}
+      worker-digest: ${{ steps.worker.outputs.worker-digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No cache: no wireit helper and no pnpm store restore in a deploy build.
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      # The release dry run (tools/release-dry-run.ts): the Wrapper artifact
+      # built twice, in two scratch copies, with one digest required, and held
+      # to its size budget. The CLI directly, as in release.yml.
+      - id: dry-run
+        run:
+          pnpm exec tsx tools/release-dry-run.ts --out
+          "$RUNNER_TEMP/release-dry-run"
+      # Exactly one artifact, and its `.sha256` file agrees with it.
+      - name: Find the Wrapper artifact
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/release-dry-run/wrapper"
+          shopt -s nullglob
+          tars=(se-client-wrapper-*.tar)
+          if [ "${#tars[@]}" -ne 1 ]; then
+            echo "::error::Expected one Wrapper artifact, found ${#tars[@]}."
+            exit 1
+          fi
+          sha256sum --check --strict "${tars[0]}.sha256"
+          {
+            echo "wrapper-file-name=${tars[0]}"
+            echo "wrapper-path=$PWD/${tars[0]}"
+          } >> "$GITHUB_OUTPUT"
+      # One file, not zipped, so the deploy job downloads the same bytes. Kept
+      # one day: it only hands the artifact to the deploy job; the released
+      # Wrapper is the release workflow's (ADR-005).
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ steps.artifact.outputs.wrapper-path }}
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+      # The proxy worker: one self-contained module, emitted by `tsc` alone
+      # (no bundler), without a source map (so no dangling `sourceMappingURL`),
+      # under the name Pages reads, with its digest.
+      - name: Build the API proxy worker
+        id: worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec tsc -p apps/pages-proxy/tsconfig.build.json \
+            --sourceMap false --outDir "$RUNNER_TEMP/pages-proxy"
+          mkdir "$RUNNER_TEMP/pages-worker"
+          cp "$RUNNER_TEMP/pages-proxy/worker.js" "$RUNNER_TEMP/pages-worker/_worker.js"
+          digest="sha256:$(sha256sum "$RUNNER_TEMP/pages-worker/_worker.js" | cut -d ' ' -f 1)"
+          echo "worker-digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "API proxy worker: ${digest}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/pages-worker/_worker.js
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+  # Repository code (the Wrapper's validator, through tsx) in the pages-stage
+  # environment, referencing only the configuration values below, never the
+  # token. Running repository code in the environment that holds the token is
+  # accepted for staging only (ADR-008, Risks accepted); production builds its
+  # configuration in a separate environment. The two documents are public once
+  # deployed (each site serves its own); the upload is kept one day.
+  config-stage:
+    name: config-stage
+    if:
+      github.ref == 'refs/heads/main' && vars.PAGES_STAGE_DEPLOY_ENABLED ==
+      'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: pages-stage
+    permissions:
+      contents: read
+    outputs:
+      wrapper-config-digest: ${{ steps.config.outputs.wrapper-config-digest }}
+      verifier-config-digest: ${{ steps.config.outputs.verifier-config-digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      # The validator imports the shell, through its built entry point.
+      - run: pnpm --filter @intraverse/se-client-shell run build
+      - name: Build and validate the configuration documents
+        id: config
+        env:
+          PAGES_WRAPPER_ORIGIN: ${{ secrets.PAGES_WRAPPER_ORIGIN }}
+          PAGES_VERIFIER_ORIGIN: ${{ secrets.PAGES_VERIFIER_ORIGIN }}
+          PAGES_CHAIN_PINS: ${{ secrets.PAGES_CHAIN_PINS }}
+          PAGES_RPC_ENDPOINTS: ${{ secrets.PAGES_RPC_ENDPOINTS }}
+          PAGES_RPC_ORIGINS: ${{ secrets.PAGES_RPC_ORIGINS }}
+          PAGES_GAME_ORIGINS: ${{ secrets.PAGES_GAME_ORIGINS }}
+          PAGES_OPERATOR_ORIGINS: ${{ secrets.PAGES_OPERATOR_ORIGINS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/pages-config"
+          pnpm exec tsx apps/wrapper/pages-config-cli.ts --out "$out"
+          for site in wrapper verifier; do
+            digest="sha256:$(sha256sum "$out/${site}-environment-config.json" | cut -d ' ' -f 1)"
+            echo "${site}-config-digest=${digest}" >> "$GITHUB_OUTPUT"
+            echo "${site} configuration document: ${digest}"
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/pages-config/wrapper-environment-config.json
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/pages-config/verifier-environment-config.json
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy-stage:
+    name: deploy-stage
+    needs: [build, config-stage]
+    if:
+      github.ref == 'refs/heads/main' && vars.PAGES_STAGE_DEPLOY_ENABLED ==
+      'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: pages-stage
+    permissions:
+      # The checkout, for the lockfile that pins wrangler. Nothing else.
+      contents: read
+    env:
+      # Public names (Direct Upload projects, production branch `main`).
+      WRAPPER_PROJECT: se-wrapper-stage
+      VERIFIER_PROJECT: se-verifier-stage
+    steps:
+      # Fails at once, by name, when the token or the account id is missing;
+      # prints no value. Both are secrets, so the logs mask them.
+      - name: Require the Pages settings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::The pages-stage environment has no ${name} (runbook/client-kit-release.md, Deploy to Cloudflare Pages)."
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The lockfile's dependencies, with lifecycle scripts off and no cache.
+      # Nothing from the repository runs after this: no build, no tools/
+      # script; only wrangler, from the lockfile, below.
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.build.outputs.wrapper-file-name }}
+          path: ${{ runner.temp }}/download
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: _worker.js
+          path: ${{ runner.temp }}/download
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: wrapper-environment-config.json
+          path: ${{ runner.temp }}/download
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: verifier-environment-config.json
+          path: ${{ runner.temp }}/download
+      # The same bytes the build job made (its digests): the artifact unpacked unchanged as
+      # the Wrapper's site. The verifier's site is the artifact's `verify/`
+      # directory, unchanged, plus a copy of its page at the root: the page's
+      # scripts and styles are referenced under `/verify/` (its build base), so
+      # they stay there, and Pages serves the root page for every other path.
+      - name: Check and unpack the Wrapper artifact
+        env:
+          WRAPPER_DIGEST: ${{ needs.build.outputs.wrapper-digest }}
+          WRAPPER_FILE_NAME: ${{ needs.build.outputs.wrapper-file-name }}
+          WORKER_DIGEST: ${{ needs.build.outputs.worker-digest }}
+          WRAPPER_CONFIG_DIGEST:
+            ${{ needs.config-stage.outputs.wrapper-config-digest }}
+          VERIFIER_CONFIG_DIGEST:
+            ${{ needs.config-stage.outputs.verifier-config-digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! [[ $WRAPPER_FILE_NAME =~ ^se-client-wrapper-[A-Za-z0-9.+-]+\.tar$ ]]; then
+            echo "::error::Unexpected Wrapper artifact name."
+            exit 1
+          fi
+          archive="$RUNNER_TEMP/download/$WRAPPER_FILE_NAME"
+          actual="sha256:$(sha256sum "$archive" | cut -d ' ' -f 1)"
+          if [ "$actual" != "$WRAPPER_DIGEST" ]; then
+            echo "::error::The downloaded Wrapper artifact is not the one the build job made."
+            exit 1
+          fi
+          download="$RUNNER_TEMP/download"
+          worker="$download/_worker.js"
+          for pair in "_worker.js:$WORKER_DIGEST" \
+            "wrapper-environment-config.json:$WRAPPER_CONFIG_DIGEST" \
+            "verifier-environment-config.json:$VERIFIER_CONFIG_DIGEST"; do
+            file="${pair%%:*}"
+            expected="${pair#*:}"
+            if [ "sha256:$(sha256sum "$download/$file" | cut -d ' ' -f 1)" != "$expected" ]; then
+              echo "::error::The downloaded ${file} is not the one its job made."
+              exit 1
+            fi
+          done
+          wrapper="$RUNNER_TEMP/sites/wrapper"
+          verifier="$RUNNER_TEMP/sites/verifier"
+          mkdir -p "$wrapper" "$verifier"
+          tar -x --no-same-owner --no-same-permissions -f "$archive" -C "$wrapper"
+          if [ ! -f "$wrapper/verify/index.html" ]; then
+            echo "::error::The Wrapper artifact has no verify/index.html."
+            exit 1
+          fi
+          cp -R "$wrapper/verify" "$verifier/verify"
+          cp "$wrapper/verify/index.html" "$verifier/index.html"
+          # The proxy in both sites. The routes send only the API paths each
+          # site's pages call to it: the Wrapper's site serves the Wrapper
+          # (/play/v1) and its copy of the verify page (/verify/v1); the
+          # verifier's site serves the verify page (/verify/v1).
+          for site in "$wrapper" "$verifier"; do
+            for file in _worker.js _routes.json environment-config.json; do
+              if [ -e "$site/$file" ]; then
+                echo "::error::The Wrapper artifact already has a ${file}."
+                exit 1
+              fi
+            done
+            cp "$worker" "$site/_worker.js"
+          done
+          # Each site's own configuration document, next to its page.
+          cp "$download/wrapper-environment-config.json" "$wrapper/environment-config.json"
+          cp "$download/verifier-environment-config.json" "$verifier/environment-config.json"
+          printf '%s\n' '{"version":1,"include":["/play/v1/*","/verify/v1/*"],"exclude":[]}' \
+            > "$wrapper/_routes.json"
+          printf '%s\n' '{"version":1,"include":["/verify/v1/*"],"exclude":[]}' \
+            > "$verifier/_routes.json"
+          echo "Unpacked ${WRAPPER_FILE_NAME} (${actual})."
+          echo "Deploying ${WRAPPER_FILE_NAME}, ${actual}, and the API proxy worker, ${WORKER_DIGEST}, built from ${GITHUB_SHA}." \
+            >> "$GITHUB_STEP_SUMMARY"
+      # Each site's Pages `_headers` file from the artifact's `headers.json`
+      # (specs/client-kit.md, How the Wrapper reaches the SuperEngine origin).
+      # The Wrapper's site: every rule in the file's order, a more specific
+      # rule detaching every header of the broader rules before it sets its
+      # own (Pages applies every matching rule), so `/verify/*` replaces the
+      # Wrapper's headers instead of adding to them. The verifier's site: the
+      # `/verify/*` rule's headers on `/*`. The placeholders take their origin
+      # lists from the Wrapper site's configuration document (the verifier's
+      # holds the same lists), so the policy and the configuration cannot
+      # disagree: the origins of its `rpcEndpoints`, its `gameOrigins`, and its
+      # `operatorOrigins`, each entry an https origin, sorted and unique. An
+      # empty RPC list leaves `connect-src 'self'`; an empty game or operator
+      # list is `'none'`. The Play and verify APIs are reached
+      # through each site's own proxy, so `'self'` in `connect-src` covers
+      # them. (Pages applies `_headers` to static assets only, never to the
+      # proxy's answers.)
+      # Refuses a `headers.json` that is not path patterns of one-line strings
+      # or has no `/verify/*` rule, a placeholder it does not know, a line over
+      # the Pages limit, or an existing `_headers`.
+      # tools/pages-headers.test.ts runs this script.
+      - name: Write the Pages headers files
+        env:
+          SITES: ${{ runner.temp }}/sites
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -f
+          headers_json="$SITES/wrapper/headers.json"
+          config="$SITES/wrapper/environment-config.json"
+          if [ ! -f "$config" ]; then
+            echo "::error::The Wrapper's site has no environment-config.json."
+            exit 1
+          fi
+          if [ ! -f "$headers_json" ]; then
+            echo "::error::The Wrapper artifact has no headers.json."
+            exit 1
+          fi
+          if ! jq --exit-status '
+            type == "object"
+            and all(.[]; type == "object" and all(.[]; type == "string"))
+            and ([.. | strings, (objects | keys[])]
+              | all(test("[[:cntrl:]]") | not))
+            and has("/verify/*")
+            ' "$headers_json" > /dev/null; then
+            echo "::error::headers.json is not path patterns of one-line string headers with a /verify/* rule."
+            exit 1
+          fi
+          origin='^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:[0-9]{1,5})?$'
+          # $1: the list's name; $2: its entries; $3: what an empty list is.
+          source_list() {
+            local name="$1" entries="" entry
+            for entry in $2; do
+              if ! [[ $entry =~ $origin ]]; then
+                echo "::error::${name} holds an entry that is not an https origin." >&2
+                return 1
+              fi
+              entries="${entries}${entry}"$'\n'
+            done
+            if [ -z "$entries" ]; then
+              printf "%s" "$3"
+            else
+              printf "%s" "$entries" | LC_ALL=C sort -u | paste -s -d ' ' -
+            fi
+          }
+          # The origin of each endpoint URL: its scheme and authority.
+          rpc_origins="$(jq --raw-output '
+            [.rpcEndpoints[][].url | capture("^(?<o>[a-z]+://[^/?#]+)").o]
+            | join(" ")' "$config")"
+          game_origins="$(jq --raw-output '.gameOrigins | join(" ")' "$config")"
+          operator_origins="$(jq --raw-output '.operatorOrigins | join(" ")' "$config")"
+          # An empty `connect-src` list leaves `'self'` alone; an empty frame or
+          # ancestor list is `'none'`.
+          connect="$(source_list rpcEndpoints "$rpc_origins" "")"
+          game="$(source_list gameOrigins "$game_origins" "'none'")"
+          ancestors="$(source_list operatorOrigins "$operator_origins" "'none'")"
+          # $1: a jq filter from headers.json to the site's rules; $2: the file.
+          write_headers() {
+            local target="$2"
+            if [ -e "$target" ]; then
+              echo "::error::The site already has a _headers file."
+              exit 1
+            fi
+            jq "$1" "$headers_json" | jq --raw-output \
+              --arg connect "$connect" --arg game "$game" --arg ancestors "$ancestors" '
+              def fill:
+                gsub(" ?\\{\\{connectOrigins\\}\\}"; if $connect == "" then "" else " " + $connect end)
+                | gsub(" ?\\{\\{verifyConnectOrigins\\}\\}"; if $connect == "" then "" else " " + $connect end)
+                | gsub("\\{\\{gameOrigins\\}\\}"; $game)
+                | gsub("\\{\\{operatorOrigins\\}\\}"; $ancestors);
+              to_entries as $rules
+              | range(0; $rules | length) as $i
+              | $rules[$i] as $rule
+              | $rule.key,
+                ([$rules[0:$i][]
+                  | select(.key | endswith("*"))
+                  | select(.key[0:-1] as $prefix | $rule.key | startswith($prefix))
+                  | .value | keys[]] | unique[] | "  ! \(.)"),
+                ($rule.value | to_entries[] | "  \(.key): \(.value | fill)")
+              ' > "$target"
+            if grep -q '{{' "$target"; then
+              echo "::error::headers.json has a placeholder this step does not fill."
+              exit 1
+            fi
+            if LC_ALL=C grep -qvE '^(/[^[:space:]]*|  ! [A-Za-z-]+|  [A-Za-z-]+: [^[:cntrl:]]+)$' "$target"; then
+              echo "::error::A _headers file has a line Pages would not read as intended."
+              exit 1
+            fi
+            if LC_ALL=C awk 'length($0) > 2000 { found = 1 } END { exit !found }' "$target"; then
+              echo "::error::A _headers line is over the Pages limit of 2000 characters."
+              exit 1
+            fi
+            echo "Wrote $target: $(grep -c '^/' "$target") rules."
+          }
+          write_headers '.' "$SITES/wrapper/_headers"
+          write_headers '{"/*": .["/verify/*"]}' "$SITES/verifier/_headers"
+      # From an empty working directory, so wrangler reads no configuration,
+      # .env file, or functions/ directory of the repository; each site holds
+      # only the artifact's files, the worker, `_routes.json`, and `_headers`.
+      # `--no-bundle`: the worker is uploaded as the build job made it, never
+      # bundled here. No metrics.
+      - name: Deploy to Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
+        shell: bash
+        run: |
+          set -euo pipefail
+          workdir="$(mktemp -d)"
+          mv "$RUNNER_TEMP/sites/wrapper" "$workdir/wrapper"
+          mv "$RUNNER_TEMP/sites/verifier" "$workdir/verifier"
+          cd "$workdir"
+          for site in wrapper verifier; do
+            if [ "$site" = wrapper ]; then
+              project="$WRAPPER_PROJECT"
+            else
+              project="$VERIFIER_PROJECT"
+            fi
+            "$GITHUB_WORKSPACE/node_modules/.bin/wrangler" pages deploy "$site" \
+              --project-name "$project" \
+              --no-bundle \
+              --branch main \
+              --commit-hash "$GITHUB_SHA" \
+              --commit-message "main at $GITHUB_SHA" \
+              --commit-dirty=false
+          done

@@ -50,7 +50,8 @@
         "./packages/shell:build",
         "./apps/wrapper:build",
         "./apps/verify:build",
-        "./apps/reference-game:build"
+        "./apps/reference-game:build",
+        "./apps/pages-proxy:build"
       ]
     },
     "format": {
@@ -89,6 +90,7 @@
         "./apps/wrapper:typecheck",
         "./apps/reference-game:typecheck",
         "./apps/verify:typecheck",
+        "./apps/pages-proxy:typecheck",
         "./e2e:typecheck",
         "typecheck:tools"
       ]
@@ -120,6 +122,7 @@
         "./apps/wrapper:test",
         "./apps/reference-game:test",
         "./apps/verify:test",
+        "./apps/pages-proxy:test",
         "./packages/snapshot:test",
         "./packages/play-client:test",
         "./packages/shell:test",
@@ -132,7 +135,8 @@
       "dependencies": [
         "./packages/contracts:build",
         "./packages/signing:build",
-        "./packages/shell:build"
+        "./packages/shell:build",
+        "./apps/wrapper:build"
       ],
       "files": [
         "tools/**",
@@ -144,6 +148,7 @@
         ".changeset/config.json",
         ".github/workflows/release.yml",
         ".github/workflows/ci.yml",
+        ".github/workflows/pages.yml",
         "tsconfig.json",
         "tsconfig.base.json",
         "package.json",
@@ -351,7 +356,8 @@
     "typescript": "7.0.2",
     "vite": "8.3.4",
     "vitest": "5.0.4",
-    "wireit": "0.14.13"
+    "wireit": "0.14.13",
+    "wrangler": "4.151.2"
   },
   "engines": {
     "node": ">=24.20.0"
