@@ -235,20 +235,24 @@ another origin.
    <!-- TODO(release, #134): deferred to #134 (owner: TPO). Attaching the artifact and its attestation to a GitHub release; ADR-005 (proposed) adds `actions/attest-build-provenance` and `actions/upload-artifact`. Reason: it waits on the protected `release` environment and the npm scope (#3), and on ADR-005's acceptance. -->
 2. This repository's CI **deploys `main` to Cloudflare Pages**
    ([ADR-008](../decisions/ADR-008-pages-deploy-with-wrangler.md), which
-   supersedes ADR-001 decision 9; `.github/workflows/pages.yml`), to two staging
-   projects on two hostnames: the Wrapper's (`se-wrapper-stage`) and the
-   verifier's (`se-verifier-stage`). **Every push to `main` deploys staging**,
-   with no switch (no repository variable gates a job; the human, 2026-10-27).
-   **Production** is decided but not built yet (#133): the production projects
-   are deployed when the changesets version pull request is merged into `main`
-   (the versions bumped and the changelogs written), from that commit, in a
-   deploy environment of their own (`pages-prod`) with their configuration built
-   in an environment with no deploy credential (ADR-008). Nothing triggers it
-   today: the release workflow pushes the version branch and publishes only when
-   started by hand, and the merge runs only the staging deploy.
+   supersedes ADR-001 decision 9; `.github/workflows/pages.yml`), to three
+   staging projects on three hostnames: the Wrapper's (`se-wrapper-stage`), the
+   verifier's (`se-verifier-stage`), and the reference game's (`se-games-stage`,
+   at `https://se-games-stage.pages.dev`, a public origin on another registrable
+   domain than the Wrapper's, W-37; see [The game's site](#the-games-site)).
+   **Every push to `main` deploys staging**, with no switch (no repository
+   variable gates a job; the human, 2026-10-27). **Production** is decided but
+   not built yet (#133): the production projects are deployed when the
+   changesets version pull request is merged into `main` (the versions bumped
+   and the changelogs written), from that commit, in a deploy environment of
+   their own (`pages-prod`) with their configuration built in an environment
+   with no deploy credential (ADR-008). Nothing triggers it today: the release
+   workflow pushes the version branch and publishes only when started by hand,
+   and the merge runs only the staging deploy.
    - A build job with a read-only token and no secret builds the Wrapper
-     artifact twice (the release dry run) and requires one digest, and builds
-     the [API proxy](#the-pages-api-proxy) worker with `tsc`.
+     artifact twice (the release dry run) and requires one digest, makes the
+     reference game's artifact from the dry run's two builds and requires one
+     digest, and builds the [API proxy](#the-pages-api-proxy) worker with `tsc`.
    - A config job, in the same environment, referencing only its configuration
      secrets and never the token, builds and validates the
      [sites' configuration documents](#the-pages-sites-configuration). It runs
@@ -257,17 +261,19 @@ another origin.
      in a separate environment with no deploy credential.
    - A deploy job that runs no repository script downloads all of them, refuses
      any whose SHA-256 is not its job's digest, and lays out the sites from the
-     unchanged artifact. The Wrapper's site is the artifact: the Wrapper at `/`,
-     and its copy of the verify page at `/verify/`. The verifier's site is the
-     artifact's `verify/` directory plus a copy of its page at the root (the
-     page's files are referenced under `/verify/`, its build base, and Pages
-     serves the root page for every path that is not a file).
+     unchanged artifacts. The Wrapper's site is the Wrapper artifact: the
+     Wrapper at `/`, and its copy of the verify page at `/verify/`. The
+     verifier's site is the artifact's `verify/` directory plus a copy of its
+     page at the root (the page's files are referenced under `/verify/`, its
+     build base, and Pages serves the root page for every path that is not a
+     file). The game's site is the reference game's artifact, unchanged.
 
-   Each site also gets the proxy as its `_worker.js`, its own
-   `environment-config.json`, a `_routes.json` that sends only its API paths to
-   the proxy, and its `_headers` (below). The job uploads each site, unbundled,
-   with the `wrangler` the lockfile pins, and logs every digest. A released
-   version keeps its tag, digest, and attestation (step 1); Pages serves `main`.
+   The Wrapper's and the verifier's sites also get the proxy as their
+   `_worker.js`, their own `environment-config.json`, and a `_routes.json` that
+   sends only their API paths to the proxy; every site gets its `_headers`
+   (below). The job uploads each site, unbundled, with the `wrangler` the
+   lockfile pins, and logs every digest. A released version keeps its tag,
+   digest, and attestation (step 1); Pages serves `main`.
 
 3. The **deploy credential** (a Cloudflare API token scoped to Pages) exists
    only as a secret of the protected GitHub environment `pages-stage`,
@@ -429,6 +435,61 @@ would need a looser policy:
   type fails the build (another HTML spelling such as `Evil.HTML`, `.htm`, or
   `.xhtml`, an `.svg`, which can hold a script, a `.cjs`, an image, a font); a
   type the Wrapper needs is added to the allow-list explicitly.
+
+#### The game's site
+
+The staging game origin is `se-games-stage`'s own
+`https://se-games-stage.pages.dev` (public: a `pages.dev` name, not a custom
+hostname; the Wrapper's and the verifier's hostnames are still never written
+here). Its W-37 comparison key (the last two labels, ADR-007) is `pages.dev`,
+which the Wrapper's custom hostname does not share; a Wrapper on a `*.pages.dev`
+name would be refused as `same-site`. The backend's catalog keeps only an origin
+per game version, so where the page lives on that origin is the kit's
+convention: the Wrapper frames `<game origin>/?parentOrigin=...` (`gameUrlOf`,
+W-37), so the reference game's page is served at the root.
+
+- **Layout.** The reference game's `vite build` output (`index.html`, one
+  script, one stylesheet), as one deterministic tar,
+  `se-client-reference-game.tar` (`tools/reference-game-artifact.ts`), made by
+  `tools/reference-game-artifact-cli.ts` from the game's build in both of the
+  release dry run's scratch copies (kept with `--keep`; two paths, two time
+  zones and locales) with one digest required, and unpacked unchanged at the
+  site's root. No proxy, no `_routes.json`, no `environment-config.json`: the
+  game calls no API and reads no configuration. The deploy refuses an artifact
+  without `index.html` or with a `_worker.js`, `_routes.json`, `_redirects`,
+  `_headers`, or `environment-config.json`.
+- **Which games.** The one page plays every `steps` round: the catalog's
+  `coin-flip-v1` and `cash-or-crash-v1` both name this origin. `book-slot-v1`
+  names it too, but a book round is not playable in the first release: the
+  Wrapper refuses it before any signature (W-26, the `missing` refusal), and the
+  reference game plays `steps` only. A book game is a separate issue.
+- **Headers** (`_headers`, on `/*`), written by the deploy: the page's own
+  `<meta>` policy with `frame-ancestors` added, which a `<meta>` cannot carry
+  ([the reference game](./client-kit/the-reference-game.md)):
+  `Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors <the Wrapper's origin> <the operator origins>`,
+  the Wrapper's own `Permissions-Policy` (read from its `headers.json` `/*`
+  rule, so the two cannot drift; a `headers.json` without one fails the step),
+  `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`. Decided
+  by the human, 2026-10-27 (W-37 and W-38 leave the game host's headers to the
+  host). The Wrapper's origin is the origin of the Wrapper site's validated
+  configuration document's `playApiBaseUrl`, so no new value or hostname is
+  needed; a document without an `https` origin there fails the step. The
+  operator origins are the same document's `operatorOrigins`, sorted and unique,
+  as in the Wrapper's own `frame-ancestors`: `frame-ancestors` checks every
+  ancestor ([operator embedding](./wrapper/operator-embedding.md#security)), so
+  an operator page that embeds the Wrapper, which embeds the game, must be
+  listed too. With no operator origin the list is the Wrapper's origin alone
+  (never `'none'` beside an origin).
+- **What the policy does not do.** It cannot stop an allowed ancestor, an
+  operator origin included, from framing the game directly. What keeps such a
+  frame from playing is the game's own parent check (`parentOrigin` against
+  `location.ancestorOrigins`, `apps/reference-game/src/parent-origin.ts`;
+  [the reference game](./client-kit/the-reference-game.md)) and the Wrapper's
+  bridge (W-37, W-38): a framer other than the Wrapper is not the Wrapper's game
+  frame, its messages carry its own origin, and the game holds no key, no token,
+  and no amount.
+- **Configuration.** `PAGES_GAME_ORIGINS` (the Wrapper's `gameOrigins`, and so
+  its `frame-src`) holds this origin; the infrastructure owner sets it.
 
 <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). Production hosting: its Pages projects and hostnames, the `pages-prod` environment with its configuration in a separate environment that holds no deploy credential, and the real operator origins behind `frame-ancestors` (staging holds a placeholder). Hostnames are shared out of band, never written in this repository. Reason: ADR-008 deploys staging only; production is to come. -->
 <!-- TODO(infrastructure owner, #137): deferred to #137 (owner: infrastructure owner). The RPC provider list with its CORS behavior and `connect-src` entries (see [wrapper.md](./wrapper.md#configuration)). Reason: the list is not published yet, and staging has no browser-reachable RPC. -->

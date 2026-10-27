@@ -1,30 +1,16 @@
-import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  jobRange,
-  keyLine,
-  readLines,
-  scalarAt,
-  stepNamed,
-} from "./workflow-text.ts";
+import { headersStep } from "./pages-headers-step.ts";
 
 // The Pages workflow's headers step (.github/workflows/pages.yml, "Write the
 // Pages headers files"; ADR-008, decision 3): its own script, read from the
-// workflow, runs here with bash and jq against temporary site directories,
-// first from the Wrapper's built `headers.json`. It writes the
-// Wrapper's site's `_headers` and the verifier's site's.
+// workflow, runs here with bash and jq against temporary site directories
+// (tools/pages-headers-step.ts), first from the Wrapper's built
+// `headers.json`. It writes the Wrapper's site's `_headers` and the
+// verifier's site's; the game's site's is tools/pages-game-site.test.ts.
 
 type Headers = Readonly<Record<string, string>>;
 
@@ -46,84 +32,10 @@ const ruleOf = (pattern: string): Headers => {
 const wrapper = ruleOf("/*");
 const verify = ruleOf("/verify/*");
 
-const pages = readLines(
-  readFileSync(
-    join(import.meta.dirname, "..", ".github", "workflows", "pages.yml"),
-    "utf8",
-  ),
-);
-
-const read = (path: string): string | null =>
-  existsSync(path) ? readFileSync(path, "utf8") : null;
-
 describe("the Pages headers step", () => {
-  const [from, to] = stepNamed(
-    pages,
-    jobRange(pages, "deploy-stage"),
-    "Write the Pages headers files",
-  );
-  const script = scalarAt(pages, keyLine(pages, from, to, 8, "run"));
-
-  const directories: string[] = [];
-  afterEach(() => {
-    for (const directory of directories.splice(0)) {
-      rmSync(directory, { recursive: true, force: true });
-    }
-  });
-
-  /** What the Wrapper site's configuration document holds for the CSP. */
-  type Origins = {
-    /** The RPC endpoints' URLs (one source). */
-    readonly rpc?: readonly string[];
-    readonly game?: readonly string[];
-    readonly operator?: readonly string[];
-  };
-
-  type Result = {
-    readonly status: number | null;
-    readonly output: string;
-    readonly wrapper: string | null;
-    readonly verifier: string | null;
-  };
-
-  const run = (
-    headers: unknown,
-    origins: Origins = {},
-    { existing = false }: { readonly existing?: boolean } = {},
-  ): Result => {
-    const sites = mkdtempSync(join(tmpdir(), "pages-headers-"));
-    directories.push(sites);
-    mkdirSync(join(sites, "wrapper"));
-    mkdirSync(join(sites, "verifier"));
-    writeFileSync(
-      join(sites, "wrapper", "headers.json"),
-      JSON.stringify(headers),
-    );
-    writeFileSync(
-      join(sites, "wrapper", "environment-config.json"),
-      JSON.stringify({
-        rpcEndpoints: {
-          base: (origins.rpc ?? []).map((url, index) => ({
-            provider: `p${String(index)}`,
-            url,
-          })),
-        },
-        gameOrigins: origins.game ?? [],
-        operatorOrigins: origins.operator ?? [],
-      }),
-    );
-    if (existing) writeFileSync(join(sites, "verifier", "_headers"), "kept\n");
-    const result = spawnSync("bash", ["-c", script], {
-      encoding: "utf8",
-      env: { PATH: process.env["PATH"], LC_ALL: "C", SITES: sites },
-    });
-    return {
-      status: result.status,
-      output: `${result.stdout}${result.stderr}`,
-      wrapper: read(join(sites, "wrapper", "_headers")),
-      verifier: read(join(sites, "verifier", "_headers")),
-    };
-  };
+  const step = headersStep();
+  const { run } = step;
+  afterEach(step.cleanup);
 
   const RPC_INPUT = [
     "https://rpc-b.example/base",
@@ -193,6 +105,8 @@ describe("the Pages headers step", () => {
       "/*": {
         "Content-Security-Policy":
           "connect-src 'self' {{connectOrigins}}; frame-src {{gameOrigins}}; frame-ancestors {{operatorOrigins}}",
+        // The game's site takes it (tools/pages-game-site.test.ts).
+        "Permissions-Policy": "camera=()",
       },
       "/verify/*": {
         "Content-Security-Policy":
@@ -204,8 +118,10 @@ describe("the Pages headers step", () => {
       [
         "/*",
         "  Content-Security-Policy: connect-src 'self'; frame-src 'none'; frame-ancestors 'none'",
+        "  Permissions-Policy: camera=()",
         "/verify/*",
         "  ! Content-Security-Policy",
+        "  ! Permissions-Policy",
         "  Content-Security-Policy: connect-src 'self'",
         "",
       ].join("\n"),
@@ -242,18 +158,12 @@ describe("the Pages headers step", () => {
   });
 
   it("refuses a site without its configuration document", () => {
-    const sites = mkdtempSync(join(tmpdir(), "pages-headers-"));
-    directories.push(sites);
+    const sites = step.directory();
     mkdirSync(join(sites, "wrapper"));
     writeFileSync(join(sites, "wrapper", "headers.json"), JSON.stringify(REAL));
-    const result = spawnSync("bash", ["-c", script], {
-      encoding: "utf8",
-      env: { PATH: process.env["PATH"], LC_ALL: "C", SITES: sites },
-    });
+    const result = step.runOn(sites);
     expect(result.status).not.toBe(0);
-    expect(`${result.stdout}${result.stderr}`).toContain(
-      "has no environment-config.json",
-    );
+    expect(result.output).toContain("has no environment-config.json");
   });
 
   it("refuses a placeholder it does not fill", () => {
@@ -286,10 +196,13 @@ describe("the Pages headers step", () => {
     expect(result.output).toContain("over the Pages limit");
   });
 
-  it("refuses a site that already has a _headers file", () => {
-    const result = run(REAL, {}, { existing: true });
-    expect(result.status).not.toBe(0);
-    expect(result.output).toContain("already has a _headers file");
-    expect(result.verifier).toBe("kept\n");
-  });
+  it.each(["verifier", "game"] as const)(
+    "refuses a site that already has a _headers file (%s)",
+    existing => {
+      const result = run(REAL, {}, { existing });
+      expect(result.status).not.toBe(0);
+      expect(result.output).toContain("already has a _headers file");
+      expect(result[existing]).toBe("kept\n");
+    },
+  );
 });

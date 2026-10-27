@@ -4,7 +4,8 @@
 - Date: 2026-10-27 (proposed and accepted the same day, in the pull request that
   builds it; amended 2026-10-27 by the human's deploy policy: staging deploys on
   every push to `main` with no gate, and production deploys when the changesets
-  version pull request is merged)
+  version pull request is merged; amended 2026-10-27: a third staging project,
+  `se-games-stage`, serves the reference game)
 - Deciders: the TPO (Pages hosting, the push model, the kit-owned proxy, the
   verify page on its own site), the human maintainer (the deploy tool, the
   secrets, the proxy hardening, acceptance), the infrastructure owner (the
@@ -152,6 +153,36 @@ specify.
 
 ### 3. The two sites
 
+Amendment note (2026-10-27, the reference game on staging): **a third staging
+project, `se-games-stage`** (Direct Upload, production branch `main`, no custom
+domain, created by the infrastructure owner), serves the reference game at its
+`pages.dev` origin, `https://se-games-stage.pages.dev`, which the backend's
+catalog names for `coin-flip-v1`, `cash-or-crash-v1`, and `book-slot-v1`, and
+which `PAGES_GAME_ORIGINS` holds. That origin is public and is written in the
+repository; the Wrapper's and the verifier's hostnames still are not. Its W-37
+comparison key (ADR-007) is `pages.dev`, which the Wrapper's custom hostname
+does not share. The build job keeps the release dry run's two scratch copies
+(`--keep`) and makes the reference game's artifact
+(`se-client-reference-game.tar`, a deterministic tar of its `vite build` output)
+from each (`tools/reference-game-artifact-cli.ts`), requiring one digest; the
+deploy job downloads it (a fifth download), checks it against that digest,
+unpacks it unchanged at the site's root (the Wrapper frames `<game origin>/`,
+W-37), refuses one without `index.html` or with a Pages control file or a
+configuration document, and uploads it with `--branch main`. The site has no
+worker, no `_routes.json`, and no configuration document. Its `_headers`
+(decision 6) is the game page's own `<meta>` policy plus `frame-ancestors` the
+Wrapper's origin (read from the Wrapper's validated configuration document) and
+the operator origins (`frame-ancestors` checks every ancestor, so an operator
+that embeds the Wrapper must be listed; the Wrapper alone when there are none),
+the Wrapper's own `Permissions-Policy`, `Referrer-Policy: no-referrer`, and
+`X-Content-Type-Options: nosniff`; decided by the human, 2026-10-27. The policy
+cannot stop a listed operator from framing the game directly; the game's own
+parent check (`parentOrigin` against `location.ancestorOrigins`) and the
+Wrapper's bridge (W-37, W-38) are what keep such a frame from playing. A
+`book-slot-v1` launch is not playable: the Wrapper refuses book rounds in the
+first release (W-26) and the reference game plays `steps` only; a separate issue
+covers it.
+
 - **`se-wrapper-stage`**: the Wrapper artifact, unpacked unchanged: the Wrapper
   at `/`, and the artifact's copy of the verify page at `/verify/`.
 - **`se-verifier-stage`**: the artifact's `verify/` directory, unchanged, and a
@@ -257,6 +288,16 @@ the configuration cannot disagree:
 - **refusals**: a malformed `headers.json` or one without `/verify/*`, an
   unknown placeholder, a line Pages would misread or over 2,000 characters, and
   a site that already holds a `_headers` file.
+- **the game's site** (amended 2026-10-27, decision 3's note): on `/*`, the
+  reference game's `<meta>` policy with `frame-ancestors` the origin of the
+  Wrapper document's `playApiBaseUrl` (a document without an `https` origin
+  there fails the step) followed by the operator origins (the Wrapper's origin
+  alone when that list is empty, never `'none'` beside it), the Wrapper's `/*`
+  rule's `Permissions-Policy` (refused when missing),
+  `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`, under
+  the same line checks. Decided by the human, 2026-10-27. It does not stop a
+  listed operator from framing the game directly; the game's parent check and
+  the Wrapper's bridge do that.
 
 ### 7. Two first-party Actions for the hand-off
 

@@ -4,12 +4,15 @@ name: Pages
 # runbook/client-kit-release.md, Deploy to Cloudflare Pages): the Wrapper to
 # `se-wrapper-stage` and the verify page to `se-verifier-stage`, each on its
 # own hostname, each with the same-origin API proxy (apps/pages-proxy) as its
-# `_worker.js` and its own `environment-config.json`. Three jobs, split like the
+# `_worker.js` and its own `environment-config.json`; and the reference game
+# (apps/reference-game) to `se-games-stage`, at its root, static only (no
+# worker, no routes, no configuration document). Three jobs, split like the
 # release (ADR-005): the job that uses the token runs no repository code.
 #   - `build` (`contents: read`, no environment, no secret) runs the release
 #     dry run, which builds the Wrapper artifact twice and requires one digest,
-#     builds the proxy worker with `tsc`, and hands both files, with their
-#     digests, to the deploy job;
+#     makes the reference game's artifact from the same two builds and
+#     requires one digest, builds the proxy worker with `tsc`, and hands the
+#     three files, with their digests, to the deploy job;
 #   - `config-stage` (environment `pages-stage`; it references only the
 #     configuration secrets, never the token: an accepted risk for staging,
 #     ADR-008, Risks accepted) builds the
@@ -18,11 +21,13 @@ name: Pages
 #     (apps/wrapper/pages-config-cli.ts), and hands them on with their digests;
 #   - `deploy-stage` (environment `pages-stage`) runs no repository script and
 #     no build: it checks every download against its digest, unpacks the
-#     artifact, lays out the two sites, adds the worker, each site's
-#     configuration document and `_routes.json`, and its `_headers` (from the
-#     artifact's `headers.json`, with the CSP lists read from the configuration
-#     documents), and uploads them, unbundled, with the `wrangler` the lockfile
-#     pins.
+#     artifacts, lays out the three sites, adds the worker, the Wrapper's and
+#     the verifier's configuration documents and `_routes.json`, and each
+#     site's `_headers` (from the Wrapper artifact's `headers.json`, with the
+#     CSP lists read from the configuration documents; the game's with
+#     `frame-ancestors` the Wrapper's and the operators' origins, from the
+#     same document), and
+#     uploads them, unbundled, with the `wrangler` the lockfile pins.
 # A later production deploy is a second environment (`pages-prod`) and a
 # second deploy job with its own trigger and project names (ADR-008): it runs
 # when the changesets version pull request is merged (not built yet, #133).
@@ -61,6 +66,7 @@ jobs:
     outputs:
       wrapper-digest: ${{ steps.dry-run.outputs.wrapper-digest }}
       wrapper-file-name: ${{ steps.artifact.outputs.wrapper-file-name }}
+      game-digest: ${{ steps.game.outputs.game-digest }}
       worker-digest: ${{ steps.worker.outputs.worker-digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -72,10 +78,11 @@ jobs:
           cache: "false"
       # The release dry run (tools/release-dry-run.ts): the Wrapper artifact
       # built twice, in two scratch copies, with one digest required, and held
-      # to its size budget. The CLI directly, as in release.yml.
+      # to its size budget. The CLI directly, as in release.yml. `--keep`
+      # keeps the two copies for the reference game's artifact below.
       - id: dry-run
         run:
-          pnpm exec tsx tools/release-dry-run.ts --out
+          pnpm exec tsx tools/release-dry-run.ts --keep --out
           "$RUNNER_TEMP/release-dry-run"
       # Exactly one artifact, and its `.sha256` file agrees with it.
       - name: Find the Wrapper artifact
@@ -101,6 +108,30 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           path: ${{ steps.artifact.outputs.wrapper-path }}
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+      # The reference game's artifact (tools/reference-game-artifact.ts): its
+      # `vite build` output in the dry run's two copies (two paths, two time
+      # zones and locales), as one deterministic tar each, with one digest
+      # required; and its `.sha256` file agrees with it. One file, not zipped,
+      # kept one day: it only hands the game's build to the deploy job; the
+      # game is never released.
+      - name: Make the reference game artifact
+        id: game
+        shell: bash
+        run: |
+          set -euo pipefail
+          dry_run="$RUNNER_TEMP/release-dry-run"
+          out="$RUNNER_TEMP/reference-game"
+          pnpm exec tsx tools/reference-game-artifact-cli.ts \
+            --first "$dry_run/first" --second "$dry_run/second-copy" --out "$out"
+          cd "$out"
+          sha256sum --check --strict se-client-reference-game.tar.sha256
+          echo "game-path=$PWD/se-client-reference-game.tar" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ steps.game.outputs.game-path }}
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -199,6 +230,7 @@ jobs:
       # Public names (Direct Upload projects, production branch `main`).
       WRAPPER_PROJECT: se-wrapper-stage
       VERIFIER_PROJECT: se-verifier-stage
+      GAME_PROJECT: se-games-stage
     steps:
       # Fails at once, by name, when the token or the account id is missing;
       # prints no value. Both are secrets, so the logs mask them.
@@ -232,6 +264,10 @@ jobs:
           path: ${{ runner.temp }}/download
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
+          name: se-client-reference-game.tar
+          path: ${{ runner.temp }}/download
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
           name: _worker.js
           path: ${{ runner.temp }}/download
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -247,10 +283,14 @@ jobs:
       # directory, unchanged, plus a copy of its page at the root: the page's
       # scripts and styles are referenced under `/verify/` (its build base), so
       # they stay there, and Pages serves the root page for every other path.
-      - name: Check and unpack the Wrapper artifact
+      # The game's site is the reference game's artifact, unpacked unchanged:
+      # its page at the root, which the Wrapper frames as `<game origin>/`
+      # (W-37), and nothing else (no worker, no routes, no configuration).
+      - name: Check and unpack the artifacts
         env:
           WRAPPER_DIGEST: ${{ needs.build.outputs.wrapper-digest }}
           WRAPPER_FILE_NAME: ${{ needs.build.outputs.wrapper-file-name }}
+          GAME_DIGEST: ${{ needs.build.outputs.game-digest }}
           WORKER_DIGEST: ${{ needs.build.outputs.worker-digest }}
           WRAPPER_CONFIG_DIGEST:
             ${{ needs.config-stage.outputs.wrapper-config-digest }}
@@ -271,7 +311,8 @@ jobs:
           fi
           download="$RUNNER_TEMP/download"
           worker="$download/_worker.js"
-          for pair in "_worker.js:$WORKER_DIGEST" \
+          for pair in "se-client-reference-game.tar:$GAME_DIGEST" \
+            "_worker.js:$WORKER_DIGEST" \
             "wrapper-environment-config.json:$WRAPPER_CONFIG_DIGEST" \
             "verifier-environment-config.json:$VERIFIER_CONFIG_DIGEST"; do
             file="${pair%%:*}"
@@ -283,8 +324,23 @@ jobs:
           done
           wrapper="$RUNNER_TEMP/sites/wrapper"
           verifier="$RUNNER_TEMP/sites/verifier"
-          mkdir -p "$wrapper" "$verifier"
+          game="$RUNNER_TEMP/sites/game"
+          mkdir -p "$wrapper" "$verifier" "$game"
           tar -x --no-same-owner --no-same-permissions -f "$archive" -C "$wrapper"
+          tar -x --no-same-owner --no-same-permissions \
+            -f "$download/se-client-reference-game.tar" -C "$game"
+          if [ ! -f "$game/index.html" ]; then
+            echo "::error::The reference game artifact has no index.html."
+            exit 1
+          fi
+          # A static site only: nothing Pages would read as a worker, routes,
+          # redirects, headers, or a configuration document.
+          for file in _worker.js _routes.json _redirects _headers environment-config.json; do
+            if [ -e "$game/$file" ]; then
+              echo "::error::The reference game artifact has a ${file}."
+              exit 1
+            fi
+          done
           if [ ! -f "$wrapper/verify/index.html" ]; then
             echo "::error::The Wrapper artifact has no verify/index.html."
             exit 1
@@ -312,7 +368,7 @@ jobs:
           printf '%s\n' '{"version":1,"include":["/verify/v1/*"],"exclude":[]}' \
             > "$verifier/_routes.json"
           echo "Unpacked ${WRAPPER_FILE_NAME} (${actual})."
-          echo "Deploying ${WRAPPER_FILE_NAME}, ${actual}, and the API proxy worker, ${WORKER_DIGEST}, built from ${GITHUB_SHA}." \
+          echo "Deploying ${WRAPPER_FILE_NAME}, ${actual}, the reference game, ${GAME_DIGEST}, and the API proxy worker, ${WORKER_DIGEST}, built from ${GITHUB_SHA}." \
             >> "$GITHUB_STEP_SUMMARY"
       # Each site's Pages `_headers` file from the artifact's `headers.json`
       # (specs/client-kit.md, How the Wrapper reaches the SuperEngine origin).
@@ -330,9 +386,19 @@ jobs:
       # through each site's own proxy, so `'self'` in `connect-src` covers
       # them. (Pages applies `_headers` to static assets only, never to the
       # proxy's answers.)
+      # The game's site: its page's own policy (the `<meta>` of
+      # apps/reference-game/index.html) with `frame-ancestors` the Wrapper's
+      # origin and the operator origins (every ancestor of the game), which a
+      # `<meta>` cannot set, the Wrapper's origin read from the Wrapper site's
+      # validated configuration document (the origin of its `playApiBaseUrl`);
+      # the Wrapper's own `Permissions-Policy` (its `/*` rule); and
+      # `Referrer-Policy: no-referrer` and `X-Content-Type-Options: nosniff`,
+      # on `/*`.
       # Refuses a `headers.json` that is not path patterns of one-line strings
-      # or has no `/verify/*` rule, a placeholder it does not know, a line over
-      # the Pages limit, or an existing `_headers`.
+      # or has no `/verify/*` rule, a placeholder it does not know, a document
+      # with no Wrapper origin, a `headers.json` with no `Permissions-Policy`
+      # in its `/*` rule, a line over the Pages limit, or an existing
+      # `_headers`.
       # tools/pages-headers.test.ts runs this script.
       - name: Write the Pages headers files
         env:
@@ -389,6 +455,27 @@ jobs:
           connect="$(source_list rpcEndpoints "$rpc_origins" "")"
           game="$(source_list gameOrigins "$game_origins" "'none'")"
           ancestors="$(source_list operatorOrigins "$operator_origins" "'none'")"
+          # The Wrapper's origin, for the game's `frame-ancestors`: the origin
+          # of the validated document's `playApiBaseUrl` (the Wrapper's origin
+          # plus `/play/v1`).
+          wrapper_origin="$(jq --raw-output '
+            (.playApiBaseUrl | strings | capture("^(?<o>[^/]+//[^/?#]+)/play/v1$").o)
+            // ""' "$config")"
+          if ! [[ $wrapper_origin =~ $origin ]]; then
+            echo "::error::The Wrapper's configuration document has no Wrapper origin."
+            exit 1
+          fi
+          # The game's ancestors: the Wrapper and, since `frame-ancestors`
+          # checks every ancestor (operator, Wrapper, game), the operator
+          # origins; the Wrapper alone when there are none (never `'none'`
+          # beside an origin).
+          if [ "$ancestors" = "'none'" ]; then
+            game_ancestors="$wrapper_origin"
+          else
+            game_ancestors="$wrapper_origin $ancestors"
+          fi
+          # The reference game's own `<meta>` policy, plus `frame-ancestors`.
+          game_csp="default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors ${game_ancestors}"
           # $1: a jq filter from headers.json to the site's rules; $2: the file.
           write_headers() {
             local target="$2"
@@ -396,7 +483,7 @@ jobs:
               echo "::error::The site already has a _headers file."
               exit 1
             fi
-            jq "$1" "$headers_json" | jq --raw-output \
+            jq --arg gameCsp "$game_csp" "$1" "$headers_json" | jq --raw-output \
               --arg connect "$connect" --arg game "$game" --arg ancestors "$ancestors" '
               def fill:
                 gsub(" ?\\{\\{connectOrigins\\}\\}"; if $connect == "" then "" else " " + $connect end)
@@ -429,9 +516,23 @@ jobs:
           }
           write_headers '.' "$SITES/wrapper/_headers"
           write_headers '{"/*": .["/verify/*"]}' "$SITES/verifier/_headers"
+          # The game's `Permissions-Policy` is the Wrapper's own, from its `/*`
+          # rule, so the two cannot drift.
+          if ! jq --exit-status '.["/*"]["Permissions-Policy"] | type == "string"' \
+            "$headers_json" > /dev/null; then
+            echo "::error::headers.json has no Permissions-Policy in its /* rule."
+            exit 1
+          fi
+          write_headers '{"/*": {
+              "Content-Security-Policy": $gameCsp,
+              "Permissions-Policy": .["/*"]["Permissions-Policy"],
+              "Referrer-Policy": "no-referrer",
+              "X-Content-Type-Options": "nosniff"
+            }}' "$SITES/game/_headers"
       # From an empty working directory, so wrangler reads no configuration,
       # .env file, or functions/ directory of the repository; each site holds
-      # only the artifact's files, the worker, `_routes.json`, and `_headers`.
+      # only its artifact's files and `_headers`, and the Wrapper's and the
+      # verifier's also the worker, `_routes.json`, and their configuration.
       # `--no-bundle`: the worker is uploaded as the build job made it, never
       # bundled here. No metrics.
       - name: Deploy to Pages
@@ -445,13 +546,14 @@ jobs:
           workdir="$(mktemp -d)"
           mv "$RUNNER_TEMP/sites/wrapper" "$workdir/wrapper"
           mv "$RUNNER_TEMP/sites/verifier" "$workdir/verifier"
+          mv "$RUNNER_TEMP/sites/game" "$workdir/game"
           cd "$workdir"
-          for site in wrapper verifier; do
-            if [ "$site" = wrapper ]; then
-              project="$WRAPPER_PROJECT"
-            else
-              project="$VERIFIER_PROJECT"
-            fi
+          for site in wrapper verifier game; do
+            case "$site" in
+              wrapper) project="$WRAPPER_PROJECT" ;;
+              verifier) project="$VERIFIER_PROJECT" ;;
+              game) project="$GAME_PROJECT" ;;
+            esac
             "$GITHUB_WORKSPACE/node_modules/.bin/wrangler" pages deploy "$site" \
               --project-name "$project" \
               --no-bundle \

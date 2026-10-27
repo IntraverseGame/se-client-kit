@@ -101,8 +101,17 @@ Several agents and people work in one clone at once. Rules:
   decision 9; [runbook](../../runbook/client-kit-release.md#deploy-to-cloudflare-pages)):
   `.github/workflows/pages.yml`, on push to `main` and by hand from `main`,
   staging only, to `se-wrapper-stage` (the artifact: Wrapper at `/`, verify
-  page at `/verify/`) and `se-verifier-stage` (the artifact's `verify/` plus a
-  root copy of its page; a round is `<verifier>/verify/rounds/{id}`). Every
+  page at `/verify/`), `se-verifier-stage` (the artifact's `verify/` plus a
+  root copy of its page; a round is `<verifier>/verify/rounds/{id}`), and
+  `se-games-stage` (the reference game's own artifact, made by
+  `tools/reference-game-artifact-cli.ts` from the dry run's two `--keep` copies
+  with one digest required; static,
+  at the root of `https://se-games-stage.pages.dev`, the one public site
+  origin; `_headers` `frame-ancestors` the Wrapper's origin, from the Wrapper's
+  configuration document's `playApiBaseUrl`, plus `operatorOrigins`, since
+  `frame-ancestors` checks every ancestor; the Wrapper's `Permissions-Policy`;
+  CSP cannot stop a listed operator framing the game directly, the game's
+  parent check and the bridge do). Every
   push to `main` deploys staging, always (the human, 2026-10-27): every job's
   only condition is `github.ref == 'refs/heads/main'`, and the workflow reads no
   `vars.` (the test asserts both, and the `push: branches: [main]` trigger).

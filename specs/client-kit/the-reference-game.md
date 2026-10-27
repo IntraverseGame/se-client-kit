@@ -104,7 +104,11 @@ else.
   `default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'`.
   The build has no inline script or style for it to refuse (the build test
   checks both). `frame-ancestors` cannot be set in a `<meta>`; the server that
-  hosts a game sets it.
+  hosts a game sets it. On staging (`se-games-stage`), the Pages deploy serves
+  the page at the origin's root, where the Wrapper frames it, with the same
+  policy as a header plus `frame-ancestors` the Wrapper's origin and the
+  operator origins (every ancestor)
+  ([The game's site](../client-kit.md#the-games-site)).
 - **The parent's origin** (the reference game's choice, not a protocol rule).
   The Wrapper's mount appends its own origin as `parentOrigin` to the game's URL
   ([W-37](../wrapper/the-game-iframe-and-the-controller-boundary.md), decided in

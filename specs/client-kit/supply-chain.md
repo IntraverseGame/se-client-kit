@@ -150,7 +150,12 @@ the attack surface a player cannot see. The rules:
   (`tools/wrapper-artifact.ts`). The release dry run
   (`tools/release-dry-run.ts`) builds it in two scratch copies of different
   paths and time zones and fails unless the digests are equal; it also requires
-  the five `pnpm pack` tarballs of both copies to be byte-identical. The
+  the five `pnpm pack` tarballs of both copies to be byte-identical. The Pages
+  workflow keeps the two copies (`--keep`) and makes the reference game's
+  artifact, `se-client-reference-game.tar` (the same tar rules over
+  `apps/reference-game/dist/`, no version in the name;
+  `tools/reference-game-artifact-cli.ts`), from each, requiring one digest; the
+  game is never released, and only that workflow deploys it (ADR-008). The
   Wrapper's `vite.config.ts` makes the release artifact only ever the production
   build (decided in human review, 2026-10-19): it refuses a build in any mode
   but `production` (Vite's build default), with `VITEST` set, or with `NODE_ENV`
