@@ -548,10 +548,10 @@ layer: the workspace, the six packages and apps (`contracts`, `signing`,
 and format configuration, the CI workflows, the CODEOWNERS file, and the pinned
 versions (ADR-001's table). The toolchain pull request landed the workspace, the
 empty skeletons, the lint and format configuration, the CI workflows,
-dependabot, changesets, and the pinned versions; CODEOWNERS names the two org
-owners. Its checklist, and the repository settings the org owners apply (the
-`main` ruleset, secret scanning with push protection, private vulnerability
-reporting, the publishing environment), are in the
+dependabot, changesets, and the pinned versions; CODEOWNERS names one code
+owner, a repository admin. Its checklist, and the repository settings the org
+owners apply (the `main` ruleset, secret scanning with push protection, private
+vulnerability reporting, the publishing environment), are in the
 [release runbook](../runbook/client-kit-release.md#bootstrap-the-toolchain).
 
 ## Errors and edge cases

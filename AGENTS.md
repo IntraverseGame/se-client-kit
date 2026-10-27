@@ -24,12 +24,14 @@ Even then, stage and commit only when a human asks, and open a pull request
 (`gh pr create`) only after a human confirms it. An approval covers the reviewed
 diff only; any further edit needs review again (ADR-003).
 
-Merging into `main` is a separate control: `.github/CODEOWNERS` names the two
-org owners, and the `main` ruleset requires a pull request with a code owner's
+Merging into `main` is a separate control: `.github/CODEOWNERS` names one code
+owner, and the `main` ruleset requires a pull request with a code owner's
 approval and every review thread resolved, dismisses stale approvals on a push,
 and blocks force-pushes and deletion. It sets no extra approval count and no
-required status check, and organization admins may bypass it. It does not
-replace the two approvals above.
+required status check, and organization admins and repository admins may bypass
+it; a pull request the code owner authors has no other code owner to review it,
+so its merge relies on the repository-admin bypass. It does not replace the two
+approvals above.
 
 ## Parallel work — worktrees
 

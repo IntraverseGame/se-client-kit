@@ -269,11 +269,13 @@ the main checkout stays on `main`. Procedure:
    then the reviewer agent approves. Agents never `git add`/`commit`/`push`
    without both approvals (see [Using the role agents](#using-the-role-agents)),
    and open a pull request (`gh pr create`) only after a human confirms it. **On
-   `main`:** `.github/CODEOWNERS` names the two org owners, and the `main`
-   ruleset requires a pull request with a code owner's approval and every review
-   thread resolved, dismisses stale approvals on a push, and blocks force-pushes
-   and deletion. It sets no extra approval count and no required status check
-   (keep `ci-ok` green anyway), and organization admins may bypass it.
+   `main`:** `.github/CODEOWNERS` names one code owner, and the `main` ruleset
+   requires a pull request with a code owner's approval and every review thread
+   resolved, dismisses stale approvals on a push, and blocks force-pushes and
+   deletion. It sets no extra approval count and no required status check (keep
+   `ci-ok` green anyway), and organization admins and repository admins may
+   bypass it. A pull request the code owner authors has no other code owner to
+   review it, so its merge relies on the repository-admin bypass.
 6. Fill in the [PR template](./.github/PULL_REQUEST_TEMPLATE.md) and complete
    the **mandatory Spec-Driven Development actions** listed in
    [`AGENTS.md`](./AGENTS.md).

@@ -1,27 +1,29 @@
-# Code owners for se-client-kit: the two organization owners. GitHub requests
-# their review on every pull request, and the `main` ruleset requires a code
-# owner's approval. The last matching pattern wins.
+# Code owners for se-client-kit: one code owner, a repository admin. GitHub
+# requests their review on every pull request, and the `main` ruleset requires a
+# code owner's approval. On a pull request the code owner authors, no one else
+# can give that review, so its merge relies on the repository-admin bypass.
+# The last matching pattern wins.
 #
 # Paths that can reach the supply chain or a credential are listed explicitly,
 # even though the owners are the same as the default, so that none of them is
 # left to the default silently.
 
-*                         @mimshins @intrabod
+*                         @mimshins
 
-/.github/                 @mimshins @intrabod
-/.ai/                     @mimshins @intrabod
-/.claude/                 @mimshins @intrabod
-/.opencode/               @mimshins @intrabod
-/.agents/                 @mimshins @intrabod
-/AGENTS.md                @mimshins @intrabod
-/CLAUDE.md                @mimshins @intrabod
-/package.json             @mimshins @intrabod
-/pnpm-lock.yaml           @mimshins @intrabod
-/pnpm-workspace.yaml      @mimshins @intrabod
-/.npmrc                   @mimshins @intrabod
-/.node-version            @mimshins @intrabod
-/packages/contracts/      @mimshins @intrabod
-/specs/                   @mimshins @intrabod
-/decisions/               @mimshins @intrabod
-/runbook/                 @mimshins @intrabod
-/SECURITY.md              @mimshins @intrabod
+/.github/                 @mimshins
+/.ai/                     @mimshins
+/.claude/                 @mimshins
+/.opencode/               @mimshins
+/.agents/                 @mimshins
+/AGENTS.md                @mimshins
+/CLAUDE.md                @mimshins
+/package.json             @mimshins
+/pnpm-lock.yaml           @mimshins
+/pnpm-workspace.yaml      @mimshins
+/.npmrc                   @mimshins
+/.node-version            @mimshins
+/packages/contracts/      @mimshins
+/specs/                   @mimshins
+/decisions/               @mimshins
+/runbook/                 @mimshins
+/SECURITY.md              @mimshins
