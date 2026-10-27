@@ -33,10 +33,14 @@ stays, and now points at a missing wireit dependency first.
 ### 1. Read what ran in the job's log
 
 CI sets `WIREIT_LOGGER=simple` (`.github/workflows/ci.yml`), so every script
-logs whether it ran or was already fresh.
+logs whether it ran or was already fresh. Read the failed job's whole log (every
+step, not only the failed one), with the guard's lines kept, so you can see
+whether the build ran before the guard (`gh run view <run-id>` lists the jobs
+and their IDs):
 
 ```sh
-gh run view <run-id> --log-failed | grep -E 'Failed to download|Restored from cache|Executed successfully|Already fresh'
+gh run view <run-id> --job <job-id> --log |
+  grep -E 'Failed to download|Restored from cache|Executed successfully|Already fresh|reads the build output|build output it reads exists|is missing'
 ```
 
 - No line for the build that owns the missing file, before the guard: the build
@@ -50,10 +54,13 @@ gh run view <run-id> --log-failed | grep -E 'Failed to download|Restored from ca
 
 ### 2. Reproduce it locally
 
-Forget wireit's record of every script and run the failed job's script from a
-clean state, as CI does:
+Start from a clean state, as CI does. `pnpm clean:cache` forgets wireit's record
+of every script but leaves each `dist/` on disk, and a `dist/` left by an
+earlier build can hide a missing dependency (the guard finds the stale file).
+Use a fresh worktree, or remove the build output first:
 
 ```sh
+find packages apps -name dist -type d -not -path '*/node_modules/*' -prune -exec rm -rf {} +
 pnpm clean:cache && WIREIT_CACHE=none WIREIT_LOGGER=simple pnpm run <script>
 ```
 
@@ -67,9 +74,14 @@ until `pnpm clean:cache`.
 - The job's log shows each build the script reads as `Executed successfully`
   before the guard's "every kit build output it reads exists" line, and the job
   passes.
-- Locally, `pnpm clean:cache && pnpm build` then
-  `WIREIT_LOGGER=simple pnpm check` passes and shows the guard's line for each
-  guarded script (the default local logger hides a passing script's output).
+- Locally, after removing the build output as in step 2,
+  `pnpm clean:cache && WIREIT_LOGGER=simple pnpm build` shows the guard's line
+  for each guarded build (the Wrapper's and the verify page's), and then
+  `WIREIT_LOGGER=simple pnpm check` shows it for each `typecheck` and `test`
+  (the builds are fresh by then, so `pnpm check` does not print their guard
+  again). `pnpm check` does not run the e2e suite: run
+  `WIREIT_LOGGER=simple pnpm test:e2e` to see its guard's line. The default
+  local logger hides a passing script's output.
 
 ## Troubleshooting
 
