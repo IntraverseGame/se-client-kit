@@ -52,11 +52,11 @@ org owners apply the settings; ask them for each.
    - the real script list in `AGENTS.md`, `CONTRIBUTING.md`, and the memories.
 
    Landed by the toolchain pull request: everything above except the release
-   workflow and the real CODEOWNERS. Nothing in it needs a repository secret:
-   the CI cache is wireit's GitHub Actions cache mode, which uses the job's own
-   cache credentials. The release workflow (`.github/workflows/release.yml`) and
-   the release dry run landed with the publishing work (#12); its publish job
-   stays off until steps 5 to 8 are done.
+   workflow and the real CODEOWNERS. Nothing in it needs a repository secret: CI
+   runs with no wireit task cache (`WIREIT_CACHE=none`, #53) and caches only the
+   pnpm store, with the job's own cache credentials. The release workflow
+   (`.github/workflows/release.yml`) and the release dry run landed with the
+   publishing work (#12); its publish job stays off until steps 5 to 8 are done.
 
    `.github/CODEOWNERS` stays comment-only until the org owners give their
    handles; branch protection (below) is the interim control.
@@ -163,11 +163,11 @@ SHA; the workflow starts with `permissions: {}`; `dry-run` gets
 `contents: read`, `version` `contents: write` and `pull-requests: read` (no
 `id-token`, no environment), and `publish` `contents: read` and
 `id-token: write` (provenance and trusted publishing). The release jobs use the
-setup action with `cache: "false"`: no wireit cache helper (which holds the
-job's cache credentials) and no pnpm store cache, so nothing is restored from a
-cache into a release build. Lifecycle scripts stay off throughout
-(`allowBuilds`, `--ignore-scripts`, and the tarball check refuses any lifecycle
-script in a published manifest).
+setup action with `cache: "false"`: no pnpm store cache, and no wireit task
+cache (no workflow uses one, and the release build steps set
+`WIREIT_CACHE=none`), so nothing is restored from a cache into a release build.
+Lifecycle scripts stay off throughout (`allowBuilds`, `--ignore-scripts`, and
+the tarball check refuses any lifecycle script in a published manifest).
 
 1. A pull request that changes a published package or the Wrapper includes a
    changeset (`pnpm changeset`) naming the packages and the bump (major for a

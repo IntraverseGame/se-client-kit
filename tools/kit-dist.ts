@@ -7,15 +7,17 @@
 // a dependency of the script. A script may also name files of its own to check
 // (the e2e suite serves the apps' `dist/` by path, not through `exports`).
 //
-// Why the build's success is not enough: with `WIREIT_CACHE=github`, wireit
-// 0.14.13 deletes a script's output before it downloads the cached tarball, and
-// when the download fails it logs a `cache-info` line (which the default CI
-// logger drops) and then reports the script as restored from the cache, with no
-// output at all (`GitHubActionsCacheHit.apply`). It also records the script as
-// fresh, so later runs in the same checkout skip it until `pnpm clean:cache`.
-// The tool that reads the missing file then fails with an error that names no
-// cause (one TS2307 per import, a failed import). This check names the missing
-// files instead, and fails before the tool runs.
+// Why the build's success is not enough: with `WIREIT_CACHE=github` (which CI
+// no longer uses, #53), wireit 0.14.13 deletes a script's output before it
+// downloads the cached tarball, and when the download fails it logs a
+// `cache-info` line (which the default CI logger drops) and then reports the
+// script as restored from the cache, with no output at all
+// (`GitHubActionsCacheHit.apply`; google/wireit#1536, fixed in 0.15.0). It also
+// records the script as fresh, so later runs in the same checkout skip it until
+// `pnpm clean:cache`. A missing wireit dependency fails the same way. The tool
+// that reads the missing file then fails with an error that names no cause (one
+// TS2307 per import, a failed import). This check names the missing files
+// instead, and fails before the tool runs.
 //
 // A kit dependency is one named with a `workspace:` specifier. The consumer's
 // `dependencies`, `devDependencies`, and `peerDependencies` count (its tests
@@ -216,8 +218,8 @@ export const formatMissingKitFiles = (
     `The ${script} of ${consumerDirectory} reads the build output of other workspaces, and these files are missing:`,
     ...problems.map(problem => `  ${problem}`),
     `Each comes from a wireit build that this ${script} depends on, which reported success without leaving it.`,
-    "In CI the likely cause is a GitHub Actions cache download that failed (#53): wireit then reports the build as restored from the cache with no output.",
-    "The log of the job (WIREIT_LOGGER=simple) shows whether a download failed; record it on #53 and rerun the failed job.",
+    "With wireit's GitHub Actions cache (WIREIT_CACHE=github), a failed tarball download does this (#53); CI runs with no task cache, so there look first for a missing wireit dependency.",
+    "The log of the job (WIREIT_LOGGER=simple) shows whether the build ran, was restored from a cache, or was already fresh.",
     "Locally: `pnpm clean:cache && pnpm build` (after a failed restore wireit records the build as fresh, so `pnpm build` alone skips it).",
     "See runbook/development/ci-failures.md.",
   ].join("\n");

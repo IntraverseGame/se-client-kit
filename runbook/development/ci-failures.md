@@ -9,21 +9,19 @@ is missing, although the build that makes it reported success:
   the build output of other workspaces, and these files are missing";
 - or, in a script the guard does not cover, a tool cannot resolve a kit package
   (`Cannot find module '@intraverse/se-client-...'`, `TS2307`, or Vite's or
-  Vitest's "Failed to resolve import");
-- and a rerun of the failed jobs on the same commit passes.
+  Vitest's "Failed to resolve import").
 
-This is issue #53, which stays open. The likely cause has been reproduced
-locally but not yet seen in a CI log. In CI, wireit restores a script from the
-GitHub Actions cache (`WIREIT_CACHE=github`). wireit 0.14.13 deletes the
-script's output before it downloads the cached tarball; when the download fails,
-it logs one `cache-info` line and then reports the script as restored from the
-cache, with no output at all. The build's success is then wrong, and every
-script after it that reads its `dist/` fails. A local reproduction (a fake cache
-service whose download fails) shows exactly that; the one CI occurrence so far
-matches the symptom, but it was logged with the default logger, which drops the
-`cache-info` line. The maintainers' decision: keep the guard and the verbose
-log, record each occurrence, and report the bug to wireit (a failed download
-should be a cache miss, so the script runs).
+This was issue #53. In CI, wireit restored scripts from the GitHub Actions cache
+(`WIREIT_CACHE=github`). wireit 0.14.13 deletes a script's output before it
+downloads the cached tarball; when the download fails, it logs one `cache-info`
+line (`Failed to download GitHub Actions cache tarball: ...`) and then reports
+the script as restored from the cache, with no output at all, and records it as
+fresh. Every script after it that reads its `dist/` then fails. It was logged in
+CI on #102 and reported upstream (google/wireit#1536, fixed in wireit 0.15.0).
+The maintainers' fix: CI runs with no task cache (`WIREIT_CACHE=none` in every
+workflow, and no wireit cache helper in `.github/actions/setup`), so every job
+builds what it reads. The guard before each script that reads a kit `dist/`
+stays, and now points at a missing wireit dependency first.
 
 ## Prerequisites
 
@@ -32,80 +30,58 @@ should be a cache miss, so the script runs).
 
 ## Steps
 
-### 1. Find the failed download in the job's log
+### 1. Read what ran in the job's log
 
 CI sets `WIREIT_LOGGER=simple` (`.github/workflows/ci.yml`), so every script
-logs whether it ran, was restored from the cache, or was already fresh, and
-every `cache-info` message is kept.
+logs whether it ran or was already fresh.
 
 ```sh
-gh run view <run-id> --log-failed | grep -E 'Failed to download|Restored from cache|Executed successfully'
+gh run view <run-id> --log-failed | grep -E 'Failed to download|Restored from cache|Executed successfully|Already fresh'
 ```
 
-The signature of #53 is a pair of lines for the same build:
+- No line for the build that owns the missing file, before the guard: the build
+  did not run before the script, so a wireit dependency is missing (see
+  Troubleshooting).
+- `Restored from cache` or `Failed to download`: the job ran with a task cache,
+  which CI must not. Check `WIREIT_CACHE` in the workflow's `env` and that
+  `.github/actions/setup` starts no wireit cache helper.
+- `Executed successfully` for that build: the build ran and still left no file.
+  Look at the build's own output and its `output` globs in `package.json`.
 
-```text
-ℹ️ [packages/snapshot:build] Failed to download GitHub Actions cache tarball: ...
-✅ [packages/snapshot:build] Restored from cache
-```
+### 2. Reproduce it locally
 
-followed by the guard's message (or a resolution error) naming a file of that
-build's `dist/`.
-
-### 2. Rerun the failed jobs
-
-The cache entry itself is sound (the rerun restores the same entry), so rerun
-only the failed jobs:
+Forget wireit's record of every script and run the failed job's script from a
+clean state, as CI does:
 
 ```sh
-gh run rerun <run-id> --failed
+pnpm clean:cache && WIREIT_CACHE=none WIREIT_LOGGER=simple pnpm run <script>
 ```
 
-Rerunning starts a new run attempt; it needs write access to Actions, which a
-reviewer or maintainer has.
-
-### 3. Record the occurrence
-
-Add a comment to issue #53 with the run ID, the job, the script, and the
-`cache-info` line, so the decision on a lasting fix rests on logged occurrences.
-Never paste a signed cache URL or a token from the log.
-
-### 4. Locally
-
-The local cache (`.wireit/`) cannot fail this way, and wireit notices output
-that was deleted by hand and restores or rebuilds it. A failed restore, though
-(a run with `WIREIT_CACHE=github`, such as a reproduction), leaves wireit's
-record of the build as fresh with no output: `pnpm build` then reports the build
-"Already fresh" and skips it, and every script after it fails until the record
-is forgotten. Forget it and rebuild:
-
-```sh
-pnpm clean:cache && pnpm build
-```
+A failed restore from a GitHub Actions cache (a run with `WIREIT_CACHE=github`,
+such as a reproduction of #53) leaves wireit's record of the build as fresh with
+no output: `pnpm build` then reports the build "Already fresh" and skips it
+until `pnpm clean:cache`.
 
 ## Verification
 
-- The rerun's log shows the build as restored from the cache (or executed) with
-  no `Failed to download` line before it, and the job passes.
+- The job's log shows each build the script reads as `Executed successfully`
+  before the guard's "every kit build output it reads exists" line, and the job
+  passes.
 - Locally, `pnpm clean:cache && pnpm build` then
-  `WIREIT_LOGGER=simple pnpm check` passes and shows the guard's "every kit
-  build output it reads exists" line for each guarded script (the default local
-  logger hides a passing script's output).
+  `WIREIT_LOGGER=simple pnpm check` passes and shows the guard's line for each
+  guarded script (the default local logger hides a passing script's output).
 
 ## Troubleshooting
 
-- **The guard fails with no `Failed to download` line before it.** The build did
-  not run before the script: a wireit dependency is missing. Every guarded
-  script must depend on the build of every kit package its guard checks and of
-  every workspace whose output it names by path;
-  `tools/kit-dist-workspaces.test.ts` holds the manifests to that, so run
+- **The guard fails and the build it names did not run before it.** A wireit
+  dependency is missing. Every guarded script must depend on the build of every
+  kit package its guard checks and of every workspace whose output it names by
+  path; `tools/kit-dist-workspaces.test.ts` holds the manifests to that, so run
   `pnpm test:tools`.
 - **"not linked in `<workspace>/node_modules`".** The install is incomplete:
   `pnpm install --frozen-lockfile`.
 - **"its package.json has no exports".** A kit package must name its entry
   points in `exports`; the guard and the tools resolve through it.
-- **The same failure on every rerun.** Not #53 (a download fails at random).
-  Look at the build's own output and its `output` globs in `package.json`.
 - **`lint:ts` fails with `Failed to open file …/packages/<name>/dist/index.js`
   (`No such file or directory`).** Not #53, and not a lint finding: oxlint's
   import plugin follows an import of a kit package through its `exports` into
@@ -117,10 +93,11 @@ pnpm clean:cache && pnpm build
 
 ## Escalation
 
-If the failure recurs often enough to slow merges, raise it on issue #53 with
-the recorded occurrences. A change to how CI uses the cache, or a patch to
-wireit, is a decision for the maintainers, and a patch or a dependency change
-needs a recorded decision first
+Open an issue with the run ID, the job, the script, and the log lines from step
+1 (never a signed cache URL or a token from a log). Turning wireit's GitHub
+Actions cache back on in CI is a decision for the maintainers, after an upgrade
+to a wireit with the fix (0.15.0 or later, once `minimumReleaseAge` allows it);
+a dependency change needs a recorded decision first
 ([ADR-001](../../decisions/ADR-001-toolchain-and-signing.md)).
 
 ## References

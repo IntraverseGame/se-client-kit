@@ -17,7 +17,8 @@ steps, verification, troubleshooting, escalation, references.
 - [`development/parallel-work.md`](./development/parallel-work.md) — worktrees:
   one task, one branch, one worktree.
 - [`development/ci-failures.md`](./development/ci-failures.md) — a CI job cannot
-  find a kit package's `dist/` (a wireit cache restore that failed, #53).
+  find a kit package's `dist/` (a missing wireit dependency; formerly a failed
+  wireit cache restore, #53).
 - [`client-kit-release.md`](./client-kit-release.md) — releasing the packages
   and the Wrapper bundle.
 - [`preview-e2e.md`](./preview-e2e.md) — running the e2e suite's preview mode

@@ -41,6 +41,12 @@ on:
 # No job gets a token unless it asks for one below.
 permissions: {}
 
+env:
+  # No task cache (#53): a release build never restores from a cache. wireit
+  # already defaults to none on CI, and the release build steps set it too;
+  # this states it for every job.
+  WIREIT_CACHE: none
+
 concurrency:
   group: release
   cancel-in-progress: false

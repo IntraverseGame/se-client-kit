@@ -46,8 +46,8 @@ pnpm release:dry-run             # the release dry run: versions, tarballs, Wrap
 [wireit](https://github.com/google/wireit) script: its `command`, input `files`,
 `output`, and `dependencies` are declared in the `wireit` section of the
 `package.json` that owns it, so `pnpm check` runs only what changed. Skipped
-tasks are restored from the cache in `.wireit/` (not committed). In CI the cache
-is the GitHub Actions cache; there is no remote cache and no secret.
+tasks are restored from the cache in `.wireit/` (not committed). CI runs with no
+task cache (`WIREIT_CACHE=none`, #53); there is no remote cache and no secret.
 `node_modules` and `.wireit` are per worktree (run
 `pnpm install --frozen-lockfile` once in each). `pnpm clean:cache` forgets every
 cached result (also if you suspect a stale entry). When you add a file a script
