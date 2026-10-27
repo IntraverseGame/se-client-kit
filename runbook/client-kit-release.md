@@ -513,7 +513,8 @@ re-enabling it. Disabling the workflow does not cancel a run that has not
 finished (queued, pending in the `pages` concurrency group, waiting, or
 running), which would deploy over the rollback: before rolling back, list every
 unfinished Pages run
-(`gh run list --workflow pages.yml --json databaseId,status --jq '.[] | select(.status != "completed") | .databaseId'`)
+(`gh run list --workflow pages.yml --all --json databaseId,status --jq '.[] | select(.status != "completed") | .databaseId'`;
+`--all` because `gh run list` leaves out a disabled workflow's runs without it)
 and cancel each (`gh run cancel <id>`). Each deployment records the commit
 (`--commit-hash`) it came from, and its run logs every digest.
 

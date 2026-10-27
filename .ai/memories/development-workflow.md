@@ -108,7 +108,8 @@ Several agents and people work in one clone at once. Rules:
   `vars.` (the test asserts both, and the `push: branches: [main]` trigger).
   To hold a Pages rollback: `gh workflow disable pages.yml` and cancel every
   unfinished Pages run (queued, pending, waiting, or in progress:
-  `gh run list --workflow pages.yml --json databaseId,status --jq '.[] | select(.status != "completed") | .databaseId'`, then `gh run cancel <id>` for each; disabling does not cancel them)
+  `gh run list --workflow pages.yml --all --json databaseId,status --jq '.[] | select(.status != "completed") | .databaseId'`
+  (`--all`: without it `gh run list` skips a disabled workflow's runs), then `gh run cancel <id>` for each; disabling does not cancel them)
   before rolling back, then
   `gh workflow enable pages.yml` and a manual run once the fix is merged.
   Three jobs:
