@@ -166,6 +166,9 @@ export const createBookRound = (
       return Promise.resolve();
     }
     if (options.admit?.(snapshot) === false) return Promise.resolve();
+    // A stale read (a lower `version`, W-29) is ignored before W-52's check:
+    // an older `starting` without `randomnessProof` is no change of the round.
+    if (snapshot.version < latest.version) return Promise.resolve();
     latest = snapshot;
     keepProof(snapshot.proofs?.randomnessProof);
     check(snapshot);

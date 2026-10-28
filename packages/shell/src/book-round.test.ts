@@ -138,6 +138,15 @@ describe("what the shell checks on a book round (W-52)", () => {
     expect(round.evidence().changes[0]?.source).toBeUndefined();
   });
 
+  it("ignores a stale read, of a lower version, before checking it (W-29)", async () => {
+    const round = started();
+    // The round's `starting` read before it was bound: version 1, no proofs.
+    await round.observe(versionedStarting(1));
+    expect(round.verdict()).toEqual({ state: "ready" });
+    expect(round.evidence().changes).toEqual([]);
+    expect(round.latest().version).toBe(2);
+  });
+
   it("before any randomnessProof there is nothing to change", async () => {
     const round = started(bookSnapshot("starting", { proofs: false }));
     await round.observe(versionedStarting(3));

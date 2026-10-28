@@ -1,7 +1,9 @@
 // T-14 and T-14a at the component level (W-45 to W-48): a status change is
 // announced through a polite live region and an error through `role="alert"`;
 // focus moves to the result or error heading only after the player's own
-// action, never after a poll; win, loss, and error carry text and an icon with
+// action, never after a poll (except the one poll that brings the result of
+// the book round the player just started, W-55; book-result-focus.test.ts);
+// win, loss, and error carry text and an icon with
 // a text alternative beside the colour; every control has a text label in the
 // session's language, with the fallback; the stylesheet honours reduced
 // motion and reflows at 200 % zoom. The axe scan of every state, keyboard-only

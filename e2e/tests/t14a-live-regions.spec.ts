@@ -1,6 +1,8 @@
 // T-14a (AC5, W-46, W-47): a status change is announced through the polite
 // live region and an error through `role="alert"`; focus moves to the error
-// heading after the player's own action, never after a poll; the result
+// heading after the player's own action, never after a poll (except the one
+// poll that brings the result of the book round the player just started,
+// W-55, covered by the Wrapper's component tests); the result
 // carries text and an icon with a text alternative; `prefers-reduced-motion`
 // stops the progress animation; and the UI works at 200 % zoom.
 

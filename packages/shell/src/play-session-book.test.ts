@@ -2,28 +2,26 @@
 // scripted Play API. The start sends the bet and the key's address and nothing
 // is signed after it; a pick, a cash-out, or a cancel is refused with no
 // request; W-26's checks and the tip check never run; a changed round is
-// failed verification; a book Snapshot at `active` is rejected; and a
-// Snapshot that changes the session (W-53) is not read in, after which the
-// session reads, starts, signs, and forwards nothing. Manual clock, fake
-// locks, a recording RPC transport.
+// failed verification; and a book Snapshot at `active` is rejected. A changed
+// session (W-53) is play-session-changed.test.ts's. Manual clock, fake locks,
+// a recording RPC transport.
 
 import type { PlayOperationId } from "@intraverse/se-client-play-client";
 import { describe, expect, it } from "vitest";
 
-import { bookInput, bookSnapshot, configOf, proofOf } from "./fixtures/book.ts";
+import { bookInput, bookSnapshot, proofOf } from "./fixtures/book.ts";
 import { createFakeGame, HELLO, mountOf } from "./fixtures/fake-game.ts";
 import { ok } from "./fixtures/fake-play.ts";
 import {
   actionKeyOf,
   GAME,
   open,
-  problem409,
   sessionOf,
   settleMany,
 } from "./fixtures/play-session.ts";
 import { ROUND_REQUEST } from "./fixtures/round-auth.ts";
 import { sessionAddress } from "./fixtures/session-round.ts";
-import { snapshot, validated, vectorInput } from "./fixtures/vectors.ts";
+import { validated } from "./fixtures/vectors.ts";
 import type { RpcTransport } from "./rpc-transport.ts";
 
 /** The Play API calls that carry a signed action: never sent for a book round. */
@@ -186,88 +184,4 @@ describe("a book Snapshot at active, resolving, or canceled (W-54)", () => {
       expect(session.round()?.verdict).toBe("ready");
     },
   );
-});
-
-describe("a changed session (W-53)", () => {
-  it("is not read in, and from then on nothing is read, started, or forwarded", async () => {
-    const opened = await open();
-    const session = sessionOf(opened);
-    const game = createFakeGame({ gameOrigin: GAME, gameOrigins: [GAME] });
-    session.mountGame(mountOf(game));
-    game.send(BOTH);
-    opened.play.answer("getSnapshot", ok(snapshot("idle")));
-    await session.read();
-    const posted = game.posted.length;
-    opened.play.answer("getSnapshot", ok(bookSnapshot("idle")));
-    expect(await session.read()).toEqual({ kind: "session-changed" });
-    // Not read in: the game got nothing of it, and nothing more is read.
-    expect(game.posted).toHaveLength(posted);
-    const reads = opened.play.sent("getSnapshot").length;
-    expect(await session.read()).toEqual({ kind: "session-changed" });
-    expect(await session.checkAgain()).toEqual({ kind: "session-changed" });
-    expect(opened.play.sent("getSnapshot")).toHaveLength(reads);
-    // Nothing is started or signed.
-    expect(await session.start(ROUND_REQUEST.bet)).toEqual({
-      kind: "session-changed",
-    });
-    expect(await session.cashOut()).toEqual({ kind: "session-changed" });
-    expect(opened.play.sent("startRound")).toHaveLength(0);
-    // The game's bridge is closed: nothing is forwarded or accepted.
-    game.send({
-      schema: "se.controller/1",
-      type: "action",
-      id: "p",
-      verb: "pick",
-      args: { step: 0, option: 0 },
-    });
-    expect(game.posted).toHaveLength(posted);
-    expect(game.listening()).toBe(false);
-  });
-
-  it("a start whose answer changes the session holds nothing", async () => {
-    const opened = await open();
-    const session = sessionOf(opened);
-    opened.play.answer("getSnapshot", ok(snapshot("idle")));
-    await session.read();
-    opened.play.answer("startRound", ok(bookSnapshot("starting")));
-    expect(await session.start(ROUND_REQUEST.bet)).toEqual({
-      kind: "session-changed",
-    });
-    expect(session.round()).toBeUndefined();
-  });
-
-  it("a ROUND_ACTIVE answer whose Snapshot changes the session is a changed session", async () => {
-    const opened = await open();
-    const session = sessionOf(opened);
-    opened.play.answer("getSnapshot", ok(bookSnapshot("idle")));
-    await session.read();
-    opened.play.answer(
-      "startRound",
-      problem409(vectorInput("valid", "problem-round-active")),
-    );
-    expect(await session.start(ROUND_REQUEST.bet)).toEqual({
-      kind: "session-changed",
-    });
-  });
-
-  it("a change of the round and of config.model together is a changed session, not a changed round", async () => {
-    const { opened, session } = await startedBook();
-    const input = bookInput("won");
-    proofOf(input)["blockNumber"] = 21_000_124;
-    configOf(input)["model"] = "bonus";
-    opened.play.answer("getSnapshot", ok(validated(input)));
-    expect(await session.read()).toEqual({ kind: "session-changed" });
-    // The Snapshot was not read into the round: it is no changed round.
-    expect(session.round()?.verdict).toBe("ready");
-  });
-
-  it("a config round's move answer that changes the session is not read in", async () => {
-    const opened = await open();
-    const session = sessionOf(opened);
-    opened.play.answer("getSnapshot", ok(snapshot("idle")));
-    await session.read();
-    opened.play.answer("getSnapshot", ok(bookSnapshot("won")));
-    expect(await session.read()).toEqual({ kind: "session-changed" });
-    expect(session.round()).toBeUndefined();
-  });
 });
