@@ -26,9 +26,11 @@ else.
   shell internal.
 - **The `playback` copy's types** (RFC-003, decided by the human, 2026-10-28).
   The subpath also exports `GamePlaybackSnapshot`, the `playback` copy of W-38,
-  with its draw and event types, type-only like the others: no value, and
-  nothing that reaches a key, a token, a signature, or another shell internal.
-  `GameSnapshot` stays the `steps` copy.
+  with its draw and event types (`GameBookDraw`, `GameBookEvent`,
+  `GameEventData`, `GameJsonValue`; `SnapshotMessage.snapshot` is
+  `GameSnapshot | GamePlaybackSnapshot`), type-only like the others: no value,
+  and nothing that reaches a key, a token, a signature, or another shell
+  internal. `GameSnapshot` stays the `steps` copy.
 - **Split later.** When a second consumer of the types appears (a game outside
   this repository, or a game SDK), they move to a `controller` package of their
   own, so a game developer does not depend on `shell` at all. Until then the
@@ -170,23 +172,28 @@ else.
   `playback` copy in any other status is ignored like a malformed copy. The draw
   is shown at once, with no timed animation, so the Wrapper's result and the
   game's agree when they show: the drawn row (`Book <index>`), its display
-  multiplier (`×<payoutMultiplier>`, never an amount), and the events as an
-  ordered list, one item per event, `<index>. <type>`, and its `data`, when
-  present, as compact JSON text set with `textContent` only (never parsed as
-  markup). That text is cut to `EVENT_DATA_TEXT_LIMIT` code points, a named
-  constant of 200, with `…` added when it is cut; the cut counts code points,
-  never UTF-16 code units, so a surrogate pair is never split. The page knows
-  nothing of the package's event types: a real slot renderer is the game
-  developer's. The copy's parser takes the `playback` allow-list exactly (W-38).
-  Two contract rules hold for every event (the backend, 2026-10-28): its `type`
-  is always present, and its `data` is absent or an object. A copy with an event
-  that breaks either, a `config.draw` outside `won` and `lost`, or an extra
-  field is ignored like any malformed copy. A `won` or `lost` copy without
-  `config.draw` is not malformed (the schema makes the draw optional): the page
-  shows the status with no draw and no events, and is not ignored. A `data`
-  object may hold numbers for display; the page shows them as text and never
-  treats one as money. The page names no event type and no `data` shape of any
-  package: generic text, shown at once with no animation.
+  multiplier (`×<payoutMultiplier>` with two fraction digits, `×1.94`, as Coin
+  Flip shows its own; never an amount), and the events as an ordered list, one
+  item per event, `<index>. <type>`, and its `data`, when present, as compact
+  JSON text set with `textContent` only (never parsed as markup). That text is
+  cut to `EVENT_DATA_TEXT_LIMIT` code points, a named constant of 200, with `…`
+  added when it is cut; the cut counts code points, never UTF-16 code units, so
+  a surrogate pair is never split. The page knows nothing of the package's event
+  types: a real slot renderer is the game developer's. The copy's parser takes
+  the `playback` allow-list exactly (W-38). Two contract rules hold for every
+  event (the backend, 2026-10-28): its `type` is always present, and its `data`
+  is absent or an object. A copy with an event that breaks either, a
+  `config.draw` outside `won` and `lost`, or an extra field is ignored like any
+  malformed copy. A `won` or `lost` copy without `config.draw` is not malformed
+  (the schema makes the draw optional): the page shows the status with no draw
+  and no events, and is not ignored. A `data` object may hold numbers for
+  display; the page shows them as text and never treats one as money. The page
+  names no event type and no `data` shape of any package: generic text, shown at
+  once with no animation. The page's parser holds a `data` to the bounds of the
+  Wrapper's copy too (at most 32 levels and 10 000 values over the Snapshot;
+  decided by the human, 2026-10-28), so a cycle or a deep value never reaches
+  it. When a book copy hides the board while a tile holds focus, the heading
+  takes it, under the rule of `document.hasFocus()` (book views only).
 - **Statuses.** Every status the bridge forwards is shown: `idle` (place a bet
   in the Wrapper), `starting`, `active` (the two calls), `resolving`, `won`,
   `lost`, and `canceled` (with `closeReason: expired` said, and the reveal when

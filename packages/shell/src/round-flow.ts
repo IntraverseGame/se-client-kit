@@ -33,10 +33,18 @@ import {
   type TrackingEvidence,
   type TrackingOptions,
 } from "./round-tracking.ts";
-import { isRoundOver } from "./snapshot-reading.ts";
+import { isRoundOver, isStale } from "./snapshot-reading.ts";
 import type { FlowTestHooks } from "./typed-data.ts";
 
-export type RoundFlowOptions = TrackingOptions & DeliveryOptions;
+export type RoundFlowOptions = TrackingOptions &
+  DeliveryOptions & {
+    /**
+     * The session's one-presentation guard (W-53, session-presentation.ts): a
+     * Snapshot it does not admit is not read into the round, and nothing is
+     * sent or signed for it. Absent in the round's own tests.
+     */
+    readonly admit?: (snapshot: ValidSnapshot) => boolean;
+  };
 
 /** The round's evidence (W-27): nothing in it is secret. */
 export type RoundEvidence = TrackingEvidence & {
@@ -81,6 +89,12 @@ export type RoundFlow = RoundActions & {
    * the round clears it.
    */
   readonly unconfirmed: () => Unconfirmed | undefined;
+  /**
+   * The last Snapshot observed, when it was a stale read of the round (a lower
+   * `version` than the round's latest, W-29), which the round did not read in;
+   * `undefined` once any later Snapshot is observed.
+   */
+  readonly staleRead: () => ValidSnapshot | undefined;
   readonly evidence: () => RoundEvidence;
   /**
    * Reads a validated Snapshot; another round's, or `idle`, is ignored, and so
@@ -139,6 +153,10 @@ export const createRoundFlow = (
   const actions = createRoundActions(options.session, tracking, delivery);
 
   const intoRound = async (snapshot: ValidSnapshot): Promise<void> => {
+    // A Snapshot that changed the session is not read in (W-53), and a stale
+    // read of the round (W-29) reaches neither the checks nor the transcript.
+    if (options.admit?.(snapshot) === false) return;
+    if (ofRound(snapshot) && isStale(snapshot, tracking.latest())) return;
     const verdict = await tracking.observe(snapshot);
     const signer = tracking.signer();
     if (
@@ -155,6 +173,11 @@ export const createRoundFlow = (
   // The highest `version` of the round's Snapshots read so far: a late, older
   // read never decides a resend (W-16's "a later read").
   let newest = -1;
+  // The round's last read, when it was stale (W-29): not read in, but the
+  // action it answered shows it, so the Wrapper drops it and reads again.
+  let stale: ValidSnapshot | undefined;
+  const ofRound = (snapshot: ValidSnapshot): boolean =>
+    snapshot.status !== "idle" && snapshot.roundId === round.roundId;
 
   // W-16's one resend of a lost move or cash-out (decided in human review,
   // 2026-10-18): its last send was lost (no answer, or a 503 not marked
@@ -191,9 +214,15 @@ export const createRoundFlow = (
   // The cancel's gate comes before the tracking: while it settles, no
   // Snapshot of the round from elsewhere (a stale read included) is read in.
   const observe = async (snapshot: ValidSnapshot): Promise<void> => {
+    // `staleRead` describes only the last Snapshot observed, of any round.
+    stale = undefined;
+    // A Snapshot that changed the session is not read in, and resends nothing
+    // (W-53).
+    if (options.admit?.(snapshot) === false) return;
     if (cancel.holds(snapshot)) return;
-    if (snapshot.status !== "idle" && snapshot.roundId === round.roundId) {
+    if (ofRound(snapshot)) {
       newest = Math.max(newest, snapshot.version);
+      if (isStale(snapshot, tracking.latest())) stale = snapshot;
     }
     await intoRound(snapshot);
     await resendLost(snapshot);
@@ -248,6 +277,7 @@ export const createRoundFlow = (
     lastError: (): Error | undefined =>
       delivery.lastError() ?? tracking.tipError(),
     unconfirmed,
+    staleRead: (): ValidSnapshot | undefined => stale,
     evidence: (): RoundEvidence =>
       Object.freeze({
         ...tracking.evidence(),

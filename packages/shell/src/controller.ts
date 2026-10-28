@@ -6,7 +6,12 @@
 
 export type {
   ActionMessage,
+  GameBookDraw,
+  GameBookEvent,
+  GameEventData,
+  GameJsonValue,
   GameMessage,
+  GamePlaybackSnapshot,
   GameSnapshot,
   GameStep,
   HelloMessage,

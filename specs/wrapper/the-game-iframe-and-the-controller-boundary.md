@@ -168,10 +168,14 @@ Part of the [Wrapper spec](../wrapper.md), section
   - every object of the copy is created with a null prototype and each member is
     set with `Object.defineProperty` (a data property, enumerable, writable,
     configurable), so an own `__proto__` key in the data is copied as a member
-    and can never change a prototype;
+    and can never change a prototype; a JSON array is copied as an array of
+    copied items (clarified with the implementation, #146: "object" is a JSON
+    object);
   - the copy is bounded: nesting at most **32** levels deep (an event's `data`
-    is level 1), and at most **10 000** values (objects, arrays, and primitives,
-    counted over every event's `data` of the Snapshot);
+    is level 1; an object or array inside a level-n container is level n + 1,
+    and a string, number, `true`, `false`, or `null` adds no level; clarified
+    with the implementation, #146), and at most **10 000** values (objects,
+    arrays, and primitives, counted over every event's `data` of the Snapshot);
   - a `data` that breaks a bound, or that cannot be read as JSON data (an
     accessor, a symbol key, a cycle, a value of another type), fails the copy,
     and the copy fails closed: that Snapshot is **not forwarded** to the game
@@ -179,7 +183,10 @@ Part of the [Wrapper spec](../wrapper.md), section
     view of the Snapshot as usual (the result, the payout, the round id, and the
     verify link, W-54) with the frame hidden and the notice "The game can't show
     this round." in its place. A later Snapshot whose copy succeeds is forwarded
-    as usual (its `version` is higher), and the notice goes. Left out:
+    as usual (its `version` is higher), and the notice goes. The copy is built
+    when the bridge is given the Snapshot, before the game's `hello` too: a copy
+    that failed is never held, so the `hello` is answered with the last copy
+    that was built (clarified with the implementation, #146). Left out:
     everything the `steps` copy leaves out, and `config.packageHash`,
     `config.rtp` (the Wrapper shows it, W-56), and `payout`. `payoutMultiplier`
     is the drawn row's display multiplier, never money; the game shows no

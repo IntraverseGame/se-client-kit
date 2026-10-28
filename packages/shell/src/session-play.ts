@@ -6,9 +6,15 @@
 // refused `round-exists`; neither sends anything. While the round's required
 // cancel holds the round (`in-flight`, `settling`, `check-later`; W-25), the
 // round is open and the session's reads are the cancel's own (W-35;
-// session-reads.ts). Every answer is a validated Snapshot, a validated typed
-// error, or a closed code; nothing here returns the key, the token, a
-// signature, or the transcript. It logs nothing.
+// session-reads.ts). A book round (`playback`, W-50 to W-52) starts the same
+// way and is then only read: nothing is signed for it (book-round.ts). Every
+// Snapshot passes the session's one-presentation guard first (W-53,
+// session-presentation.ts): one that changes the session is not read in, the
+// game's bridge is closed, and from then until the page is reloaded every use
+// case answers `session-changed` with nothing read, signed, started, or
+// forwarded. Every answer is a validated Snapshot, a validated typed error, or
+// a closed code; nothing here returns the key, the token, a signature, or the
+// transcript. It logs nothing.
 
 import type { RandomUuid } from "@intraverse/se-client-play-client";
 
@@ -20,15 +26,18 @@ import {
 } from "./controller-bridge.ts";
 import { createPickUseCase } from "./pick-use-case.ts";
 import { redacting } from "./redaction.ts";
-import type { RoundFlow, RoundFlowOptions } from "./round-flow.ts";
-import { type Bet, startRoundFlow } from "./round-start.ts";
+import type { RoundFlowOptions } from "./round-flow.ts";
+import { type Bet, startSessionRound } from "./round-start.ts";
 import {
   beforeOf,
+  CHANGED,
   createSessionReads,
   ENDED,
   FRESH,
   readOfError,
   refused,
+  type SessionReads,
+  type SessionReadsHost,
 } from "./session-reads.ts";
 import type {
   GameMount,
@@ -59,6 +68,12 @@ export type PlaySessionHandle = {
   readonly session: PlaySession;
   /** Tells the session's listeners it ended, and closes the game's bridge. */
   readonly notifyEnd: () => void;
+  /**
+   * What a changed session kept (W-53, W-27): the first and the differing
+   * values of the four fields, and nothing else. Internal: the shell's own
+   * evidence, never handed to the UI.
+   */
+  readonly change: SessionReads["change"];
 };
 
 export const createPlaySession = (
@@ -67,7 +82,8 @@ export const createPlaySession = (
   const { flow: flowOptions, ended } = parts;
   const endListeners = new Set<() => void>();
   const changeListeners = new Set<(read: SessionRead) => void>();
-  let current: RoundFlow | undefined;
+  // The round the session holds: a config round's flow or a book round.
+  let current: ReturnType<SessionReadsHost["current"]>;
   let bridge: ControllerBridge | undefined;
   // A start or a cash-out in flight: a second one is refused, never sent.
   let acting = false;
@@ -78,12 +94,19 @@ export const createPlaySession = (
     transport: flowOptions.transport,
     authorization: flowOptions.authorization,
   });
-  const { see, settle, read, holdsOpenRound } = createSessionReads({
+  const reads = createSessionReads({
     reader,
     current: () => current,
     bridge: () => bridge,
     ended,
+    // The Snapshot that changes the session closes the game's bridge: nothing
+    // more is forwarded to the game (W-53).
+    onChange: () => {
+      bridge?.close();
+      bridge = undefined;
+    },
   });
+  const { see, settle, read, holdsOpenRound, admit, changed } = reads;
 
   /**
    * Runs one start or cash-out at a time: while one is in flight, another is
@@ -105,8 +128,9 @@ export const createPlaySession = (
     // A new round beside the open one the shell holds is never started.
     if (holdsOpenRound()) return refused("round-exists");
     try {
-      const flow = await startRoundFlow({
+      const flow = await startSessionRound({
         ...flowOptions,
+        admit,
         randomUuid: parts.randomUuid,
         bet,
         // The round is the session's before its first Snapshot is read, so a
@@ -115,6 +139,8 @@ export const createPlaySession = (
           current = started;
         },
       });
+      // The start's answer changed the session (W-53): it is not read in.
+      if (flow === undefined) return ended() ? ENDED : CHANGED;
       // A cancel the round's first Snapshot required is part of the start: once
       // its reads decide it, the start answers with the round (W-25).
       return settle(flow, FRESH);
@@ -128,14 +154,25 @@ export const createPlaySession = (
       ) {
         // `ROUND_ACTIVE`: the open round is shown; the shell holds no state
         // for it, so it signs nothing in it (W-42).
-        await see(outcome.problem.snapshot);
+        const seen = await see(outcome.problem.snapshot);
+        if (seen === undefined) return CHANGED;
       }
       return outcome;
     }
   };
 
-  const start = (bet: Bet): Promise<SessionRead> =>
-    ended() ? Promise.resolve(ENDED) : oneAtATime(() => startOnce(bet));
+  /** The answer of a use case that may not run: the session ended or changed. */
+  const closed = (): SessionRead | undefined => {
+    if (ended()) return ENDED;
+    return changed() ? CHANGED : undefined;
+  };
+
+  const start = (bet: Bet): Promise<SessionRead> => {
+    const answer = closed();
+    return answer === undefined
+      ? oneAtATime(() => startOnce(bet))
+      : Promise.resolve(answer);
+  };
 
   const cashOutOnce = async (): Promise<SessionRead> => {
     const flow = current;
@@ -145,10 +182,15 @@ export const createPlaySession = (
     return outcome.accepted ? settle(flow, before) : refused(outcome.reason);
   };
 
-  const cashOut = (): Promise<SessionRead> =>
-    ended() ? Promise.resolve(ENDED) : oneAtATime(cashOutOnce);
+  const cashOut = (): Promise<SessionRead> => {
+    const answer = closed();
+    return answer === undefined
+      ? oneAtATime(cashOutOnce)
+      : Promise.resolve(answer);
+  };
 
-  const flowPick = createPickUseCase(() => current);
+  // A changed session takes no pick (W-53): its bridge is closed anyway.
+  const flowPick = createPickUseCase(() => (changed() ? undefined : current));
   // The game's pick, through the round flow (the gate, W-23); its answer
   // reaches the UI through `onChange`.
   const pick: PickUseCase = async value => {
@@ -196,6 +238,12 @@ export const createPlaySession = (
     if (!result.ok)
       return Object.freeze({ ok: false, refusal: result.refusal });
     bridge?.close();
+    if (changed()) {
+      // A changed session forwards nothing to the game (W-53).
+      result.bridge.close();
+      bridge = undefined;
+      return Object.freeze({ ok: true, gameOrigin: origin });
+    }
     bridge = result.bridge;
     const latest = current?.latest() ?? reader.latest();
     if (latest !== undefined) bridge.sendSnapshot(latest);
@@ -237,5 +285,5 @@ export const createPlaySession = (
     ended,
     end: parts.end,
   });
-  return Object.freeze({ session, notifyEnd });
+  return Object.freeze({ session, notifyEnd, change: reads.change });
 };

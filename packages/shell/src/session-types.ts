@@ -30,6 +30,13 @@ export type SessionRead =
   | SnapshotRead
   /** The session ended (W-7): the key and the token are gone. */
   | { readonly kind: "session-ended" }
+  /**
+   * A Snapshot changed the session's presentation, model, `config.kind`, or
+   * `config.model` (W-53): it was not read in, and from now until the page is
+   * reloaded the session reads, signs, starts, and forwards nothing. Final, as
+   * the states of W-44; the Wrapper shows "this round failed verification".
+   */
+  | { readonly kind: "session-changed" }
   /** The shell did not act: nothing was signed or sent. */
   | {
       readonly kind: "refused";
@@ -41,7 +48,9 @@ export type RoundState = {
   readonly roundId: string;
   /**
    * `checking` until W-26 has decided; `ready` once every check passed (the
-   * game may be shown as ready); `failed` with what the player is shown.
+   * game may be shown as ready); `failed` with what the player is shown. A book
+   * round, which W-26 does not apply to, is `ready` from its start unless it
+   * changed (W-52: `failed`, "this round failed verification").
    */
   readonly verdict: "checking" | "ready" | "failed";
   /**

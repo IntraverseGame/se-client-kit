@@ -77,7 +77,7 @@ describe("check 1, present (missing)", () => {
   });
 
   it("refuses a Snapshot whose proofs carry no createRoundAuth", () => {
-    const input = vectorInput("valid", "book-playback-resolving-placeholder");
+    const input = vectorInput("valid", "book-playback-won-payout");
     const book = validated(input);
     expect(book.proofs?.createRoundAuth).toBeUndefined();
     expect(checkCreateRoundAuth(roundConfig(), ROUND_REQUEST, book)).toEqual(

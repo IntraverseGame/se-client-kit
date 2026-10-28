@@ -5,8 +5,11 @@
 // (`in-flight`, `settling`, `check-later`; W-25), the round is open whatever
 // the session saw, the UI gets the round's own latest Snapshot, never one
 // from elsewhere (the game is sent nothing from such a read), and a read is
-// the cancel's own (its counted read, or "check again"). Every answer is a validated Snapshot, a validated typed
-// error, or a closed code. It logs nothing.
+// the cancel's own (its counted read, or "check again"). Every Snapshot passes
+// the session's one-presentation guard first (W-53): one that changes the
+// session is not read in, and from then on the session reads nothing more and
+// answers `session-changed`. Every answer is a validated Snapshot, a validated
+// typed error, or a closed code. It logs nothing.
 
 import {
   NetworkError,
@@ -18,7 +21,11 @@ import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 import { type CancelState, holdsRound, isOfRound } from "./cancel-state.ts";
 import type { ControllerBridge } from "./controller-bridge.ts";
 import { ShellError } from "./errors.ts";
-import type { RoundFlow } from "./round-flow.ts";
+import {
+  createPresentationGuard,
+  type SessionChange,
+} from "./session-presentation.ts";
+import type { SessionRound } from "./session-round.ts";
 import type { SessionRead } from "./session-types.ts";
 import {
   type SnapshotRead,
@@ -27,6 +34,8 @@ import {
 } from "./snapshot-read.ts";
 
 export const ENDED: SessionRead = Object.freeze({ kind: "session-ended" });
+/** A Snapshot changed the session (W-53): final until the page is reloaded. */
+export const CHANGED: SessionRead = Object.freeze({ kind: "session-changed" });
 const REJECTED: SessionRead = Object.freeze({ kind: "rejected" });
 
 export const refused = (
@@ -66,21 +75,28 @@ const READ_DECIDED: ReadonlySet<CancelState> = new Set([
 export type Before = {
   readonly error: Error | undefined;
   readonly cancel: CancelState;
+  /** The round's stale read before the action: never this action's answer. */
+  readonly stale: ValidSnapshot | undefined;
 };
 
 /** Before a round's first action: no failure, no cancel. */
 export const FRESH: Before = Object.freeze({
   error: undefined,
   cancel: "none",
+  stale: undefined,
 });
 
-export const beforeOf = (flow: RoundFlow | undefined): Before =>
+export const beforeOf = (flow: SessionRound | undefined): Before =>
   flow === undefined
     ? FRESH
-    : Object.freeze({ error: flow.lastError(), cancel: flow.cancel() });
+    : Object.freeze({
+        error: flow.lastError(),
+        cancel: flow.cancel(),
+        stale: flow.staleRead(),
+      });
 
 /** Whether `flow`'s cancel moved, since `before`, to a state its reads decide. */
-const cancelDecided = (flow: RoundFlow, before: Before): boolean => {
+const cancelDecided = (flow: SessionRound, before: Before): boolean => {
   const cancel = flow.cancel();
   return cancel !== before.cancel && READ_DECIDED.has(cancel);
 };
@@ -93,8 +109,10 @@ const snapshotOfRead = (read: SnapshotRead): ValidSnapshot | undefined => {
 
 export type SessionReadsHost = {
   readonly reader: SnapshotReader;
+  /** Called once, when a Snapshot changes the session (W-53). */
+  readonly onChange: () => void;
   /** The round the session holds, if any. */
-  readonly current: () => RoundFlow | undefined;
+  readonly current: () => SessionRound | undefined;
   /** The game's bridge, once mounted. */
   readonly bridge: () => ControllerBridge | undefined;
   readonly ended: () => boolean;
@@ -103,19 +121,36 @@ export type SessionReadsHost = {
 export type SessionReads = {
   /**
    * Lets the current round's checks, and the game, see a validated Snapshot,
-   * and resolves with the Snapshot the UI is given.
+   * and resolves with the Snapshot the UI is given, or `undefined` when it
+   * changed the session (W-53) and was not read in.
    */
-  readonly see: (snapshot: ValidSnapshot) => Promise<ValidSnapshot>;
+  readonly see: (snapshot: ValidSnapshot) => Promise<ValidSnapshot | undefined>;
   /** An action's answer: its new failure, or the round's latest Snapshot. */
-  readonly settle: (flow: RoundFlow, before: Before) => SessionRead;
+  readonly settle: (flow: SessionRound, before: Before) => SessionRead;
   /** The session's Snapshot read (`PlaySession.read`). */
   readonly read: () => Promise<SessionRead>;
   /** Whether the round the session holds is still open (`round-exists`). */
   readonly holdsOpenRound: () => boolean;
+  /**
+   * The session's W-53 guard: whether a Snapshot may be read in. The first one
+   * it refuses changes the session, for good.
+   */
+  readonly admit: (snapshot: ValidSnapshot) => boolean;
+  /** Whether a Snapshot changed the session (W-53). */
+  readonly changed: () => boolean;
+  /** What a changed session kept: the four fields' first and changed values. */
+  readonly change: () => SessionChange | undefined;
 };
 
 export const createSessionReads = (host: SessionReadsHost): SessionReads => {
   const { reader, current, ended } = host;
+  const guard = createPresentationGuard();
+  const changed = (): boolean => guard.change() !== undefined;
+  const admit = (snapshot: ValidSnapshot): boolean => {
+    if (guard.admit(snapshot)) return true;
+    if (guard.change() !== undefined) host.onChange();
+    return false;
+  };
   // The latest validated Snapshot the round guard saw, of any round.
   let shown: ValidSnapshot | undefined;
 
@@ -135,7 +170,11 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
   // when observing the read led to a newer Snapshot of the round (by
   // `version`: the answer to the W-16 resend the read caused), the UI and the
   // game are shown that one, never the read's older one.
-  const see = async (snapshot: ValidSnapshot): Promise<ValidSnapshot> => {
+  const see = async (
+    snapshot: ValidSnapshot,
+  ): Promise<ValidSnapshot | undefined> => {
+    // W-53 before the round's own rules (W-52, W-26).
+    if (!admit(snapshot)) return undefined;
     const flow = current();
     const before = beforeOf(flow);
     if (flow !== undefined && snapshot.roundId === flow.roundId) {
@@ -157,8 +196,9 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
     return show(snapshot);
   };
 
-  const settle = (flow: RoundFlow, before: Before): SessionRead => {
+  const settle = (flow: SessionRound, before: Before): SessionRead => {
     if (ended()) return ENDED;
+    if (changed()) return CHANGED;
     const error = flow.lastError();
     if (
       !cancelDecided(flow, before) &&
@@ -167,7 +207,15 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
     ) {
       return readOfError(error);
     }
-    return Object.freeze({ kind: "snapshot", snapshot: show(flow.latest()) });
+    // An answer that was a stale read of the round (W-29) is what the action
+    // got: the UI drops it for its lower `version` and reads again (W-35), and
+    // the game's bridge ignores it; the round did not read it in.
+    // Only this action's own stale answer: one left from before it (an action
+    // decided only through the cancel's reads observes nothing) is not.
+    const stale = flow.staleRead();
+    const answer =
+      stale !== undefined && stale !== before.stale ? stale : flow.latest();
+    return Object.freeze({ kind: "snapshot", snapshot: show(answer) });
   };
 
   // While the cancel is `settling`, a read is one of its counted reads
@@ -176,7 +224,7 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
   // whose Snapshot the cancel's gate drops. The flow's `checkAgain` is its
   // `refresh` today, so which one is called cannot be observed; the two names
   // follow W-35's two reads, and keep apart if the flow's ever differ.
-  const readCancel = async (flow: RoundFlow): Promise<SessionRead> => {
+  const readCancel = async (flow: SessionRound): Promise<SessionRead> => {
     const before = beforeOf(flow);
     await (flow.cancel() === "check-later"
       ? flow.checkAgain()
@@ -186,6 +234,8 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
 
   const read = async (): Promise<SessionRead> => {
     if (ended()) return ENDED;
+    // A changed session reads nothing more (W-53).
+    if (changed()) return CHANGED;
     const flow = current();
     const cancel = flow?.cancel();
     if (
@@ -199,6 +249,7 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
     if (seen === undefined) return ended() ? ENDED : outcome;
     const given = await see(seen);
     if (ended()) return ENDED;
+    if (given === undefined) return CHANGED;
     return given === seen
       ? outcome
       : Object.freeze({ kind: "snapshot", snapshot: given });
@@ -214,5 +265,13 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
     return !flow.over() && shown?.roundId === flow.roundId;
   };
 
-  return Object.freeze({ see, settle, read, holdsOpenRound });
+  return Object.freeze({
+    see,
+    settle,
+    read,
+    holdsOpenRound,
+    admit,
+    changed,
+    change: guard.change,
+  });
 };

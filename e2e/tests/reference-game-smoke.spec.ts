@@ -80,7 +80,8 @@ test.describe("the reference game", () => {
         data: {
           schema: SCHEMA,
           type: "hello",
-          presentations: ["steps"],
+          // Both presentations since the book-slot page (#146).
+          presentations: ["steps", "playback"],
           statuses: [
             "idle",
             "starting",

@@ -14,7 +14,7 @@
 
 import type { Connectivity } from "./connectivity.ts";
 import type { EnvironmentConfig } from "./environment-config.ts";
-import { followed } from "./poll-follow.ts";
+import { createResultFocus, followed } from "./poll-follow.ts";
 import { createView } from "./render.ts";
 import type { SnapshotRead } from "./round-input.ts";
 import { createSnapshotPoller, type PollConfig } from "./snapshot-poller.ts";
@@ -30,6 +30,7 @@ import {
   block,
   type BlockingState,
   clearProblem,
+  gameCopied,
   initialState,
   leaveEndedRound,
   type WrapperState,
@@ -66,6 +67,8 @@ export type WrapperApp = {
   readonly block: (state: BlockingState, cause?: ChangeCause) => void;
   /** The game's `hello` did not declare what the Wrapper sends (W-38). */
   readonly gameIncompatible: () => void;
+  /** Whether the latest game copy was built (W-38, W-55; `onCopy`). */
+  readonly gameCopied: (copied: boolean) => void;
   /** Where the game iframe is mounted (W-37); see `View.gameHost`. */
   readonly gameHost: () => HTMLElement;
   readonly state: () => WrapperState;
@@ -91,9 +94,8 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
   // The ended round the player started another round from (W-40): its panel
   // goes once a Snapshot of another round is shown.
   let startedFrom: string | undefined;
-
-  // `apply`, `view`, `poller`, and `reread` refer to each other; each is
-  // called only after all of them exist.
+  const focus = createResultFocus();
+  // `apply`, `view`, `poller`, and `reread` refer to each other (called later).
   const apply = (next: WrapperState, cause: ChangeCause): void => {
     if (next === state) return;
     state = next;
@@ -106,7 +108,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
       state = leaveEndedRound(state, startedFrom);
       startedFrom = undefined;
     }
-    view.update(state, cause);
+    view.update(state, focus.causeOf(state, cause));
     const { round, cancel, unconfirmed } = followed(state);
     poller.follow(round, cancel, unconfirmed);
     // A re-read stops the moment one may no longer run (W-35): no timer stays.
@@ -266,6 +268,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
               ...others,
               start: bet => {
                 startedFrom = state.endedRound?.roundId;
+                focus.started();
                 start(bet);
               },
             };
@@ -280,6 +283,9 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     },
     gameIncompatible: (): void => {
       apply({ ...state, gameIncompatible: true }, "poll");
+    },
+    gameCopied: (copied: boolean): void => {
+      apply(gameCopied(state, copied), "poll");
     },
     gameHost: (): HTMLElement => view.gameHost,
     state: (): WrapperState => state,

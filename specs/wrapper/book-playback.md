@@ -40,7 +40,9 @@ game plays back. The player makes no move during the round.
   signer lock (W-14). Nothing is ever signed for a book round: no
   `PlayerAction`, no `PlayerCashOut`, and no `PlayerCancel`. The transcript
   (W-15 to W-19) is not used, and the shell refuses a pick, a cash-out, or a
-  cancel of a book round with no request sent.
+  cancel of a book round with no request sent: a pick and a cash-out are
+  answered `not_legal` (decided by the human, 2026-10-28), and a book round has
+  no cancel path at all.
 
 - **W-52. What the shell checks on a book round.** A book Snapshot never carries
   `proofs.createRoundAuth` or `proofs.fairnessProof`; the schema rejects one
@@ -56,13 +58,18 @@ game plays back. The player makes no move during the round.
   - **Consistency of one round** (the kit's own rule). Once a Snapshot of the
     round carries `proofs.randomnessProof`, every later Snapshot of the same
     `roundId` MUST carry the same `source`, `blockNumber`, and
-    `roundSecretHash`, and the same `config.packageHash`. A change of
-    `config.model` (or of the presentation) is W-53's, which wins: it ends the
-    session, not only the round. A Snapshot that differs is a **changed round**:
-    the shell keeps the first values and the second in the round's evidence
-    (W-27), and the Wrapper shows "this round failed verification" in place of
-    the round until it is over, as for a failed W-26 check. Nothing is signed
-    either way, so nothing is canceled.
+    `roundSecretHash`, and the same `config.packageHash`; a later Snapshot of
+    the round with no `randomnessProof` is a change too (clarified with the
+    implementation, #146). A change of `config.model` (or of the presentation)
+    is W-53's, which wins: it ends the session, not only the round. A Snapshot
+    that differs is a **changed round**: the shell keeps the first values and
+    the second in the round's evidence (W-27), and the Wrapper shows "this round
+    failed verification" in place of the round until it is over, as for a failed
+    W-26 check. A changed round that is over (in practice the change is seen on
+    the `won` or `lost` read) shows its result with the line "This round failed
+    verification." beside it, shown like W-33's closed-before-cancel line, and
+    the game frame stays hidden (W-55) (decided by the human, 2026-10-28).
+    Nothing is signed either way, so nothing is canceled.
   - The shell does not recompute anything from `roundSecret`: it does not check
     it against `roundSecretHash`, and derives no seed or draw from it (decided
     by the human, 2026-10-28). That is the verify page's, for a book round a
@@ -79,7 +86,9 @@ game plays back. The player makes no move during the round.
   differs is a **changed session**, final for the session like the final states
   of W-44 (decided by the human, 2026-10-28):
   - the Snapshot is not read into the session, and the Wrapper shows "this round
-    failed verification", in place of the round or, at `idle`, of the bet
+    failed verification", with the detail "The game changed during this session.
+    Reload to continue." (a label under W-48's language rule, decided by the
+    human, 2026-10-28), in place of the round or, at `idle`, of the bet
     selector;
   - from then until the page is reloaded the session reads nothing more (no
     poll, no re-read, no "check again"), signs nothing, starts nothing, and
@@ -105,11 +114,12 @@ game plays back. The player makes no move during the round.
   | `won`, `lost` | as W-31: the result, the payout as `formatted` (on `lost` only when `payout.value` is above 0), the round id and the verify link (W-39), and the next bet with the RTP line; the game plays the draw back beside it (W-55), or, when the `playback` copy fails closed, the frame is hidden and "The game can't show this round." shows in its place ([the controller boundary](./the-game-iframe-and-the-controller-boundary.md)) | the next bet, from this Snapshot's `bet` |
 
   A book Snapshot whose `status` is `active`, `resolving`, or `canceled` fails
-  validation (W-28: the generic error state; the log line names `/status`). The
-  vendored schema still allows the three on a book round, so until the sync
-  below the shell applies this rule itself, after the `snapshot` validator,
-  which follows the vendored schema exactly; once the schema refuses them, the
-  validator does and the shell's rule is removed. The vendored
+  validation (W-28: the generic error state; the shell's validation issue names
+  `/status`, and the Wrapper adds no log line for it, decided by the human,
+  2026-10-28). The vendored schema still allows the three on a book round, so
+  until the sync below the shell applies this rule itself, after the `snapshot`
+  validator, which follows the vendored schema exactly; once the schema refuses
+  them, the validator does and the shell's rule is removed. The vendored
   `valid/book-playback-resolving-placeholder` then moves to `invalid/` (a
   pre-release change of a vendored vector, rule 1's `--allow-vector-change`),
   and no kit test may rely on it as a valid book Snapshot.
@@ -119,8 +129,9 @@ game plays back. The player makes no move during the round.
   MUST NOT compute or show an amount from `config.draw.payoutMultiplier`, the
   bet, or the RTP (W-34): the multiplier is the game's display only. A changed
   round (W-52) shows "this round failed verification" in place of the round
-  until it is over. W-35 polls a book round while it is `starting`, as any
-  round.
+  until it is over, and then its result with the line "This round failed
+  verification." beside it. W-35 polls a book round while it is `starting`, as
+  any round.
 
 - **W-55. The game frame on a book round.** W-37 shows the frame only when the
   round is ready (`active` after W-26, or `resolving`), which a book round never
@@ -133,9 +144,11 @@ game plays back. The player makes no move during the round.
   Snapshot whose copy succeeds
   ([the controller boundary](./the-game-iframe-and-the-controller-boundary.md)).
   The notice is a label like any other: it follows W-48's language rule. Focus
-  follows W-46: the Wrapper's result heading takes it when the player's own
-  start led to the result; the game never takes it from there. Decided by the
-  human, 2026-10-28.
+  follows W-46, with its exception for a book round: the Wrapper's result
+  heading takes it when the player's own start led to the result, also when the
+  result arrives by the poll after that start's `starting` answer (once, for
+  that round only; any other poll moves no focus); the game never takes it from
+  there. Decided by the human, 2026-10-28.
 
 - **W-56. The RTP.** When a book Snapshot carries `config.rtp`, the Wrapper
   shows the mode's return to player beside the bet selector (W-31's `idle` row

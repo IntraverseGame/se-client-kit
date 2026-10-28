@@ -10,7 +10,10 @@
 // is the Snapshot's `formatted`; a choice compares `value` as a `bigint`
 // (bet-options.ts). A `won` round shows its `payout` as `formatted`, and a
 // `lost` one only when `payout.value` is above 0 (compared as a `bigint`); an
-// absent `payout` shows nothing. None is ever computed (W-31, W-34).
+// absent `payout` shows nothing. None is ever computed (W-31, W-34). A book
+// round (`playback`, W-54) shows its mode's return to player beside the bet
+// selector, from `config.rtp.decimal` by string operations (W-56); never an
+// amount from the draw's `payoutMultiplier`, the bet, or the RTP.
 
 import { unitsOf } from "./bet-options.ts";
 import { betSelector } from "./bet-selector.ts";
@@ -31,6 +34,7 @@ import {
   type ShownAmount,
   type SnapshotInput,
 } from "./round-input.ts";
+import { rtpPercent } from "./rtp.ts";
 import { unconfirmedView } from "./unconfirmed-view.ts";
 import type { Intents } from "./view-options.ts";
 
@@ -66,6 +70,28 @@ export const shownPayout = (
   if (units === undefined) return undefined;
   if (status === "won") return payout;
   return status === "lost" && units > 0n ? payout : undefined;
+};
+
+/**
+ * The bet selector, and beside it a book round's return to player when its
+ * Snapshot carries `config.rtp` (W-56): "Return to player: 96.00%". None when
+ * it is absent, with no error.
+ */
+const betWithRtp = (
+  el: Builder,
+  m: Localized["messages"],
+  snapshot: SnapshotInput,
+  intents: Intents,
+): Child[] => {
+  const decimal =
+    snapshot.presentation === "playback"
+      ? snapshot.config.rtp?.decimal
+      : undefined;
+  const percent = decimal === undefined ? undefined : rtpPercent(decimal);
+  return [
+    betSelector(el, m, snapshot, intents),
+    percent !== undefined && field(el, m["label.rtp"], `${percent}%`),
+  ];
 };
 
 const formatMultiplier = (language: string, multiplier: number): string =>
@@ -125,7 +151,7 @@ export const roundView = (
     case "idle": {
       children.push(
         field(el, m["label.balance"], snapshot.bet.balance.formatted),
-        betSelector(el, m, snapshot, intents),
+        ...betWithRtp(el, m, snapshot, intents),
       );
       break;
     }
@@ -179,6 +205,15 @@ export const roundView = (
         children.push(
           el("p", { class: "se-detail" }, [m["detail.closedBeforeCancel"]]),
         );
+      } else if (
+        snapshot.presentation === "playback" &&
+        check?.verdict === "verification-failed"
+      ) {
+        // A changed book round (W-52) that is over: its result, with the
+        // failure beside it, as the closed-before-cancel line (W-54).
+        children.push(
+          el("p", { class: "se-detail" }, [m["detail.unverified"]]),
+        );
       }
       const payout = shownPayout(snapshot);
       if (payout !== undefined) {
@@ -202,7 +237,7 @@ export const roundView = (
   // Snapshot's `bet` (W-31, W-40): the read keeps showing the ended round until
   // the next start.
   if (roundEnded(snapshot, check?.cancel)) {
-    children.push(betSelector(el, m, snapshot, intents));
+    children.push(...betWithRtp(el, m, snapshot, intents));
   }
   return children;
 };

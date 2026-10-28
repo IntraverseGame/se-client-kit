@@ -12,11 +12,9 @@ import {
   type Transport,
 } from "@intraverse/se-client-play-client";
 import type { PlayerMessage } from "@intraverse/se-client-signing";
-import {
-  type ValidSnapshot,
-  validateSnapshot,
-} from "@intraverse/se-client-snapshot";
+import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
+import { validateSessionSnapshot } from "./book-status.ts";
 import { ShellError } from "./errors.ts";
 import type { PendingAction } from "./pending-action.ts";
 import { type TypedDataEncoder, typedDataOf } from "./typed-data.ts";
@@ -39,7 +37,7 @@ export type RoundSnapshot = Exclude<ValidSnapshot, { readonly status: "idle" }>;
 
 /** A validated Snapshot, or `snapshot-rejected` (W-28). */
 export const snapshotOf = (body: unknown): ValidSnapshot => {
-  const result = validateSnapshot(body);
+  const result = validateSessionSnapshot(body);
   if (!result.ok) throw new ShellError("snapshot-rejected");
   return result.value;
 };

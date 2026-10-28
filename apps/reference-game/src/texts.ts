@@ -4,6 +4,7 @@
 
 import type { RejectReason } from "@intraverse/se-client-shell/controller";
 
+import type { BookRound } from "./book-round.ts";
 import type { CoinFlipRound, Side } from "./coin-flip.ts";
 import type { GameView, TilePick } from "./game.ts";
 import type { StepsRound } from "./steps-round.ts";
@@ -181,6 +182,47 @@ const stepsText = (round: StepsRound, pending: TilePick | undefined): Text => {
   }
 };
 
+/**
+ * A book round's state. The draw itself (its row, multiplier, and events) is
+ * shown below the live region (book.ts); here it is only named.
+ */
+const bookText = (round: BookRound): Text => {
+  const drawn =
+    round.draw === undefined
+      ? undefined
+      : `Book ${String(round.draw.index)} was drawn.`;
+  switch (round.status) {
+    case "idle": {
+      return {
+        heading: "Ready to play",
+        detail: "Place a bet in the Wrapper to start a round.",
+      };
+    }
+    case "starting": {
+      return {
+        heading: "Starting the round",
+        detail: "The round is being prepared.",
+      };
+    }
+    case "won": {
+      return {
+        heading: "You won",
+        detail: drawn ?? "The round ended with a win.",
+      };
+    }
+    case "lost": {
+      return {
+        heading: "You lost",
+        detail: drawn ?? "The round ended without a win.",
+      };
+    }
+    default: {
+      // A book round shows only these four statuses (book-snapshot.ts).
+      return { heading: "Waiting for the round", detail: "" };
+    }
+  }
+};
+
 /** The heading and detail of `view`. */
 export const textOf = (view: GameView): Text => {
   switch (view.kind) {
@@ -214,6 +256,9 @@ export const textOf = (view: GameView): Text => {
     }
     case "steps": {
       return stepsText(view.round, view.pending);
+    }
+    case "book": {
+      return bookText(view.round);
     }
     default: {
       return { heading: "", detail: "" };

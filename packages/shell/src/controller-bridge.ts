@@ -2,12 +2,14 @@
 // The Wrapper mounts the game iframe and gives the bridge the frame's window,
 // the game origin D, a way to listen for `message` events, and the pick use
 // case. The bridge holds no key, no token, and no signing capability: it sends
-// the game only the allow-listed copy of a validated Snapshot and `reject`
+// the game only the allow-listed copy of a validated Snapshot (its `steps` copy,
+// or its `playback` copy, in a presentation the game declared) and `reject`
 // messages, always with `targetOrigin = D`, and hands an accepted pick to the
 // use case. It touches no global: the window and the listener are injected.
 
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
+import { gameCopyOf, type HeldCopy, preCheck } from "./bridge-rules.ts";
 import type { Environment } from "./chain-config.ts";
 import {
   type ActionMessage,
@@ -15,7 +17,6 @@ import {
   type HelloMessage,
   type Pick,
   type RejectReason,
-  toGameSnapshot,
   type WrapperMessage,
 } from "./controller-protocol.ts";
 import { isCompatible, parseGameMessage } from "./game-message.ts";
@@ -75,11 +76,18 @@ export type ControllerBridgeOptions = {
   readonly listen: ListenForMessages;
   readonly pick: PickUseCase;
   /**
-   * Called once when the game's first valid `hello` does not declare `steps`
-   * and all seven statuses: the Wrapper shows the generic "game not compatible"
-   * error. The bridge then sends nothing more.
+   * Called once when the game's first valid `hello` does not declare all seven
+   * statuses, or when a Snapshot the bridge is about to send has a presentation
+   * the game did not declare: the Wrapper shows the generic "game not
+   * compatible" error. The bridge then sends and accepts nothing more.
    */
   readonly onIncompatible: () => void;
+  /**
+   * Called with each Snapshot given (not a stale one): `false` when its
+   * `playback` copy failed closed and it is not forwarded (W-38, W-55), `true`
+   * when its copy was built.
+   */
+  readonly onCopy?: (copied: boolean) => void;
 };
 
 /** Why the bridge refused to mount the game (W-37). */
@@ -100,19 +108,24 @@ export type ControllerMountRefusal =
 export type ControllerBridgeState =
   /** No valid `hello` yet: nothing is sent to the game. */
   | "awaiting-hello"
-  /** The game declared what the Wrapper sends. */
+  /** The game declared all seven statuses. */
   | "ready"
-  /** The game's `hello` did not: nothing is sent, nothing is accepted. */
+  /**
+   * The game's `hello` did not declare all seven statuses, or a Snapshot came
+   * in a presentation it did not declare: nothing is sent, nothing is
+   * accepted.
+   */
   | "incompatible"
   /** `close` was called. */
   | "closed";
 
 export type ControllerBridge = {
   /**
-   * Gives the bridge a Snapshot that passed W-28. It is kept as the latest (a
-   * lower `version` than the latest is ignored, W-29) and its allow-listed copy
-   * is sent once the game is ready; before the `hello`, only the latest is kept
-   * and it is sent when the `hello` arrives.
+   * Gives the bridge a Snapshot that passed W-28. A lower `version` than the
+   * latest given is ignored (W-29). Its allow-listed copy is built at once and
+   * kept as the latest, and sent once the game is ready; before the `hello`,
+   * only the latest is kept and it is sent when the `hello` arrives. A
+   * `playback` copy that fails closed is neither kept nor sent (`onCopy`).
    */
   readonly sendSnapshot: (snapshot: ValidSnapshot) => void;
   readonly state: () => ControllerBridgeState;
@@ -138,20 +151,6 @@ const checkMount = (
   return undefined;
 };
 
-/** The W-23 pre-check against the latest Snapshot sent to the game. */
-const preCheck = (
-  latest: ValidSnapshot | undefined,
-  pick: Pick,
-): RejectReason | undefined => {
-  if (latest?.status !== "active") return "not_active";
-  if (latest.config.kind !== "steps" || latest.step !== pick.step) {
-    return "not_legal";
-  }
-  const step = latest.config.steps.find(s => s.index === pick.step);
-  if (step === undefined || pick.option >= step.optionCount) return "not_legal";
-  return undefined;
-};
-
 /**
  * Mounts the bridge to the game frame, or refuses (W-37). A message is accepted
  * only if its `source` is `frame` and its `origin` is D, and only if it parses
@@ -163,10 +162,14 @@ export const createControllerBridge = (
   const refusal = checkMount(options);
   if (refusal !== undefined) return Object.freeze({ ok: false, refusal });
 
-  const { gameOrigin, frame, pick, onIncompatible } = options;
+  const { gameOrigin, frame, pick, onIncompatible, onCopy } = options;
   let state: ControllerBridgeState = "awaiting-hello";
-  let latest: ValidSnapshot | undefined;
+  // The highest `version` given, whether or not its copy could be built.
+  let latestVersion: number | undefined;
+  // The latest Snapshot whose copy was built, with that copy.
+  let latest: HeldCopy | undefined;
   let sent: ValidSnapshot | undefined;
+  let declared: readonly HelloMessage["presentations"][number][] = [];
   let inFlight = false;
 
   const post = (message: WrapperMessage): void => {
@@ -177,9 +180,20 @@ export const createControllerBridge = (
     }
   };
 
-  const forward = (snapshot: ValidSnapshot): void => {
-    const copy = toGameSnapshot(snapshot);
-    if (copy === undefined) return;
+  const incompatible = (): void => {
+    state = "incompatible";
+    onIncompatible();
+  };
+
+  // Only in a presentation the game declared; otherwise the game is not
+  // compatible, and nothing more is sent or accepted (W-38, RFC-003).
+  const forward = (): void => {
+    if (latest === undefined) return;
+    const { snapshot, copy } = latest;
+    if (!declared.includes(snapshot.presentation)) {
+      incompatible();
+      return;
+    }
     sent = snapshot;
     post(
       Object.freeze({
@@ -219,12 +233,12 @@ export const createControllerBridge = (
   const onHello = (hello: HelloMessage): void => {
     if (state !== "awaiting-hello") return;
     if (!isCompatible(hello)) {
-      state = "incompatible";
-      onIncompatible();
+      incompatible();
       return;
     }
     state = "ready";
-    if (latest !== undefined) forward(latest);
+    declared = hello.presentations;
+    forward();
   };
 
   const onAction = ({ id, args }: ActionMessage): void => {
@@ -259,9 +273,17 @@ export const createControllerBridge = (
   const bridge: ControllerBridge = Object.freeze({
     sendSnapshot: (snapshot: ValidSnapshot): void => {
       if (state === "closed" || state === "incompatible") return;
-      if (latest !== undefined && snapshot.version < latest.version) return;
-      latest = snapshot;
-      if (state === "ready") forward(snapshot);
+      if (latestVersion !== undefined && snapshot.version < latestVersion) {
+        return;
+      }
+      latestVersion = snapshot.version;
+      const copy = gameCopyOf(snapshot);
+      onCopy?.(copy !== undefined);
+      // A copy that failed closed is not forwarded: the game keeps the last
+      // copy it was sent, and the pre-check the last Snapshot sent.
+      if (copy === undefined) return;
+      latest = { snapshot, copy };
+      if (state === "ready") forward();
     },
     state: (): ControllerBridgeState => state,
     close: (): void => {

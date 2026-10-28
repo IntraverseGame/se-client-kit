@@ -18,6 +18,7 @@ import type {
   WrapperMessage,
 } from "@intraverse/se-client-shell/controller";
 
+import { parsePlaybackSnapshot } from "./book-snapshot.ts";
 import { parseGameSnapshot, STATUSES } from "./game-snapshot.ts";
 import { type Fields, hasFields, oneOf, plainFields } from "./plain-data.ts";
 
@@ -34,12 +35,15 @@ const REJECT_REASONS: readonly RejectReason[] = Object.freeze([
 /** 1 to 64 characters from `[A-Za-z0-9_-]`, as the protocol says. */
 const ACTION_ID = /^[A-Za-z0-9_-]{1,64}$/u;
 
-/** The game's `hello`: the `steps` presentation and all seven statuses. */
+/**
+ * The game's `hello`: both presentations (the `steps` rounds and the book
+ * slot's `playback`) and all seven statuses.
+ */
 export const helloMessage = (): HelloMessage =>
   Object.freeze({
     schema: SCHEMA,
     type: "hello",
-    presentations: Object.freeze(["steps"] as const),
+    presentations: Object.freeze(["steps", "playback"] as const),
     statuses: STATUSES,
   });
 
@@ -59,7 +63,9 @@ export const actionMessage = (
 
 const parseSnapshotMessage = (fields: Fields): SnapshotMessage | undefined => {
   if (!hasFields(fields, ["schema", "type", "snapshot"])) return undefined;
-  const snapshot = parseGameSnapshot(fields.get("snapshot"));
+  const data = fields.get("snapshot");
+  // Each parser takes its own presentation only, so at most one succeeds.
+  const snapshot = parseGameSnapshot(data) ?? parsePlaybackSnapshot(data);
   return snapshot === undefined
     ? undefined
     : Object.freeze({ schema: SCHEMA, type: "snapshot", snapshot });

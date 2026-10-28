@@ -1,14 +1,18 @@
 # `@intraverse/se-client-reference-game`
 
-A minimal `steps` game for the SuperEngine Wrapper: it plays Coin Flip and, as
-rows of tiles, any other `steps` round, Cash or Crash included.
+A minimal game for the SuperEngine Wrapper: it plays Coin Flip and, as rows of
+tiles, any other `steps` round, Cash or Crash included, and shows the draw of a
+book round (the `playback` presentation).
 
 **This is not a production game.** It exists for the kit's own tests, as the
 game the end-to-end suite loads, and as a sample for game developers who build a
 game for the Wrapper. It has no artwork, no sound, and no translations. It plays
 whatever `steps` configuration the Snapshot carries: Coin Flip's one step of two
 options as heads or tails, and any other as a row of tiles per step. The
-cash-out is the Wrapper's control, not the game's.
+cash-out is the Wrapper's control, not the game's. On a book round it shows the
+drawn row, its display multiplier, and the round's events as plain text, at once
+and with no animation; it knows nothing of a game's event types, and a book
+round takes no pick.
 
 **Status:** pre-release. It is an application, not an npm package, and is never
 published.
@@ -27,8 +31,8 @@ How a game talks to the Wrapper through the controller protocol
   other package reaches its bundle.
 - Its page carries a Content Security Policy that allows only its own scripts
   and stylesheets.
-- On load it sends `hello`, declaring the `steps` presentation and all seven
-  round statuses.
+- On load it sends `hello`, declaring the `steps` and `playback` presentations
+  and all seven round statuses.
 - It accepts a message only from its parent window, at its parent's origin, and
   only when the message matches the protocol exactly: a `snapshot` with the
   game's copy of the round, or a `reject` for its own pick. Anything else is
@@ -37,10 +41,11 @@ How a game talks to the Wrapper through the controller protocol
   URL, checked against `location.ancestorOrigins` where the browser has it. When
   it cannot tell, it talks to nobody.
 - It renders every status (`idle`, `starting`, `active`, `resolving`, `won`,
-  `lost`, `canceled`, and an expired round), asks for a pick (a side, or a tile
-  of the row being played) with an `action` message, holds the calls until a
-  newer Snapshot or a `reject` answers, and explains each reject reason
-  (`not_legal`, `not_active`, `busy`, `invalid`).
+  `lost`, `canceled`, and an expired round; on a book round `idle`, `starting`,
+  `won`, and `lost`), asks for a pick (a side, or a tile of the row being
+  played) with an `action` message, holds the calls until a newer Snapshot or a
+  `reject` answers, and explains each reject reason (`not_legal`, `not_active`,
+  `busy`, `invalid`).
 - It never goes back to an older Snapshot (a lower `version`).
 
 ## Accessibility

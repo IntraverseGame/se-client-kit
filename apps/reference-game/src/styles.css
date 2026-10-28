@@ -141,6 +141,52 @@ body {
   gap: 0.75rem;
 }
 
+/*
+ * A book round's page: the mode, the drawn row, and its events, shown at once
+ * with no animation. An event's data is text and may be long, so it wraps.
+ */
+.rg-book,
+.rg-book-draw {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rg-book[hidden],
+.rg-book-draw[hidden] {
+  display: none;
+}
+
+.rg-book-mode,
+.rg-events-label {
+  margin: 0;
+  color: var(--rg-muted);
+}
+
+.rg-book-row {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.rg-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rg-event-type {
+  font-weight: 600;
+}
+
+.rg-event-data {
+  font-family: ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
 .rg-button {
   min-width: 2.75rem;
   min-height: 2.75rem;

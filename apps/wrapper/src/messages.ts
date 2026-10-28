@@ -28,6 +28,7 @@ export type MessageKey =
   | "label.betUnavailable"
   | "label.multiplier"
   | "label.payout"
+  | "label.rtp"
   | "label.game"
   | "label.roundId"
   | "label.requestId"
@@ -45,6 +46,7 @@ export type MessageKey =
   | "notice.slow"
   | "notice.chainNotIndependent"
   | "notice.opensInNewTab"
+  | "notice.gameCantShow"
   | "state.configuration"
   | "state.configurationDetail"
   | "state.sessionEnded"
@@ -68,6 +70,7 @@ export type MessageKey =
   | "state.unconfirmedDetail"
   | "state.rejected"
   | "state.rejectedDetail"
+  | "state.sessionChangedDetail"
   | "error.heading"
   | "error.generic"
   | "error.gameIncompatible"
@@ -112,6 +115,7 @@ const EN: Messages = {
   "label.betUnavailable": "above your balance",
   "label.multiplier": "Multiplier",
   "label.payout": "Payout",
+  "label.rtp": "Return to player:",
   "label.game": "Game",
   "label.roundId": "Round ID",
   "label.requestId": "Reference",
@@ -129,6 +133,7 @@ const EN: Messages = {
   "notice.slow": "This is taking longer than expected.",
   "notice.chainNotIndependent": "Chain check not independent (development)",
   "notice.opensInNewTab": "(opens in a new tab)",
+  "notice.gameCantShow": "The game can't show this round.",
   "state.configuration": "The game cannot start",
   "state.configurationDetail":
     "This environment is not configured correctly. Nothing was signed.",
@@ -160,6 +165,8 @@ const EN: Messages = {
     "If it never arrives, the round ends by its time limit.",
   "state.rejected": "The game state could not be read",
   "state.rejectedDetail": "Something went wrong. Nothing was signed.",
+  "state.sessionChangedDetail":
+    "The game changed during this session. Reload to continue.",
   "error.heading": "Something went wrong",
   "error.generic": "The request could not be completed.",
   "error.gameIncompatible": "This game is not compatible with the player.",

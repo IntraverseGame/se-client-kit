@@ -144,6 +144,10 @@ const mountGame = (
     onIncompatible: () => {
       app.gameIncompatible();
     },
+    // A book round's `playback` copy that failed closed (W-38, W-55).
+    onCopy: copied => {
+      app.gameCopied(copied);
+    },
   });
   if (!mounted.ok) {
     frame.remove();
