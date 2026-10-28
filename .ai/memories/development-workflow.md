@@ -198,6 +198,16 @@ Several agents and people work in one clone at once. Rules:
   repository-variable gate. release.yml does not do that flow end to end yet:
   its `version` job (manual dispatch) force-pushes `changeset-release/main`, a
   person opens the PR, and nothing reacts to its merge but the staging deploy.
+  ADR-009 (accepted 2026-10-28, not built, #133): release.yml moves to
+  `changesets/action` on every push to `main` (bump PR `chore: bump versions`,
+  no CI on it; on the merge push it publishes and tags/releases every package)
+  in three jobs (no concurrency group; each push's run is independent): `changesets-mode` (read-only: pending changesets; `release-candidate` = the commit is the bump PR's merge, none pending, and some publishable `<name>@<version>` untagged per `git ls-remote --tags`; else "nothing to release") and two that
+  each run the action in one mode: `version` (no
+  env, contents + pull-requests write, no id-token) and `publish` (`release`,
+  contents write + id-token, no pull-requests; reviewers asked only for a
+  release candidate; re-checks the tags first, else "already released"; recovery after publishing was off or a publish without tags = manual re-run of the bump merge's run within 30 days (re-run keeps the SHA, reads current vars); rule: no bump-PR merge while publishing is off; bump merge detected via the associated PR's head ref + head repo, no second parent since squash merges; `changesets-mode` has contents + pull-requests read) (supersedes ADR-005's job splits);
+  the Wrapper is private: tagged, never on npm; separate jobs attest the Wrapper
+  tar, attach it, and deploy production from the attested tar (`pages-prod` concurrency group on `deploy-prod` only, no reviewer; the redeploy-by-tag dispatch refuses while a release run is queued or running). Tag ruleset widens to `@intraverse/*@*` (#154).
   `wrangler` is a root devDependency at an exact version; `workerd`'s install
   script is denied. Tests: `tools/pages-workflow.test.ts`,
   `tools/pages-headers.test.ts` (reads `apps/wrapper/dist/headers.json`, so

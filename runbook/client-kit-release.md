@@ -81,8 +81,11 @@ org owners apply the settings; ask them for each.
    workflow's `github-release` job tags each release with the job's own token
    (Release, step 3). The `build` job refuses a release whose tag exists, so a
    run never tries to overwrite one. No job that runs repository tooling holds a
-   write token.
-   <!-- TODO(org owners, #154): create the tag ruleset above; needed before the first real publish. -->
+   write token. With ADR-009's release flow (decided, not built) every published
+   package is tagged, so the pattern widens to `@intraverse/*@*` (decided by the
+   human, 2026-10-28), and the `version` and `publish` jobs, which run
+   repository tooling, hold `contents: write`.
+   <!-- TODO(org owners, #154): create the tag ruleset above, on `@intraverse/*@*` (ADR-009); needed before the first real publish. -->
 3. **Secret scanning and push protection** on (they are). Dependabot alerts and
    security updates on. **Private vulnerability reporting** on, so a reporter
    can open a private advisory from the Security tab
@@ -90,6 +93,13 @@ org owners apply the settings; ask them for each.
 4. **Actions settings:** read-only default workflow token; Actions may not
    create or approve pull requests; first-time and outside contributors'
    workflows need approval (GitHub's "Fork pull request workflows" setting).
+   With ADR-009's release flow (decided, not built), `changesets/action` opens
+   the bump pull request, so the repository setting "Allow GitHub Actions to
+   create and approve pull requests" is turned on. The job token can then
+   approve a pull request, but a `github-actions[bot]` approval is not a code
+   owner's approval, so the `main` ruleset still holds; an org owner confirms
+   it.
+   <!-- TODO(org owners, #154): turn on "Allow GitHub Actions to create and approve pull requests" (ADR-009) when the workflow implementation lands, and confirm that a `github-actions[bot]` approval cannot satisfy the `main` ruleset's code-owner review. -->
 5. **The publishing environment `release`** (decided by the org owners,
    2026-10-27): there are two required reviewers, self-review is allowed (a
    reviewer may approve a deployment they started), and deployments are
@@ -175,6 +185,41 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
    reviewers check every copied file against the never-public checklist.
 
 ### Release
+
+**Decided, not built yet**
+([ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
+the human, 2026-10-28): the release workflow moves to `changesets/action` on
+every push to `main`, in three jobs: `changesets-mode` (read-only, no repository
+tooling), which decides what the run does, and two that each run the action in
+one mode. Each push's run is independent (no concurrency group), so a later push
+never cancels the bump merge's run. With pending changesets, `version` (no
+environment, no OIDC token) opens or updates the bump pull request
+(`changeset-release/main`, `chore: bump versions`), which gets no CI; review and
+merge it. When the pushed commit is the merge of the bump pull request, no
+changeset is pending, and a publishable package's `<name>@<version>` has no git
+tag yet, the run is a release candidate and `publish` runs (environment
+`release`, whose reviewers are asked only then, and only while
+`RELEASE_PUBLISH_ENABLED` is `true`): it publishes, creates a tag and a GitHub
+release per published package, and later jobs attest the Wrapper tar, attach it
+to the Wrapper's release, and deploy production. `publish` checks again that the
+versions are still untagged and otherwise ends with "already released". The
+reviewers are never asked for a push whose publishable versions are all tagged
+(or `0.0.0`): it ends with "nothing to release". A release candidate while
+`RELEASE_PUBLISH_ENABLED` is not `true` ends with "publishing was off"; once it
+is `true`, re-run the bump merge's run by hand (a re-run keeps its commit but
+reads the variables as they are then), since later pushes never publish it.
+**Rule** (decided by the human, 2026-10-28): do not merge a bump pull request
+while publishing is off, and re-run a failed release run within 30 days
+(GitHub's re-run limit); after that, a library version already on npm stays
+published but never gets its tag or GitHub release, and a version not yet
+published is skipped; the next bump moves past both. The Wrapper is never
+published to npm; its git tag marks it released. If a run published to npm but
+failed before creating the tags, re-run the bump merge's run by hand within 30
+days: approve it, and the versions already on npm are skipped. A pending release
+approval, or a short "nothing to release" run, blocks a production redeploy by
+tag but not a Pages rollback. The version and publish dispatches below then go
+away. The steps below are the workflow as it is today.
+<!-- TODO(release, #133): rewrite this section (the job table, steps 2, 3, and 5) when the workflow implementation lands (ADR-009). -->
 
 The kit uses changesets. The release workflow (`.github/workflows/release.yml`)
 runs only by hand (`workflow_dispatch`). Every Action is pinned by full commit
@@ -602,8 +647,20 @@ configuration environment with no deploy credential, and second config and
 deploy jobs with the production project names (ADR-008). Nothing reacts to that
 merge today beyond the staging deploy every push gets: the release workflow
 pushes the version branch and publishes only by hand, and the merge itself
-triggers nothing else.
-<!-- TODO(hosting, #133): the production deploy, triggered by the merge of the changesets version pull request into `main`. -->
+triggers nothing else. **Decided, not built yet**
+([ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
+the human, 2026-10-28): the production deploy runs in the release workflow's run
+that publishes the merged bump pull request, after the Wrapper's tar is attested
+and attached to its GitHub release. A job with no secret downloads the tar and
+its `.sha256` by tag, checks the digest, and runs `gh attestation verify`
+([Verify before and after](#verify-before-and-after), step 2, plus
+`--source-digest`); the proxy worker is built with `tsc` at the tag's commit;
+the configuration is built in an environment with no deploy credential; and
+`deploy-prod` (environment `pages-prod`, no required reviewer) refuses any other
+digest. A redeploy or a rollback to an earlier release goes by its tag, through
+the same checks. Nothing reaches production until the publish path is on (#154).
+<!-- TODO(release, #133): the production deploy jobs, their redeploy-by-tag entry point, and the steps above, once the workflow implementation lands (ADR-009). -->
+<!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). The production projects and hostnames, the `pages-prod` and configuration environments and their secrets, the operator and game origins, the RPC providers, and `tipLagMargin`; shared out of band, never written in this repository. -->
 
 **After the first deploy** (the real test: zone-wide settings can still answer
 with a 403 or a challenge page), checks 1 to 4 on the Wrapper's and the

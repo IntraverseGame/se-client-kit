@@ -254,7 +254,20 @@ another origin.
    their own (`pages-prod`) with their configuration built in an environment
    with no deploy credential (ADR-008). Nothing triggers it today: the release
    workflow pushes the version branch and publishes only when started by hand,
-   and the merge runs only the staging deploy.
+   and the merge runs only the staging deploy. **Decided, not built yet**
+   ([ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
+   the human, 2026-10-28): the release workflow runs `changesets/action` on
+   every push to `main`; with pending changesets it opens or updates the bump
+   pull request, and on the push that merges it, it publishes and creates a tag
+   and a GitHub release per published package. In the same run, separate jobs
+   attest the Wrapper tar, attach it and its `.sha256` to the Wrapper's release,
+   and deploy production: a job with no secret downloads the tar by tag, checks
+   its digest, and runs `gh attestation verify`; the proxy worker is built with
+   `tsc` at the tag's commit; the configuration is built in an environment with
+   no deploy credential; and the deploy job (`pages-prod`, no required reviewer)
+   refuses any other digest. Production cannot deploy before the publish path is
+   on (#154).
+   <!-- TODO(release, #133): this step changes when the workflow implementation lands (ADR-009): the production deploy jobs and the release flow they follow. -->
    - A build job with a read-only token and no secret builds the Wrapper
      artifact twice (the release dry run) and requires one digest, makes the
      reference game's artifact from the dry run's two builds and requires one

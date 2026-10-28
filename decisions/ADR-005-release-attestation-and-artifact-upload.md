@@ -1,6 +1,12 @@
 # ADR-005 — Two GitHub Actions for the release: the Wrapper's build-provenance attestation and the dry run's artifact
 
-- Status: accepted
+- Status: accepted; partly superseded by
+  [ADR-009](./ADR-009-production-pages-deploy-trigger-and-source.md) (the manual
+  dispatch; the `version`/`version-push` and `build`/`publish` splits; no
+  repository tooling in a token job; the publish-only job's npm CLI as a job
+  boundary; `github-release` creating the tag and release; and, in decision 2,
+  the publishing job's `contents: read` and the `attest` job's "dispatched from
+  `main`" condition. Decisions 1, 3, and 4, and the rest of 2 and 5, stand)
 - Date: 2026-10-17 (proposed); 2026-10-28 (accepted by the human, with the
   recommended answers to the three open questions)
 - Relates to: [ADR-001](./ADR-001-toolchain-and-signing.md) (decision 3, GitHub
@@ -415,7 +421,10 @@ Action is added; and the publish-only job runs the npm CLI of the pinned Node
 [supply-chain spec](../specs/client-kit/supply-chain.md), checked by
 `tools/actions-allow-list.test.ts`.
 
-<!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). Where the released Wrapper is deployed from in production. Reason: ADR-008 decides the push to Cloudflare Pages for staging only; production is to come. -->
+Pointer (2026-10-28): production deploys the attested release tar from the
+Wrapper's GitHub release, decided in
+[ADR-009](./ADR-009-production-pages-deploy-trigger-and-source.md), which also
+supersedes this ADR's job splits and manual dispatch.
 
 Decided by the human on 2026-10-17, and folded into the decision above:
 

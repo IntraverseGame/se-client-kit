@@ -16,13 +16,14 @@ structure, a protocol, supply-chain tooling, the agent workflow.
 
 ## Index
 
-| ADR                                                             | Status   | Decision                                                                                                                          |
-| --------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| [ADR-001](./ADR-001-toolchain-and-signing.md)                   | accepted | toolchain; hand-written EIP-712 over `@noble` (decision 9 superseded by ADR-008)                                                  |
-| [ADR-002](./ADR-002-spec-driven-development.md)                 | accepted | Spec-Driven Development; agent-agnostic knowledge layer                                                                           |
-| [ADR-003](./ADR-003-agent-workflow-and-approvals.md)            | accepted | agent workflow, approvals, adapters, and the pr-shepherd                                                                          |
-| [ADR-004](./ADR-004-openapi-typescript-6.md)                    | accepted | `openapi-typescript` 6.7.6, without a TypeScript compiler-API dependency                                                          |
-| [ADR-005](./ADR-005-release-attestation-and-artifact-upload.md) | accepted | `actions/attest-build-provenance` and `actions/upload-artifact` in the release                                                    |
-| [ADR-006](./ADR-006-the-operator-protocol-se-operator-1.md)     | accepted | the operator protocol `se.operator/1`: separate, operator first, lobby and deposit as navigations                                 |
-| [ADR-007](./ADR-007-no-public-suffix-list.md)                   | accepted | W-37's registrable-domain rule by the last two labels, without a public suffix list                                               |
-| [ADR-008](./ADR-008-pages-deploy-with-wrangler.md)              | accepted | kit CI deploys the Wrapper and the verifier to Cloudflare Pages from `main`, with a pinned `wrangler` and a same-origin API proxy |
+| ADR                                                                | Status   | Decision                                                                                                                              |
+| ------------------------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| [ADR-001](./ADR-001-toolchain-and-signing.md)                      | accepted | toolchain; hand-written EIP-712 over `@noble` (decision 9 superseded by ADR-008)                                                      |
+| [ADR-002](./ADR-002-spec-driven-development.md)                    | accepted | Spec-Driven Development; agent-agnostic knowledge layer                                                                               |
+| [ADR-003](./ADR-003-agent-workflow-and-approvals.md)               | accepted | agent workflow, approvals, adapters, and the pr-shepherd                                                                              |
+| [ADR-004](./ADR-004-openapi-typescript-6.md)                       | accepted | `openapi-typescript` 6.7.6, without a TypeScript compiler-API dependency                                                              |
+| [ADR-005](./ADR-005-release-attestation-and-artifact-upload.md)    | accepted | `actions/attest-build-provenance` and `actions/upload-artifact` in the release (job splits and manual dispatch superseded by ADR-009) |
+| [ADR-006](./ADR-006-the-operator-protocol-se-operator-1.md)        | accepted | the operator protocol `se.operator/1`: separate, operator first, lobby and deposit as navigations                                     |
+| [ADR-007](./ADR-007-no-public-suffix-list.md)                      | accepted | W-37's registrable-domain rule by the last two labels, without a public suffix list                                                   |
+| [ADR-008](./ADR-008-pages-deploy-with-wrangler.md)                 | accepted | kit CI deploys the Wrapper and the verifier to Cloudflare Pages from `main`, with a pinned `wrangler` and a same-origin API proxy     |
+| [ADR-009](./ADR-009-production-pages-deploy-trigger-and-source.md) | accepted | releases through `changesets/action` on every push to `main`; production deploys the attested release tar (not built yet, #133)       |
