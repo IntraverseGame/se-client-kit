@@ -16,6 +16,7 @@ import {
   readApiBase,
   readEndpoint,
   readOrigins,
+  readOwnApiBase,
   readPerSource,
   readUrl,
   shareProvider,
@@ -43,7 +44,7 @@ export type VerifyConfig = {
   readonly sources: Readonly<Record<string, SourceConfig>>;
   /** The page's own base, `<origin>/verify`. */
   readonly verifyBaseUrl: string;
-  /** The verify API base, ending with `/verify/v1`. */
+  /** The verify API base on the page's own origin, ending `/verify/v1`. */
   readonly verifyApiBaseUrl: string;
 };
 
@@ -230,9 +231,10 @@ export const validateEnvironmentConfig = (
   if (verifyBaseUrl === undefined) {
     issues.push({ code: "invalid-verify-base", field: "verifyBaseUrl" });
   }
-  const verifyApiBaseUrl = readApiBase(
+  const verifyApiBaseUrl = readOwnApiBase(
     own(fields, "verifyApiBaseUrl"),
     "/verify/v1",
+    ownOrigin,
   );
   if (verifyApiBaseUrl === undefined) {
     issues.push({ code: "invalid-verify-api-base", field: "verifyApiBaseUrl" });

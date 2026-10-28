@@ -12,6 +12,7 @@ import { boot, type BootResult } from "./boot.ts";
 import {
   endpoints,
   environmentDocument,
+  LOCAL_ORIGIN,
   localDocument,
   SE_ORIGIN,
   SOURCE,
@@ -50,7 +51,7 @@ const scriptedFetch = (answers: Answer[]) => {
   return { fetch, calls };
 };
 
-const booted = (answers: Answer[], online = true) => {
+const booted = (answers: Answer[], online = true, origin = SE_ORIGIN) => {
   document.body.replaceChildren();
   const host = document.createElement("div");
   document.body.append(host);
@@ -69,7 +70,7 @@ const booted = (answers: Answer[], online = true) => {
     window: {
       addEventListener: () => {},
       removeEventListener: () => {},
-      origin: SE_ORIGIN,
+      origin,
     },
     connectivity: {
       onLine: () => isOnline,
@@ -148,7 +149,11 @@ describe("boot", () => {
   it.each(["local", "preview"])(
     "starts %s with minRpcQuorum 1 and the degraded indicator",
     async environment => {
-      const b = booted([ok(localDocument({ environment }))]);
+      const b = booted(
+        [ok(localDocument({ environment }))],
+        true,
+        LOCAL_ORIGIN,
+      );
       expect(await kindOf(b.result)).toBe("configured");
       expect(b.host.textContent).toContain(m["notice.chainNotIndependent"]);
     },

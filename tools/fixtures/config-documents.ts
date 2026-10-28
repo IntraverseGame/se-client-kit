@@ -6,6 +6,9 @@
 
 export const OWN_ORIGIN = "https://se.example";
 
+/** The own origin of the local documents, a loopback host. */
+export const LOCAL_ORIGIN = "http://localhost:8080";
+
 const SOURCE = "ethereum:block";
 
 const endpoints = (count: number): { provider: string; url: string }[] =>
@@ -42,8 +45,18 @@ export const configDocument = (
   return document;
 };
 
-/** Named documents, valid and not, that both validators must judge alike. */
-export const CONFIG_DOCUMENTS: readonly (readonly [string, unknown])[] = [
+/** One shared case: a named document, for a page at `ownOrigin`. */
+export type ConfigCase = {
+  readonly name: string;
+  readonly document: unknown;
+  readonly ownOrigin: string;
+};
+
+/**
+ * Named documents, valid and not, each for a page at its own origin when one is
+ * given, else at `OWN_ORIGIN`.
+ */
+const DOCUMENTS: readonly (readonly [string, unknown, string?])[] = [
   ["valid production", configDocument()],
   [
     "valid local, one loopback node, quorum 1",
@@ -51,12 +64,13 @@ export const CONFIG_DOCUMENTS: readonly (readonly [string, unknown])[] = [
       environment: "local",
       playApiBaseUrl: "http://localhost:8080/play/v1",
       verifyBaseUrl: "http://localhost:8080/verify",
-      verifyApiBaseUrl: "http://localhost:8080/verify/v1",
+      verifyApiBaseUrl: `${LOCAL_ORIGIN}/verify/v1`,
       rpcEndpoints: {
         [SOURCE]: [{ provider: "anvil", url: "http://127.0.0.1:8545" }],
       },
       minRpcQuorum: 1,
     }),
+    LOCAL_ORIGIN,
   ],
   ["valid, minRpcQuorum absent", configDocument({ minRpcQuorum: undefined })],
   ["valid, no operator origins", configDocument({ operatorOrigins: [] })],
@@ -122,6 +136,21 @@ export const CONFIG_DOCUMENTS: readonly (readonly [string, unknown])[] = [
     "verifyApiBaseUrl over http on a public host",
     configDocument({ verifyApiBaseUrl: "http://se.example/verify/v1" }),
   ],
+  [
+    "verifyApiBaseUrl on another host",
+    configDocument({
+      verifyApiBaseUrl: "https://verify-api.example/verify/v1",
+    }),
+  ],
+  [
+    "verifyApiBaseUrl on another scheme",
+    configDocument({ verifyApiBaseUrl: `${LOCAL_ORIGIN}/verify/v1` }),
+    "https://localhost:8080",
+  ],
+  [
+    "verifyApiBaseUrl on another port",
+    configDocument({ verifyApiBaseUrl: "https://se.example:8443/verify/v1" }),
+  ],
   ["no game origins", configDocument({ gameOrigins: [] })],
   [
     "a game origin with a path",
@@ -133,3 +162,8 @@ export const CONFIG_DOCUMENTS: readonly (readonly [string, unknown])[] = [
     configDocument({ operatorOrigins: ["https://game.example"] }),
   ],
 ];
+
+/** The shared cases that both validators must judge alike. */
+export const CONFIG_DOCUMENTS: readonly ConfigCase[] = DOCUMENTS.map(
+  ([name, document, ownOrigin = OWN_ORIGIN]) => ({ name, document, ownOrigin }),
+);

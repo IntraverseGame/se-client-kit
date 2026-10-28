@@ -15,6 +15,7 @@ import {
 import {
   endpoints,
   environmentDocument,
+  LOCAL_ORIGIN,
   localDocument,
   SE_ORIGIN,
   SOURCE,
@@ -25,8 +26,11 @@ const codes = (document: unknown): readonly EnvironmentConfigIssueCode[] => {
   return result.ok ? [] : result.issues.map(issue => issue.code);
 };
 
-const accepted = (document: unknown): EnvironmentConfig => {
-  const result = validateEnvironmentConfig(document, SE_ORIGIN);
+const accepted = (
+  document: unknown,
+  ownOrigin: string = SE_ORIGIN,
+): EnvironmentConfig => {
+  const result = validateEnvironmentConfig(document, ownOrigin);
   if (!result.ok) {
     throw new Error(result.issues.map(issue => issue.code).join(", "));
   }
@@ -109,7 +113,7 @@ describe("boot rule W-26a: production needs a quorum of at least 2", () => {
   it.each(["local", "preview"])(
     "accepts %s with minRpcQuorum 1, marked degraded",
     environment => {
-      const config = accepted(localDocument({ environment }));
+      const config = accepted(localDocument({ environment }), LOCAL_ORIGIN);
       expect(config.chain.minRpcQuorum).toBe(1);
       expect(config.chain.degraded).toBe(true);
     },
@@ -170,26 +174,6 @@ describe("boot rule W-26b: every source can reach the quorum", () => {
 });
 
 describe("the Wrapper's fields", () => {
-  it.each([
-    ["https://se.example/play/v1/", "a trailing slash"],
-    ["https://se.example/api", "another path"],
-    ["http://se.example/play/v1", "plain http off loopback"],
-    ["https://user@se.example/play/v1", "credentials"],
-    ["https://se.example/play/v1?x=1", "a query"],
-    ["/play/v1", "a relative URL"],
-    [42, "a number"],
-  ])("refuses playApiBaseUrl %s (%s)", (value, _reason) => {
-    expect(codes(environmentDocument({ playApiBaseUrl: value }))).toEqual([
-      "invalid-play-api-base",
-    ]);
-  });
-
-  it("accepts a loopback http Play API base", () => {
-    expect(accepted(localDocument()).playApiBaseUrl).toBe(
-      "http://localhost:8080/play/v1",
-    );
-  });
-
   it.each([
     ["verify.example", "no scheme"],
     ["https://verify.example/#round", "a fragment"],

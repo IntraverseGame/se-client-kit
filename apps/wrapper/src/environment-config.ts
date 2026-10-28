@@ -45,7 +45,10 @@ export type EnvironmentConfigIssueCode =
   | "invalid-play-api-base"
   /** `verifyBaseUrl` is not an absolute URL. */
   | "invalid-verify-base"
-  /** `verifyApiBaseUrl` is not an absolute URL ending with `/verify/v1`. */
+  /**
+   * `verifyApiBaseUrl` is not an absolute URL ending with `/verify/v1` on the
+   * Wrapper's own origin (V-3a).
+   */
   | "invalid-verify-api-base"
   /** `gameOrigins` is not a non-empty list of distinct origins. */
   | "invalid-game-origins"
@@ -138,16 +141,21 @@ const readPlayApiBase = (value: unknown): string | undefined => {
 };
 
 /**
- * The verify API base (verify-page.md V-3, D-4): `playApiBaseUrl`'s rule with
- * the `/verify/v1` suffix. Required, never derived or defaulted. The Wrapper
- * validates it for the verify page, which reads the same document, and does not
- * use it.
+ * The verify API base (verify-page.md V-3, V-3a, D-4, D-10): `playApiBaseUrl`'s
+ * rule with the `/verify/v1` suffix, on `ownOrigin` only (the verify API sends
+ * no CORS headers, so it is read same-origin). Required, never derived or
+ * defaulted. The Wrapper validates it for the verify page, which reads the same
+ * document, and does not use it.
  */
-const readVerifyApiBase = (value: unknown): string | undefined => {
+const readVerifyApiBase = (
+  value: unknown,
+  ownOrigin: string,
+): string | undefined => {
   const url = readUrl(value);
   return url !== undefined &&
     typeof value === "string" &&
     url.href === value &&
+    url.origin === ownOrigin &&
     url.pathname.endsWith(VERIFY_API_SUFFIX)
     ? value
     : undefined;
@@ -226,7 +234,10 @@ export const validateEnvironmentConfig = (
   if (verifyBaseUrl === undefined) {
     issues.push({ code: "invalid-verify-base", field: "verifyBaseUrl" });
   }
-  const verifyApiBaseUrl = readVerifyApiBase(own(fields, "verifyApiBaseUrl"));
+  const verifyApiBaseUrl = readVerifyApiBase(
+    own(fields, "verifyApiBaseUrl"),
+    ownOrigin,
+  );
   if (verifyApiBaseUrl === undefined) {
     issues.push({
       code: "invalid-verify-api-base",

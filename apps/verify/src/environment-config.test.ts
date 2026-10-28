@@ -17,21 +17,27 @@ import {
   SOURCE,
 } from "./fixtures/environment.ts";
 
-const accepted = (document: unknown): VerifyConfig => {
-  const result = validateEnvironmentConfig(document, OWN_ORIGIN);
+const accepted = (
+  document: unknown,
+  ownOrigin: string = OWN_ORIGIN,
+): VerifyConfig => {
+  const result = validateEnvironmentConfig(document, ownOrigin);
   if (!result.ok) {
     throw new TypeError(`refused: ${JSON.stringify(result.issues)}`);
   }
   return result.config;
 };
 
-const issues = (document: unknown): readonly ConfigIssue[] => {
-  const result = validateEnvironmentConfig(document, OWN_ORIGIN);
+const issues = (
+  document: unknown,
+  ownOrigin: string = OWN_ORIGIN,
+): readonly ConfigIssue[] => {
+  const result = validateEnvironmentConfig(document, ownOrigin);
   return result.ok ? [] : result.issues;
 };
 
-const codes = (document: unknown): string[] =>
-  issues(document).map(issue => issue.code);
+const codes = (document: unknown, ownOrigin: string = OWN_ORIGIN): string[] =>
+  issues(document, ownOrigin).map(issue => issue.code);
 
 describe("a valid document", () => {
   it("is accepted, typed, and frozen", () => {
@@ -77,6 +83,7 @@ describe("a valid document", () => {
         },
         operatorOrigins: [],
       }),
+      "http://localhost:8080",
     );
     expect(config.environment).toBe("local");
     expect(config.minRpcQuorum).toBe(1);
@@ -234,6 +241,32 @@ describe("the verify API base (D-4)", () => {
     expect(codes(environmentDocument({ verifyApiBaseUrl: value }))).toEqual([
       "invalid-verify-api-base",
     ]);
+  });
+
+  it.each([
+    ["https://se.example/verify/v1", OWN_ORIGIN],
+    ["https://se.example/api/verify/v1", OWN_ORIGIN],
+    ["http://localhost:8080/verify/v1", "http://localhost:8080"],
+  ])("accepts %s on the page's own origin %s (V-3a)", (value, ownOrigin) => {
+    expect(
+      accepted(environmentDocument({ verifyApiBaseUrl: value }), ownOrigin)
+        .verifyApiBaseUrl,
+    ).toBe(value);
+  });
+
+  it.each([
+    ["another host", "https://verify-api.example/verify/v1", OWN_ORIGIN],
+    ["a subdomain", "https://api.se.example/verify/v1", OWN_ORIGIN],
+    [
+      "another scheme",
+      "http://localhost:8080/verify/v1",
+      "https://localhost:8080",
+    ],
+    ["another port", "https://se.example:8443/verify/v1", OWN_ORIGIN],
+  ])("refuses %s than the page's own origin (V-3a)", (_, value, ownOrigin) => {
+    expect(
+      issues(environmentDocument({ verifyApiBaseUrl: value }), ownOrigin),
+    ).toEqual([{ code: "invalid-verify-api-base", field: "verifyApiBaseUrl" }]);
   });
 });
 

@@ -411,10 +411,11 @@ would need a looser policy:
   `contentSecurityPolicyFor` computes the filled policy for a validated
   document; `verifyContentSecurityPolicyFor` does the same for the verify page's
   (its `connect-src` takes the origin of `verifyApiBaseUrl`, which the validated
-  document keeps, and the RPC endpoints' origins). `Permissions-Policy` turns
-  off camera, microphone, geolocation, payment, USB, MIDI, display capture,
-  credential `get`, and clipboard read (clipboard write is not a recognised
-  feature and is not listed); this list is proposed for review;
+  document keeps and which validation holds to the page's own origin,
+  verify-page.md V-3a, and the RPC endpoints' origins). `Permissions-Policy`
+  turns off camera, microphone, geolocation, payment, USB, MIDI, display
+  capture, credential `get`, and clipboard read (clipboard write is not a
+  recognised feature and is not listed); this list is proposed for review;
 - the verify page (`apps/verify`, built on its own) is copied into the output
   under `verify/` with the same rules: its own `<meta>` policy (the one above
   with `worker-src 'none'`), SRI on every script and stylesheet, which must lie
@@ -493,7 +494,13 @@ W-37), so the reference game's page is served at the root.
   its `frame-src`) holds this origin; the infrastructure owner sets it.
 
 <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). Production hosting: its Pages projects and hostnames, the `pages-prod` environment with its configuration in a separate environment that holds no deploy credential, and the real operator origins behind `frame-ancestors` (staging holds a placeholder). Hostnames are shared out of band, never written in this repository. Reason: ADR-008 deploys staging only; production is to come. -->
-<!-- TODO(infrastructure owner, #137): deferred to #137 (owner: infrastructure owner). The RPC provider list with its CORS behavior and `connect-src` entries (see [wrapper.md](./wrapper.md#configuration)). Reason: the list is not published yet, and staging has no browser-reachable RPC. -->
+
+**The RPC providers** ([wrapper.md](./wrapper.md#configuration)): staging has no
+browser-reachable RPC (decided for now, 2026-10-28), so its configuration names
+one placeholder endpoint and a staging round stops at "could not verify the
+chain" (W-26a).
+
+<!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). Production's RPC provider list (two independent providers per entropy source), with its CORS behavior and `connect-src` entries. Reason: production is to come; the list is shared out of band, never written in this repository. -->
 
 ### Never in the public repository
 

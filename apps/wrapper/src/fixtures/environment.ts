@@ -7,6 +7,9 @@ export const SOURCE = "base";
 /** The Wrapper's own origin, the SE origin, the documents are checked for. */
 export const SE_ORIGIN = "https://se.example";
 
+/** The Wrapper's own origin for `localDocument`, a loopback host. */
+export const LOCAL_ORIGIN = "http://localhost:8080";
+
 /** `count` endpoints of `SOURCE`, each with its own provider. */
 export const endpoints = (
   count: number,
@@ -39,7 +42,10 @@ export const environmentDocument = (
   ...overrides,
 });
 
-/** A local document with one node (`minRpcQuorum` 1). */
+/**
+ * A local document with one node (`minRpcQuorum` 1), for a Wrapper served at
+ * `LOCAL_ORIGIN` (its verify API base is on that origin, V-3a).
+ */
 export const localDocument = (
   overrides: Readonly<Record<string, unknown>> = {},
 ): Record<string, unknown> =>
@@ -47,7 +53,7 @@ export const localDocument = (
     environment: "local",
     playApiBaseUrl: "http://localhost:8080/play/v1",
     verifyBaseUrl: "http://localhost:8081/",
-    verifyApiBaseUrl: "http://localhost:8080/verify/v1",
+    verifyApiBaseUrl: `${LOCAL_ORIGIN}/verify/v1`,
     minRpcQuorum: 1,
     rpcEndpoints: {
       [SOURCE]: [{ provider: "anvil", url: "http://localhost:8545" }],

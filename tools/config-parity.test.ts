@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { CONFIG_DOCUMENTS, OWN_ORIGIN } from "./fixtures/config-documents.ts";
+import { CONFIG_DOCUMENTS } from "./fixtures/config-documents.ts";
 
 type Issue = { readonly code: string; readonly field: string };
 type Result =
@@ -40,23 +40,26 @@ const issuesOf = (result: Result): string[] =>
 describe("one configuration schema (V-3)", () => {
   it("has documents both valid and not", () => {
     const verdicts = CONFIG_DOCUMENTS.map(
-      ([, document]) =>
-        wrapper.validateEnvironmentConfig(document, OWN_ORIGIN).ok,
+      ({ document, ownOrigin }) =>
+        wrapper.validateEnvironmentConfig(document, ownOrigin).ok,
     );
     expect(verdicts).toContain(true);
     expect(verdicts).toContain(false);
   });
 
   it.each(CONFIG_DOCUMENTS)(
-    "%s: the same verdict and issues",
-    (_name, document) => {
+    "$name: the same verdict and issues",
+    ({ name, document, ownOrigin }) => {
       const fromWrapper = wrapper.validateEnvironmentConfig(
         document,
-        OWN_ORIGIN,
+        ownOrigin,
       );
-      const fromVerify = verify.validateEnvironmentConfig(document, OWN_ORIGIN);
+      const fromVerify = verify.validateEnvironmentConfig(document, ownOrigin);
       expect(fromVerify.ok).toBe(fromWrapper.ok);
       expect(issuesOf(fromVerify)).toEqual(issuesOf(fromWrapper));
+      // A document named valid is accepted, so the shared set cannot drift
+      // into refusing what it means to accept.
+      expect(fromWrapper.ok).toBe(name.startsWith("valid"));
     },
   );
 });

@@ -5,7 +5,8 @@
   builds it; amended 2026-10-27 by the human's deploy policy: staging deploys on
   every push to `main` with no gate, and production deploys when the changesets
   version pull request is merged; amended 2026-10-27: a third staging project,
-  `se-games-stage`, serves the reference game)
+  `se-games-stage`, serves the reference game; follow-up references updated
+  2026-10-28: staging's RPC and lag margin stated, production's moved to #133)
 - Deciders: the TPO (Pages hosting, the push model, the kit-owned proxy, the
   verify page on its own site), the human maintainer (the deploy tool, the
   secrets, the proxy hardening, acceptance), the infrastructure owner (the
@@ -268,7 +269,8 @@ Derived, never configured: `playApiBaseUrl` is the Wrapper's origin plus
 `/verify/v1`; `verifyBaseUrl` is the verifier's origin plus `/verify` (both
 documents), so the Wrapper's verify link opens the verifier's site. The
 `tipLagMargin` of staging is the infrastructure owner's value in
-`PAGES_CHAIN_PINS` (#135).
+`PAGES_CHAIN_PINS`: 2 blocks, the preview value (the backend, 2026-10-28;
+production's is #133's).
 
 ### 6. The headers: a `_headers` file per site
 
@@ -315,7 +317,8 @@ workflow's.
 ### 8. Staging runs as `preview`, with a quorum of one
 
 Staging moves no real money (the human, 2026-10-27). Until staging has a
-browser-reachable RPC (#137), its configuration is `environment: "preview"` with
+browser-reachable RPC (none yet, decided for now on 2026-10-28; production's
+providers are #133's), its configuration is `environment: "preview"` with
 `minRpcQuorum` 1, accepted by the TPO (2026-10-27): W-26a's local or preview
 exception applies (the degraded indicator, `tipCheck: "degraded"`), and with no
 reachable endpoint the tip check fails, as W-26a says. Production must be
@@ -371,8 +374,9 @@ Wrapper's boot rule already enforces (W-26a). Recorded in
 - **The release workflow is unchanged.** A released Wrapper keeps its tag,
   digest, and (ADR-005) attestation; Pages serves `main`.
 - **Follow-ups**: the Actions allow-list of ADR-005 lists `download-artifact`
-  when it is built; the first-deploy checks of the runbook; staging's RPC (#137)
-  and lag margin (#135).
+  when it is built; the first-deploy checks of the runbook. Staging's RPC and
+  lag margin are settled for now (2026-10-28: no browser-reachable RPC; a lag
+  margin of 2 blocks); production's are #133's.
 
 ## Risks accepted
 

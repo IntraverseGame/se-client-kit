@@ -211,7 +211,7 @@ describe("the Pages sites' configuration documents", () => {
   });
 
   it("accepts the staging placeholder https://invalid.example", () => {
-    // Staging has no browser-reachable RPC yet (#137): one placeholder
+    // Staging has no browser-reachable RPC yet (specs/wrapper.md): one placeholder
     // endpoint, a quorum of one (preview), and placeholder origin lists.
     const placeholder = "https://invalid.example";
     expect(
