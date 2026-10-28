@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-28 (#135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
+last-verified: 2026-10-28 (staging's entropy chain moves to Somnia's public testnet, 50312, tipLagMargin 120, the switch procedure; #135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
 ---
 
 # Development workflow
@@ -185,10 +185,13 @@ Several agents and people work in one clone at once. Rules:
   (set), compatibility date 2024-11-11 or later (confirmed). Since 2026-10-28
   the infrastructure owner manages the three projects' settings as code: ask
   them for a change (never the dashboard; their apply removes it), and redeploy
-  when they ask. Staging has no browser-reachable RPC (decided for now; a
-  round stops at "could not verify the chain") and its `tipLagMargin` is 2,
-  the preview value (the backend, 2026-10-28); production's providers and lag
-  margin are #133's. Production
+  when they ask. Staging's entropy chain is Somnia's public testnet (chain id
+  50312, source key still `anvil`), one provider read directly from the
+  browser, `preview` with `minRpcQuorum` 1 (degraded indicator), and
+  `tipLagMargin` 120 (the backend, 2026-10-28); the URL is configuration,
+  never in the repo. A chain switch: set the three RPC/pin secrets right after
+  the backend's switch, redeploy `main`, check `environment-config.json`
+  (runbook). Production's providers and lag margin are #133's. Production
   (decided, not built, #133; ADR-008 amendment): deploys when the changesets
   version pull request is merged into `main`, to `pages-prod` with config built
   in an environment without the token, second config and deploy jobs; no

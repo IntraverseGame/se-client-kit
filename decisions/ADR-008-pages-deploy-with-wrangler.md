@@ -6,7 +6,9 @@
   every push to `main` with no gate, and production deploys when the changesets
   version pull request is merged; amended 2026-10-27: a third staging project,
   `se-games-stage`, serves the reference game; follow-up references updated
-  2026-10-28: staging's RPC and lag margin stated, production's moved to #133)
+  2026-10-28: staging's RPC and lag margin stated, production's moved to #133;
+  updated again 2026-10-28: staging's entropy chain moves to Somnia's public
+  testnet, read through its public RPC, with a lag margin of 120 blocks)
 - Deciders: the TPO (Pages hosting, the push model, the kit-owned proxy, the
   verify page on its own site), the human maintainer (the deploy tool, the
   secrets, the proxy hardening, acceptance), the infrastructure owner (the
@@ -269,8 +271,8 @@ Derived, never configured: `playApiBaseUrl` is the Wrapper's origin plus
 `/verify/v1`; `verifyBaseUrl` is the verifier's origin plus `/verify` (both
 documents), so the Wrapper's verify link opens the verifier's site. The
 `tipLagMargin` of staging is the infrastructure owner's value in
-`PAGES_CHAIN_PINS`: 2 blocks, the preview value (the backend, 2026-10-28;
-production's is #133's).
+`PAGES_CHAIN_PINS`: 120 blocks on Somnia's public testnet, chain id 50312 (the
+backend, 2026-10-28; production's is #133's).
 
 ### 6. The headers: a `_headers` file per site
 
@@ -316,15 +318,14 @@ workflow's.
 
 ### 8. Staging runs as `preview`, with a quorum of one
 
-Staging moves no real money (the human, 2026-10-27). Until staging has a
-browser-reachable RPC (none yet, decided for now on 2026-10-28; production's
-providers are #133's), its configuration is `environment: "preview"` with
-`minRpcQuorum` 1, accepted by the TPO (2026-10-27): W-26a's local or preview
-exception applies (the degraded indicator, `tipCheck: "degraded"`), and with no
-reachable endpoint the tip check fails, as W-26a says. Production must be
-`environment: "production"` with `minRpcQuorum` of at least 2, which the
-Wrapper's boot rule already enforces (W-26a). Recorded in
-[specs/wrapper.md](../specs/wrapper.md#configuration).
+Staging moves no real money (the human, 2026-10-27). While staging reads one RPC
+provider (Somnia's public testnet RPC since 2026-10-28; production's providers
+are #133's), its configuration is `environment: "preview"` with `minRpcQuorum`
+1, accepted by the TPO (2026-10-27): W-26a's local or preview exception applies
+(the degraded indicator, `tipCheck: "degraded"`), and the tip check passes with
+that one endpoint. Production must be `environment: "production"` with
+`minRpcQuorum` of at least 2, which the Wrapper's boot rule already enforces
+(W-26a). Recorded in [specs/wrapper.md](../specs/wrapper.md#configuration).
 
 ## Alternatives considered
 
@@ -375,8 +376,8 @@ Wrapper's boot rule already enforces (W-26a). Recorded in
   digest, and (ADR-005) attestation; Pages serves `main`.
 - **Follow-ups**: the Actions allow-list of ADR-005 lists `download-artifact`
   when it is built; the first-deploy checks of the runbook. Staging's RPC and
-  lag margin are settled for now (2026-10-28: no browser-reachable RPC; a lag
-  margin of 2 blocks); production's are #133's.
+  lag margin are settled (2026-10-28: Somnia's public testnet RPC, one provider;
+  a lag margin of 120 blocks); production's are #133's.
 
 ## Risks accepted
 
@@ -398,8 +399,8 @@ Wrapper's boot rule already enforces (W-26a). Recorded in
   separate configuration environment (decision 2, Risks accepted).
 - One environment, `pages-stage`, for staging's config and deploy jobs (the
   human, 2026-10-27; Risks accepted).
-- Staging runs as `preview` with `minRpcQuorum` 1 until it has a
-  browser-reachable RPC (decision 8).
+- Staging runs as `preview` with `minRpcQuorum` 1 while it reads one RPC
+  provider (decision 8).
 - Staging deploys on every push to `main`, with no gate; a rollback is held by
   disabling the workflow (the human, 2026-10-27; decision 2, amendment note).
 - Production deploys when the changesets version pull request is merged (the

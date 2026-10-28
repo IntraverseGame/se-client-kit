@@ -399,8 +399,9 @@ Part of the [Wrapper spec](../wrapper.md), section
   signs `PlayerCancel` only if `T_0` is settled, and otherwise signs nothing
   (W-25, W-26). The environment configuration carries an `environment` field
   (`production`, `preview`, or `local`). A local or preview environment with one
-  chain endpoint (the local anvil node) may set `minRpcQuorum` to 1, and then
-  the shell MUST show a non-dismissable "chain check not independent
+  chain endpoint (the local anvil node, or staging's one public testnet RPC,
+  [wrapper.md](../wrapper.md#configuration)) may set `minRpcQuorum` to 1, and
+  then the shell MUST show a non-dismissable "chain check not independent
   (development)" indicator and MUST record `tipCheck: "degraded"` with the
   round's evidence (W-27). **Boot rule:** the Wrapper MUST refuse to start if
   `environment` is `production` and `minRpcQuorum` is below 2 (it shows the
@@ -412,7 +413,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   RPC endpoints for their chain id and their final block, and fails closed on
   any disagreement. In production these are public RPC endpoints from
   independent providers. The local or preview exception of W-26a (one endpoint,
-  the local node, with `minRpcQuorum` = 1, the degraded indicator, and
+  such as the local node, with `minRpcQuorum` = 1, the degraded indicator, and
   `tipCheck: "degraded"`) applies to everything below: "public" and the
   independence rule describe the production requirement.
   - **Definitions.** `h_top` is the maximum final block over all the endpoints
@@ -457,11 +458,14 @@ Part of the [Wrapper spec](../wrapper.md), section
     below `minRpcQuorum`, so a quorum can never be unreachable by configuration,
     and an entropy source without its pinned `entropyChainId`.
   - **The lag margin per environment** (the `tipLagMargin` configuration value,
-    in blocks per entropy source; the backend, 2026-10-28). The local chain uses
-    0 and preview uses 2 (anvil). Staging keeps the preview value, **2**: its
-    entropy source is a development chain that no browser can reach, so no lag
-    has been measured there. Production's value is derived from the measured RPC
-    lag, owned by the backend.
+    in blocks per entropy source; the backend, 2026-10-28). The value is set per
+    configuration document, not per `environment` value. The local chain uses 0
+    and the backend's preview stack (anvil) uses 2. Staging, also `preview` but
+    on Somnia's public testnet (chain id 50312), uses **120** (the backend's
+    value: about 10 s at about 12 blocks a second, the backend, 2026-10-28):
+    config games bind at the tip, so a margin of 2 is far too small there.
+    Production's value is derived from the measured RPC lag, owned by the
+    backend.
     <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner; the measurement: backend). Production's `tipLagMargin` per entropy source, from the backend's measurement of the RPC lag; a configuration value, set in production's configuration document. Reason: not measured yet; production is to come. -->
 - **W-27.** The shell SHOULD keep each round's evidence (its `CreateRoundAuth`,
   the tip-check answers, and every signed action) in memory for the page's life
