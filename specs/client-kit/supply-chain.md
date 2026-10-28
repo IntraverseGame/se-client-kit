@@ -89,6 +89,40 @@ the attack surface a player cannot see. The rules:
 
 - **Provenance.** Packages are published from GitHub Actions with npm
   provenance, so each version links to the commit and workflow that built it.
+  **Decided, not built yet**
+  ([ADR-009](../../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
+  the human, 2026-10-28): the release workflow moves to `changesets/action` on
+  every push to `main` (a new Action, pinned by SHA on the allow-list), in three
+  jobs, `changesets-mode` and two that each run the action in one mode, with no
+  concurrency group (each push's run is independent and checks out its own
+  commit). The read-only `changesets-mode`, with no repository tooling, decides
+  from the pending changesets and, when the pushed commit is the merge of the
+  bump pull request (`changeset-release/main`) and none is pending, whether a
+  publishable package's `<name>@<version>` has no git tag yet, checked with
+  `git ls-remote --tags`, no registry and no token (a tag is permanent under the
+  tag ruleset): `version` (no environment, `contents: write` and
+  `pull-requests: write`, no `id-token`) opens or updates the bump pull request,
+  and `publish` (environment `release`, `contents: write` and `id-token: write`,
+  no `pull-requests`) publishes only on a release candidate (no changeset
+  pending and an untagged version), after checking again that the versions are
+  still untagged, so its reviewers are asked only for a real release, never for
+  a push whose publishable versions are all tagged (or `0.0.0`); otherwise the
+  run ends with "nothing to release" (or "publishing was off" while
+  `RELEASE_PUBLISH_ENABLED` is not `true`; the recovery is a manual re-run of
+  the bump merge's run within 30 days, which keeps its commit and reads the
+  current variables). The Wrapper is private: it is tagged and released on
+  GitHub, never published to npm, so its git tag is what marks it released.
+  `version`'s `contents: write` could also create tags or a fake Wrapper
+  release; it has no `id-token`, so it cannot attest, and production verifies
+  the tar with `gh attestation verify`. Both run repository tooling with a write
+  token, which supersedes the rule below and the `version`/`version-push` and
+  `build`/`publish` splits; the attestation, the digest checks,
+  `RELEASE_PUBLISH_ENABLED`, and trusted publishing stay. Every published
+  package gets a tag and a GitHub release; the tag ruleset widens to
+  `@intraverse/*@*` (#154). The description below is the workflow as it is
+  today.
+  <!-- TODO(release, #133): rewrite this Provenance description when the workflow implementation lands (ADR-009). -->
+
   The release workflow (`.github/workflows/release.yml`) runs by hand only and
   starts with `permissions: {}`; each job asks for its own. **No job that holds
   a write token or an OIDC token runs repository tooling** (decided: stripping
@@ -139,12 +173,13 @@ the attack surface a player cannot see. The rules:
       step), and creates the tag (on the dispatched commit) and the GitHub
       release with the two files attached. The GitHub release asset is the
       released Wrapper's durable home (ADR-005, accepted 2026-10-28; production
-      confirms it under #133). A tag ruleset on the release tag pattern
-      (`@intraverse/se-client-wrapper@*`; decided by the human, 2026-10-28)
-      blocks updating and deleting those tags for everyone but the org owners
-      and allows creating them, so this job can tag a release and a released tag
-      never moves; `build` refuses a release whose tag exists, so a run never
-      tries to overwrite one.
+      deploys this asset, verified by digest and `gh attestation verify`:
+      ADR-009, decided by the human 2026-10-28, not built yet). A tag ruleset on
+      the release tag pattern (`@intraverse/se-client-wrapper@*`; decided by the
+      human, 2026-10-28) blocks updating and deleting those tags for everyone
+      but the org owners and allows creating them, so this job can tag a release
+      and a released tag never moves; `build` refuses a release whose tag
+      exists, so a run never tries to overwrite one.
 
   **Precondition** (ADR-005, decision 2): every npm trusted publisher of the
   kit's packages, and any other consumer that trusts this repository's OIDC

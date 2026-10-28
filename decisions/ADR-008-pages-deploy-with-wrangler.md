@@ -1,6 +1,7 @@
 # ADR-008 — Kit CI deploys the Wrapper and the verifier to Cloudflare Pages, with a same-origin API proxy
 
-- Status: accepted
+- Status: accepted; the production trigger and source specified by
+  [ADR-009](./ADR-009-production-pages-deploy-trigger-and-source.md)
 - Date: 2026-10-27 (proposed and accepted the same day, in the pull request that
   builds it; amended 2026-10-27 by the human's deploy policy: staging deploys on
   every push to `main` with no gate, and production deploys when the changesets
