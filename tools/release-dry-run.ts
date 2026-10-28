@@ -25,13 +25,10 @@
 //   7. writes the artifact, its `.sha256`, the tarballs, and a report to
 //      `--out`, and prints the digests and the sizes against the budget.
 //
-// Usage: pnpm release:dry-run (output in a new temporary directory), or
-//        pnpm exec tsx tools/release-dry-run.ts [--out <directory>] [--keep]
-// (not `pnpm release:dry-run -- ...`: wireit passes extra arguments to a
-// `shell: true` spawn unescaped). The offline installs use the store of the
-// repository's own install (`pnpm store path`, as `--store-dir`).
-// `--out` must be outside the repository and empty (default: a new temporary
-// directory); `--keep` keeps the scratch copies.
+// Usage: pnpm release:dry-run, or pnpm exec tsx tools/release-dry-run.ts
+// [--out <empty directory outside the repository; default: a new temporary
+// one>] [--keep (the scratch copies)]; not `pnpm release:dry-run -- ...` (wireit
+// passes extra arguments unescaped). Installs use `pnpm store path`'s store.
 
 import {
   appendFileSync,
@@ -295,6 +292,8 @@ if (stepSummary !== undefined && existsSync(stepSummary)) {
 }
 const stepOutput = process.env["GITHUB_OUTPUT"];
 if (stepOutput !== undefined && existsSync(stepOutput)) {
-  appendFileSync(stepOutput, `wrapper-digest=${first.wrapper.digest}\n`);
+  const { digest, fileName } = first.wrapper;
+  appendFileSync(stepOutput, `wrapper-digest=${digest}\n`);
+  appendFileSync(stepOutput, `wrapper-file-name=${fileName}\n`);
 }
 if (problems.length > 0) process.exitCode = 1;

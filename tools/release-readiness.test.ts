@@ -23,7 +23,7 @@ const manifests = (
 const ready = (overrides: Partial<Readiness> = {}): Readiness => ({
   changesetFiles: ["README.md", "config.json"],
   manifests: manifests(),
-  publish: true,
+  wrapperVersion: "1.0.0",
   expectedDigest: DIGEST,
   actualDigest: DIGEST,
   ...overrides,
@@ -83,6 +83,15 @@ describe("findReadinessProblems", () => {
     ]);
   });
 
+  it("refuses a Wrapper at 0.0.0 or without a version", () => {
+    expect(findReadinessProblems(ready({ wrapperVersion: "0.0.0" }))).toEqual([
+      "@intraverse/se-client-wrapper is at 0.0.0",
+    ]);
+    expect(findReadinessProblems(ready({ wrapperVersion: undefined }))).toEqual(
+      ["@intraverse/se-client-wrapper has no version"],
+    );
+  });
+
   it("refuses a digest mismatch", () => {
     const other = `sha256:${"b".repeat(64)}`;
     expect(findReadinessProblems(ready({ actualDigest: other }))).toEqual([
@@ -90,20 +99,10 @@ describe("findReadinessProblems", () => {
     ]);
   });
 
-  it("refuses a missing digest when publishing for real", () => {
+  it("refuses a missing digest", () => {
     expect(findReadinessProblems(ready({ expectedDigest: undefined }))).toEqual(
-      [
-        "--expect-wrapper-digest is required with --publish (the dry run's Wrapper digest)",
-      ],
+      ["--expect-wrapper-digest is required (the dry run's Wrapper digest)"],
     );
-  });
-
-  it("accepts a missing digest for a publish dry run", () => {
-    expect(
-      findReadinessProblems(
-        ready({ expectedDigest: undefined, publish: false }),
-      ),
-    ).toEqual([]);
   });
 });
 

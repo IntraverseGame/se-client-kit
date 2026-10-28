@@ -550,23 +550,24 @@ holds no hostname and no credential.
 ### Artifact form: a commit pin now
 
 The proposal is **a commit pin now**, because the suite is not a released
-artifact and the release artifact is not decided:
+artifact and no release exists yet to pull a tar from:
 
 - What the kit releases
   ([ADR-001](../../decisions/ADR-001-toolchain-and-signing.md) decision 9) is
-  the Wrapper bundle, as a tar identified by digest and, if
-  [ADR-005](../../decisions/ADR-005-release-attestation-and-artifact-upload.md)
-  is accepted, attested and uploaded. That tar holds the Wrapper's `dist` only.
-  The suite (`e2e/`), the reference game, and the vendored vectors are not in
-  it, and the private `e2e` package is never published.
-- ADR-005 is **proposed**, not accepted. The preview mode cannot depend on a
-  decision that is open.
+  the Wrapper bundle, as a tar identified by digest, attested, and attached to a
+  GitHub release
+  ([ADR-005](../../decisions/ADR-005-release-attestation-and-artifact-upload.md),
+  accepted 2026-10-28). That tar holds the Wrapper's `dist` only. The suite
+  (`e2e/`), the reference game, and the vendored vectors are not in it, and the
+  private `e2e` package is never published.
+- ADR-005 was proposed when this RFC was written; it is **accepted**
+  (2026-10-28).
 - The commit pin needs nothing new in the kit; it is what the spec already
   describes.
 
-When ADR-005 is accepted and a release exists, two improvements become possible
-and are **not** decided here: the stack could serve the Wrapper from the
-released tar pulled by digest (so the stack runs the released bytes, and the
+Now that ADR-005 is accepted, once a release exists two improvements become
+possible and are **not** decided here: the stack could serve the Wrapper from
+the released tar pulled by digest (so the stack runs the released bytes, and the
 suite's build-identity check compares against the tar), while the suite stays
 commit-pinned to the tag's commit; and a released, versioned form of the suite
 itself would need its own ADR (a new published artifact is a supply-chain
@@ -784,13 +785,13 @@ Confirmed by the backend on 2026-10-26 (answers, not decisions of the human):
 None of these is a decision for the human in this RFC; each is a backend answer,
 a number to measure, or a fact known later.
 
-| ID  | Item                                                                                                 | State                                                                                                                                                                                                               |
-| --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Q11 | Release artifacts after ADR-005.                                                                     | Out of this RFC. When ADR-005 is accepted: the stack could serve the Wrapper tar by digest with the suite commit-pinned (the recommended direction), or the suite could also be released (its own ADR), or neither. |
-| Q12 | The numbers: per-test timeout, run timeout, hook timeout, funding margin, browser environment names. | Set from the first real run (test 2 minutes, run 15 minutes, hook 15 s, step 30 s; the browser names held); the funding margin is the backend's to set in the hook.                                                 |
-| Q13 | The commit to pin.                                                                                   | Known only after the implementation merges (see Pin). The kit hands the backend the merge commit and the runbook's **Changes** table.                                                                               |
-| Q14 | Stack declares Cash or Crash `[3,3,4]` ([OQ-3](../../specs/wrapper.md#decided-questions)).           | **Confirmed by the backend, 2026-10-26**: the stack declares Cash or Crash `[3,3,4]`.                                                                                                                               |
-| Q15 | Whether 40 rounds suffice at the stack's odds.                                                       | **Confirmed by the backend, 2026-10-26**: 40 rounds suffice. A run that does not see the outcome still fails, which is the intended signal.                                                                         |
+| ID  | Item                                                                                                 | State                                                                                                                                                                                                                                   |
+| --- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q11 | Release artifacts after ADR-005.                                                                     | Out of this RFC. With ADR-005 accepted, once a release exists: the stack could serve the Wrapper tar by digest with the suite commit-pinned (the recommended direction), or the suite could also be released (its own ADR), or neither. |
+| Q12 | The numbers: per-test timeout, run timeout, hook timeout, funding margin, browser environment names. | Set from the first real run (test 2 minutes, run 15 minutes, hook 15 s, step 30 s; the browser names held); the funding margin is the backend's to set in the hook.                                                                     |
+| Q13 | The commit to pin.                                                                                   | Known only after the implementation merges (see Pin). The kit hands the backend the merge commit and the runbook's **Changes** table.                                                                                                   |
+| Q14 | Stack declares Cash or Crash `[3,3,4]` ([OQ-3](../../specs/wrapper.md#decided-questions)).           | **Confirmed by the backend, 2026-10-26**: the stack declares Cash or Crash `[3,3,4]`.                                                                                                                                                   |
+| Q15 | Whether 40 rounds suffice at the stack's odds.                                                       | **Confirmed by the backend, 2026-10-26**: 40 rounds suffice. A run that does not see the outcome still fails, which is the intended signal.                                                                                             |
 
 Hand-off to the implementer waits for the human's approval of the RFC as a
 whole.

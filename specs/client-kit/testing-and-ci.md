@@ -30,8 +30,9 @@ dry run: changesets applied on a scratch copy, the five tarballs packed and
 checked and imported as a consumer would, the Wrapper artifact built twice with
 one digest, and held to the size budget; no token, no network). The release
 itself is a separate workflow, `release` (changesets, provenance, run by hand
-from the default branch only, its `version` job pushing the version pull
-request's branch, its publish job in the protected `release` environment;
+from the default branch only, its `version` and `version-push` jobs making the
+version pull request's branch, its `build`, `publish` (in the protected
+`release` environment), `attest`, and `github-release` jobs publishing;
 [release runbook](../../runbook/client-kit-release.md#release)).
 
 Today `contracts` runs the test-only-entry import check, the hash check against
@@ -57,11 +58,14 @@ harness's own tests, a smoke run on the Wrapper's release bundle, the browser
 rows of the Wrapper's test plan that run on the fake Play API, and a smoke run
 on the reference game's build; the others are pending
 ([The e2e harness](#the-e2e-harness)). The workflows hold no secret, run with
-`permissions: {}` at the top and `contents: read` per job (the release
-workflow's `publish` job adds `id-token: write`, for provenance and trusted
-publishing, and its `version` job has `contents: write` and
-`pull-requests: read` instead, to push the version branch), and pin every Action
-by full commit SHA.
+`permissions: {}` at the top and `contents: read` per job (in the release
+workflow, `publish` adds `id-token: write`, for provenance and trusted
+publishing; `attest` adds `id-token: write` and `attestations: write`; `version`
+adds `pull-requests: read`; `version-push` and `github-release` have
+`contents: write` instead; none of `publish`, `attest`, `version-push`, and
+`github-release` runs repository tooling), and pin every Action by full commit
+SHA, on the Actions allow-list ([supply chain](./supply-chain.md), Pinned
+toolchain; `tools/actions-allow-list.test.ts`).
 
 **The size budget** of the Wrapper's release output (`tools/size-budget.ts`,
 unit-tested) is checked by `pnpm check:size-budget` (part of `pnpm check`, and

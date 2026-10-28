@@ -105,6 +105,18 @@ until `pnpm clean:cache`.
   five package builds so that never overlaps; if it fails this way, check that
   its `dependencies` still name every `./packages/<name>:build`
   (`tools/wireit-edges.test.ts` holds it to that).
+- **A Dependabot pull request that bumps an Action fails
+  `tools/actions-allow-list.test.ts`.** The Actions allow-list (the table in
+  [the supply-chain spec](../../specs/client-kit/supply-chain.md), Pinned
+  toolchain) still names the old version and SHA. In the same pull request,
+  update that Action's row: the version, and the full commit SHA, re-verified
+  against the upstream repository (the release's tag resolves to that commit,
+  and the release is at least seven days old). For
+  `actions/attest-build-provenance`, also re-read the `action.yml` at the new
+  SHA and record the inner `actions/attest` pin it carries under the table
+  ([ADR-005](../../decisions/ADR-005-release-attestation-and-artifact-upload.md),
+  Supply-chain risk). Never add a new Action this way: that needs a recorded
+  decision.
 
 ## Escalation
 

@@ -1,33 +1,41 @@
-// CLI: the publish step of the release workflow (.github/workflows/release.yml,
-// job `publish`; runbook/client-kit-release.md). It runs in the checkout of the
-// commit being released, after the dry run passed on that commit:
+// CLI: the build step of the release workflow's publish path
+// (.github/workflows/release.yml, job `build`; runbook/client-kit-release.md,
+// Release step 3). It runs in the checkout of the commit being released, after
+// the dry run passed on that commit, in a job that holds no OIDC token and no
+// write token, and it publishes nothing:
 //
 //   1. builds everything without the task cache, packs the five libraries,
 //      and runs the same tarball and consumer checks as the dry run;
 //   2. refuses to go on (tools/release-readiness.ts) while a changeset is
 //      pending, while a library is still `private` or at 0.0.0, while the
-//      Wrapper build is not the one the dry run reported
-//      (`--expect-wrapper-digest`, required with `--publish`), or while the
-//      Wrapper or the verify page in it is over its size budget (tools/size-budget.ts);
-//   3. publishes **the checked tarballs themselves** (`pnpm publish <tarball>`,
-//      with provenance, public access, and lifecycle scripts off), in
-//      dependency order. A version the registry already has is skipped only
-//      when the registry holds exactly these bytes; other bytes fail.
+//      Wrapper is at 0.0.0, while the Wrapper build is not the one the dry run
+//      reported
+//      (`--expect-wrapper-digest`, required), or while the Wrapper or the
+//      verify page in it is over its size budget (tools/size-budget.ts);
+//   3. asks the registry about each version: a version the registry already
+//      has is skipped only when the registry holds exactly these bytes; other
+//      bytes fail;
+//   4. writes the publish plan: one `<sha256>  <tarball>` line per tarball to
+//      publish, in dependency order (`sha256sum --check` format), to
+//      `<out>/publish-plan.sha256` and, in Actions, to the step output
+//      `publish-plan`.
 //
-// Without `--publish`, every `pnpm publish` runs with `--dry-run`. The
-// credential is not handled here: npm trusted publishing exchanges the job's
-// OIDC token itself, and nothing is read from or written to a file.
-//
-// This script still runs repository tooling in the job that holds
-// `id-token: write`. Before any real publish, the job is split in two (a build
-// job without `id-token`, and a publish-only job that verifies the digests and
-// publishes the downloaded tarballs): runbook, Bootstrap step 7.
+// The five tarballs stay in `<out>/packages/`; the workflow uploads them, and
+// the `publish` job (which holds `id-token: write` and runs no repository
+// tooling) checks each against the plan's SHA-256 and runs
+// `npm publish <tarball>` on it, in the plan's order.
 //
 // Usage: tsx tools/release-publish.ts --out <directory>
-//          [--expect-wrapper-digest sha256:<hex>] [--publish]
+//          --expect-wrapper-digest sha256:<hex>
 
-import { readdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { randomUUID } from "node:crypto";
+import {
+  appendFileSync,
+  existsSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 import { loadVectors } from "./build-output-vectors.ts";
@@ -58,7 +66,6 @@ const { values } = parseArgs({
   options: {
     out: { type: "string" },
     "expect-wrapper-digest": { type: "string" },
-    publish: { type: "boolean", default: false },
   },
 });
 if (values.out === undefined) throw new Error("--out is required.");
@@ -84,7 +91,9 @@ const problems = [
         readJson(join(root, "packages", name, "package.json")),
       ]),
     ),
-    publish: values.publish,
+    wrapperVersion: readJson(join(root, "apps", "wrapper", "package.json"))[
+      "version"
+    ],
     expectedDigest: values["expect-wrapper-digest"],
     actualDigest: wrapper.digest,
   }),
@@ -130,8 +139,9 @@ if (registryProblems.length > 0) {
   fail(registryProblems, "The registry disagrees; nothing was published.");
 }
 
-// One at a time, in dependency order (PUBLISHED_PACKAGES), so a dependency is
-// on the registry before the package that needs it.
+// In dependency order (PUBLISHED_PACKAGES), so the publish job puts a
+// dependency on the registry before the package that needs it.
+const plan: string[] = [];
 for (const [index, library] of packed.entries()) {
   const label = `${packageNameOf(library.name)}@${library.version}`;
   const decision = decisions[index];
@@ -142,19 +152,20 @@ for (const [index, library] of packed.entries()) {
     console.log(`${label} is already published with these bytes; skipped`);
     continue;
   }
-  const args = [
-    "publish",
-    library.tarball,
-    "--provenance",
-    "--access",
-    "public",
-    "--ignore-scripts",
-    "--no-git-checks",
-    ...(values.publish ? [] : ["--dry-run"]),
-  ];
-  console.log(`pnpm ${args.join(" ")}`);
-  // The publish needs the job's OIDC variables, so it gets the real
-  // environment, not the scratch one.
-  console.log(run("pnpm", args, { cwd: root, env: process.env }));
+  console.log(`${label} is to be published`);
+  plan.push(`${library.sha256}  ${basename(library.tarball)}`);
 }
+const planText = plan.map(line => `${line}\n`).join("");
+writeFileSync(join(out, "publish-plan.sha256"), planText);
 console.log(`Wrapper ${wrapper.fileName}: ${wrapper.digest}`);
+console.log(
+  `Publish plan:\n${planText === "" ? "(nothing to publish)\n" : planText}`,
+);
+const stepOutput = process.env["GITHUB_OUTPUT"];
+if (stepOutput !== undefined && existsSync(stepOutput)) {
+  const delimiter = `publish-plan-${randomUUID()}`;
+  appendFileSync(
+    stepOutput,
+    `publish-plan<<${delimiter}\n${planText}${delimiter}\n`,
+  );
+}

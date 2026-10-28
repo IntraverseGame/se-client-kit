@@ -9,8 +9,8 @@ export type Readiness = {
   readonly changesetFiles: readonly string[];
   /** Each published library's `package.json`, by directory name. */
   readonly manifests: ReadonlyMap<string, Readonly<Record<string, unknown>>>;
-  /** Whether this run publishes for real (`--publish`). */
-  readonly publish: boolean;
+  /** The Wrapper's `package.json` version (`apps/wrapper`), if it has one. */
+  readonly wrapperVersion: unknown;
   /** The dry run's Wrapper digest (`--expect-wrapper-digest`), if given. */
   readonly expectedDigest: string | undefined;
   /** The digest of the Wrapper this run built. */
@@ -20,12 +20,14 @@ export type Readiness = {
 /**
  * The reasons not to publish; empty means ready. It refuses a pending changeset
  * (the version pull request is not merged), a library that is missing,
- * `private`, or at 0.0.0, and, when publishing for real, a missing expected
- * digest or one that differs from this run's build (fail closed).
+ * `private`, or at 0.0.0, a Wrapper without a version or at 0.0.0 (its release
+ * would be tagged `@intraverse/se-client-wrapper@0.0.0`), and a missing
+ * expected digest or one that differs from this run's build (fail closed).
  *
- * This is the **only** guard against publishing a `private` package: the kit
- * publishes tarballs (`pnpm publish <tarball>`), and pnpm 12.10.1 does not
- * refuse a private package's tarball (its `--dry-run` goes through).
+ * This is the guard the kit relies on against publishing a `private` package:
+ * the kit publishes tarballs (`npm publish <tarball>` in the release workflow's
+ * `publish` job), and pnpm 12.10.1, which the dry run's publish checks use,
+ * does not refuse a private package's tarball (its `--dry-run` goes through).
  */
 export const findReadinessProblems = (readiness: Readiness): string[] => {
   const problems: string[] = [];
@@ -52,12 +54,15 @@ export const findReadinessProblems = (readiness: Readiness): string[] => {
       problems.push(`${packageNameOf(name)} is at 0.0.0`);
     }
   }
+  if (typeof readiness.wrapperVersion !== "string") {
+    problems.push("@intraverse/se-client-wrapper has no version");
+  } else if (readiness.wrapperVersion === "0.0.0") {
+    problems.push("@intraverse/se-client-wrapper is at 0.0.0");
+  }
   if (readiness.expectedDigest === undefined) {
-    if (readiness.publish) {
-      problems.push(
-        "--expect-wrapper-digest is required with --publish (the dry run's Wrapper digest)",
-      );
-    }
+    problems.push(
+      "--expect-wrapper-digest is required (the dry run's Wrapper digest)",
+    );
   } else if (readiness.expectedDigest !== readiness.actualDigest) {
     problems.push(
       `the Wrapper build (${readiness.actualDigest}) is not the dry run's (${readiness.expectedDigest})`,
