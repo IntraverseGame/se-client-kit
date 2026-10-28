@@ -7,6 +7,12 @@ packages:
 # A version must have been published for at least 7 days (in minutes).
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true
+# A one-time waiver of that window, scoped to one exact version: wireit 0.15.0
+# (published 2026-10-24) carries the fix for google/wireit#1536 (in
+# google/wireit#1542), and the human waived the wait on 2026-10-28 (#143).
+# Remove this entry after 2026-10-31, when 0.15.0 is seven days old.
+minimumReleaseAgeExclude:
+  - wireit@0.15.0
 # Dependency lifecycle scripts are off. A package may run one only if it is
 # listed here with `true`; no entry is `true`, on purpose.
 allowBuilds:
@@ -22,6 +28,12 @@ allowBuilds:
 strictDepBuilds: true
 # Refuse a version whose trust evidence is weaker than an earlier one's.
 trustPolicy: no-downgrade
+# One exception, scoped to one exact version: wireit 0.15.0 needs chokidar
+# ^4.0.3. chokidar 4.0.2 and 4.0.3 were published without provenance by the same
+# maintainer who published 4.0.0 and 4.0.1 with it. The human accepted this on
+# 2026-10-28 (#143). Remove this entry when wireit moves off chokidar 4.
+trustPolicyExclude:
+  - chokidar@4.0.3
 # Dependencies are saved at an exact version.
 savePrefix: ""
 # openapi-typescript 6.7.6 (the Play API document's generator) declares undici

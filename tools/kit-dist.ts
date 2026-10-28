@@ -8,16 +8,16 @@
 // (the e2e suite serves the apps' `dist/` by path, not through `exports`).
 //
 // Why the build's success is not enough: with `WIREIT_CACHE=github` (which CI
-// no longer uses, #53), wireit 0.14.13 deletes a script's output before it
-// downloads the cached tarball, and when the download fails it logs a
-// `cache-info` line (which the default CI logger drops) and then reports the
-// script as restored from the cache, with no output at all
-// (`GitHubActionsCacheHit.apply`; google/wireit#1536, fixed in 0.15.0). It also
-// records the script as fresh, so later runs in the same checkout skip it until
-// `pnpm clean:cache`. A missing wireit dependency fails the same way. The tool
-// that reads the missing file then fails with an error that names no cause (one
-// TS2307 per import, a failed import). This check names the missing files
-// instead, and fails before the tool runs.
+// no longer uses, #53; it stays off on wireit 0.15.0, #143), wireit 0.14.13
+// deleted a script's output before it downloaded the cached tarball, and when
+// the download failed it logged a `cache-info` line (which the default CI logger
+// drops) and then reported the script as restored from the cache, with no
+// output at all (`GitHubActionsCacheHit.apply`; google/wireit#1536, fixed in
+// 0.15.0). It also recorded the script as fresh, so later runs in the same
+// checkout skipped it until `pnpm clean:cache`. A missing wireit dependency
+// still fails the same way. The tool that reads the missing file then fails with
+// an error that names no cause (one TS2307 per import, a failed import). This
+// check names the missing files instead, and fails before the tool runs.
 //
 // A kit dependency is one named with a `workspace:` specifier. The consumer's
 // `dependencies`, `devDependencies`, and `peerDependencies` count (its tests
