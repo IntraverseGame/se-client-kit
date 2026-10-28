@@ -1,6 +1,6 @@
 ---
 description: TypeScript, error, money, secret, logging, and naming conventions. Read before writing code.
-last-verified: 2026-10-16 (toolchain pull request; the TypeScript rules are accepted in ADR-001 and enforced by oxlint, and stylelint for CSS)
+last-verified: 2026-10-28 (#143: the two exact-version supply-chain exceptions; 2026-10-16, toolchain pull request; the TypeScript rules are accepted in ADR-001 and enforced by oxlint, and stylelint for CSS)
 ---
 
 # Conventions
@@ -94,7 +94,10 @@ This note records the patterns behind them.
   recorded decision; lifecycle scripts are off by default; versions are pinned
   by the lockfile, the `packageManager` field, and `.node-version`; dependencies
   are saved at an exact version and must be at least seven days old
-  (`minimumReleaseAge`). The allow-list is `tools/allowed-dependencies.json`,
+  (`minimumReleaseAge`). Two exact-version exceptions exist for #143:
+  `wireit@0.15.0` (release age; remove after 2026-10-31) and `chokidar@4.0.3`
+  (trust policy); see
+  [supply chain](../../specs/client-kit/supply-chain.md). The allow-list is `tools/allowed-dependencies.json`,
   kept equal to the ADR-001 table by a test and enforced by `pnpm check:deps`,
   which also requires exact registry versions (or `workspace:`) and covers
   overrides and catalogs in `package.json` and `pnpm-workspace.yaml`.

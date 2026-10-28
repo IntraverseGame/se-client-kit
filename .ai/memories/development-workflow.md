@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-27 (#3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
+last-verified: 2026-10-28 (#143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
 ---
 
 # Development workflow
@@ -253,8 +253,10 @@ Several agents and people work in one clone at once. Rules:
   If a result looks stale, `pnpm clean:cache`.
 - **CI cache.** None for tasks: every workflow sets `WIREIT_CACHE=none` (#53:
   wireit 0.14.13's GitHub Actions cache reports a failed tarball download as a
-  restore with no output; google/wireit#1536, fixed in 0.15.0). Turning it back
-  on is a maintainers' decision, after a wireit upgrade. The local composite
+  restore with no output; google/wireit#1536, fixed in 0.15.0). The kit is on
+  wireit 0.15.0 and the cache stays off (#143, recorded in
+  `specs/client-kit/testing-and-ci.md`): every CI run is a clean build, with no
+  cache helper step and no cache credentials. The local composite
   action `.github/actions/setup` caches only the pnpm store (not in a release
   job), runs no wireit cache helper, and installs with
   `--frozen-lockfile --ignore-scripts`, so no lifecycle script runs in CI, a
@@ -272,7 +274,7 @@ Several agents and people work in one clone at once. Rules:
   build output and build state); keep that when you touch its `files`. Use
   `src/**` (not `src/**/*.ts`) so JSON, CSS and assets count.
 - **A cache restore can leave no output (#53, logged in CI on #102; CI now runs
-  with `WIREIT_CACHE=none`).** wireit 0.14.13 deletes a
+  with `WIREIT_CACHE=none`; the kit is on 0.15.0 since #143).** wireit 0.14.13 deletes a
   script's output, then downloads its GitHub Actions cache tarball; when the
   download fails it logs a `cache-info` line and still reports "Restored from
   cache", with no `dist/` (google/wireit#1536, fixed in 0.15.0). wireit also
@@ -304,7 +306,10 @@ Several agents and people work in one clone at once. Rules:
   the built `dist/`; `tools/package-files.test.ts` checks the manifests.
 - **Supply chain.** `pnpm-workspace.yaml` sets `minimumReleaseAge` (7 days),
   `allowBuilds` with no `true` entry (no lifecycle script runs), `trustPolicy: no-downgrade`, and
-  exact saves. Dependabot's cooldown (npm and github-actions) matches the age. Every Action is pinned by
+  exact saves. Two exact-version exceptions exist for #143: `wireit@0.15.0`
+  (release age; remove after 2026-10-31) and `chokidar@4.0.3` (trust policy);
+  see [supply chain](../../specs/client-kit/supply-chain.md).
+  Dependabot's cooldown (npm and github-actions) matches the age. Every Action is pinned by
   full commit SHA with a version comment; resolve a SHA with `gh api`, never by
   hand.
 - Generated code: never edit; regenerate and commit.

@@ -17,11 +17,14 @@ downloads the cached tarball; when the download fails, it logs one `cache-info`
 line (`Failed to download GitHub Actions cache tarball: ...`) and then reports
 the script as restored from the cache, with no output at all, and records it as
 fresh. Every script after it that reads its `dist/` then fails. It was logged in
-CI on #102 and reported upstream (google/wireit#1536, fixed in wireit 0.15.0).
-The maintainers' fix: CI runs with no task cache (`WIREIT_CACHE=none` in every
-workflow, and no wireit cache helper in `.github/actions/setup`), so every job
-builds what it reads. The guard before each script that reads a kit `dist/`
-stays, and now points at a missing wireit dependency first.
+CI on #102 and reported upstream (google/wireit#1536, fixed in wireit 0.15.0 by
+google/wireit#1542; the kit is on 0.15.0 since #143). The maintainers' fix: CI
+runs with no task cache (`WIREIT_CACHE=none` in every workflow, and no wireit
+cache helper in `.github/actions/setup`), so every job builds what it reads. It
+stays off after the upgrade (#143): every CI run is a clean build, with no
+third-party cache helper and no cache credentials. The guard before each script
+that reads a kit `dist/` stays, and now points at a missing wireit dependency
+first.
 
 ## Prerequisites
 
@@ -106,11 +109,13 @@ until `pnpm clean:cache`.
 ## Escalation
 
 Open an issue with the run ID, the job, the script, and the log lines from step
-1 (never a signed cache URL or a token from a log). Turning wireit's GitHub
-Actions cache back on in CI is a decision for the maintainers, after an upgrade
-to a wireit with the fix (0.15.0 or later, once `minimumReleaseAge` allows it);
-a dependency change needs a recorded decision first
-([ADR-001](../../decisions/ADR-001-toolchain-and-signing.md)).
+1 (never a signed cache URL or a token from a log). The kit is on a wireit with
+the fix (0.15.0), and CI keeps its task cache off by decision (#143). Turning
+wireit's GitHub Actions cache back on in CI is a new decision for the
+maintainers: it reverses #143's and must update
+[testing and CI](../../specs/client-kit/testing-and-ci.md) with its reason, and
+bringing back a cache helper Action is a supply-chain decision too
+([ADR-005](../../decisions/ADR-005-release-attestation-and-artifact-upload.md)).
 
 ## References
 

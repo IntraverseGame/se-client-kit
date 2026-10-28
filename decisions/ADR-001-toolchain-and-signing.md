@@ -9,7 +9,8 @@
   pull request: Vite and stylelint cover both apps; amended 2026-10-27 by
   ADR-008: `wrangler` added to the dependency table, and decision 9 superseded;
   amended 2026-10-27 (#3): the `intraverse` npm organization claimed, trusted
-  publishing from the `release` environment)
+  publishing from the `release` environment; amended 2026-10-28 (#143): `wireit`
+  upgraded to 0.15.0)
 
 Amendment note (2026-10-16, toolchain pull request): decision 3 and the
 dependency table named `prettier` for Markdown and YAML because `oxfmt` did not
@@ -99,6 +100,19 @@ builds the verify page (`apps/verify`), a third app, and the repository root
 takes `vite` as a development dependency for the test-only-entry guard shared
 from `tools/` by the Wrapper's and the verify page's builds. No dependency is
 added: `vite` is already on the development list, at the pinned version.
+
+Amendment note (2026-10-28, #143): `wireit` is upgraded from 0.14.13 to 0.15.0,
+which fixes a failed GitHub Actions cache download being reported as a restore
+with no output (google/wireit#1536, fixed by google/wireit#1542). The upgrade
+needs no change to the kit's wireit configuration. CI keeps its task cache off
+(`WIREIT_CACHE=none`) all the same, so the kit uses no wireit cache in CI and no
+cache credential ([testing and CI](../specs/client-kit/testing-and-ci.md)). Two
+supply-chain exceptions, each for one exact version, came with it, accepted by
+the human: a waiver of the release age for `wireit@0.15.0` (it can go after
+2026-10-31) and a `no-downgrade` trust exception for `chokidar@4.0.3`, which
+0.15.0 needs and which was published without provenance (it goes when wireit
+moves off `chokidar` 4). Both are recorded in
+[supply chain](../specs/client-kit/supply-chain.md).
 
 ## Context
 
@@ -321,7 +335,7 @@ from here). This ADR records the kit's own technical decisions.
 | `@noble/curves`                                                                                                                                                                      | runtime, `signing` only      | secp256k1 signing and recovery with RFC 6979                                                                                                                                                                                                                                         |
 | `@noble/hashes`                                                                                                                                                                      | runtime, `signing` only      | Keccak-256 and SHA-256                                                                                                                                                                                                                                                               |
 | `typescript`, `vite`, `vitest`, `jsdom`, `oxlint`, `oxfmt`, `@playwright/test`, `@axe-core/playwright`, `@changesets/cli`, `openapi-typescript`, `json-schema-to-typescript`, `pnpm` | development only             | compile, build, test, DOM for component tests, lint, format, accessibility checks, release notes, and the generated types                                                                                                                                                            |
-| `wireit`                                                                                                                                                                             | development only             | task orchestration and build and test caching without a separate orchestrator; GitHub Actions cache in CI, no secret                                                                                                                                                                 |
+| `wireit`                                                                                                                                                                             | development only             | task orchestration and build and test caching without a separate orchestrator; local cache only, none in CI, no secret                                                                                                                                                               |
 | `@types/node`                                                                                                                                                                        | development only             | type definitions of the Node APIs used by the tooling and the e2e code (a type package; the libraries use none)                                                                                                                                                                      |
 | `tsdown`                                                                                                                                                                             | development only             | builds the packages' `dist/` (bundled ESM, declarations, source maps) with a separate chunk per entry; no companion package, no install script                                                                                                                                       |
 | `@changesets/changelog-github`                                                                                                                                                       | development only             | the changelog generator of changesets: entries link to the pull request, commit, and author; used by `changeset version` in the release job                                                                                                                                          |
@@ -349,7 +363,7 @@ must be at least seven days old when it is resolved (pnpm's
 | `@playwright/test`             | 1.64.0                                                     |
 | `@axe-core/playwright`         | 4.13.0                                                     |
 | `@changesets/cli`              | 3.0.3                                                      |
-| `wireit`                       | 0.14.13                                                    |
+| `wireit`                       | 0.15.0 (amended 2026-10-28, #143)                          |
 | `@types/node`                  | 24.19.1                                                    |
 | `tsdown`                       | 0.23.0                                                     |
 | `@changesets/changelog-github` | 1.0.1                                                      |

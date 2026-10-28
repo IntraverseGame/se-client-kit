@@ -14,11 +14,12 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # No task cache in CI: every job runs its scripts from a clean checkout.
-  # wireit 0.14.13 reports a script as restored from the GitHub Actions cache
-  # when the tarball download failed, with its output deleted (#53;
-  # google/wireit#1536). The release-dry-run job, which already builds with no
-  # cache, takes about 35s (runbook/development/ci-failures.md).
+  # No task cache in CI: every job runs its scripts from a clean checkout, with
+  # no cache helper step and no cache credentials. It was turned off for a
+  # wireit cache bug (#53; google/wireit#1536), and stays off after the upgrade
+  # to wireit 0.15.0, which fixes it (#143): the time saved is not worth the
+  # helper step and its credentials. The release-dry-run job, which already
+  # builds with no cache, takes about 35s (specs/client-kit/testing-and-ci.md).
   WIREIT_CACHE: none
   # One line per script (run or already fresh), which the default CI logger
   # drops.

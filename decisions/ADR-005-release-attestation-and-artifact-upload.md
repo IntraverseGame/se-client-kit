@@ -44,7 +44,10 @@ only. An Action runs in the release job, which holds the job's OIDC token, so
 adding one is a supply-chain decision (CONTRIBUTING, Route).
 
 Amendment note (2026-10-27, #53): `google/wireit` is no longer used; the kit now
-uses four external Actions.
+uses four external Actions. (2026-10-28, #143): it stays unused. The kit is on
+wireit 0.15.0, which fixes the cache bug, but CI keeps `WIREIT_CACHE=none`, so
+no cache helper Action comes back
+([testing and CI](../specs/client-kit/testing-and-ci.md)).
 
 The human chose to propose these two Actions through this ADR. The other option
 was to attach the artifact with the `gh` CLI and drop the attestation.

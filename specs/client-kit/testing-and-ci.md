@@ -115,9 +115,12 @@ outputs restored from the cache.
   run or skip. The GitHub Actions cache mode (`WIREIT_CACHE=github`) was turned
   off for #53: wireit 0.14.13 reports a script as restored from that cache even
   when the tarball download failed, after it has deleted the output, and records
-  it as fresh (logged in CI on #102; google/wireit#1536, fixed in wireit
-  0.15.0). The `release-dry-run` job, which already built with no cache, takes
-  about 35s.
+  it as fresh (logged in CI on #102; google/wireit#1536). wireit 0.15.0 fixes it
+  (google/wireit#1542), and the kit is on 0.15.0, but **the CI cache stays off**
+  (decided 2026-10-28, #143): every CI run is a clean build, with no third-party
+  cache helper step and no cache credentials, and the CI time a cache would save
+  is not worth bringing those back. The release workflows stay at `none` too.
+  The `release-dry-run` job, which already built with no cache, takes about 35s.
 - **A restored build is not trusted to have left its output.** Whatever left a
   kit package's `dist/` missing (a failed cache restore as above, a missing
   wireit dependency), the tool that reads it must not fail with an error that
