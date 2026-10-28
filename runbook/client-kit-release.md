@@ -578,12 +578,16 @@ so the secrets change right after the backend's switch, not before:
    staging round is refused at check 3 (`cross-field`: the round's
    `entropyChainId` is not the pinned one) and shows "this round failed
    verification"; `T_0` is not settled, so nothing is signed (W-26). In the same
-   window the verify page's check 6 reads the old pins for new rounds.
+   window the verify page's check 6 reads the old pins for new rounds. The
+   Wrapper reads its configuration once, at boot, so a session opened before the
+   redeploy keeps the old pins and keeps refusing until it is relaunched.
 4. Verify the deployed `<site>/environment-config.json` on the Wrapper's and the
    verifier's sites: `entropyChainId`, `tipLagMargin`, `minRpcQuorum`,
    `environment`, and `registryDomain` are the values sent, and `rpcEndpoints`
-   names the one endpoint under the expected source key. Then start a round on
-   staging: it passes the start, with the degraded indicator shown.
+   names the one endpoint under the expected source key. Then open a new Wrapper
+   session from a fresh launch (a new launch code: codes are single-use), never
+   a tab opened before the redeploy, and start a round: it passes the start,
+   with the degraded indicator shown.
 
 Expected after a switch, not an alarm: a staging round played on the old chain
 (anvil, before the switch) cannot be verified on staging's verify page
