@@ -422,15 +422,19 @@ only public values; the Wrapper refuses to start on an invalid document.
 | `operatorOrigins`  | the allow-list of operator page origins A                                                                                                                                                                                                                                                                                                                                                   |
 
 **Staging runs as `preview`** (decided 2026-10-27: the human confirms staging
-moves no real money, and the TPO accepts it; ADR-008, decision 8). Staging has
-no browser-reachable RPC (its entropy source is a development chain that no
-browser can reach; the backend, 2026-10-28), so its document sets
-`environment: "preview"` and `minRpcQuorum` 1, so W-26a's local or preview
-exception applies (the non-dismissable "chain check not independent
-(development)" indicator, `tipCheck: "degraded"`), and while no endpoint
-answers, the tip check fails ("could not verify the chain", W-26a). Production
-MUST set `environment: "production"` with `minRpcQuorum` of at least 2 (W-26a's
-boot rule refuses less). The staging documents are written by the Pages deploy
+moves no real money, and the TPO accepts it; ADR-008, decision 8). Staging's
+entropy chain is Somnia's public testnet (chain id 50312; the backend,
+2026-10-28), read through one provider, Somnia's public testnet RPC, so its
+document sets `environment: "preview"` and `minRpcQuorum` 1, and W-26a's local
+or preview exception applies: the tip check passes with one answering endpoint,
+under the non-dismissable "chain check not independent (development)" indicator
+and with `tipCheck: "degraded"`. Its entropy source keeps the key `anvil`, with
+`entropyChainId` 50312 and a `tipLagMargin` of 100 blocks (W-26b);
+`registryDomain` stays at chain id 31337 by design, since the registry is not on
+the entropy chain (the backend, 2026-10-28). The record chain needs no RPC in
+the browser before INC1 anchoring. Production MUST set
+`environment: "production"` with `minRpcQuorum` of at least 2 (W-26a's boot rule
+refuses less). The staging documents are written by the Pages deploy
 ([client-kit.md](./client-kit.md#the-pages-sites-configuration)).
 
 The schema, as the Wrapper validates it at boot (`apps/wrapper`,
@@ -478,10 +482,13 @@ The list of RPC providers is owned by the infrastructure owner: which providers
 are used, their CORS behavior, and the matching `connect-src` entries of the
 Content Security Policy.
 
-- **Staging** (decided for now, 2026-10-28): there is no browser-reachable RPC,
-  so no CORS-enabled provider and only the placeholder endpoint's origin in
-  `connect-src` (the configuration names one placeholder endpoint). A staging
-  round stops at "could not verify the chain" (W-26a) until an RPC is provided.
+- **Staging** (the backend, 2026-10-28): one provider, Somnia's public testnet
+  RPC (chain id 50312), read directly from the browser. It sends CORS for any
+  origin, answers `eth_chainId` and `eth_getBlockByNumber`, and reports
+  `finalized` at the head; nothing is added on the backend's edge. Its origin is
+  the only RPC entry in `connect-src`. Its URL is configuration
+  (`PAGES_RPC_ENDPOINTS`, with its origin in `PAGES_RPC_ORIGINS`), set by the
+  infrastructure owner, never written in this repository.
 - **Production:** two independent providers per entropy source (so
   `minRpcQuorum` of at least 2, W-26b), picked by the infrastructure owner.
   Their names and endpoints are configuration values shared out of band, never

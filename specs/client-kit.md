@@ -504,10 +504,14 @@ W-37), so the reference game's page is served at the root.
 
 <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). Production hosting: its Pages projects and hostnames, the `pages-prod` environment with its configuration in a separate environment that holds no deploy credential, and the real operator origins behind `frame-ancestors` (staging holds a placeholder). Hostnames are shared out of band, never written in this repository. Reason: ADR-008 deploys staging only; production is to come. -->
 
-**The RPC providers** ([wrapper.md](./wrapper.md#configuration)): staging has no
-browser-reachable RPC (decided for now, 2026-10-28), so its configuration names
-one placeholder endpoint and a staging round stops at "could not verify the
-chain" (W-26a).
+**The RPC providers** ([wrapper.md](./wrapper.md#configuration)): staging's
+entropy chain is Somnia's public testnet (chain id 50312; the backend,
+2026-10-28), and both sites' configuration names one endpoint, Somnia's public
+testnet RPC, which the browser reads directly (it sends CORS for any origin;
+nothing is added on the backend's edge). With one provider, staging runs as
+`preview` with `minRpcQuorum` 1, so the tip check passes under W-26a's degraded
+indicator. The endpoint's URL is configuration (`PAGES_RPC_ENDPOINTS`), set by
+the infrastructure owner, never written in this repository.
 
 <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). Production's RPC provider list (two independent providers per entropy source), with its CORS behavior and `connect-src` entries. Reason: production is to come; the list is shared out of band, never written in this repository. -->
 

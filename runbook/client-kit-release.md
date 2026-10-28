@@ -519,12 +519,15 @@ enter this repository, an issue, or a log):
    - **`PAGES_CHAIN_PINS`**: JSON with exactly `environment`, `runtimeSigner`,
      `registryDomain`, `entropyChainId`, `minRpcQuorum`, and `tipLagMargin`
      ([wrapper.md](../specs/wrapper.md#configuration)). Set. Staging is
-     `environment: "preview"` with `minRpcQuorum` 1 while it has no
-     browser-reachable RPC (ADR-008, decision 8), and its `tipLagMargin` is 2
-     blocks per entropy source, the preview value (the backend, 2026-10-28;
-     [W-26b](../specs/wrapper/signing-start-move-cash-out-and-cancel.md)).
-     Production must be `"production"` with `minRpcQuorum` of at least 2; its
-     `tipLagMargin` comes from the backend's measurement of the RPC lag (#133).
+     `environment: "preview"` with `minRpcQuorum` 1 while it reads one RPC
+     provider (ADR-008, decision 8). Its one entropy source keeps the key
+     `anvil` with `entropyChainId` 50312, Somnia's public testnet, and
+     `tipLagMargin` 100 blocks (the backend's value, 2026-10-28;
+     [W-26b](../specs/wrapper/signing-start-move-cash-out-and-cancel.md));
+     `registryDomain` stays at chain id 31337 by design (the registry is not on
+     the entropy chain), so do not change it to 50312. Production must be
+     `"production"` with `minRpcQuorum` of at least 2; its `tipLagMargin` comes
+     from the backend's measurement of the RPC lag (#133).
    - **`PAGES_RPC_ENDPOINTS`**: JSON of `rpcEndpoints`,
      `{"<source>":[{"provider":"…","url":"…"}]}`, keyed by the same entropy
      source as the pins' `entropyChainId` and `tipLagMargin`;
@@ -544,19 +547,51 @@ fails in its first deploy step, naming what is missing. A configuration value
 that is missing or makes an invalid document fails the config job, naming the
 input or the field and the issue, never a value.
 
-**Staging has no browser-reachable RPC yet** (decided for now, 2026-10-28: its
-entropy source is a development chain that no browser can reach;
-[wrapper.md](../specs/wrapper.md#configuration)). Until an RPC is provided,
-`PAGES_RPC_ENDPOINTS` can name only a placeholder endpoint (with `minRpcQuorum`
-1, which `environment: preview` allows; the Wrapper then shows its
-non-dismissable "chain check not independent (development)" indicator, W-26a),
-and the on-chain checks cannot pass in the browser: the Wrapper's tip check
-before a round's first signature fails ("could not verify the chain", W-26a), so
-no round can be started, and the verify page's chain read (check 6) fails ("this
-round could not be verified against the chain", V-7). This is the specified
-behavior for an unreachable RPC, not a fault of the deploy. Production's RPC
+**Staging's entropy chain is Somnia's public testnet** (chain id 50312; the
+backend, 2026-10-28; [wrapper.md](../specs/wrapper.md#configuration)).
+`PAGES_RPC_ENDPOINTS` names one endpoint, Somnia's public testnet RPC, under the
+source key `anvil`, and `PAGES_RPC_ORIGINS` its origin; the browser reads it
+directly (it sends CORS for any origin; nothing is added on the backend's edge).
+With `minRpcQuorum` 1, which `environment: preview` allows, the Wrapper's tip
+check passes with that one endpoint and shows its non-dismissable "chain check
+not independent (development)" indicator (W-26a), so staging rounds play past
+the start. Book rounds bind further ahead there (about 3 s), so a book draw
+takes about 3 s longer on staging; that is expected (the backend, 2026-10-28;
+[W-26b](../specs/wrapper/signing-start-move-cash-out-and-cancel.md)). No
+record-chain RPC is needed in the browser before INC1 anchoring. The URL is the
+infrastructure owner's value, never written in this repository. Production's RPC
 providers (two independent per entropy source), their CORS behavior, and their
 `connect-src` entries are #133's, shared out of band.
+
+**Switching staging's entropy chain** (as for the move from anvil to Somnia's
+public testnet, 2026-10-28). The engine and the Wrapper must pin the same chain,
+so the secrets change right after the backend's switch, not before:
+
+1. The infrastructure owner sends the values: the RPC endpoint and its origin,
+   and the chain pins (`entropyChainId` and `tipLagMargin` per source, with any
+   other pin that changes). They are shared out of band, never in an issue, a
+   pull request, or a log.
+2. Right after the backend's switch, a maintainer sets the three `pages-stage`
+   secrets: `PAGES_RPC_ENDPOINTS`, `PAGES_RPC_ORIGINS`, and `PAGES_CHAIN_PINS`.
+3. Dispatch the Pages workflow on `main` (**Redeploy**, below). Until that
+   redeploy the deployed configuration still pins the old chain, so every
+   staging round is refused at check 3 (`cross-field`: the round's
+   `entropyChainId` is not the pinned one) and shows "this round failed
+   verification"; `T_0` is not settled, so nothing is signed (W-26). In the same
+   window the verify page's check 6 reads the old pins for new rounds. The
+   Wrapper reads its configuration once, at boot, so a session opened before the
+   redeploy keeps the old pins and keeps refusing until it is relaunched.
+4. Verify the deployed `<site>/environment-config.json` on the Wrapper's and the
+   verifier's sites: `entropyChainId`, `tipLagMargin`, `minRpcQuorum`,
+   `environment`, and `registryDomain` are the values sent, and `rpcEndpoints`
+   names the one endpoint under the expected source key. Then open a new Wrapper
+   session from a fresh launch (a new launch code: codes are single-use), never
+   a tab opened before the redeploy, and start a round: it passes the start,
+   with the degraded indicator shown.
+
+Expected after a switch, not an alarm: a staging round played on the old chain
+(anvil, before the switch) cannot be verified on staging's verify page
+afterwards, because check 6 then reads the new chain (Somnia's public testnet).
 
 **Production (not built yet, #133).** A production deploy runs when the
 changesets version pull request is merged into `main` (the versions bumped and
@@ -599,8 +634,9 @@ verifier's sites and check 5 on the game's site:
    `X-Content-Type-Options`. A launch of `coin-flip-v1` through the Wrapper
    loads `<game origin>/?parentOrigin=...` in its frame with a 200 and no
    `frame-ancestors` or `frame-src` violation in the browser console (the frame
-   stays hidden until a round is ready, W-31, which staging cannot reach without
-   a browser-reachable RPC).
+   stays hidden until a round is ready, W-31). On staging, a started round
+   passes the tip check and shows the game, under the degraded indicator
+   (W-26a).
 
 Check them again after any change to `headers.json`, the proxy, the
 configuration, the reference game, or the projects' settings.
