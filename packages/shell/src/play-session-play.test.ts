@@ -15,8 +15,10 @@ import {
   actionKeyOf,
   CODE,
   GAME,
+  NOW,
   open,
   problem409,
+  redeemed,
   SE_ORIGIN,
   sessionOf,
   settleMany,
@@ -133,6 +135,7 @@ describe("the open session", () => {
     expect(session.mountGame(mountOf(game))).toEqual({
       ok: true,
       gameOrigin: GAME,
+      gamePath: "/",
     });
     game.send(HELLO);
     expect(game.posted.at(-1)?.message).toMatchObject({ type: "snapshot" });
@@ -151,6 +154,18 @@ describe("the open session", () => {
     await settleMany();
     expect(opened.play.sent("continueRound")).toHaveLength(1);
     expect(changes).toEqual(["snapshot"]);
+  });
+
+  it("mounts the game at the redeem answer's gamePath on D, still checked by D alone (W-37)", async () => {
+    const session = sessionOf(
+      await open({ redeem: redeemed(() => NOW, GAME, "/coin-flip/") }),
+    );
+    const game = createFakeGame({ gameOrigin: GAME, gameOrigins: [GAME] });
+    expect(session.mountGame(mountOf(game))).toEqual({
+      ok: true,
+      gameOrigin: GAME,
+      gamePath: "/coin-flip/",
+    });
   });
 
   it("mounts no game once the session ended (W-37)", async () => {

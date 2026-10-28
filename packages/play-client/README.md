@@ -82,7 +82,10 @@ try {
     (`Sealed<...Response, T>`), so the plain token never leaves the package. The
     redeem answer also holds `gameOrigin`, the origin to frame the game at,
     checked only against the document's length bounds: whether it is an allowed
-    origin is the shell's check. A Snapshot answer is `unknown`.
+    origin is the shell's check. When the server sends one, it also holds
+    `gamePath`, the path of the game's page on that origin (starting and ending
+    with `/`), checked against the document's rule; none means the root. A
+    Snapshot answer is `unknown`.
     - `getRoundVerification(transport, roundId, { signal? })` reads
       `GET /verify/v1/rounds/{roundId}` (no credential, a read, repeated as one
       is). Make its transport with `verifyApiBaseUrl` as the `baseUrl`; the

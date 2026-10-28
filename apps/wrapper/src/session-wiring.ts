@@ -102,13 +102,19 @@ const betOf = (amount: ShownAmount): Parameters<PlaySession["start"]>[0] => ({
 });
 
 /**
- * The game frame's URL: D's root, with the Wrapper's own origin as
+ * The game frame's URL: the game's page on D, at the redeem answer's `gamePath`
+ * (`/`, D's root, when it has none), with the Wrapper's own origin as
  * `parentOrigin` (decided in human review, 2026-10-17), which the game checks
  * against `location.ancestorOrigins[0]` where that exists. It is not a secret.
- * Built with the `URL` API, never by joining strings.
+ * Built with the `URL` API, never by joining strings; the path is an absolute
+ * path that play-client checked, so the URL stays on D.
  */
-export const gameUrlOf = (gameOrigin: string, ownOrigin: string): string => {
-  const url = new URL("/", gameOrigin);
+export const gameUrlOf = (
+  gameOrigin: string,
+  gamePath: string,
+  ownOrigin: string,
+): string => {
+  const url = new URL(gamePath, gameOrigin);
   url.searchParams.set("parentOrigin", ownOrigin);
   return url.href;
 };
@@ -153,7 +159,11 @@ const mountGame = (
     frame.remove();
     return;
   }
-  frame.src = gameUrlOf(mounted.gameOrigin, options.ownOrigin);
+  frame.src = gameUrlOf(
+    mounted.gameOrigin,
+    mounted.gamePath,
+    options.ownOrigin,
+  );
 };
 
 /**

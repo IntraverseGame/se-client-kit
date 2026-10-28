@@ -106,6 +106,23 @@ describe("an answer that does not match the document", () => {
       { ...redeemAnswer, gameOrigin: "\u{1F3B2}".repeat(268) },
     ],
     ["a numeric gameOrigin", { ...redeemAnswer, gameOrigin: 1 }],
+    ["an empty gamePath", { ...redeemAnswer, gamePath: "" }],
+    ["a relative gamePath", { ...redeemAnswer, gamePath: "coin-flip/" }],
+    ["a gamePath without a trailing /", { ...redeemAnswer, gamePath: "/a" }],
+    ["a gamePath with //", { ...redeemAnswer, gamePath: "/a//b/" }],
+    ["a gamePath with ..", { ...redeemAnswer, gamePath: "/a/../" }],
+    ["a gamePath with .", { ...redeemAnswer, gamePath: "/./" }],
+    ["a gamePath with a query", { ...redeemAnswer, gamePath: "/a?b/" }],
+    ["a gamePath with %", { ...redeemAnswer, gamePath: "/a%2F/" }],
+    [
+      "a gamePath with a host",
+      { ...redeemAnswer, gamePath: "//evil.example/" },
+    ],
+    [
+      "a gamePath of 257 characters",
+      { ...redeemAnswer, gamePath: `/${"a/".repeat(128)}` },
+    ],
+    ["a numeric gamePath", { ...redeemAnswer, gamePath: 1 }],
   ])("refuses a redeem answer with %s", async (_name, body) => {
     h.server.answer("redeemLaunchCode", {
       kind: "success",

@@ -28,9 +28,16 @@ export const GAME = "https://game.example.net";
 /** The Wrapper's own origin, the SE origin. */
 export const SE_ORIGIN = "https://play.example.com";
 
-/** The redeem answer, with `gameOrigin` as D (the session's only source). */
+/**
+ * The redeem answer, with `gameOrigin` as D (the session's only source) and,
+ * when given, `gamePath` as the path of the game's page on D.
+ */
 export const redeemed =
-  (now: () => number, gameOrigin: string = GAME): Responder =>
+  (
+    now: () => number,
+    gameOrigin: string = GAME,
+    gamePath?: string,
+  ): Responder =>
   (): PlayResponse => ({
     status: 200,
     body: {
@@ -39,6 +46,7 @@ export const redeemed =
       tokenExpiresAt: "2026-10-16T12:15:00.000Z",
       sessionExpiresAt: "2026-10-16T14:00:00.000Z",
       gameOrigin,
+      ...(gamePath === undefined ? {} : { gamePath }),
     },
     receivedAtMs: now(),
     clockOffsetMs: 0,

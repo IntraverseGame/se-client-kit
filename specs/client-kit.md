@@ -459,10 +459,16 @@ The staging game origin is `se-games-stage`'s own
 hostname; the Wrapper's and the verifier's hostnames are still never written
 here). Its W-37 comparison key (the last two labels, ADR-007) is `pages.dev`,
 which the Wrapper's custom hostname does not share; a Wrapper on a `*.pages.dev`
-name would be refused as `same-site`. The backend's catalog keeps only an origin
-per game version, so where the page lives on that origin is the kit's
-convention: the Wrapper frames `<game origin>/?parentOrigin=...` (`gameUrlOf`,
-W-37), so the reference game's page is served at the root.
+name would be refused as `same-site`. The backend's catalog keeps an origin and
+an optional page path per game version, and the Wrapper frames
+`<game origin><game path>?parentOrigin=...` (`gameUrlOf`, W-37), with `/` when
+the redeem answer has no path. The reference game's page is served at the root.
+This site is the reference game's only: other staging games that share one
+origin under `/<slug>/` paths are deployed from their own source to their own
+Pages project and origin, never to `se-games-stage`, so the two deploys never
+overwrite each other, and that origin is added to the staging Wrapper's
+`gameOrigins` (decided 2026-10-28; W-37). A shared origin is accepted for
+staging; production should give each game its own origin.
 
 - **Layout.** The reference game's `vite build` output (`index.html`, one
   script, one stylesheet), as one deterministic tar,

@@ -54,7 +54,7 @@ describe("the game iframe (W-37, W-38)", () => {
 
   it("mounts a sandboxed, titled frame on D once the bridge accepts it", async () => {
     const ui = await wired(fake => {
-      fake.setMount(() => ({ ok: true, gameOrigin: D }));
+      fake.setMount(() => ({ ok: true, gameOrigin: D, gamePath: "/" }));
     });
     const frame = ui.host.querySelector("iframe");
     expect(frame?.getAttribute("sandbox")).toBe(
@@ -69,6 +69,19 @@ describe("the game iframe (W-37, W-38)", () => {
     expect(
       ui.fake.mounts.map(options => Object.keys(options).toSorted()),
     ).toEqual([["frame", "listen", "onCopy", "onIncompatible"]]);
+  });
+
+  it("frames the game's page at its gamePath on D", async () => {
+    const ui = await wired(fake => {
+      fake.setMount(() => ({
+        ok: true,
+        gameOrigin: D,
+        gamePath: "/coin-flip/",
+      }));
+    });
+    expect(ui.host.querySelector("iframe")?.getAttribute("src")).toBe(
+      `${D}/coin-flip/?parentOrigin=${encodeURIComponent(SE_ORIGIN)}`,
+    );
   });
 
   it("never gives a refused D's frame a src, so nothing is loaded", async () => {
@@ -103,7 +116,7 @@ describe("the game iframe (W-37, W-38)", () => {
     const ui = await wired(fake => {
       fake.setMount(options => {
         options.onIncompatible();
-        return { ok: true, gameOrigin: D };
+        return { ok: true, gameOrigin: D, gamePath: "/" };
       });
     });
     expect(alertText(ui.host)).toContain(m["error.gameIncompatible"]);
