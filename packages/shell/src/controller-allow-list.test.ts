@@ -285,9 +285,8 @@ describe("the game receives only allow-listed fields (T-9)", () => {
           ).snapshot?.presentation,
         );
         const text = JSON.stringify(message);
-        for (const secret of forbidden) {
-          expect(text).not.toContain(secret);
-        }
+        // One assertion for all secrets (one each was slow on CI); lists leaks.
+        expect(forbidden.filter(secret => text.includes(secret))).toEqual([]);
         expect(text).not.toMatch(/0x[0-9a-fA-F]{40}/u);
       }
     }
