@@ -522,11 +522,12 @@ enter this repository, an issue, or a log):
      `environment: "preview"` with `minRpcQuorum` 1 while it reads one RPC
      provider (ADR-008, decision 8). Its one entropy source keeps the key
      `anvil` with `entropyChainId` 50312, Somnia's public testnet, and
-     `tipLagMargin` 120 blocks (the backend's value, 2026-10-28;
+     `tipLagMargin` 100 blocks (the backend's value, 2026-10-28;
      [W-26b](../specs/wrapper/signing-start-move-cash-out-and-cancel.md));
-     `registryDomain` is unchanged. Production must be `"production"` with
-     `minRpcQuorum` of at least 2; its `tipLagMargin` comes from the backend's
-     measurement of the RPC lag (#133).
+     `registryDomain` stays at chain id 31337 by design (the registry is not on
+     the entropy chain), so do not change it to 50312. Production must be
+     `"production"` with `minRpcQuorum` of at least 2; its `tipLagMargin` comes
+     from the backend's measurement of the RPC lag (#133).
    - **`PAGES_RPC_ENDPOINTS`**: JSON of `rpcEndpoints`,
      `{"<source>":[{"provider":"…","url":"…"}]}`, keyed by the same entropy
      source as the pins' `entropyChainId` and `tipLagMargin`;
@@ -554,10 +555,13 @@ directly (it sends CORS for any origin; nothing is added on the backend's edge).
 With `minRpcQuorum` 1, which `environment: preview` allows, the Wrapper's tip
 check passes with that one endpoint and shows its non-dismissable "chain check
 not independent (development)" indicator (W-26a), so staging rounds play past
-the start. No record-chain RPC is needed in the browser before INC1 anchoring.
-The URL is the infrastructure owner's value, never written in this repository.
-Production's RPC providers (two independent per entropy source), their CORS
-behavior, and their `connect-src` entries are #133's, shared out of band.
+the start. Book rounds bind further ahead there (about 3 s), so a book draw
+takes about 3 s longer on staging; that is expected (the backend, 2026-10-28;
+[W-26b](../specs/wrapper/signing-start-move-cash-out-and-cancel.md)). No
+record-chain RPC is needed in the browser before INC1 anchoring. The URL is the
+infrastructure owner's value, never written in this repository. Production's RPC
+providers (two independent per entropy source), their CORS behavior, and their
+`connect-src` entries are #133's, shared out of band.
 
 **Switching staging's entropy chain** (as for the move from anvil to Somnia's
 public testnet, 2026-10-28). The engine and the Wrapper must pin the same chain,

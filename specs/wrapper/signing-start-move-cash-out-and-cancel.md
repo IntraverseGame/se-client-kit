@@ -461,11 +461,12 @@ Part of the [Wrapper spec](../wrapper.md), section
     in blocks per entropy source; the backend, 2026-10-28). The value is set per
     configuration document, not per `environment` value. The local chain uses 0
     and the backend's preview stack (anvil) uses 2. Staging, also `preview` but
-    on Somnia's public testnet (chain id 50312), uses **120** (the backend's
-    value: about 10 s at about 12 blocks a second, the backend, 2026-10-28):
-    config games bind at the tip, so a margin of 2 is far too small there.
-    Production's value is derived from the measured RPC lag, owned by the
-    backend.
+    on Somnia's public testnet (chain id 50312), uses **100** (the backend's
+    value: about 10 s at about 10 blocks a second, the backend, 2026-10-28):
+    config games bind at the tip, so a margin of 2 is far too small there. Book
+    rounds bind further ahead there (about 3 s), so a book draw takes about 3 s
+    longer on staging (the backend, 2026-10-28). Production's value is derived
+    from the measured RPC lag, owned by the backend.
     <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner; the measurement: backend). Production's `tipLagMargin` per entropy source, from the backend's measurement of the RPC lag; a configuration value, set in production's configuration document. Reason: not measured yet; production is to come. -->
 - **W-27.** The shell SHOULD keep each round's evidence (its `CreateRoundAuth`,
   the tip-check answers, and every signed action) in memory for the page's life

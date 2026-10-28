@@ -8,7 +8,7 @@
   `se-games-stage`, serves the reference game; follow-up references updated
   2026-10-28: staging's RPC and lag margin stated, production's moved to #133;
   updated again 2026-10-28: staging's entropy chain moves to Somnia's public
-  testnet, read through its public RPC, with a lag margin of 120 blocks)
+  testnet, read through its public RPC, with a lag margin of 100 blocks)
 - Deciders: the TPO (Pages hosting, the push model, the kit-owned proxy, the
   verify page on its own site), the human maintainer (the deploy tool, the
   secrets, the proxy hardening, acceptance), the infrastructure owner (the
@@ -271,7 +271,7 @@ Derived, never configured: `playApiBaseUrl` is the Wrapper's origin plus
 `/verify/v1`; `verifyBaseUrl` is the verifier's origin plus `/verify` (both
 documents), so the Wrapper's verify link opens the verifier's site. The
 `tipLagMargin` of staging is the infrastructure owner's value in
-`PAGES_CHAIN_PINS`: 120 blocks on Somnia's public testnet, chain id 50312 (the
+`PAGES_CHAIN_PINS`: 100 blocks on Somnia's public testnet, chain id 50312 (the
 backend, 2026-10-28; production's is #133's).
 
 ### 6. The headers: a `_headers` file per site
@@ -377,7 +377,7 @@ that one endpoint. Production must be `environment: "production"` with
 - **Follow-ups**: the Actions allow-list of ADR-005 lists `download-artifact`
   when it is built; the first-deploy checks of the runbook. Staging's RPC and
   lag margin are settled (2026-10-28: Somnia's public testnet RPC, one provider;
-  a lag margin of 120 blocks); production's are #133's.
+  a lag margin of 100 blocks); production's are #133's.
 
 ## Risks accepted
 
