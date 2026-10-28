@@ -11,28 +11,32 @@ Part of the [Wrapper spec](../wrapper.md), section
 - **W-29.** The Snapshot is the only source of round state. The Wrapper MUST NOT
   infer hidden state from an absent field, and MUST ignore a Snapshot whose
   `version` is lower than the last one it accepted for the session (a stale
-  response). It is a tolerant reader only within what the schema allows: an
-  optional field the schema lists may be absent, and a field the schema leaves
-  open (`context.view`, `theme.colorPalette`, `theme.tileStyles`, a book event's
-  `data`) may hold members the Wrapper does not read, which it ignores. A field,
-  `status`, or value the schema does not allow fails validation (W-28): every
-  object of `se.snapshot/1` is closed (the allow-list), so a new field or status
-  reaches the Wrapper only with a kit that has synced the new schema. The
-  Wrapper also ignores a Snapshot whose `version` equals the last accepted one
-  (it carries nothing new). `version` is the per-session counter the Play API
-  document and the Snapshot schema describe: the first run of the e2e suite's
-  preview mode against a real stack (a win, a loss, and a cash-out) saw no
-  `version` go down among responses that did not overlap in time. A response can
-  still arrive after a newer one when two requests overlap; the Wrapper drops it
-  as above: it is neither an error nor newer state, and a later read shows the
-  current state. Where a poll runs, a drop delays a newer balance or status by
-  one read; where none runs (an action's answer to an `active` round, or the
-  start's answer from an ended round), the Wrapper reads the Snapshot again
-  until a read is taken (W-35's re-read after a drop), so the state it shows
-  catches up.
+  response). A Snapshot whose presentation, model, `config.kind`, or
+  `config.model` differs from the session's first is W-53's changed session
+  ([Book playback](./book-playback.md)), final until a reload. It is a tolerant
+  reader only within what the schema allows: an optional field the schema lists
+  may be absent, and a field the schema leaves open (`context.view`,
+  `theme.colorPalette`, `theme.tileStyles`, a book event's `data`) may hold
+  members the Wrapper does not read, which it ignores. A field, `status`, or
+  value the schema does not allow fails validation (W-28): every object of
+  `se.snapshot/1` is closed (the allow-list), so a new field or status reaches
+  the Wrapper only with a kit that has synced the new schema. The Wrapper also
+  ignores a Snapshot whose `version` equals the last accepted one (it carries
+  nothing new). `version` is the per-session counter the Play API document and
+  the Snapshot schema describe: the first run of the e2e suite's preview mode
+  against a real stack (a win, a loss, and a cash-out) saw no `version` go down
+  among responses that did not overlap in time. A response can still arrive
+  after a newer one when two requests overlap; the Wrapper drops it as above: it
+  is neither an error nor newer state, and a later read shows the current state.
+  Where a poll runs, a drop delays a newer balance or status by one read; where
+  none runs (an action's answer to an `active` round, or the start's answer from
+  an ended round), the Wrapper reads the Snapshot again until a read is taken
+  (W-35's re-read after a drop), so the state it shows catches up.
 - **W-30.** The Wrapper MUST declare its capabilities when the session starts:
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
-  six of R3 and `canceled`, which the cancel path needs).
+  six of R3 and `canceled`, which the cancel path needs). Decided (issue #146,
+  2026-10-28; [Book playback](./book-playback.md)): `["steps", "playback"]` once
+  the Wrapper renders a book round; the declaration is still not sent (below).
   - **The carrier** (decided 2026-10-18, RFC-001 Q9, agreed by the backend's
     TPO; specified in the backend's documentation at commit b6e1e48). The
     declaration is the backend's Snapshot negotiation, never the operator
@@ -50,7 +54,9 @@ Part of the [Wrapper spec](../wrapper.md), section
     for a declaration (b6e1e48).
   - **Until then the Wrapper fails closed.** A status outside the schema fails
     validation (W-28), and a presentation the Wrapper does not render
-    (`playback`) is valid but never forwarded to the game.
+    (`playback`) is valid but never forwarded to the game. Decided (#146,
+    2026-10-28): a `playback` Snapshot is rendered and forwarded by W-50 to W-56
+    and RFC-003.
   <!-- TODO(Play API, #69): deferred to #69 (owner: backend; the issue is closed as deferred and reopened when the field ships). Vendor the Play API document once it carries the optional `capabilities` object of the `sessions:redeem` request (specified at b6e1e48, not built), then send W-30's declaration in it. Reason: the field is specified but not built and not scheduled. -->
 - **W-31.** Statuses. The Wrapper MUST handle each as follows:
 
@@ -177,53 +183,55 @@ Part of the [Wrapper spec](../wrapper.md), section
   (SHOULD: 500 ms rising to 2 s, Wrapper configuration) until the status
   changes, and MUST keep polling at the slow rate after a longer wait, with a
   "taking longer than expected" notice. It MUST stop polling when the status is
-  terminal or the session ended. The Wrapper doubles the wait after each read
-  (500 ms, 1 s, 2 s, then 2 s); the slow rate is that 2 s maximum, also used
-  after a read with no response (W-43). PROVISIONAL: the "longer wait" before
-  the notice is 15 s (W-43's request timeout) until this spec gives a number. A
-  poll stops in every status but `starting` and `resolving`, on a typed error
-  (until the player asks to try again), and in any blocking state (W-44), except
-  while the shell's cancel is `settling` or `check-later` (below). An `active`
-  round whose move or cash-out is not confirmed is read in the background
-  (below): that exception is to the status rule only, so a typed error stops
-  that read too, until the player asks to try again or to check again. Whether a
-  round is over is decided in one place, the shell's `isRoundOver`, which the
-  Wrapper's polling and rendering read; the Wrapper keeps no status list of its
-  own. From a Snapshot alone, `canceled` is final, with or without a
-  `closeReason` (W-25); while the shell's own cancel is not settled, the round
-  flow's cancel state decides instead (below). While the shell's cancel is
-  `settling` (W-25), the Wrapper also polls, through the round flow's `refresh`
-  (the session's `read` is then one of the cancel's counted reads), with the
-  same backoff and slow rate, whatever the status of the round's last Snapshot;
-  a read with no response, another round's Snapshot, `resolving`, a typed error,
-  or a rejected read does not stop it, and neither does the round's failed
-  verification (W-26), which the required cancel always comes with and which the
-  player could not retry; only a final state (W-44: the session ended, another
-  tab, the configuration error) stops it. A final read (`canceled`, `won`,
-  `lost`), `active`, or `idle` settles the cancel. The shell counts these reads;
-  after 30 it reports `check-later`, and the Wrapper stops the fast poll and
-  shows "still resolving — contact support" (W-33). In `check-later` the Wrapper
-  reads once when the player asks to check again (the session's `checkAgain`,
-  the flow's `checkAgain`), and once every 30 s in the background (the session's
-  `read`, which is then the same read) until the session ends, with no "taking
-  longer" notice, also after a read with no response (Wrapper configuration;
-  time comes from the Wrapper's injected timers, never the shell). Either read
-  may settle the cancel. The same background read, once every 30 s with no
-  notice, also after a read with no response, runs while an `active` round's
-  move or cash-out is not confirmed (W-16, `RoundState.unconfirmed`), beside its
-  "check again" (the session's `checkAgain`, which is then `read`); neither
-  sends or signs anything, and it stops once a read clears the state, and, as
-  every poll outside the cancel's states, on a typed error, until "try again" or
-  "check again" (each first clears the typed error shown) reads the round again.
-  After a read settles the cancel, polling follows the round's status as usual:
-  it stops once the cancel is `ended`, `not-taken`, or `sent`, whatever the
-  status of the round's last Snapshot. Once the cancel is `ended`, the Wrapper
-  reads the Snapshot exactly once more, through the session's `read` (the normal
-  read, which passes `idle` on to the UI and the game), for the current balance
-  (W-33); it is never repeated for the round and restarts no poll beyond what
-  its answer calls for (an `idle` one calls for none). A final state (W-44: the
-  session ended, another tab) is kept: that read's answer never replaces one,
-  and the session's end that answers it is shown.
+  terminal or the session ended. A book round is polled only while `starting`,
+  the one status before its result ([W-54](./book-playback.md)). The Wrapper
+  doubles the wait after each read (500 ms, 1 s, 2 s, then 2 s); the slow rate
+  is that 2 s maximum, also used after a read with no response (W-43).
+  PROVISIONAL: the "longer wait" before the notice is 15 s (W-43's request
+  timeout) until this spec gives a number. A poll stops in every status but
+  `starting` and `resolving`, on a typed error (until the player asks to try
+  again), and in any blocking state (W-44), except while the shell's cancel is
+  `settling` or `check-later` (below). An `active` round whose move or cash-out
+  is not confirmed is read in the background (below): that exception is to the
+  status rule only, so a typed error stops that read too, until the player asks
+  to try again or to check again. Whether a round is over is decided in one
+  place, the shell's `isRoundOver`, which the Wrapper's polling and rendering
+  read; the Wrapper keeps no status list of its own. From a Snapshot alone,
+  `canceled` is final, with or without a `closeReason` (W-25); while the shell's
+  own cancel is not settled, the round flow's cancel state decides instead
+  (below). While the shell's cancel is `settling` (W-25), the Wrapper also
+  polls, through the round flow's `refresh` (the session's `read` is then one of
+  the cancel's counted reads), with the same backoff and slow rate, whatever the
+  status of the round's last Snapshot; a read with no response, another round's
+  Snapshot, `resolving`, a typed error, or a rejected read does not stop it, and
+  neither does the round's failed verification (W-26), which the required cancel
+  always comes with and which the player could not retry; only a final state
+  (W-44: the session ended, another tab, the configuration error) stops it. A
+  final read (`canceled`, `won`, `lost`), `active`, or `idle` settles the
+  cancel. The shell counts these reads; after 30 it reports `check-later`, and
+  the Wrapper stops the fast poll and shows "still resolving — contact support"
+  (W-33). In `check-later` the Wrapper reads once when the player asks to check
+  again (the session's `checkAgain`, the flow's `checkAgain`), and once every 30
+  s in the background (the session's `read`, which is then the same read) until
+  the session ends, with no "taking longer" notice, also after a read with no
+  response (Wrapper configuration; time comes from the Wrapper's injected
+  timers, never the shell). Either read may settle the cancel. The same
+  background read, once every 30 s with no notice, also after a read with no
+  response, runs while an `active` round's move or cash-out is not confirmed
+  (W-16, `RoundState.unconfirmed`), beside its "check again" (the session's
+  `checkAgain`, which is then `read`); neither sends or signs anything, and it
+  stops once a read clears the state, and, as every poll outside the cancel's
+  states, on a typed error, until "try again" or "check again" (each first
+  clears the typed error shown) reads the round again. After a read settles the
+  cancel, polling follows the round's status as usual: it stops once the cancel
+  is `ended`, `not-taken`, or `sent`, whatever the status of the round's last
+  Snapshot. Once the cancel is `ended`, the Wrapper reads the Snapshot exactly
+  once more, through the session's `read` (the normal read, which passes `idle`
+  on to the UI and the game), for the current balance (W-33); it is never
+  repeated for the round and restarts no poll beyond what its answer calls for
+  (an `idle` one calls for none). A final state (W-44: the session ended,
+  another tab) is kept: that read's answer never replaces one, and the session's
+  end that answers it is shown.
 
   **Re-read after a drop.** When the Wrapper drops a Snapshot because its
   `version` is lower than the one shown (W-29), from an action's answer, a read

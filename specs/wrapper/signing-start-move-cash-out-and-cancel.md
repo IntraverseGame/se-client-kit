@@ -375,7 +375,14 @@ Part of the [Wrapper spec](../wrapper.md), section
   book Snapshot that carries one is invalid (W-28). Decided by human review,
   2026-10-17: the first release ships config games only, so the shell refuses a
   book round as `missing` (check 1) until a later increment defines its
-  evidence.
+  evidence. Decided (issue #146, 2026-10-28;
+  [Book playback](./book-playback.md)): that increment is W-52, which replaces
+  this refusal when book playback ships. Checks 1 to 5, the tip check, and the
+  re-issue rule do not apply to a book round, nothing is signed for one (W-51),
+  and the shell checks instead that the round's `randomnessProof` and
+  `packageHash` do not change between reads (W-52's changed round). A change of
+  the session's presentation, model, `config.kind`, or `config.model` is W-53's
+  changed session, final until a reload.
 
   The shell builds checks 1 to 5 and the re-issue rule
   ([the `shell` package](../client-kit/the-shell-package.md)); the backend's

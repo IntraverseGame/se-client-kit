@@ -24,6 +24,11 @@ else.
   (`CONTROLLER_SCHEMA`, `ROUND_STATUSES`, and the bridge stay on the main
   entry), and none of the types reaches a key, a token, a signature, or another
   shell internal.
+- **The `playback` copy's types** (RFC-003, decided by the human, 2026-10-28).
+  The subpath also exports `GamePlaybackSnapshot`, the `playback` copy of W-38,
+  with its draw and event types, type-only like the others: no value, and
+  nothing that reaches a key, a token, a signature, or another shell internal.
+  `GameSnapshot` stays the `steps` copy.
 - **Split later.** When a second consumer of the types appears (a game outside
   this repository, or a game SDK), they move to a `controller` package of their
   own, so a game developer does not depend on `shell` at all. Until then the
@@ -128,7 +133,8 @@ else.
   another origin gains nothing: what the game posts to that origin is dropped by
   the browser, and the framer's own messages carry its real origin.
 - **Messages.** On load the game sends one `hello`: `presentations: ["steps"]`
-  and all seven statuses. It parses every message against `se.controller/1`
+  (`["steps", "playback"]` once the book-slot page ships, #146, below) and all
+  seven statuses. It parses every message against `se.controller/1`
   (`protocol.ts`, `game-snapshot.ts`): a plain object with exactly its fields,
   read through its own data properties only; a `snapshot` whose copy has exactly
   the W-38 allow-listed fields, each well formed; a `reject` with an `id` of 1
@@ -151,6 +157,36 @@ else.
   game's: the game sends no message for it, and the page says the Wrapper offers
   it. The same build plays both, so the preview run serves one build at one game
   origin for both games.
+- **The book-slot page (issue #146, decided by the human, 2026-10-28).** The
+  same build plays a book round (`playback`, W-50 to W-56), so the staging game
+  origin serves `book-slot-v1` from the one page at its root, beside
+  `coin-flip-v1` and `cash-or-crash-v1`, with no deploy change. The game's
+  `hello` declares `presentations: ["steps", "playback"]` and all seven
+  statuses, and it renders by the copy's `presentation`. On a `playback` copy it
+  plays the base mode: the mode it shows is `config.model`, and it offers the
+  player no choice and sends no `action` (a book round takes no pick). A book
+  round shows four statuses (W-54): `idle` (place a bet in the Wrapper),
+  `starting` (the round is being prepared), and `won` and `lost` (the draw); a
+  `playback` copy in any other status is ignored like a malformed copy. The draw
+  is shown at once, with no timed animation, so the Wrapper's result and the
+  game's agree when they show: the drawn row (`Book <index>`), its display
+  multiplier (`×<payoutMultiplier>`, never an amount), and the events as an
+  ordered list, one item per event, `<index>. <type>`, and its `data`, when
+  present, as compact JSON text set with `textContent` only (never parsed as
+  markup). That text is cut to `EVENT_DATA_TEXT_LIMIT` code points, a named
+  constant of 200, with `…` added when it is cut; the cut counts code points,
+  never UTF-16 code units, so a surrogate pair is never split. The page knows
+  nothing of the package's event types: a real slot renderer is the game
+  developer's. The copy's parser takes the `playback` allow-list exactly (W-38).
+  Two contract rules hold for every event (the backend, 2026-10-28): its `type`
+  is always present, and its `data` is absent or an object. A copy with an event
+  that breaks either, a `config.draw` outside `won` and `lost`, or an extra
+  field is ignored like any malformed copy. A `won` or `lost` copy without
+  `config.draw` is not malformed (the schema makes the draw optional): the page
+  shows the status with no draw and no events, and is not ignored. A `data`
+  object may hold numbers for display; the page shows them as text and never
+  treats one as money. The page names no event type and no `data` shape of any
+  package: generic text, shown at once with no animation.
 - **Statuses.** Every status the bridge forwards is shown: `idle` (place a bet
   in the Wrapper), `starting`, `active` (the two calls), `resolving`, `won`,
   `lost`, and `canceled` (with `closeReason: expired` said, and the reveal when
@@ -212,4 +248,14 @@ else.
   `https://game.e2e-games.test` and runs a smoke test of the game page in a
   stand-in host page ([The e2e harness](./testing-and-ci.md#the-e2e-harness)); a
   whole round through the Wrapper is T-10 and T-11 on the fake round (Coin
-  Flip), and T-10 to T-12 in the preview run (T-12 on Cash or Crash).
+  Flip), and T-10 to T-12 in the preview run (T-12 on Cash or Crash). For #146:
+  the book page's parsing and rendering per status on hand-written copies of the
+  vendored `valid/book-playback-*` Snapshots (the playback copy of `won` with
+  its two events, and of `idle`, `starting`, and `lost` built the same way), an
+  event `data` shown as text and never as markup, an event without a `type` or
+  with a `data` that is not an object refused, a `won` or `lost` copy without
+  `config.draw` shown with its status and no draw, a `data` text cut at
+  `EVENT_DATA_TEXT_LIMIT` code points (the test reads the constant) with a
+  surrogate pair at the cut kept whole, no `action` sent on a book round, and
+  the `hello` with both presentations; a whole book round through the Wrapper is
+  T-24.

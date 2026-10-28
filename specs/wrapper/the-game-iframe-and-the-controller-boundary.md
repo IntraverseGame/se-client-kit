@@ -64,7 +64,9 @@ Part of the [Wrapper spec](../wrapper.md), section
     that exists and talks to nobody when they disagree. The Wrapper sets the
     frame's `src` only after the bridge accepted D, so a refused D is never
     loaded, and the frame is kept for the session's life and hidden unless the
-    round is shown ready (`active` after W-26 passed, or `resolving`, W-31).
+    round is shown ready (`active` after W-26 passed, or `resolving`, W-31). A
+    book round's frame is also shown at `won` and `lost`, for the playback
+    ([W-55](./book-playback.md)).
 - **W-38.** A message from the game is accepted only if `event.source` is the
   game frame's `contentWindow` **and** `event.origin` is D. The Wrapper posts to
   the game only with `targetOrigin = D`. Every accepted message MUST be parsed
@@ -80,7 +82,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   | --------------- | ---------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
   | game to Wrapper | `hello`    | `presentations`, `statuses`                      | The game's capabilities. The Wrapper sends no variant the game did not declare.                                                              |
   | game to Wrapper | `action`   | `id`, `verb` (`pick`), `args` (`step`, `option`) | A pick request. It is not an action: the Wrapper validates it (W-23) and builds the signed action.                                           |
-  | Wrapper to game | `snapshot` | `snapshot`                                       | A Snapshot that passed W-28, sent on every accepted change.                                                                                  |
+  | Wrapper to game | `snapshot` | `snapshot`                                       | A Snapshot that passed W-28, sent on every accepted change: its `steps` copy, or (#146) its `playback` copy.                                 |
   | Wrapper to game | `reject`   | `id`, `reason`                                   | An `action` request that was not accepted. `reason` is a closed list (`not_legal`, `not_active`, `busy`, `invalid`), never a server message. |
 
   The message set is closed: a `type` outside it is ignored. The operator page
@@ -110,6 +112,17 @@ Part of the [Wrapper spec](../wrapper.md), section
   - The Wrapper sends only the `steps` presentation: a `playback` Snapshot is
     not forwarded in the first release. It does not send a Snapshot whose
     `version` is lower than the latest it was given (W-29).
+  - **Decided by the human, 2026-10-28 (RFC-003, issue #146); it replaces the
+    two items above when the Wrapper ships book playback.** A game must declare
+    all seven statuses and at least one presentation; `steps` is no longer
+    required. The Wrapper sends a Snapshot only in a presentation the game
+    declared: when the Snapshot it is about to send (the latest it holds when
+    the `hello` arrives, or any later one) has a presentation the game did not
+    declare, it shows the generic "game not compatible" error, and sends and
+    accepts nothing more. A `steps` Snapshot is sent as its `steps` copy and a
+    `playback` Snapshot as its `playback` copy (below). The `version` rule
+    (W-29) is unchanged. A game that declares `steps` only and plays a `steps`
+    game is unaffected.
 - **The Snapshot allow-list (decided in human review, 2026-10-17).** The
   `snapshot` message carries a copy of the validated Snapshot built only from
   these fields, never by removing fields, so a field the schema adds reaches the
@@ -132,6 +145,47 @@ Part of the [Wrapper spec](../wrapper.md), section
   `tileStyles`, `bet`, `bankedAmount`, `schema`, and `model`. The game gets no
   amount: the Wrapper shows money (W-32, W-34).
 
+  **The `playback` copy (decided by the human, 2026-10-28; RFC-003, issue
+  #146).** Built the same way, field by field, from a validated `playback`
+  Snapshot (a book round, W-50 to W-56):
+
+  | Field                                                                                                 | Why the game needs it                       |
+  | ----------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+  | `version`                                                                                             | ordering                                    |
+  | `presentation` (always `playback`)                                                                    | the contract it renders                     |
+  | `status`, `closeReason`                                                                               | the state it shows                          |
+  | `roundId`                                                                                             | which round it renders                      |
+  | `context.language`, `context.device`, `context.theme.appearance`                                      | the language, layout, and light or dark     |
+  | `config.kind` (always `book`), `config.model`                                                         | the contract, and the mode it plays         |
+  | `config.draw` (`index`, `payoutMultiplier`, `events[]` with `index`, `type`, and `data` when present) | the drawn book to play back (`won`, `lost`) |
+
+  `config.draw` is copied only when the Snapshot has it (on `won` and `lost`;
+  the schema forbids it before and on `canceled`). An event's `data` is a member
+  the schema leaves open (its shape is the math package's; the contract says it
+  is absent or an object). It is copied as a deep copy of its JSON value
+  (objects, arrays, strings, numbers, `true`, `false`, `null`), read from own
+  data properties only, so the game gets data and no object of the Wrapper's:
+  - every object of the copy is created with a null prototype and each member is
+    set with `Object.defineProperty` (a data property, enumerable, writable,
+    configurable), so an own `__proto__` key in the data is copied as a member
+    and can never change a prototype;
+  - the copy is bounded: nesting at most **32** levels deep (an event's `data`
+    is level 1), and at most **10 000** values (objects, arrays, and primitives,
+    counted over every event's `data` of the Snapshot);
+  - a `data` that breaks a bound, or that cannot be read as JSON data (an
+    accessor, a symbol key, a cycle, a value of another type), fails the copy,
+    and the copy fails closed: that Snapshot is **not forwarded** to the game
+    (the game keeps the last copy it was sent), and the Wrapper shows its own
+    view of the Snapshot as usual (the result, the payout, the round id, and the
+    verify link, W-54) with the frame hidden and the notice "The game can't show
+    this round." in its place. A later Snapshot whose copy succeeds is forwarded
+    as usual (its `version` is higher), and the notice goes. Left out:
+    everything the `steps` copy leaves out, and `config.packageHash`,
+    `config.rtp` (the Wrapper shows it, W-56), and `payout`. `payoutMultiplier`
+    is the drawn row's display multiplier, never money; the game shows no
+    amount. Decided by the human, 2026-10-28: this allow-list, with
+    `packageHash` and `rtp` left out.
+
 - **A pick (W-23, decided in human review, 2026-10-17).** In this order:
   - a well-formed `action` envelope (its fields, the schema, and a valid `id`)
     whose `verb` or `args` are bad gets `reject: invalid`; any other schema
@@ -143,11 +197,19 @@ Part of the [Wrapper spec](../wrapper.md), section
     only the latest Snapshot it sent the game, and the in-flight slot is freed
     when the use case settles, so a second pick for the same step can pass it
     before the Snapshot that answers the first arrives. A `playback` Snapshot,
-    which is not forwarded, does not update the pre-check's state. The
-    pre-check: a status other than `active` (or no Snapshot yet) gets
-    `reject: not_active`; a `step` that is not the Snapshot's current `step`, a
-    step the config does not have, or an `option` not below its `optionCount`
-    gets `reject: not_legal`;
+    which the first release does not forward, does not update the pre-check's
+    state; once it is forwarded (#146) it does, like any other. The pre-check,
+    in this order:
+    1. a pick while the latest Snapshot sent is `playback` gets
+       `reject: not_legal`, whatever its status, since a book round takes no
+       pick; this runs **before** the status check, so a book round never
+       answers `not_active` (decided by the human, 2026-10-28; RFC-003). The
+       shell's pick use case refuses it too, and nothing is signed (W-51);
+    2. a status other than `active` (or no Snapshot yet) gets
+       `reject: not_active`;
+    3. a `step` that is not the Snapshot's current `step`, a step the config
+       does not have, or an `option` not below its `optionCount` gets
+       `reject: not_legal`;
   - otherwise the pick goes to the shell's pick use case, the security gate. It
     MUST re-check W-23's legality against the shell's own latest validated
     Snapshot, MUST refuse a step it has already signed (W-15), checks what the
