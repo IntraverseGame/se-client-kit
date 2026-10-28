@@ -387,27 +387,44 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `apps/wrapper/dist/` to `WRAPPER_BUDGET`; the measuring and judging are pure
   (`tools/size-budget.ts`, covered by `tools/size-budget.test.ts`, which also
   keeps the limits equal to the testing spec's list). The release dry run and
-  the publish step call `checkReleaseSize` directly, so a problem is listed
+  the release `build` job's `tools/release-publish.ts` call `checkReleaseSize` directly, so a problem is listed
   once; an output without `index.html` (an empty `dist/` too) is a problem.
-  **Known gap:** nothing tests that the dry-run and publish CLIs still call
+  **Known gap:** nothing tests that the dry-run and release-build CLIs still call
   `checkReleaseSize` (mutants S8a/S8b survive): they are CLI glue, and a test
   would mean a full dry run in `pnpm check`. On `main` the required `build`
-  job runs `check:size-budget` on the same commit; the publish job's digest
-  check does not enforce size by itself.
+  job runs `check:size-budget` on the same commit; the release `build` job's
+  digest check does not enforce size by itself.
 - **Workflows:** `tools/workflow-text.ts` is a small block-style reader (no
   YAML parser in the repository). `tools/release-workflow.test.ts` compares
-  `release.yml`'s values whole (every `if:`, permissions, jobs, the push
-  refspec, checkouts, pins) and checks ci.yml's `check:size-budget` step;
-  `tools/release-version-guard.test.ts` extracts the version job's guard
+  `release.yml`'s values whole (every `if:`, exact permissions per job, the
+  job graph, the push refspec, checkouts, pins) and holds the split: only
+  `publish` and `attest` hold `id-token`, only `version-push` and
+  `github-release` hold `contents: write`, and those four jobs use only their
+  listed Actions (never the setup action) and run no package manager, Node,
+  or `tools/` script; it also checks ci.yml's `check:size-budget` step.
+  `tools/release-version-guard.test.ts` extracts the version-push job's guard
   script and runs it with bash in temporary git repositories (no user or
-  system git configuration). `tools/pages-workflow.test.ts` checks
+  system git configuration), each case twice: directly, and through the
+  version job's export script and the version-push job's apply script.
+  The tests that run a release.yml step's script use
+  `tools/fixtures/workflow-step.ts`, which runs it as Actions runs
+  `shell: bash` (`bash --noprofile --norc -eo pipefail`): a test without `-e`
+  once missed a step that failed in Actions.
+  `tools/release-github-release-guard.test.ts` runs the github-release
+  job's existing-release step with a stub `gh` that serves pages of releases
+  through jq (no match goes on; a draft, a published release, or a match on a
+  later page refuses; an API error fails).
+  `tools/release-npm-version.test.ts` runs the publish job's npm version
+  step with a stub `npm` (11.5.1 and later pass, older and malformed fail).
+  `tools/actions-allow-list.test.ts` holds every `uses:` under `.github/` to
+  the Actions allow-list table in `specs/client-kit/supply-chain.md`. `tools/pages-workflow.test.ts` checks
   `pages.yml` (gates, permissions, the `pages-stage` environment, the project
   names, pins, which steps see the token, the worker build and digests, the
   routes, `--no-bundle`, the config job's secrets, no repository script in
   `deploy-stage`), and
   `tools/pages-headers.test.ts` runs its headers step's script with bash and
-  `jq` (both needed locally; macOS ships `jq` since 15). The three workflows are
-  `test:tools` inputs. The Pages API proxy's unit tests
+  `jq` (both needed locally; macOS ships `jq` since 15). Every `.github/**/*.yml` is a
+  `test:tools` input. The Pages API proxy's unit tests
   (`apps/pages-proxy/src/*.test.ts`) call its handler with an injected `fetch`
   and a fake `ASSETS` binding: byte-exact streamed bodies and `duplex`, the
   path allow-list, each site's prefixes, refused paths, dropped request

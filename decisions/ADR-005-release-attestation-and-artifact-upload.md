@@ -1,7 +1,8 @@
 # ADR-005 — Two GitHub Actions for the release: the Wrapper's build-provenance attestation and the dry run's artifact
 
-- Status: proposed
-- Date: 2026-10-17
+- Status: accepted
+- Date: 2026-10-17 (proposed); 2026-10-28 (accepted by the human, with the
+  recommended answers to the three open questions)
 - Relates to: [ADR-001](./ADR-001-toolchain-and-signing.md) (decision 3, GitHub
   Actions for the release; decision 7, the supply-chain minimum, Actions pinned
   by full commit SHA; decision 9, the Wrapper bundle released with an
@@ -134,7 +135,8 @@ The workflow keeps `permissions: {}` at the top. Each job asks for its own.
     (`repo:IntraverseGame/se-client-kit:environment:attest`). It can therefore
     never match a binding that requires the `release` environment. The `attest`
     environment holds no secret, and deployments to it are restricted to `main`.
-    An org owner creates it, as a Bootstrap step of the release runbook (#134).
+    An org owner creates it, as a Bootstrap step of the release runbook (step
+    7).
 
 The `publish` job keeps its own permissions (`contents: read`,
 `id-token: write`) and its `release` environment.
@@ -164,9 +166,11 @@ Action accepts. The `attest` job has no checkout and no copy of the tar, so it
 cannot derive the name itself. The `dry-run` job therefore exposes a second job
 output, `wrapper-file-name` (`se-client-wrapper-<version>.tar`), next to
 `wrapper-digest`. The same value names the two uploads (decision 5). The digest
-is attested only after the `publish` job has rebuilt the artifact and found the
-same digest. The result is an in-toto statement with an SLSA v1 provenance
-predicate, signed by a Sigstore certificate. It binds:
+is attested only after the `build` job has rebuilt the artifact and found the
+same digest, and the `publish` job has published (amended at acceptance,
+2026-10-28: the rebuild moved to `build` when the publish job was split). The
+result is an in-toto statement with an SLSA v1 provenance predicate, signed by a
+Sigstore certificate. It binds:
 
 - **the artifact**: the tar's file name and its SHA-256. The digest is the
   identity: the attestation holds for any copy of those bytes, wherever they are
@@ -386,17 +390,30 @@ in the public transparency log.
   `actions/attest` directly, or a different signer), a new ADR supersedes this
   one.
 
-## Open questions (for acceptance)
+## Decided at acceptance (2026-10-28)
 
-1. **`attest-build-provenance` or `actions/attest` directly?** Recommended:
-   accept `attest-build-provenance` as proposed, since it is what was asked and
-   the inner pin fixes both. Moving to `actions/attest` would then be a separate
-   decision, taken when Dependabot or upstream deprecation calls for it.
-2. **Retention of the dry run's upload: 14 days?** Alternatives are 30 days, or
-   the repository default.
-3. **The durable home of the released tar** for the pull-deploy. The spec
-   assumes a GitHub release asset (with #134). The infrastructure owner confirms
-   it.
+The human accepted this ADR with the recommended answer to each open question:
+
+1. **`attest-build-provenance` or `actions/attest` directly?** Keep
+   `actions/attest-build-provenance`, pinned by full commit SHA (decision 1).
+   Moving to `actions/attest` would be a separate decision, taken when
+   Dependabot or an upstream deprecation calls for it.
+2. **Retention of the dry run's upload.** 14 days (`retention-days: 14`,
+   decision 5).
+3. **The durable home of the released tar.** A GitHub release asset: the release
+   workflow's `github-release` job creates the tag and the release and attaches
+   the tar and its `.sha256`. The production deploy's source is confirmed under
+   #133.
+
+Built with #134, which also split the `version` job and the publish job
+(Follow-ups). Two details the follow-ups left open were settled there: the
+artifacts pass between jobs with `actions/download-artifact`, already on the
+allow-list for the Pages workflow
+([ADR-008](./ADR-008-pages-deploy-with-wrangler.md), decision 7), so no third
+Action is added; and the publish-only job runs the npm CLI of the pinned Node
+(decided by the human, 2026-10-28). The Actions allow-list is the table in the
+[supply-chain spec](../specs/client-kit/supply-chain.md), checked by
+`tools/actions-allow-list.test.ts`.
 
 <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). Where the released Wrapper is deployed from in production. Reason: ADR-008 decides the push to Cloudflare Pages for staging only; production is to come. -->
 

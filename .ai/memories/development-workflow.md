@@ -52,52 +52,83 @@ Several agents and people work in one clone at once. Rules:
   needs no token. Version pull request: the release workflow's `version` job
   (only from `main`, with the `version` input and without `publish`, after
   `dry-run`, whose first step fails a run with both inputs;
-  `contents: write` and `pull-requests: read`, no `id-token`, no environment)
-  runs `changeset version` with the job's `GITHUB_TOKEN`; a step without the
-  token reads `git diff --cached --no-renames --raw -z` and allows only `M` of
-  a `package.json`, `A`/`M` of a `CHANGELOG.md` (neither inside
-  `.changeset/`), and `D` of a `.changeset/<name>.md` (not README), all mode
-  100644 with paths in `[A-Za-z0-9._/@-]`; every git command of the check and
-  push steps runs with `-c core.hooksPath=/dev/null -c core.fsmonitor=false`,
-  and the commit and push with `--no-verify`; the last step (only when something changed)
+  `contents: read` and `pull-requests: read`, no `id-token`, no environment)
+  runs `changeset version` with the job's read-only `GITHUB_TOKEN` and uploads
+  the change as one binary patch (`git diff --cached --binary --no-renames`,
+  kept one day). `version-push` (`contents: write`, no repository tooling:
+  checkout, `actions/download-artifact`, git) applies it with `git apply`; a
+  step without the token reads `git diff --cached --no-renames --raw -z` and
+  allows only `M` of a `package.json`, `A`/`M` of a `CHANGELOG.md` (neither
+  inside `.changeset/`), and `D` of a `.changeset/<name>.md` (not README), all
+  mode 100644 with paths in `[A-Za-z0-9._/@-]`; every git command of the
+  apply, check, and push steps runs with
+  `-c core.hooksPath=/dev/null -c core.fsmonitor=false`, and the commit and
+  push with `--no-verify`; the last step (only when something changed)
   force-pushes one `github-actions[bot]` commit to `changeset-release/main`
-  (credential helper reading the environment; checkout without persisted
-  credentials, `fetch-depth: 0`). A person opens the pull request (Actions may
-  not create pull requests here; no new Action). A `GITHUB_TOKEN` push starts
-  no workflow: close and reopen an open version pull request to rerun its
-  checks. Accepted residual risk (2026-10-18): the code `changeset version`
-  loads holds the `contents: write` token, which can push to unprotected
-  branches and create tags and releases; once `actions/upload-artifact` is
-  allowed (ADR-005 Follow-ups) the job is split so only a no-tooling job holds
-  `contents: write`. The `main` ruleset dismisses stale approvals on a push;
-  the tag ruleset is still to come (#134). Tests: `tools/release-workflow.test.ts` (whole `if:` values,
-  permissions, job set, refspec, checkouts, pins, no `${{` in `run:`, via the
-  block-style reader `tools/workflow-text.ts`; no YAML parser in the
-  repository) and `tools/release-version-guard.test.ts` (runs the guard
-  step's own script against temporary git repositories). Attestation and artifact upload: an ADR to come proposes
-  `actions/attest-build-provenance` and `actions/upload-artifact`.
+  (credential helper reading the environment; checkouts without persisted
+  credentials). A person opens the pull request (Actions may not create pull
+  requests here). A `GITHUB_TOKEN` push starts no workflow: close and reopen
+  an open version pull request to rerun its checks. The residual risk accepted
+  on 2026-10-18 (tooling holding `contents: write`) is closed by the split
+  (#134). The `main` ruleset dismisses stale approvals on a push; the tag
+  ruleset (decided 2026-10-28, to be created by an org owner, #154) blocks
+  updating and deleting `@intraverse/se-client-wrapper@*` tags except for the
+  org owners and allows creating them, so `github-release` can tag. Tests: `tools/release-workflow.test.ts` (whole `if:` values,
+  exact permissions per job, which jobs hold `id-token` or a write token, that
+  those jobs use only their listed Actions and run no package manager, Node,
+  or `tools/` script, the job graph, refspec, checkouts, the 14-day dry-run
+  uploads, the attest inputs, pins, no `${{` in `run:`, via the block-style
+  reader `tools/workflow-text.ts`; no YAML parser in the repository) and
+  `tools/release-version-guard.test.ts` (runs the guard step's own script
+  against temporary git repositories, directly and through the version job's
+  export and the version-push job's apply scripts).
 - **Release** ([runbook](../../runbook/client-kit-release.md#release)):
-  `.github/workflows/release.yml`, `workflow_dispatch` only. Job `dry-run`
-  (`contents: read`) runs `pnpm release:dry-run`; job `publish` runs only from
-  `main` with the `publish` input, the repository variable
-  `RELEASE_PUBLISH_ENABLED == 'true'`, and an approval in the protected
-  `release` environment (`contents: read`, `id-token: write`), and runs
-  `tools/release-publish.ts`. Its gate is the pure
-  `findReadinessProblems` (`tools/release-readiness.ts`, unit-tested): pending
-  changesets, a `private` or 0.0.0 library, a missing (with `--publish`) or
-  different Wrapper digest. It is the only `private` guard: pnpm 12.10.1
-  publishes a private package's tarball without complaint. It then publishes
-  the checked tarballs with `--provenance --ignore-scripts`, skipping a version
-  only when the registry's `dist.integrity` equals the local SHA-512. Both
-  release jobs call the setup action with `cache: "false"` (no wireit cache
-  helper, no pnpm store cache). The five libraries are still `private: true`
-  on purpose: removing it is a reviewed change made after the trusted
-  publishers exist (#134). No npm token exists: the credential is npm trusted
-  publishing (OIDC) from `release.yml` in the `release` environment (decided
-  2026-10-27; the `intraverse` npm organization is claimed). **Before any real publish** (decided by the human; runbook Bootstrap
-  step 7, after ADR-005), the publish job is split: a build job without
-  `id-token`, and a publish-only job that runs no repository tooling and only
-  verifies digests and publishes the downloaded tarballs.
+  `.github/workflows/release.yml`, `workflow_dispatch` only, `permissions: {}`
+  at the top; no job that holds a write or OIDC token runs repository
+  tooling. Job `dry-run` (`contents: read`) runs the dry run, outputs
+  `wrapper-digest`, `wrapper-file-name`, and `release-tag`
+  (`@intraverse/se-client-wrapper@<version>`), and uploads the tar and its
+  `.sha256` (one file each, `archive: false`, 14 days; ADR-005, accepted
+  2026-10-28). The publish path runs only from `main` with the `publish`
+  input and the repository variable `RELEASE_PUBLISH_ENABLED == 'true'`:
+  `build` (`contents: read`, no environment) refuses an existing release tag
+  (`git ls-remote`), runs `tools/release-publish.ts` (build, pack, checks, the
+  gate `findReadinessProblems` in `tools/release-readiness.ts`: pending
+  changesets, a `private` or 0.0.0 library, a missing or different Wrapper
+  digest; the registry check, skipping a version only when `dist.integrity`
+  equals the local SHA-512), writes the publish plan (`<sha256>  <tarball>`
+  lines, dependency order) as the output `publish-plan`, and uploads the five
+  tarballs; `publish` (environment `release`, `contents: read`,
+  `id-token: write`) has a sparse checkout of `.node-version`,
+  `actions/setup-node` (`package-manager-cache: false`), the download, and one
+  shell steps: npm 11.5.1 or later required (`npm --version`, plain bash;
+  `tools/release-npm-version.test.ts`), plan lines validated,
+  `sha256sum --check --strict`, then
+  `npm publish <tarball> --provenance --access public --ignore-scripts` (npm,
+  not pnpm, decided 2026-10-28); `attest` (environment `attest`,
+  `contents: read`, `id-token: write`, `attestations: write`, no checkout)
+  runs `actions/attest-build-provenance` on the dry run's name and digest;
+  `github-release` (`contents: write`, no checkout) checks the downloaded tar
+  and `.sha256` against the digest, refuses when any release of the
+  repository (drafts included; `gh api --paginate .../releases`, `--jq` exact
+  `tag_name == env.RELEASE_TAG`, `set -euo pipefail` so an API error fails)
+  has the tag, and runs `gh release create` with both.
+  The readiness gate (which also refuses a Wrapper at 0.0.0) is the guard the
+  kit relies on against publishing a `private` package: the real publish is
+  `npm publish <tarball>` in `publish`, and pnpm 12.10.1, which the dry run's
+  publish checks use, does not refuse a private package's tarball (its
+  `--dry-run` goes through). The
+  repository-tooling jobs call the setup action with `cache: "false"`. The
+  five libraries are still `private: true` on purpose: removing it is a
+  reviewed change made after the trusted publishers exist (#154). No npm token
+  exists: the credential is npm trusted publishing (OIDC) from `release.yml`
+  in the `release` environment (decided 2026-10-27; the `intraverse` npm
+  organization is claimed). Still open (#154): the trusted publishers, the
+  `attest` environment and the OIDC precondition, the tag ruleset,
+  `RELEASE_PUBLISH_ENABLED`, and the first-publish rehearsal. **Actions
+  allow-list**: the table in `specs/client-kit/supply-chain.md`, held to every
+  `uses:` under `.github/` (pinned SHA and version comment) by
+  `tools/actions-allow-list.test.ts`; a new Action needs a recorded decision.
 - **Pages deploy** (#133, ADR-008, accepted, which supersedes ADR-001
   decision 9; [runbook](../../runbook/client-kit-release.md#deploy-to-cloudflare-pages)):
   `.github/workflows/pages.yml`, on push to `main` and by hand from `main`,

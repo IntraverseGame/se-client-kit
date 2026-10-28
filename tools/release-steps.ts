@@ -1,4 +1,4 @@
-// The steps the release dry run and the publish job share
+// The steps the release dry run and the release build job share
 // (tools/release-dry-run.ts, tools/release-publish.ts; the procedure is in
 // runbook/client-kit-release.md): running a command with a clean environment,
 // copying the working tree, packing and checking the five libraries, and
@@ -12,8 +12,9 @@
 // of the same user can still read its parent's environment (on Linux,
 // `/proc/<pid>/environ`), so a job that holds a credential, such as the OIDC
 // request token of `id-token: write`, must not run repository tooling at all.
-// That is why the publish job is to be split from the build (runbook, Bootstrap
-// step 7).
+// That is why the release workflow builds in a `build` job without
+// `id-token` and publishes in a `publish` job that runs no repository tooling
+// (runbook, Release step 3).
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";

@@ -74,7 +74,7 @@ organization is claimed and owned by the org owners. The packages publish
 through npm trusted publishing (OIDC) from `release.yml` in the protected
 `release` environment, with no stored npm token; each package's trusted
 publisher is to be configured on npmjs.com, requiring the environment `release`
-(#134).
+(#154; moved from #134, which built the publish path).
 
 Amendment note (2026-10-16, toolchain pull request):
 `@changesets/changelog-github` is added as a development dependency, at the root
