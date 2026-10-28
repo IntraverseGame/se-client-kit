@@ -47,7 +47,10 @@ export type TrackingEvidence = {
 
 export type RoundTracking = {
   readonly roundId: string;
-  /** Reads a validated Snapshot; another round's, or `idle`, is ignored. */
+  /**
+   * Reads a validated Snapshot; another round's, or `idle`, is ignored. The
+   * flow keeps a stale one (a lower `version`, W-29) from reaching it.
+   */
   readonly observe: (snapshot: ValidSnapshot) => Promise<RoundVerdict>;
   readonly verdict: () => RoundVerdict;
   /** The transcript state, once opened. */

@@ -75,18 +75,25 @@ const READ_DECIDED: ReadonlySet<CancelState> = new Set([
 export type Before = {
   readonly error: Error | undefined;
   readonly cancel: CancelState;
+  /** The round's stale read before the action: never this action's answer. */
+  readonly stale: ValidSnapshot | undefined;
 };
 
 /** Before a round's first action: no failure, no cancel. */
 export const FRESH: Before = Object.freeze({
   error: undefined,
   cancel: "none",
+  stale: undefined,
 });
 
 export const beforeOf = (flow: SessionRound | undefined): Before =>
   flow === undefined
     ? FRESH
-    : Object.freeze({ error: flow.lastError(), cancel: flow.cancel() });
+    : Object.freeze({
+        error: flow.lastError(),
+        cancel: flow.cancel(),
+        stale: flow.staleRead(),
+      });
 
 /** Whether `flow`'s cancel moved, since `before`, to a state its reads decide. */
 const cancelDecided = (flow: SessionRound, before: Before): boolean => {
@@ -200,7 +207,15 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
     ) {
       return readOfError(error);
     }
-    return Object.freeze({ kind: "snapshot", snapshot: show(flow.latest()) });
+    // An answer that was a stale read of the round (W-29) is what the action
+    // got: the UI drops it for its lower `version` and reads again (W-35), and
+    // the game's bridge ignores it; the round did not read it in.
+    // Only this action's own stale answer: one left from before it (an action
+    // decided only through the cancel's reads observes nothing) is not.
+    const stale = flow.staleRead();
+    const answer =
+      stale !== undefined && stale !== before.stale ? stale : flow.latest();
+    return Object.freeze({ kind: "snapshot", snapshot: show(answer) });
   };
 
   // While the cancel is `settling`, a read is one of its counted reads

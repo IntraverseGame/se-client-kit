@@ -30,6 +30,7 @@ export type SessionRound = Pick<
   | "cancel"
   | "lastError"
   | "unconfirmed"
+  | "staleRead"
   | "observe"
   | "refresh"
   | "checkAgain"

@@ -147,6 +147,15 @@ describe("what the shell checks on a book round (W-52)", () => {
     expect(round.latest().version).toBe(2);
   });
 
+  it("names only the last Snapshot observed as stale", async () => {
+    const round = started();
+    const stale = versionedStarting(1);
+    await round.observe(stale);
+    expect(round.staleRead()).toBe(stale);
+    await round.observe(bookSnapshot("idle"));
+    expect(round.staleRead()).toBeUndefined();
+  });
+
   it("before any randomnessProof there is nothing to change", async () => {
     const round = started(bookSnapshot("starting", { proofs: false }));
     await round.observe(versionedStarting(3));

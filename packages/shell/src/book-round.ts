@@ -26,7 +26,7 @@ import type { PickOutcome, PickUseCase } from "./controller-bridge.ts";
 import type { StartRequest } from "./create-round-auth.ts";
 import { redacting } from "./redaction.ts";
 import type { FlowVerdict, SessionRound } from "./session-round.ts";
-import { isRoundOver } from "./snapshot-reading.ts";
+import { isRoundOver, isStale } from "./snapshot-reading.ts";
 
 /** What the shell sent in the start of a book round (W-27). */
 export type BookStartRequest = StartRequest & {
@@ -136,6 +136,8 @@ export const createBookRound = (
 ): BookRound => {
   const { roundId, request } = round;
   let latest = first;
+  // The round's last read when it was stale (W-29); not read in.
+  let stale: ValidSnapshot | undefined;
   let baseline: BookRoundValues | undefined;
   const changes: BookRoundValues[] = [];
   const proofs: BookRandomnessProof[] = [];
@@ -162,13 +164,18 @@ export const createBookRound = (
   };
 
   const observe = (snapshot: ValidSnapshot): Promise<void> => {
+    // `staleRead` describes only the last Snapshot observed.
+    stale = undefined;
     if (snapshot.status === "idle" || snapshot.roundId !== roundId) {
       return Promise.resolve();
     }
     if (options.admit?.(snapshot) === false) return Promise.resolve();
     // A stale read (a lower `version`, W-29) is ignored before W-52's check:
     // an older `starting` without `randomnessProof` is no change of the round.
-    if (snapshot.version < latest.version) return Promise.resolve();
+    if (isStale(snapshot, latest)) {
+      stale = snapshot;
+      return Promise.resolve();
+    }
     latest = snapshot;
     keepProof(snapshot.proofs?.randomnessProof);
     check(snapshot);
@@ -186,6 +193,7 @@ export const createBookRound = (
     cancel: (): CancelState => "none",
     lastError: (): Error | undefined => undefined,
     unconfirmed: (): undefined => undefined,
+    staleRead: (): ValidSnapshot | undefined => stale,
     observe,
     // The session reads a book round through its own reads; a round with no
     // cancel has no reads of its own (W-35), so these read nothing.

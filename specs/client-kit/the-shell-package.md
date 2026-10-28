@@ -422,6 +422,23 @@ are in brackets.
   case is the gate and MUST re-check W-23 against the shell's own latest
   validated Snapshot and refuse a step it has already signed (W-15). The bridge
   logs nothing.
+- **A stale read of the round (W-29; decided by the human, 2026-10-28, #146).**
+  A Snapshot of the round the shell holds whose `version` is lower than the
+  round's latest is ignored (`isStale`, `snapshot-reading.ts`) before the
+  round's tracking, its verification, and its transcript state see it: in a
+  config round's `round-flow.ts` (its `observe`, and the cancel's reads into the
+  round) and in `book-round.ts`, one rule for both. An equal `version` is read.
+  W-16's resend keeps its own rule. The required cancel's own decision
+  (`decide()` in `round-cancel.ts`) does not yet compare versions: a stale
+  cancel read never reaches the round's tracking, checks, or signer, but it can
+  still settle the cancel's state or allow its one resend of the same signed
+  bytes, which signs nothing new (a known gap, #163). An action whose own answer
+  was a stale read (`SessionRound.staleRead`, which names only the last Snapshot
+  observed, compared with the one before the action) answers the UI with it, so
+  the Wrapper drops it and reads again (W-35). So a stale read never moves
+  `latest()` back, sends the verdict back to `checking` or to a required cancel,
+  desynchronizes the transcript (W-19), reopens an ended round (`round-exists`),
+  or reaches the game's copy at the mount.
 - **Book playback in the shell (W-50 to W-56, #146; built).** The session's
   start (`startSessionRound`) holds a round whose first Snapshot is `playback`
   as a book round (`book-round.ts`): no transcript state, nothing signed, a pick

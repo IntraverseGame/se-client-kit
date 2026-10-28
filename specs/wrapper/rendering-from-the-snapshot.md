@@ -31,7 +31,23 @@ Part of the [Wrapper spec](../wrapper.md), section
   Where a poll runs, a drop delays a newer balance or status by one read; where
   none runs (an action's answer to an `active` round, or the start's answer from
   an ended round), the Wrapper reads the Snapshot again until a read is taken
-  (W-35's re-read after a drop), so the state it shows catches up.
+  (W-35's re-read after a drop), so the state it shows catches up. The shell
+  applies the same rule to the round it holds, config or book (decided by the
+  human, 2026-10-28, #146): a Snapshot of the round whose `version` is lower
+  than the round's latest is ignored before the round's tracking, its checks
+  (W-26 for a config round, W-52 for a book round), and its transcript state see
+  it, so a stale read never moves the round back, fails it, or changes what is
+  signed; an equal `version` is read. The comparison is the shell's `isStale`
+  (`snapshot-reading.ts`), in the config round's flow (`round-flow.ts`) and in
+  the book round (`book-round.ts`); W-16's resend keeps its own rule (only the
+  newest read of the round decides it). A stale read the required cancel's own
+  reads take (W-25) never reaches the round's tracking, checks, or transcript
+  state either, but the cancel's own decision does not yet compare versions: a
+  stale read can still settle the cancel's state or allow its one resend, which
+  sends the same signed bytes and signs nothing new (a known gap; follow-up
+  #163 <!-- TODO(W-29, #163): the cancel's decision compares versions before it settles or resends. -->).
+  An action whose own answer was such a stale read hands the UI that answer,
+  which it drops and reads again as above; the round itself never read it in.
 - **W-30.** The Wrapper MUST declare its capabilities when the session starts:
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
   six of R3 and `canceled`, which the cancel path needs). Decided (issue #146,
