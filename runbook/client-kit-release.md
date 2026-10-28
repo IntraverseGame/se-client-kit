@@ -186,8 +186,9 @@ the tarball check refuses any lifecycle script in a published manifest).
    changeset (`pnpm changeset`) naming the packages and the bump (major for a
    break, minor for an addition, patch for a fix) and a note for the release. A
    change to a contract's version (a new Play prefix, a new Snapshot schema) is
-   a **major**. Its CI runs `release-dry-run` (below), so a changeset that would
-   break a tarball fails before merge.
+   a **major**. Before 1.0, a breaking change is a **minor** bump (decided by
+   the human, 2026-10-28). Its CI runs `release-dry-run` (below), so a changeset
+   that would break a tarball fails before merge.
 2. **Version pull request.** The changesets are applied (`changeset version`:
    versions and changelogs) in a pull request of their own. Review it: the
    versions, the changelogs, and that the lock file's contract entries match
@@ -470,10 +471,12 @@ enter this repository, an issue, or a log):
    - **`PAGES_CHAIN_PINS`**: JSON with exactly `environment`, `runtimeSigner`,
      `registryDomain`, `entropyChainId`, `minRpcQuorum`, and `tipLagMargin`
      ([wrapper.md](../specs/wrapper.md#configuration)). Set. Staging is
-     `environment: "preview"` with `minRpcQuorum` 1 until it has a
-     browser-reachable RPC (#137; ADR-008, decision 8); production must be
-     `"production"` with `minRpcQuorum` of at least 2.
-     <!-- TODO(#135): staging's `tipLagMargin` in `PAGES_CHAIN_PINS`: the value #135 settles. -->
+     `environment: "preview"` with `minRpcQuorum` 1 while it has no
+     browser-reachable RPC (ADR-008, decision 8), and its `tipLagMargin` is 2
+     blocks per entropy source, the preview value (the backend, 2026-10-28;
+     [W-26b](../specs/wrapper/signing-start-move-cash-out-and-cancel.md)).
+     Production must be `"production"` with `minRpcQuorum` of at least 2; its
+     `tipLagMargin` comes from the backend's measurement of the RPC lag (#133).
    - **`PAGES_RPC_ENDPOINTS`**: JSON of `rpcEndpoints`,
      `{"<source>":[{"provider":"…","url":"…"}]}`, keyed by the same entropy
      source as the pins' `entropyChainId` and `tipLagMargin`;
@@ -493,7 +496,9 @@ fails in its first deploy step, naming what is missing. A configuration value
 that is missing or makes an invalid document fails the config job, naming the
 input or the field and the issue, never a value.
 
-**Staging has no browser-reachable RPC yet** (#137). Until an RPC is provided,
+**Staging has no browser-reachable RPC yet** (decided for now, 2026-10-28: its
+entropy source is a development chain that no browser can reach;
+[wrapper.md](../specs/wrapper.md#configuration)). Until an RPC is provided,
 `PAGES_RPC_ENDPOINTS` can name only a placeholder endpoint (with `minRpcQuorum`
 1, which `environment: preview` allows; the Wrapper then shows its
 non-dismissable "chain check not independent (development)" indicator, W-26a),
@@ -501,7 +506,9 @@ and the on-chain checks cannot pass in the browser: the Wrapper's tip check
 before a round's first signature fails ("could not verify the chain", W-26a), so
 no round can be started, and the verify page's chain read (check 6) fails ("this
 round could not be verified against the chain", V-7). This is the specified
-behavior for an unreachable RPC, not a fault of the deploy.
+behavior for an unreachable RPC, not a fault of the deploy. Production's RPC
+providers (two independent per entropy source), their CORS behavior, and their
+`connect-src` entries are #133's, shared out of band.
 
 **Production (not built yet, #133).** A production deploy runs when the
 changesets version pull request is merged into `main` (the versions bumped and
@@ -513,7 +520,7 @@ deploy jobs with the production project names (ADR-008). Nothing reacts to that
 merge today beyond the staging deploy every push gets: the release workflow
 pushes the version branch and publishes only by hand, and the merge itself
 triggers nothing else.
-<!-- TODO(#133): the production deploy, triggered by the merge of the changesets version pull request into `main`. -->
+<!-- TODO(hosting, #133): the production deploy, triggered by the merge of the changesets version pull request into `main`. -->
 
 **After the first deploy** (the real test: zone-wide settings can still answer
 with a 403 or a challenge page), checks 1 to 4 on the Wrapper's and the
@@ -545,7 +552,7 @@ verifier's sites and check 5 on the game's site:
    loads `<game origin>/?parentOrigin=...` in its frame with a 200 and no
    `frame-ancestors` or `frame-src` violation in the browser console (the frame
    stays hidden until a round is ready, W-31, which staging cannot reach without
-   an RPC, #137).
+   a browser-reachable RPC).
 
 Check them again after any change to `headers.json`, the proxy, the
 configuration, the reference game, or the projects' settings.

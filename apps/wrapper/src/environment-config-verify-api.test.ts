@@ -1,6 +1,7 @@
-// The `verifyApiBaseUrl` field (specs/verify-page.md V-3, D-4; specs/wrapper.md,
-// Configuration): required, never derived or defaulted, `playApiBaseUrl`'s rule
-// with the `/verify/v1` suffix. The Wrapper validates it and does not use it.
+// The `verifyApiBaseUrl` field (specs/verify-page.md V-3, V-3a, D-4, D-10;
+// specs/wrapper.md, Configuration): required, never derived or defaulted,
+// `playApiBaseUrl`'s rule with the `/verify/v1` suffix, on the Wrapper's own
+// origin only. The Wrapper validates it and does not use it.
 
 import { describe, expect, it } from "vitest";
 
@@ -10,12 +11,16 @@ import {
 } from "./environment-config.ts";
 import {
   environmentDocument,
+  LOCAL_ORIGIN,
   localDocument,
   SE_ORIGIN,
 } from "./fixtures/environment.ts";
 
-const codes = (document: unknown): readonly EnvironmentConfigIssueCode[] => {
-  const result = validateEnvironmentConfig(document, SE_ORIGIN);
+const codes = (
+  document: unknown,
+  ownOrigin: string = SE_ORIGIN,
+): readonly EnvironmentConfigIssueCode[] => {
+  const result = validateEnvironmentConfig(document, ownOrigin);
   return result.ok ? [] : result.issues.map(issue => issue.code);
 };
 
@@ -33,7 +38,9 @@ describe("verifyApiBaseUrl", () => {
   });
 
   it("accepts a loopback http verify API base", () => {
-    expect(validateEnvironmentConfig(localDocument(), SE_ORIGIN).ok).toBe(true);
+    expect(validateEnvironmentConfig(localDocument(), LOCAL_ORIGIN).ok).toBe(
+      true,
+    );
   });
 
   it.each([
@@ -52,6 +59,39 @@ describe("verifyApiBaseUrl", () => {
     expect(codes(environmentDocument({ verifyApiBaseUrl: value }))).toEqual([
       "invalid-verify-api-base",
     ]);
+  });
+
+  it.each([
+    ["https://verify-api.example/verify/v1", SE_ORIGIN, "another host"],
+    ["https://api.se.example/verify/v1", SE_ORIGIN, "a subdomain"],
+    [
+      "http://localhost:8080/verify/v1",
+      "https://localhost:8080",
+      "another scheme",
+    ],
+    ["https://se.example:8443/verify/v1", SE_ORIGIN, "another port"],
+    ["http://localhost:8081/verify/v1", LOCAL_ORIGIN, "another loopback port"],
+  ])(
+    "refuses verifyApiBaseUrl %s for a Wrapper at %s (%s, V-3a)",
+    (value, ownOrigin, _reason) => {
+      expect(
+        codes(environmentDocument({ verifyApiBaseUrl: value }), ownOrigin),
+      ).toEqual(["invalid-verify-api-base"]);
+    },
+  );
+
+  it("names the field, never the value, when the origin differs", () => {
+    const result = validateEnvironmentConfig(
+      environmentDocument({
+        verifyApiBaseUrl: "https://verify-api.example/verify/v1",
+      }),
+      SE_ORIGIN,
+    );
+    expect(result).toEqual({
+      ok: false,
+      issues: [{ code: "invalid-verify-api-base", field: "verifyApiBaseUrl" }],
+    });
+    expect(JSON.stringify(result)).not.toContain("verify-api.example");
   });
 
   it("refuses a document without verifyApiBaseUrl, and derives nothing", () => {

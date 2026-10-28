@@ -123,6 +123,21 @@ export const readApiBase = (
     : undefined;
 };
 
+/**
+ * The verify API base (V-3a, D-10): `readApiBase`'s rule, on `ownOrigin` only
+ * (the verify API sends no CORS headers, so it is read same-origin).
+ */
+export const readOwnApiBase = (
+  value: unknown,
+  suffix: string,
+  ownOrigin: string,
+): string | undefined => {
+  const base = readApiBase(value, suffix);
+  return base !== undefined && new URL(base).origin === ownOrigin
+    ? base
+    : undefined;
+};
+
 const readOrigin = (value: unknown): string | undefined => {
   const url = readUrl(value);
   return url !== undefined && url.origin === value

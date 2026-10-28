@@ -144,14 +144,34 @@ describe("verifyContentSecurityPolicyFor", () => {
     );
   });
 
-  it("names the verify API's origin even when it differs from the Play API's", () => {
+  it("names the page's own origin for the verify API, not the Play API's", () => {
     const policy = directives(
       verifyContentSecurityPolicyFor(
-        configOf({ verifyApiBaseUrl: "https://verify-api.example/verify/v1" }),
+        configOf({ playApiBaseUrl: "https://play-api.example/play/v1" }),
       ),
     );
-    expect(policy.get("connect-src")).toContain("https://verify-api.example");
-    expect(policy.get("connect-src")).not.toContain("https://se.example");
+    expect(policy.get("connect-src")).toBe(
+      "'self' https://rpc1.example https://rpc2.example https://se.example",
+    );
+  });
+
+  it("is only ever given a same-origin verify API (V-3a, D-10)", () => {
+    // A validated document is the only input; one naming another origin for
+    // the verify API is refused before a policy can be built from it.
+    for (const verifyApiBaseUrl of [
+      "https://verify-api.example/verify/v1",
+      "http://se.example/verify/v1",
+      "https://se.example:8443/verify/v1",
+    ]) {
+      expect(
+        validateEnvironmentConfig(
+          environmentDocument({ verifyApiBaseUrl }),
+          SE_ORIGIN,
+        ).ok,
+      ).toBe(false);
+    }
+    const { verifyApiBaseUrl } = configOf({});
+    expect(new URL(verifyApiBaseUrl).origin).toBe(SE_ORIGIN);
   });
 });
 

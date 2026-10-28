@@ -14,7 +14,7 @@ import {
   mount,
   statusHeading,
 } from "./fixtures/app.ts";
-import { localDocument } from "./fixtures/environment.ts";
+import { LOCAL_ORIGIN, localDocument } from "./fixtures/environment.ts";
 import { problemVector, snapshotVector } from "./fixtures/vectors.ts";
 import { messagesFor } from "./messages.ts";
 import type { ProblemInput } from "./round-input.ts";
@@ -223,7 +223,7 @@ describe("degraded states, each distinct (W-44)", () => {
   });
 
   it("shows the chain-not-independent indicator for a quorum of 1 (W-26a)", () => {
-    const ui = mount(localDocument());
+    const ui = mount(localDocument(), undefined, LOCAL_ORIGIN);
     expect(allText(ui.host)).toContain(m["notice.chainNotIndependent"]);
     expect(allText(mount().host)).not.toContain(
       m["notice.chainNotIndependent"],

@@ -20,7 +20,7 @@ with its browser rows VT-5 to VT-8
 ([The e2e fake](#the-e2e-fake-of-the-verify-api-built)). The verify API document
 is vendored into `contracts` (`schemas/verify.v1.openapi.yaml`, with its
 generated types); what it does not yet carry (the on-chain record and the
-proofs) is still marked `TODO(verify API)`, deferred to #136. The request is
+proofs) is still marked `TODO(verify API)`, deferred to #155. The request is
 `play-client`'s `getRoundVerification` (A-1). Its four design decisions were
 made by the human on 2026-10-18, and five more on the kernel derivations on
 2026-10-19 ([Decisions](#decisions)).
@@ -127,11 +127,14 @@ Out of scope:
     ([client-kit.md](./client-kit.md#the-pages-api-proxy)).
   - The rewritten path is served with the same headers as the page (this spec's
     rule, V-16 and Security).
-  - The verify API is on the page's own origin, a read that needs no CORS, when
-    the Wrapper is served from the backend's origin, as in preview (b6e1e48);
-    otherwise the verify API is on another origin and needs the backend's CORS
-    decision first, before a configuration document may name it.
-  <!-- TODO(verify API, #136): deferred to #136 (owner: backend). The CORS decision for a cross-origin `verifyApiBaseUrl`. Reason: undecided; the verify API answers with no CORS headers today, so a same-origin read is the only supported path (the edge route in preview, each Pages site's API proxy on staging). -->
+  - **The verify API is read from the page's own origin only** (D-10, decided by
+    the TPO, 2026-10-27): it sends no CORS headers on any surface, so
+    `verifyApiBaseUrl` is always the page's own origin plus `/verify/v1`, a read
+    that needs no CORS. In preview the edge routes `/verify/v1/` on the
+    backend's origin (b6e1e48); on the Pages sites each site's API proxy
+    forwards it ([client-kit.md](./client-kit.md#the-pages-api-proxy)). A
+    cross-origin `verifyApiBaseUrl` is not supported: the configuration's
+    validation refuses it (V-3a).
   <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). The same `/verify/v1/` route and `/verify/rounds/*` serving, with the page's headers, on production's sites. Reason: ADR-008 deploys staging only (done there by each site's proxy and Pages' fallback); production is to come. -->
 
 ### Configuration (V-3)
@@ -147,19 +150,28 @@ Out of scope:
   host, no credentials, query, or fragment) whose path ends with `/verify/v1`,
   with no trailing slash. The page will read
   `<verifyApiBaseUrl>/rounds/{roundId}`. The field is required (D-4), never
-  derived or defaulted: once the Wrapper accepts the field, the preview
-  configuration is to set it to the Wrapper's origin plus `/verify/v1`, a
-  same-origin read when the Wrapper is served from the backend's origin, as in
-  preview (b6e1e48); otherwise the verify API is on another origin and needs the
-  backend's CORS decision first (V-2). The field is part of the one
-  configuration schema: the Wrapper's validator accepts it and does not use it
-  ([wrapper.md](./wrapper.md#configuration)), and refuses a document without it
-  (`invalid-verify-api-base`). Before this change the Wrapper refused it as an
-  unknown field, so **the Wrapper's acceptance of the field ships before, or in
-  the same release as, any configuration document that carries it**; and, the
-  field being required, the configuration document of every environment is
-  updated in that same release, since the Wrapper that accepts the field refuses
-  a document without it.
+  derived or defaulted, and its origin is the page's own (V-3a). The field is
+  part of the one configuration schema: the Wrapper's validator accepts it and
+  does not use it ([wrapper.md](./wrapper.md#configuration)), and refuses a
+  document without it (`invalid-verify-api-base`). Before this change the
+  Wrapper refused it as an unknown field, so **the Wrapper's acceptance of the
+  field ships before, or in the same release as, any configuration document that
+  carries it**; and, the field being required, the configuration document of
+  every environment is updated in that same release, since the Wrapper that
+  accepts the field refuses a document without it.
+- **V-3a. The verify API base is on the page's own origin.** The verify API
+  sends no CORS headers, so a same-origin read is the only one (V-2, D-10). Both
+  validators refuse a document whose `verifyApiBaseUrl` has an origin (scheme,
+  host, and port) other than the origin of the page that reads it: the verify
+  page's validator compares it with the page's `location.origin`, and the
+  Wrapper's with its own (the SE origin), each given to the validator by its
+  caller, never read inside it. The refusal is the field's own,
+  `invalid-verify-api-base` at `verifyApiBaseUrl`, naming the field and never
+  the value. Every configuration document sets the field to the page's own
+  origin plus `/verify/v1` (staging's are written so by the Pages deploy, from
+  each site's own origin). The verify page's header policy
+  (`verifyContentSecurityPolicyFor`) is built from a validated document only, so
+  the origin it names for the verify API is always the page's own.
 
 ### The page's states (V-4 to V-11)
 
@@ -422,7 +434,7 @@ alone, and the payout is shown, not recomputed (V-13).
   Links from the evidence (`blockExplorerUrl`, `explorerUrl`, `proofLink`) are
   shown as text, not as links, in the first release: they come from the API the
   page does not trust.
-  <!-- TODO(verify API, #136): deferred to #136 (owner: backend). The on-chain record and the proofs, when the document carries them (its `onchain_record` and `proofs` checks). Reason: the vendored verify API document does not carry them yet. -->
+  <!-- TODO(verify API, #155): deferred to #155 (owner: backend). The on-chain record and the proofs, when the document carries them (its `onchain_record` and `proofs` checks); they stay "not available yet" until the backend's on-chain anchoring lands. Reason: the vendored verify API document does not carry them yet. -->
 - **Which package does what.** `signing` for every keccak256 hash and the
   signature recovery (it has no kit dependency at run time); Web Crypto for
   SHA-256; `apps/verify` for StepsDerive and the kernel's rules; the vendored
@@ -738,7 +750,7 @@ never reported anywhere.
 
 | Row   | Level               | What it proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ----- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| VT-1  | unit                | the round id: normalization, the schema's pattern (v7 only, canonical), the path parser for `/rounds/{id}` (empty, extra segments, encoded characters), and the URL the Wrapper builds (W-39); `verifyApiBaseUrl`'s rule, and the Wrapper's schema accepting it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| VT-1  | unit                | the round id: normalization, the schema's pattern (v7 only, canonical), the path parser for `/rounds/{id}` (empty, extra segments, encoded characters), and the URL the Wrapper builds (W-39); `verifyApiBaseUrl`'s rule, and the Wrapper's schema accepting it; V-3a in both validators: the page's own origin accepted, another host, scheme, or port refused (`environment-config.test.ts` of each app, and the shared documents of `tools/config-parity.test.ts`), and the verify page's policy built only from a same-origin value (`release.test.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | VT-1a | unit                | the chain read (check 6): a quorum that agrees passes; another chain id, too few answering, a timeout, an endpoint with a chain id but no block, and two hashes fail in W-26b's order, and a refused configuration (`config`) asks nothing; `fetch` is called unbound; `blockValue` present and equal, present and different, absent; the one-endpoint degraded indicator                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | VT-1b | unit                | the kernel version (V-12a): kernel 1 runs the derivations, an unknown one shows V-8 and runs none; a `canceled` round without reveals shows checks 5 and 7 as "not checked"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | VT-2  | unit                | each check of V-12 against the vendored vectors, each with a passing case and a case per failure: checks 1 to 4 against `created`, `ready`, and the `signature/` Snapshot vectors' `randomnessTarget` and signature verdicts; checks 5 and 7 (SHA-256, the seed, StepsDerive, Coin Flip's outcome) against the fairness kernel's public vectors (the SuperEngine fairness kernel, kernelVersion 1: `kernel/public/v1/seed`, `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`, read through the `contracts` test-only entry as `kernelVectors.v1`), and `roundSecretHash` against its definition until the kernel has a vector for it                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -903,6 +915,15 @@ Decided by the human on 2026-10-19, during the review of the kernel derivations:
   changesets, and `.changeset/config.json` ignores
   `@intraverse/se-client-verify` as it does the reference game
   ([Packages](./client-kit/packages.md)).
+
+Decided by the backend's TPO on 2026-10-27 (#136):
+
+- **D-10. The verify API is read same-origin only** (V-2, V-3): it sends no CORS
+  headers on any surface, so the page reads it on its own origin, through the
+  edge route in preview and each Pages site's API proxy on staging. Rejected: a
+  cross-origin `verifyApiBaseUrl` with CORS headers on the verify API. The human
+  decided on 2026-10-28 to enforce it in both validators (V-3a), not only in the
+  way the documents are written.
 
 ### Assumptions (decided)
 

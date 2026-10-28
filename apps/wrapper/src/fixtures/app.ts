@@ -40,12 +40,14 @@ export const STANDALONE: LinkRules = Object.freeze({
 });
 
 /**
- * The UI, configured with `document` (a valid production one by default), its
- * gate open with `links` (standalone, the vectors' operator listed).
+ * The UI, configured with `document` (a valid production one by default) as
+ * validated for a Wrapper at `ownOrigin`, its gate open with `links`
+ * (standalone, the vectors' operator listed).
  */
 export const mount = (
   document: Readonly<Record<string, unknown>> = environmentDocument(),
   links: LinkRules = STANDALONE,
+  ownOrigin: string = SE_ORIGIN,
 ): Mounted => {
   globalThis.document.body.replaceChildren();
   const host = globalThis.document.createElement("div");
@@ -83,7 +85,7 @@ export const mount = (
     calling: app.calling,
     read: app.readQuiet,
   });
-  const result = validateEnvironmentConfig(document, SE_ORIGIN);
+  const result = validateEnvironmentConfig(document, ownOrigin);
   if (!result.ok) {
     throw new Error("fixture document refused");
   }
