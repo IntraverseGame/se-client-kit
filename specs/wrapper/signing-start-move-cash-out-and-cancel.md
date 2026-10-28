@@ -22,9 +22,13 @@ Part of the [Wrapper spec](../wrapper.md), section
   vector from the same signer (`signed-action/cashorcrash-cash-out`, the
   cash-out of a vendored Cash or Crash round after its first pick) is replayed
   the same way, and the shell's round flow signs that cash-out to its struct
-  hash, digest, and typedData. The contracts repository's signing vectors
-  (release 1.0.0) pin the same type hash and a `player-cancel` round (a
-  `PlayerCancel` at sequence 1 on `T_0`, whose `canceled` hash is
+  hash, digest, and typedData. A vendored Cash or Crash round won on its last
+  row (`typed-data/cashorcrash-last-row-pick-row0` to `-row2`) pins a move's
+  chain to the end of a round: `signing` replays its three picks and their
+  links, and the shell signs them and nothing after the last, since the round
+  ends `won` (W-24). The contracts repository's signing vectors (release 1.0.0)
+  pin the same type hash and a `player-cancel` round (a `PlayerCancel` at
+  sequence 1 on `T_0`, whose `canceled` hash is
   `keccak256(abi.encode(ready, T_1))`), which `signing` replays too.
 - **W-21.** Every signature MUST be canonical: 65 bytes `r ‖ s ‖ v`, `v` in
   `{27, 28}`, low `s`, deterministic (RFC 6979). The shell MUST reject any other

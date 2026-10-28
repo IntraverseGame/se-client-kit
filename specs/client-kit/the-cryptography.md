@@ -155,20 +155,25 @@ Part of the [Client kit spec](../client-kit.md), section
   its first pick, replayed the same way as the cancel below
   (`cash-out-vector.test.ts`), with its chain: the pick
   (`typed-data/cashorcrash-pick`) links to the round's `readyHash`, and the
-  cash-out's `previous` is the pick's struct hash. `PlayerCancel`'s independent
-  signature is the backend's `signed-action/coinflip-cancel` Snapshot vector,
-  vendored and read through the same entry
-  (`snapshotVectors.signedAction["coinflip-cancel"]`, signed with `PLAYER_KEY`)
-  and replayed: the tests reproduce its type hash, domain separator, struct
-  hash, and digest, sign the digest with the `player` key (its test key, the
-  same public account) to its exact bytes, and recover both that signature and
-  the vector's to its address (#41). That vector file carries its test key
-  (`testKey`), as the cash-out's does: the tests read its address, a contracts
-  test checks that each is the same public key as `PLAYER_KEY`, and the tests
-  sign with the fixture below, not with it. The signing vector file names its
-  two signing keys (the action key `player` and the admin `engine`) as the
-  well-known local development accounts but does not carry them, so the tests
-  hold those two keys in a test fixture
+  cash-out's `previous` is the pick's struct hash. A whole round's chain of
+  `PlayerAction`s has the vendored Cash or Crash round won on its last row: its
+  three picks (`typed-data/cashorcrash-last-row-pick-row0` to `-row2`) are
+  replayed byte for byte, the first links to the round's `readyHash` and each
+  later one to the struct hash of the pick before it on that round
+  (`last-row-vector.test.ts`); no signature of them is vendored, and nothing
+  follows the last. `PlayerCancel`'s independent signature is the backend's
+  `signed-action/coinflip-cancel` Snapshot vector, vendored and read through the
+  same entry (`snapshotVectors.signedAction["coinflip-cancel"]`, signed with
+  `PLAYER_KEY`) and replayed: the tests reproduce its type hash, domain
+  separator, struct hash, and digest, sign the digest with the `player` key (its
+  test key, the same public account) to its exact bytes, and recover both that
+  signature and the vector's to its address (#41). That vector file carries its
+  test key (`testKey`), as the cash-out's does: the tests read its address, a
+  contracts test checks that each is the same public key as `PLAYER_KEY`, and
+  the tests sign with the fixture below, not with it. The signing vector file
+  names its two signing keys (the action key `player` and the admin `engine`) as
+  the well-known local development accounts but does not carry them, so the
+  tests hold those two keys in a test fixture
   (`packages/signing/src/fixtures/keys.ts`). They are the vectors' test keys
   (the AGENTS.md exception): public by design, the default accounts of the local
   Ethereum development node, holding nothing and never used outside tests. The

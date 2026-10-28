@@ -1,0 +1,21 @@
+{
+  "vector": "snapshot/typed-data/cashorcrash-last-row-pick-row1",
+  "description": "Cash or Crash, the second move of the round in snapshot/valid/cashorcrash-last-row-active-step1: action \"pick row 1 tile 2\", path [0, 1], sequence 2, previous T_1, the structHash of snapshot/typed-data/cashorcrash-last-row-pick-row0 on that round. Its structHash, T_2, is the previous of snapshot/typed-data/cashorcrash-last-row-pick-row2. The typedData the shell sends to rounds:continue.",
+  "fields": {
+    "kind": {
+      "name": "ACTION_KIND_ACTION",
+      "number": 1
+    },
+    "action": "pick row 1 tile 2",
+    "path": [
+      0,
+      1
+    ],
+    "sequence": 2,
+    "previous": "0x605f22a9355bf415702bd35d81cdaaa7c4131b9ef06c41994a6722d38fcdf85f"
+  },
+  "typedData": {
+    "hex": "0x080112117069636b20726f7720312074696c6520321a02000120022a20605f22a9355bf415702bd35d81cdaaa7c4131b9ef06c41994a6722d38fcdf85f",
+    "base64": "CAESEXBpY2sgcm93IDEgdGlsZSAyGgIAASACKiBgXyKpNVv0FXAr012BzaqnxBMbnvBsQZlKZyLTj834Xw=="
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "vector": "snapshot/typed-data/cashorcrash-last-row-pick-row2",
+  "description": "Cash or Crash, the last move of the round in snapshot/valid/cashorcrash-last-row-active-step2, on its last row: action \"pick row 2 tile 1\", path [0, 1, 2], sequence 3, previous T_2, the structHash of snapshot/typed-data/cashorcrash-last-row-pick-row1 on that round. It survives, so the round ends won (snapshot/valid/cashorcrash-last-row-won) and the shell signs nothing after it. The typedData the shell sends to rounds:continue.",
+  "fields": {
+    "kind": {
+      "name": "ACTION_KIND_ACTION",
+      "number": 1
+    },
+    "action": "pick row 2 tile 1",
+    "path": [
+      0,
+      1,
+      2
+    ],
+    "sequence": 3,
+    "previous": "0x5c19e5b63f69bdc9f05f96316fe93ee257394ce3272297e7f25aaee1cb1c3d42"
+  },
+  "typedData": {
+    "hex": "0x080112117069636b20726f7720322074696c6520311a0300010220032a205c19e5b63f69bdc9f05f96316fe93ee257394ce3272297e7f25aaee1cb1c3d42",
+    "base64": "CAESEXBpY2sgcm93IDIgdGlsZSAxGgMAAQIgAyogXBnltj9pvcnwX5Yxb+k+4lc5TOMnIpfn8lqu4cscPUI="
+  }
+}
