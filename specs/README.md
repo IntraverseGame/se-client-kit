@@ -104,6 +104,9 @@ the specs' headings.
     W-28 to W-36
   - [The game iframe and the controller boundary](./wrapper/the-game-iframe-and-the-controller-boundary.md)
     — W-37 to W-40
+  - [Book playback](./wrapper/book-playback.md) — W-50 to W-56 (#146, decided
+    2026-10-28): a book round's base-mode playback, nothing signed, its checks,
+    the RTP
   - [Error and degraded states](./wrapper.md#error-and-degraded-states) — W-41
     to W-44
   - [Accessibility](./wrapper.md#accessibility) — W-45 to W-48

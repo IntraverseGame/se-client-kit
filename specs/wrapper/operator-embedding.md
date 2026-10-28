@@ -264,7 +264,7 @@ ADR-006 is accepted.
   | `starting`, `active`, `resolving`, or any state with a signed action not yet seen applied (W-15)                                                                | no                                      | no      |
   | `won`, `lost`, `canceled` (the round id and verify link shown, W-39), and a typed error shown beside them (`INSUFFICIENT_FUNDS` on the next start, for example) | yes                                     | yes     |
   | session ended (the relaunch instruction of W-1a and W-2)                                                                                                        | yes, labelled as the way to relaunch    | no      |
-  | open in another tab, round failed verification, out of sync, Snapshot rejected (W-44)                                                                           | yes, from the latest validated Snapshot | no      |
+  | open in another tab, round failed verification, out of sync, Snapshot rejected, a changed session (W-44, W-53)                                                  | yes, from the latest validated Snapshot | no      |
   | connection problem (W-43), "game not compatible" (W-38), the generic error (W-42) outside `idle`                                                                | no                                      | no      |
   | "this browser cannot keep your session safe" (W-14), "could not verify the chain" (W-26a), and any other state, including one a later spec adds                 | no                                      | no      |
 

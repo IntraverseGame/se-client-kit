@@ -213,7 +213,8 @@ Rules:
    `valid/book-playback-won-rtp` and five `invalid/book-rtp-*` vectors. The kit
    validates it as the schema gives it and does not use it yet: the shell
    forwards no `playback` Snapshot's copy to the game (W-38), and the Wrapper
-   does not show the RTP (the book game's page and playback are #146).
+   does not show the RTP (the book game's page and playback are #146, specified
+   in [Book playback](../wrapper/book-playback.md), W-56).
 
    **A Cash or Crash round won on its last row** (the Snapshot vectors synced
    from se-backend `71edfbe`; the Snapshot schema stays at `13bcee0` and the

@@ -64,6 +64,22 @@ Part of the [Client kit spec](../client-kit.md), section
   is typed optional, as the generated types are: the schema requires it from the
   bind on for `model: "config"`, which the narrowing by `status` does not
   express.
+- **A book round's `BookConfig`** (issue #146). The validator enforces it
+  through the schema alone, with no rule of its own (above): `kind` `book`, a
+  `packageHash`, a `model` of 1 to 64 characters, and nothing else but `rtp` and
+  `draw`; `rtp`, when present, is exactly `fraction` (`"n"` or `"n/d"`, at most
+  201 characters) and `decimal` (`0.` and four digits, or `1.0000`, a string,
+  never a number); `draw` (`index`, `payoutMultiplier`, `events` of `index`,
+  `type` of 1 to 64 characters, and an open `data`) only on `won` and `lost`,
+  never on `canceled`; and the Snapshot of a book round has no `step`, no
+  `proofs.fairnessProof`, and no `proofs.createRoundAuth`. That the fraction is
+  reduced, at most 1, and agrees with `decimal` is not checked: the schema does
+  not say it, and the kit computes nothing from either (the Wrapper shows
+  `decimal` only, W-56). Decided by the human, 2026-10-28: no check on
+  `rtp.fraction` beyond the schema. `PlaybackPresentation` (what
+  `isPlaybackPresentation` narrows to) types `config` as `BookConfig` and
+  `model` as `book`; the narrowing by `status` says the rest (no `draw` before
+  `won` and `lost` is the schema's, not typed).
 - **Money.** `parseBaseUnits` is the package's one reader of `Amount.value`: a
   base-10 string without sign or leading zero, at most 2^256 - 1, read as a
   `bigint` (`undefined` otherwise). `compareAmounts` compares two amounts of the
@@ -78,6 +94,15 @@ Part of the [Client kit spec](../client-kit.md), section
   test helpers, no new dependency) check that the validators never throw, never
   modify the input, are deterministic, and never reach the fail-closed paths on
   arbitrary JSON or on mutations of the vectors; T-6a's `snapshot` half covers
-  amounts above 2^53 and at 2^256 - 1.
+  amounts above 2^53 and at 2^256 - 1. The book vectors
+  (`valid/book-playback-*`, `invalid/book-rtp-*`,
+  `invalid/create-round-auth-on-book`,
+  `invalid/allowlist-fairness-proof-on-book`) are among those T-5 replays; a
+  narrowing test takes each valid book vector through `isPlaybackPresentation`.
+  The vendored schema still allows `active`, `resolving`, and `canceled` on a
+  book round; the next sync refuses them, and
+  `valid/book-playback-resolving-placeholder` moves to `invalid/` with it. Until
+  then the validator follows the vendored schema, and the shell refuses those
+  statuses itself (W-54; T-22).
 - **Not yet.** The render helpers named in [Packages](./packages.md) follow with
   the Wrapper's rendering work.

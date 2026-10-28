@@ -321,7 +321,13 @@ are in brackets.
      Snapshot too). A book Snapshot never carries the object, so a book round is
      refused here: the first release ships config games only, and book rounds
      are refused until a later increment defines their evidence (decided by
-     human review, 2026-10-17; W-26).
+     human review, 2026-10-17; W-26). Decided (issue #146, 2026-10-28): the
+     checks are not run on a book round at all; W-52 in
+     [Book playback](../wrapper/book-playback.md) replaces them with the round's
+     consistency rule, nothing is signed for a book round (W-51), and the bridge
+     forwards its `playback` copy (W-38, RFC-003). A Snapshot that changes the
+     session's presentation, model, `config.kind`, or `config.model` is W-53's
+     changed session, final until a reload.
   2. `pinned-mismatch`: `domain.chainId`, `domain.verifyingContract`, or
      `signer` is not the configuration's `registryDomain` or `runtimeSigner`
      (addresses compared without case).
