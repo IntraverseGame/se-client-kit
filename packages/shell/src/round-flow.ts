@@ -36,7 +36,15 @@ import {
 import { isRoundOver } from "./snapshot-reading.ts";
 import type { FlowTestHooks } from "./typed-data.ts";
 
-export type RoundFlowOptions = TrackingOptions & DeliveryOptions;
+export type RoundFlowOptions = TrackingOptions &
+  DeliveryOptions & {
+    /**
+     * The session's one-presentation guard (W-53, session-presentation.ts): a
+     * Snapshot it does not admit is not read into the round, and nothing is
+     * sent or signed for it. Absent in the round's own tests.
+     */
+    readonly admit?: (snapshot: ValidSnapshot) => boolean;
+  };
 
 /** The round's evidence (W-27): nothing in it is secret. */
 export type RoundEvidence = TrackingEvidence & {
@@ -139,6 +147,8 @@ export const createRoundFlow = (
   const actions = createRoundActions(options.session, tracking, delivery);
 
   const intoRound = async (snapshot: ValidSnapshot): Promise<void> => {
+    // A Snapshot that changed the session is not read in (W-53).
+    if (options.admit?.(snapshot) === false) return;
     const verdict = await tracking.observe(snapshot);
     const signer = tracking.signer();
     if (
@@ -191,6 +201,9 @@ export const createRoundFlow = (
   // The cancel's gate comes before the tracking: while it settles, no
   // Snapshot of the round from elsewhere (a stale read included) is read in.
   const observe = async (snapshot: ValidSnapshot): Promise<void> => {
+    // A Snapshot that changed the session is not read in, and resends nothing
+    // (W-53).
+    if (options.admit?.(snapshot) === false) return;
     if (cancel.holds(snapshot)) return;
     if (snapshot.status !== "idle" && snapshot.roundId === round.roundId) {
       newest = Math.max(newest, snapshot.version);

@@ -1,9 +1,10 @@
-// T-9, the allow-list (W-38): a property test over recorded sessions. Each
-// seeded session forwards every golden Snapshot (the `valid/` and `signature/`
-// vectors, so `proofs.createRoundAuth` is in play), mixed with legal picks,
-// illegal picks, malformed and forged messages, and use-case outcomes. Every
-// message the game receives must hold only allow-listed fields, go to D, and
-// carry no proof, signature, session id, link, or amount.
+// T-9 and T-23, the allow-lists (W-38): a property test over recorded
+// sessions forwarding every golden Snapshot the session accepts (`valid/`,
+// with the book rounds, and `signature/`) to a game that declared both
+// presentations, mixed with picks, malformed and forged messages, and use-case
+// outcomes. Every message holds only its own copy's allow-listed fields, goes
+// to D, and carries no proof, signature, session id, link, `packageHash`, RTP,
+// payout, or amount.
 
 import { snapshotVectors } from "@intraverse/se-client-contracts/testing";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@intraverse/se-client-snapshot";
 import { describe, expect, it } from "vitest";
 
+import { validateSessionSnapshot } from "./book-status.ts";
 import { CONTROLLER_SCHEMA } from "./controller-protocol.ts";
 import {
   action,
@@ -22,7 +24,7 @@ import {
 } from "./fixtures/fake-game.ts";
 import { seededInts } from "./fixtures/seeded.ts";
 
-const SNAPSHOT_FIELDS = [
+const STEPS_FIELDS = [
   "schema",
   "type",
   "snapshot",
@@ -48,11 +50,42 @@ const SNAPSHOT_FIELDS = [
   "snapshot.config.steps[].selectedIndex",
   "snapshot.config.steps[].losingIndex",
 ];
+const PLAYBACK_FIELDS = [
+  "schema",
+  "type",
+  "snapshot",
+  "snapshot.version",
+  "snapshot.presentation",
+  "snapshot.status",
+  "snapshot.closeReason",
+  "snapshot.roundId",
+  "snapshot.context",
+  "snapshot.context.language",
+  "snapshot.context.device",
+  "snapshot.context.theme",
+  "snapshot.context.theme.appearance",
+  "snapshot.config",
+  "snapshot.config.kind",
+  "snapshot.config.model",
+  "snapshot.config.draw",
+  "snapshot.config.draw.index",
+  "snapshot.config.draw.payoutMultiplier",
+  "snapshot.config.draw.events",
+  "snapshot.config.draw.events[]",
+  "snapshot.config.draw.events[].index",
+  "snapshot.config.draw.events[].type",
+  "snapshot.config.draw.events[].data",
+];
+/** An event's `data` is open: every member under it is the math package's. */
+const DATA = "snapshot.config.draw.events[].data";
 const REJECT_FIELDS = ["schema", "type", "id", "reason"];
-const ALLOWED: ReadonlySet<string> = new Set([
-  ...SNAPSHOT_FIELDS,
-  ...REJECT_FIELDS,
-]);
+
+/** Whether `path` is in `fields`, or under an event's open `data`. */
+const listed = (fields: readonly string[], path: string): boolean =>
+  fields.includes(path) ||
+  (fields.includes(DATA) && path.startsWith(`${DATA}.`));
+
+const ALL_FIELDS = [...STEPS_FIELDS, ...PLAYBACK_FIELDS, ...REJECT_FIELDS];
 
 /** Every field path of a JSON value, array items as `[]`. */
 const paths = (value: unknown, prefix = ""): string[] => {
@@ -70,11 +103,19 @@ const paths = (value: unknown, prefix = ""): string[] => {
   return [];
 };
 
-/** The fields of a message outside the allow-list of its own type. */
+/** The fields of a message outside the allow-list of its own copy. */
 const outsideItsType = (message: unknown): readonly string[] => {
-  const { type } = message as { readonly type: unknown };
-  const allowed = type === "reject" ? REJECT_FIELDS : SNAPSHOT_FIELDS;
-  return paths(message).filter(path => !allowed.includes(path));
+  const { type, snapshot } = message as {
+    readonly type: unknown;
+    readonly snapshot?: { readonly presentation?: unknown };
+  };
+  const allowed =
+    type === "reject"
+      ? REJECT_FIELDS
+      : snapshot?.presentation === "playback"
+        ? PLAYBACK_FIELDS
+        : STEPS_FIELDS;
+  return paths(message).filter(path => !listed(allowed, path));
 };
 
 type VectorFile = { readonly definition?: unknown; readonly input?: unknown };
@@ -98,10 +139,19 @@ const inputs = (
     return result.value;
   });
 
-const pool: readonly ValidSnapshot[] = [
+const vectors: readonly ValidSnapshot[] = [
   ...inputs("valid", snapshotVectors.valid),
   ...inputs("signature", snapshotVectors.signature),
 ];
+
+/**
+ * What the session hands the bridge: the vectors that also pass the shell's
+ * interim book-status rule (W-54), which refuses a book round at `active`,
+ * `resolving`, or `canceled` until the next sync.
+ */
+const pool: readonly ValidSnapshot[] = vectors.filter(
+  s => validateSessionSnapshot(s).ok,
+);
 
 /** Text that must never reach the game, collected from the pool itself. */
 const forbidden: readonly string[] = [
@@ -114,10 +164,26 @@ const forbidden: readonly string[] = [
         ...(auth === undefined ? [] : [auth.signature, auth.signer]),
         ...(auth === undefined ? [] : [auth.newRound.actionKey]),
         s.bet.balance.formatted,
+        ...(s.payout === undefined ? [] : [s.payout.formatted]),
+        ...(s.config.kind === "book"
+          ? [
+              s.config.packageHash,
+              ...(s.config.rtp === undefined
+                ? []
+                : [s.config.rtp.fraction, s.config.rtp.decimal]),
+            ]
+          : []),
       ];
     }),
   ),
 ];
+
+/** A hello that declares both presentations, so every copy is sent. */
+const BOTH = { ...HELLO, presentations: ["steps", "playback"] };
+
+/** Whether a Snapshot is a book round carrying its mode's RTP. */
+const hasRtp = (s: ValidSnapshot): boolean =>
+  s.config.kind === "book" && s.config.rtp !== undefined;
 
 const SESSIONS = 25;
 const EVENTS = 120;
@@ -134,7 +200,7 @@ const recordSession = async (seed: number): Promise<Recorded> => {
   let version = 0;
   let settled = 0;
   let current: ValidSnapshot | undefined;
-  game.send(HELLO);
+  game.send(BOTH);
   for (let event = 0; event < EVENTS; event += 1) {
     const choice = next(7);
     if (choice <= 1) {
@@ -173,24 +239,32 @@ const recordSession = async (seed: number): Promise<Recorded> => {
 };
 
 describe("the game receives only allow-listed fields (T-9)", () => {
-  it("the pool is every valid/ and signature/ Snapshot vector, each validated", () => {
+  it("the pool is every valid/ and signature/ Snapshot vector the session accepts", () => {
     const valid = snapshotFiles(snapshotVectors.valid).length;
     const signature = snapshotFiles(snapshotVectors.signature).length;
     // Every signature/ vector is a Snapshot; none is skipped.
     expect(signature).toBe(Object.keys(snapshotVectors.signature).length);
     expect(valid).toBeGreaterThan(0);
     expect(signature).toBeGreaterThan(0);
-    expect(pool).toHaveLength(valid + signature);
+    expect(vectors).toHaveLength(valid + signature);
+    // Only the book round the shell refuses until the next sync is left out.
+    const refused = vectors.filter(s => !pool.includes(s));
+    expect(refused.map(s => [s.presentation, s.status])).toEqual([
+      ["playback", "resolving"],
+    ]);
   });
 
-  it("the pool holds createRoundAuth, links, and session ids to leak", () => {
+  it("the pool holds createRoundAuth, links, session ids, and book rounds to leak", () => {
     expect(pool.some(s => s.proofs?.createRoundAuth !== undefined)).toBe(true);
     expect(pool.some(s => s.context.links !== undefined)).toBe(true);
+    expect(pool.some(s => hasRtp(s))).toBe(true);
+    expect(pool.some(s => s.payout !== undefined)).toBe(true);
     expect(forbidden.length).toBeGreaterThan(3);
   });
 
   it("over recorded sessions, every message is allow-listed", async () => {
     const types = new Set<unknown>();
+    const presentations = new Set<unknown>();
     let picks = 0;
     for (let seed = 1; seed <= SESSIONS; seed += 1) {
       // oxlint-disable-next-line no-await-in-loop -- one session per seed, in order
@@ -198,9 +272,18 @@ describe("the game receives only allow-listed fields (T-9)", () => {
       picks += recorded.picks;
       const { messages } = recorded;
       for (const message of messages) {
-        expect(paths(message).filter(path => !ALLOWED.has(path))).toEqual([]);
+        expect(
+          paths(message).filter(path => !listed(ALL_FIELDS, path)),
+        ).toEqual([]);
         expect(outsideItsType(message)).toEqual([]);
         types.add((message as { readonly type: unknown }).type);
+        presentations.add(
+          (
+            message as {
+              readonly snapshot?: { readonly presentation?: unknown };
+            }
+          ).snapshot?.presentation,
+        );
         const text = JSON.stringify(message);
         for (const secret of forbidden) {
           expect(text).not.toContain(secret);
@@ -209,17 +292,9 @@ describe("the game receives only allow-listed fields (T-9)", () => {
       }
     }
     expect([...types].toSorted()).toEqual(["reject", "snapshot"]);
+    // Both copies were sent: the steps copy and the playback copy.
+    expect(presentations).toEqual(new Set([undefined, "steps", "playback"]));
     // The sessions reached the use case, not only the refusals.
     expect(picks).toBeGreaterThan(0);
-  });
-
-  it("a playback Snapshot is not forwarded", () => {
-    const playback = pool.filter(s => s.presentation === "playback");
-    expect(playback.length).toBeGreaterThan(0);
-    const game = createFakeGame();
-    const bridge = mount(game);
-    game.send(HELLO);
-    for (const s of playback) bridge.sendSnapshot(s);
-    expect(game.posted).toEqual([]);
   });
 });

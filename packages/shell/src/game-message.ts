@@ -136,9 +136,12 @@ export const parseGameMessage = (data: unknown): ParsedGameMessage => {
 };
 
 /**
- * Whether a `hello` declares what the Wrapper sends: `steps` and all seven
- * statuses.
+ * Whether a `hello` declares what the Wrapper needs: all seven statuses (W-30)
+ * and at least one presentation, which the parser already requires. `steps` is
+ * no longer required (RFC-003, issue #146): a Snapshot is sent only in a
+ * presentation the game declared, and one the game did not declare makes it
+ * incompatible when it is about to be sent (controller-bridge.ts).
  */
 export const isCompatible = (hello: HelloMessage): boolean =>
-  hello.presentations.includes("steps") &&
+  hello.presentations.length > 0 &&
   ROUND_STATUSES.every(status => hello.statuses.includes(status));

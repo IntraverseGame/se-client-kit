@@ -11,6 +11,11 @@ import {
   type SnapshotInput,
   type SnapshotRead,
 } from "./round-input.ts";
+import {
+  clearProblem,
+  gameCopied,
+  leaveEndedRound,
+} from "./state-transitions.ts";
 
 /**
  * The states that replace the round view (W-44), each shown distinctly. The
@@ -27,7 +32,9 @@ export type BlockingState =
   | "verification-failed"
   | "chain-unverified"
   | "out-of-sync"
-  | "snapshot-rejected";
+  | "snapshot-rejected"
+  /** A changed session (W-53): "this round failed verification", final. */
+  | "session-changed";
 
 /** A round that ended, kept until the player starts another one (W-39, W-40). */
 export type EndedRound = {
@@ -49,6 +56,8 @@ export type WrapperState = {
   readonly refused?: true;
   /** The game's `hello` did not declare what the Wrapper sends (W-38). */
   readonly gameIncompatible?: true;
+  /** The latest `playback` copy failed closed (W-38, W-55; game-visibility.ts). */
+  readonly gameCopyFailed?: true;
   readonly endedRound?: EndedRound;
   /** The typed error of the last call, shown beside the round (W-42). */
   readonly problem?: ProblemInput;
@@ -83,6 +92,7 @@ const FINAL_STATES: ReadonlySet<BlockingState> = new Set([
   "session-ended",
   "other-tab",
   "unsupported-browser",
+  "session-changed",
 ]);
 
 /** States of one round: only its end, or another round, clears them. */
@@ -261,6 +271,9 @@ export const acceptRead = (
     case "session-ended": {
       return block(state, "session-ended");
     }
+    case "session-changed": {
+      return block(state, "session-changed");
+    }
     case "refused": {
       return isFinal(state) ? state : { ...state, refused: true };
     }
@@ -279,21 +292,4 @@ export const block = (
   blocking: BlockingState,
 ): WrapperState => (isFinal(state) ? state : { ...state, blocking });
 
-/**
- * The player started another round from the ended round `from` (W-40): once a
- * Snapshot of another round is shown, `from`'s panel goes. Until then (a start
- * refused, or not answered yet) it stays with its result.
- */
-export const leaveEndedRound = (
-  state: WrapperState,
-  from: string,
-): WrapperState =>
-  state.endedRound?.roundId === from &&
-  state.snapshot?.roundId !== undefined &&
-  state.snapshot.roundId !== from
-    ? without(state, "endedRound")
-    : state;
-
-/** The player asks to try again: the error goes until the next answer. */
-export const clearProblem = (state: WrapperState): WrapperState =>
-  state.problem === undefined ? state : without(state, "problem");
+export { clearProblem, gameCopied, leaveEndedRound };

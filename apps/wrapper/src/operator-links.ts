@@ -35,6 +35,7 @@ const LOBBY_ONLY_STATES: ReadonlySet<string> = new Set([
   "verification-failed",
   "out-of-sync",
   "snapshot-rejected",
+  "session-changed",
 ]);
 
 /** Cancel states with a signed action not yet seen applied (W-15, W-25). */

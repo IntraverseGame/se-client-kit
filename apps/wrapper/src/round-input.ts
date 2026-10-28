@@ -107,6 +107,8 @@ export const isPolled = (
 export type SnapshotInput = {
   /** Per session, increasing; a lower one is a stale response (W-29). */
   readonly version: number;
+  /** `playback` is a book round (W-50 to W-56); `steps` any other. */
+  readonly presentation: "steps" | "playback";
   readonly status: RoundStatus;
   /** Shown beside the status, never a status of its own (W-33). */
   readonly closeReason?: "expired";
@@ -129,6 +131,15 @@ export type SnapshotInput = {
   };
   /** For display only, never for money (W-34). */
   readonly currentMultiplier?: number;
+  /**
+   * Of the game's config, only what the Wrapper shows: its kind, and a book
+   * round's `rtp.decimal` (W-56). `rtp.fraction`, the draw, and the
+   * `packageHash` are never read here.
+   */
+  readonly config: {
+    readonly kind: "steps" | "book";
+    readonly rtp?: { readonly decimal: string };
+  };
   /**
    * What the finished round credits, computed by the server: on `won` and
    * `lost` only (the schema forbids it on every other status), `0` when nothing
@@ -203,5 +214,11 @@ export type SnapshotRead =
   | { readonly kind: "network" }
   /** The session ended (W-7): the key and the token are gone. */
   | { readonly kind: "session-ended" }
+  /**
+   * A Snapshot changed the session's presentation (W-53): it was not read in,
+   * and the session reads, signs, starts, and forwards nothing more until the
+   * page is reloaded.
+   */
+  | { readonly kind: "session-changed" }
   /** The shell did not act on the player's request: nothing was sent. */
   | { readonly kind: "refused" };

@@ -8,12 +8,18 @@
 // `origin` is the parent's origin, and only when it parses against
 // `se.controller/1`; anything else is ignored without a trace. A Snapshot with
 // a lower `version` than the latest is ignored too.
+//
+// It renders by the copy's `presentation`: a `steps` copy is Coin Flip or a
+// board, and a `playback` copy is a book round, which takes no pick: the game
+// sends no `action` on one.
 
 import type {
+  GamePlaybackSnapshot,
   GameSnapshot,
   RejectReason,
 } from "@intraverse/se-client-shell/controller";
 
+import { type BookRound, bookRound } from "./book-round.ts";
 import {
   type CoinFlipRound,
   coinFlipRound,
@@ -70,7 +76,9 @@ export type GameView =
       /** The tile the player asked for, until a Snapshot or a reject answers. */
       readonly pending: TilePick | undefined;
       readonly rejected: RejectReason | undefined;
-    };
+    }
+  /** A book round (`playback`): the draw, shown at once; it takes no pick. */
+  | { readonly kind: "book"; readonly round: BookRound };
 
 /** A tile of a row, as the game asks for it. */
 export type TilePick = { readonly step: number; readonly option: number };
@@ -136,6 +144,7 @@ export const createGame = (options: GameOptions): Game => {
 
   let latest: CoinFlipRound | undefined;
   let latestSteps: StepsRound | undefined;
+  let latestBook: BookRound | undefined;
   let latestVersion: number | undefined;
   let unsupported = false;
   let pending: Pending | undefined;
@@ -146,6 +155,9 @@ export const createGame = (options: GameOptions): Game => {
 
   const view = (): GameView => {
     if (unsupported) return freeze({ kind: "unsupported" });
+    if (latestBook !== undefined) {
+      return freeze({ kind: "book", round: latestBook });
+    }
     if (latestSteps !== undefined) {
       return freeze({
         kind: "steps",
@@ -170,17 +182,26 @@ export const createGame = (options: GameOptions): Game => {
     options.onView(view(), cause);
   };
 
-  const onSnapshot = (snapshot: GameSnapshot): void => {
+  const onSnapshot = (snapshot: GameSnapshot | GamePlaybackSnapshot): void => {
     if (latestVersion !== undefined && snapshot.version < latestVersion) return;
     const advanced =
       latestVersion === undefined || snapshot.version > latestVersion;
     latestVersion = snapshot.version;
-    // Coin Flip keeps its own page; every other `steps` round is rows of tiles.
-    const round = coinFlipRound(snapshot);
-    const rows = round === undefined ? stepsRound(snapshot) : undefined;
-    unsupported = round === undefined && rows === undefined;
+    // Coin Flip keeps its own page; every other `steps` round is rows of tiles;
+    // a `playback` copy is a book round, which takes no pick.
+    const steps = snapshot.presentation === "steps" ? snapshot : undefined;
+    const book =
+      snapshot.presentation === "playback" ? bookRound(snapshot) : undefined;
+    const round = steps === undefined ? undefined : coinFlipRound(steps);
+    const rows =
+      steps === undefined || round !== undefined
+        ? undefined
+        : stepsRound(steps);
+    unsupported =
+      round === undefined && rows === undefined && book === undefined;
     latest = round;
     latestSteps = rows;
+    latestBook = book;
     const answered =
       (pending !== undefined && snapshot.version > pending.version) ||
       (pendingTile !== undefined && snapshot.version > pendingTile.version);

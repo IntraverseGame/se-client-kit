@@ -155,6 +155,25 @@ describe("narrowing by presentation", () => {
     expect(isStepsPresentation(snapshot)).toBe(false);
     expect(bookModel(snapshot)).toBe("book");
   });
+
+  // T-22 (#146): every vendored valid book vector is accepted and narrows to a
+  // book round. `book-playback-resolving-placeholder` is among them as
+  // vendored today; the next sync moves it to `invalid/` (W-54), and the shell
+  // refuses it until then.
+  const bookVectors = Object.keys(snapshotVectors.valid).filter(name =>
+    name.startsWith("book-playback-"),
+  );
+
+  it("finds the vendored valid book vectors", () => {
+    expect(bookVectors.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it.each(bookVectors)("narrows %s to a book round", name => {
+    const snapshot = snapshotOf(name);
+    expect(isPlaybackPresentation(snapshot)).toBe(true);
+    expect(isStepsPresentation(snapshot)).toBe(false);
+    expect(bookModel(snapshot)).toBe("book");
+  });
 });
 
 describe("narrowing the typed error", () => {

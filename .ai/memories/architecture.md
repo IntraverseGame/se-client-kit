@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-28 (#136: the verify API is read same-origin only, verify-page.md D-10; 2026-10-27, #3: CODEOWNERS active, the npm org claimed; open-marker deferrals: production hosting is #133; #133: `apps/pages-proxy`, the Pages API proxy, outside the dependency graph; 2026-10-20: verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify page states pull request: `apps/verify`'s states, view, checks 1 to 4 and 6, configuration read, and the verify API read; operator launch contract pull request, #42: the shell's operator channel and `serialized-origin.ts`, the Wrapper's operator gate, dispatch, and links; verify kernel pull request: `apps/verify` with the kernel derivations of checks 5 and 7, `signing`'s raw `keccak256`; start resend pull request: `startMayBeStored`, W-22's one resend of a start whose round may exist; Play API document: a start, move, or cash-out may be stored after a lost response, `UNAVAILABLE`, or `INTERNAL`; Play API document: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-28 (#146 book playback pull request: the session's `SessionRound` (a `RoundFlow` or a `BookRound`), the W-53 guard and `session-changed`, the interim book-status rule, the bridge's `playback` copy and `onCopy`; #136: the verify API is read same-origin only, verify-page.md D-10; 2026-10-27, #3: CODEOWNERS active, the npm org claimed; open-marker deferrals: production hosting is #133; #133: `apps/pages-proxy`, the Pages API proxy, outside the dependency graph; 2026-10-20: verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify page states pull request: `apps/verify`'s states, view, checks 1 to 4 and 6, configuration read, and the verify API read; operator launch contract pull request, #42: the shell's operator channel and `serialized-origin.ts`, the Wrapper's operator gate, dispatch, and links; verify kernel pull request: `apps/verify` with the kernel derivations of checks 5 and 7, `signing`'s raw `keccak256`; start resend pull request: `startMayBeStored`, W-22's one resend of a start whose round may exist; Play API document: a start, move, or cash-out may be stored after a lost response, `UNAVAILABLE`, or `INTERNAL`; Play API document: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -295,6 +295,36 @@ structure below.
   exports; its tests replay all four sets. The
   bundle's path in its source repository never appears here: it lives only in
   the sync's sources file, outside the repository.
+
+## Book playback in the shell (#146)
+
+- **The session holds a `SessionRound`** (`session-round.ts`): a config
+  round's `RoundFlow`, or a `BookRound` (`book-round.ts`) when the start's
+  first Snapshot is `playback`. A book round signs nothing and holds no
+  transcript state; a pick or a cash-out is `not_legal` with no request, and
+  its verdict is `ready` until W-52's values change (`failed`). The session's
+  start is `startSessionRound`; `startRoundFlow` stays the config flow's.
+- **The W-53 guard runs before every round rule.** `session-presentation.ts`
+  fixes the session's `presentation`, `model`, `config.kind`, and
+  `config.model` from its first validated Snapshot. `session-reads.ts` owns it
+  and admits every Snapshot (`see`, a start's answer, a `ROUND_ACTIVE`
+  problem's embedded one), and a config round checks it too through
+  `RoundFlowOptions.admit` (its own answers and cancel reads). The first
+  refusal closes the game's bridge; every use case then answers the
+  `SessionRead` kind `session-changed` and reads, starts, signs, and forwards
+  nothing.
+- **Interim rule: shell code validates through `validateSessionSnapshot` and
+  `validateSessionProblem`** (`book-status.ts`), never `validateSnapshot` or
+  `validatePlayProblem` directly: they refuse a book round at `active`,
+  `resolving`, or `canceled` at `/status`, which the vendored schema still
+  allows. Until the #146 re-vendor; then the validator refuses them and the
+  module goes.
+- **The bridge builds each Snapshot's copy on receipt** (`bridge-rules.ts`,
+  `playback-copy.ts`), before the `hello` too; a `playback` copy that fails
+  closed is never held or sent, and `onCopy(false)` tells the Wrapper (`true`
+  once a later copy is built). It sends only the presentations the game
+  declared; another makes the game incompatible. A `hello` needs all seven
+  statuses, not `steps`.
 
 ## Things not to "fix"
 

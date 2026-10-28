@@ -68,7 +68,7 @@ describe("the game iframe (W-37, W-38)", () => {
     // at open: the UI gives only the frame, its messages, and the notice.
     expect(
       ui.fake.mounts.map(options => Object.keys(options).toSorted()),
-    ).toEqual([["frame", "listen", "onIncompatible"]]);
+    ).toEqual([["frame", "listen", "onCopy", "onIncompatible"]]);
   });
 
   it("never gives a refused D's frame a src, so nothing is loaded", async () => {

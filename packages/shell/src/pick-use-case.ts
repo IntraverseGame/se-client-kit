@@ -6,7 +6,7 @@
 // token, and gives the bridge no signing capability beyond this one call.
 
 import type { PickOutcome, PickUseCase } from "./controller-bridge.ts";
-import type { RoundFlow } from "./round-flow.ts";
+import type { SessionRound } from "./session-round.ts";
 
 const NOT_ACTIVE: PickOutcome = Object.freeze({
   accepted: false,
@@ -15,7 +15,7 @@ const NOT_ACTIVE: PickOutcome = Object.freeze({
 
 /** The pick use case over the round flow `current` returns, if any. */
 export const createPickUseCase =
-  (current: () => RoundFlow | undefined): PickUseCase =>
+  (current: () => SessionRound | undefined): PickUseCase =>
   pick => {
     const flow = current();
     return flow === undefined ? Promise.resolve(NOT_ACTIVE) : flow.pick(pick);

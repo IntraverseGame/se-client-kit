@@ -3,7 +3,10 @@
 // other shape is refused, so the game renders only a well-formed allow-listed
 // copy. And the two messages the game sends are exactly the protocol's.
 
-import type { SnapshotMessage } from "@intraverse/se-client-shell/controller";
+import type {
+  GameSnapshot,
+  SnapshotMessage,
+} from "@intraverse/se-client-shell/controller";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -22,11 +25,11 @@ import {
 const active = SNAPSHOTS.active;
 
 describe("what the game sends", () => {
-  it("says hello with the steps presentation and all seven statuses", () => {
+  it("says hello with both presentations and all seven statuses", () => {
     expect(helloMessage()).toEqual({
       schema: "se.controller/1",
       type: "hello",
-      presentations: ["steps"],
+      presentations: ["steps", "playback"],
       statuses: [
         "idle",
         "starting",
@@ -60,7 +63,7 @@ describe("what the game takes", () => {
       expect(message).toEqual(data);
       expect(message).not.toBe(data);
       expect(Object.isFrozen(message)).toBe(true);
-      const copy = (message as SnapshotMessage).snapshot;
+      const copy = (message as SnapshotMessage).snapshot as GameSnapshot;
       expect(Object.isFrozen(copy.config.steps[0])).toBe(true);
       expect(copy).not.toBe(data["snapshot"]);
     },

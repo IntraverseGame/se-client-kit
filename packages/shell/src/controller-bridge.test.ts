@@ -262,11 +262,24 @@ describe("hello", () => {
     expect(game.incompatible()).toBe(1);
   });
 
-  it("a game that does not declare steps is incompatible", () => {
+  // RFC-003 (#146): `steps` is no longer required; a Snapshot in a
+  // presentation the game did not declare ends the boundary instead.
+  it("a hello without steps is accepted", () => {
     const game = createFakeGame();
     const bridge = mount(game);
     game.send({ ...HELLO, presentations: ["playback"] });
+    expect(bridge.state()).toBe("ready");
+    expect(game.incompatible()).toBe(0);
+  });
+
+  it("a steps Snapshot to a game that declared playback only is not compatible", () => {
+    const game = createFakeGame();
+    const bridge = mount(game);
+    bridge.sendSnapshot(snapshot("active"));
+    game.send({ ...HELLO, presentations: ["playback"] });
     expect(bridge.state()).toBe("incompatible");
+    expect(game.incompatible()).toBe(1);
+    expect(game.posted).toEqual([]);
   });
 });
 

@@ -1,12 +1,14 @@
 // The game's page: one heading and a line of detail in a polite live region,
 // an alert for a pick the Wrapper did not accept, and the picks: the two calls
-// of Coin Flip, or the board of rows (board.ts) of any other `steps` round. The
+// of Coin Flip, or the board of rows (board.ts) of any other `steps` round, or
+// the draw of a book round (book.ts), which takes no pick. The
 // DOM is built once and updated in place, so focus stays where the player left
 // it. Elements are built with `createElement` and text goes in as text only: no
 // markup string and no inline style (dom.ts). The text (texts.ts) is English
 // only: this is a sample, and the Snapshot's `context.language` is not used.
 
 import { createBoard } from "./board.ts";
+import { createBookPage } from "./book.ts";
 import { SIDES, type Side } from "./coin-flip.ts";
 import { elementBuilder } from "./dom.ts";
 import type { GameView, ViewCause } from "./game.ts";
@@ -66,6 +68,7 @@ export const createPage = (doc: Document, host: HTMLElement): GamePage => {
     ],
   );
   const board = createBoard(el);
+  const book = createBookPage(el);
   const main = el("main", { class: "rg-game" }, [
     el(
       "section",
@@ -75,6 +78,7 @@ export const createPage = (doc: Document, host: HTMLElement): GamePage => {
     alert,
     calls,
     board.element,
+    book.element,
   ]);
   host.replaceChildren(main);
 
@@ -92,9 +96,10 @@ export const createPage = (doc: Document, host: HTMLElement): GamePage => {
     detail.textContent = text.detail;
     const round = view.kind === "round" ? view : undefined;
     const rows = view.kind === "steps" ? view : undefined;
-    const shown = round ?? rows;
-    alert.textContent =
-      shown?.rejected === undefined ? "" : REJECTED[shown.rejected];
+    const drawn = view.kind === "book" ? view : undefined;
+    const shown = round ?? rows ?? drawn;
+    const rejected = (round ?? rows)?.rejected;
+    alert.textContent = rejected === undefined ? "" : REJECTED[rejected];
     main.dataset["view"] = view.kind;
     if (shown === undefined) delete main.dataset["status"];
     else main.dataset["status"] = shown.round.status;
@@ -107,6 +112,7 @@ export const createPage = (doc: Document, host: HTMLElement): GamePage => {
     const rowsOpen =
       rows !== undefined && (rows.round.open || rows.pending !== undefined);
     board.show(rows);
+    book.show(drawn);
     const showCalls =
       round !== undefined && (round.round.open || round.pending !== undefined);
     calls.hidden = !showCalls;
@@ -126,11 +132,14 @@ export const createPage = (doc: Document, host: HTMLElement): GamePage => {
     // pick a Snapshot already answered never reaches here (game.ts ignores it).
     // Coin Flip's own rule below applies to every view but a board, whose calls
     // are always hidden.
-    const rejected = rows?.rejected !== undefined;
+    const rowRejected = rows?.rejected !== undefined;
     const boardNeedsHeading =
-      rows !== undefined &&
-      ((boardFocused && ((cause === "answered" && !rejected) || !rowsOpen)) ||
-        (!rowsOpen && cause === "answered"));
+      (rows !== undefined &&
+        ((boardFocused &&
+          ((cause === "answered" && !rowRejected) || !rowsOpen)) ||
+          (!rowsOpen && cause === "answered"))) ||
+      // The board hides because a book round came while a tile held focus.
+      (drawn !== undefined && boardFocused);
     if (
       ((rows === undefined &&
         calls.hidden &&

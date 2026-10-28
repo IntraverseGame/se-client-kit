@@ -146,12 +146,17 @@ const compatible = (
 };
 
 describe("isCompatible", () => {
-  it("needs steps and all seven statuses", () => {
+  // RFC-003 (#146): all seven statuses and at least one presentation; `steps`
+  // is no longer required.
+  it("needs all seven statuses and a presentation", () => {
     expect(compatible(["steps"], ROUND_STATUSES)).toBe(true);
     expect(compatible(["playback", "steps"], ROUND_STATUSES.toReversed())).toBe(
       true,
     );
-    expect(compatible(["playback"], ROUND_STATUSES)).toBe(false);
+    expect(compatible(["playback"], ROUND_STATUSES)).toBe(true);
     expect(compatible(["steps"], ROUND_STATUSES.slice(0, 6))).toBe(false);
+    expect(compatible(["playback"], ROUND_STATUSES.slice(1))).toBe(false);
+    // An empty list is not a hello at all.
+    expect(compatible([], ROUND_STATUSES)).toBeUndefined();
   });
 });

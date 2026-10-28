@@ -2,7 +2,12 @@
 // of it, and whether its move or cash-out is not confirmed (W-16), or nothing
 // when no poll may run (a typed error, a blocking state).
 
-import type { CancelState, RoundProgress } from "./round-input.ts";
+import {
+  type CancelState,
+  type RoundProgress,
+  roundEnded,
+} from "./round-input.ts";
+import type { ChangeCause } from "./view-options.ts";
 import { isFinal, type WrapperState } from "./wrapper-state.ts";
 
 /**
@@ -36,4 +41,50 @@ export const followed = (state: WrapperState): Followed => {
         unconfirmed: state.check?.unconfirmed !== undefined,
       }
     : NOTHING;
+};
+
+/**
+ * Which cause a change of the UI is shown with (W-46, W-55): a poll never moves
+ * focus, except the poll that brings the result of the book round the player
+ * just started (decided by the human, 2026-10-28): its start answered
+ * `starting` and the round's result arrives by a poll, so the result heading
+ * takes focus as it would after the player's own action. Only that round's
+ * first shown result, and only once.
+ */
+export type ResultFocus = {
+  /** The player asked to start a round. */
+  readonly started: () => void;
+  /** The cause to show `state` with, given the cause of its change. */
+  readonly causeOf: (state: WrapperState, cause: ChangeCause) => ChangeCause;
+};
+
+export const createResultFocus = (): ResultFocus => {
+  // The player's start is waiting for its answer.
+  let starting = false;
+  // The book round the player started, until its result is shown.
+  let round: string | undefined;
+  return Object.freeze({
+    started: (): void => {
+      starting = true;
+      round = undefined;
+    },
+    causeOf: (state: WrapperState, cause: ChangeCause): ChangeCause => {
+      const { snapshot } = state;
+      if (cause === "player") {
+        if (starting) {
+          starting = false;
+          round =
+            snapshot?.presentation === "playback" &&
+            snapshot.status === "starting"
+              ? snapshot.roundId
+              : undefined;
+        }
+        return cause;
+      }
+      if (round === undefined || snapshot?.roundId !== round) return cause;
+      if (!roundEnded(snapshot, state.check?.cancel)) return cause;
+      round = undefined;
+      return "player";
+    },
+  });
 };

@@ -34,6 +34,16 @@ const READABLE: ReadonlySet<string> = new Set([
   "bet",
   "currentMultiplier",
   "payout",
+  // A book round's RTP line (W-56): only `config.rtp.decimal` below it.
+  "presentation",
+  "config",
+]);
+
+/** Of `config`, the UI reads only a book round's `rtp.decimal` (W-56). */
+const CONFIG_READABLE: ReadonlySet<string> = new Set([
+  "config",
+  "config.rtp",
+  "config.rtp.decimal",
 ]);
 
 /**
@@ -90,6 +100,12 @@ describe("every valid Snapshot vector (T-6, AC3)", () => {
     rendered(recording(snapshotVector(name), reads));
     const topLevel = [...reads].map(path => topLevelOf(path));
     expect(topLevel.filter(field => !READABLE.has(field))).toEqual([]);
+    // Never the draw, the packageHash, or `rtp.fraction` (W-54, W-56).
+    expect(
+      [...reads]
+        .filter(path => path.startsWith("config"))
+        .filter(path => !CONFIG_READABLE.has(path)),
+    ).toEqual([]);
     // Display-only numbers are never read (W-34).
     expect([...reads].filter(path => path.endsWith(".normalized"))).toEqual([]);
   });

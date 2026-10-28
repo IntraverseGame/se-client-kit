@@ -3,7 +3,7 @@
 // a rejected Snapshot, a failed verification, out of sync, a typed error with
 // its `requestId`, and the connection problem; beside a failed verification,
 // a cancel left to check later (W-33). The round id and the verify link
-// (W-39) are built here too.
+// (W-39) are round-id-view.ts's.
 
 import { checkLaterView } from "./cancel-views.ts";
 import {
@@ -11,14 +11,12 @@ import {
   button,
   type Builder,
   type Child,
-  externalLink,
   field,
   heading,
-  roundIdField,
   STATUS_HEADING_ID,
 } from "./dom.ts";
 import { type MessageKey, type Messages, problemMessage } from "./messages.ts";
-import { verifyUrlFor } from "./verify-link.ts";
+import { roundIdAndVerify } from "./round-id-view.ts";
 import type { Intents, ViewOptions } from "./view-options.ts";
 import type { WrapperState } from "./wrapper-state.ts";
 
@@ -99,42 +97,6 @@ export const blockingView = (
   }
 };
 
-export const roundIdAndVerify = (
-  el: Builder,
-  m: Messages,
-  roundId: string,
-  options: ViewOptions,
-  announce: (text: string) => void,
-): Child[] => {
-  const copy = options.intents.copyText;
-  return [
-    roundIdField(el, m["label.roundId"], roundId),
-    el("div", { class: "se-actions" }, [
-      copy !== undefined &&
-        button(el, m["action.copyRoundId"], "copy-round-id", () => {
-          copy(roundId).then(
-            () => {
-              announce(m["notice.copied"]);
-              return null;
-            },
-            () => {
-              // The clipboard refused: the round id stays visible to copy by hand.
-              return null;
-            },
-          );
-        }),
-      options.verifyBaseUrl !== undefined &&
-        externalLink(
-          el,
-          m,
-          verifyUrlFor(options.verifyBaseUrl, roundId),
-          "action.verify",
-          "verify",
-        ),
-    ]),
-  ];
-};
-
 export type AlertContent = {
   readonly key: string;
   readonly heading: string;
@@ -191,6 +153,16 @@ export const alertContent = (
         key: "configuration",
         heading: m["state.configuration"],
         lines: [m["state.configurationDetail"]],
+        retry: false,
+      };
+    }
+    case "session-changed": {
+      // W-53: shown as "this round failed verification", in place of the
+      // round or, at `idle`, of the bet selector; final until a reload.
+      return {
+        key: "session-changed",
+        heading: m["state.verificationFailed"],
+        lines: [m["state.sessionChangedDetail"]],
         retry: false,
       };
     }
@@ -298,3 +270,5 @@ export const alertView = (
       button(el, m[error.retryLabel ?? "action.retry"], "retry", retry),
   ];
 };
+
+export { roundIdAndVerify };

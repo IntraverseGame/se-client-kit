@@ -101,11 +101,68 @@ export type GameSnapshot = {
   };
 };
 
+/**
+ * A JSON value of a book event's `data`, as the game receives it: data only,
+ * never an object of the Wrapper's.
+ */
+export type GameJsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | readonly GameJsonValue[]
+  | GameEventData;
+
+/**
+ * A book event's `data`: a JSON object whose shape is the math package's. The
+ * kit reads none of it; the game shows or plays it.
+ */
+export type GameEventData = { readonly [member: string]: GameJsonValue };
+
+/** One event of the drawn book, in order. */
+export type GameBookEvent = {
+  readonly index: number;
+  /** The math package's event type, 1 to 64 characters. */
+  readonly type: string;
+  readonly data?: GameEventData;
+};
+
+/** The drawn book of a `won` or `lost` book round, to play back. */
+export type GameBookDraw = {
+  /** The drawn row of the game's math package. */
+  readonly index: number;
+  /** The row's display multiplier: never money (W-34, W-54). */
+  readonly payoutMultiplier: number;
+  readonly events: readonly GameBookEvent[];
+};
+
+/**
+ * The game's copy of a validated Snapshot of the `playback` presentation (a
+ * book round, W-50 to W-56): only the allow-listed fields (W-38). It has no
+ * proofs, no `packageHash`, no RTP, no payout, no amount, and no
+ * personalization; it is not an `se.snapshot/1` document. `config.draw` is
+ * present only when the Snapshot has it (`won` and `lost`).
+ */
+export type GamePlaybackSnapshot = {
+  readonly version: number;
+  readonly presentation: "playback";
+  readonly status: RoundStatus;
+  readonly closeReason?: "expired";
+  readonly roundId?: string;
+  readonly context: GameSnapshot["context"];
+  readonly config: {
+    readonly kind: "book";
+    /** The mode the round plays (the game version's base mode). */
+    readonly model: string;
+    readonly draw?: GameBookDraw;
+  };
+};
+
 /** Wrapper to game: a Snapshot that passed W-28, as its allow-listed copy. */
 export type SnapshotMessage = {
   readonly schema: typeof CONTROLLER_SCHEMA;
   readonly type: "snapshot";
-  readonly snapshot: GameSnapshot;
+  readonly snapshot: GameSnapshot | GamePlaybackSnapshot;
 };
 
 /** Wrapper to game: an `action` request that was not accepted. */
@@ -142,9 +199,9 @@ const gameStep = (step: {
   });
 
 /**
- * The game's copy of a validated Snapshot, built from the allow-list only
- * (W-38). A `playback` Snapshot has no copy (`undefined`): the first release
- * forwards only the `steps` presentation.
+ * The game's `steps` copy of a validated Snapshot, built from the allow-list
+ * only (W-38). A `playback` Snapshot has no `steps` copy (`undefined`): its
+ * copy is `toPlaybackCopy`'s (playback-copy.ts).
  */
 export const toGameSnapshot = (
   snapshot: ValidSnapshot,

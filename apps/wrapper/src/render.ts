@@ -22,6 +22,7 @@ import {
   replace,
   STATUS_HEADING_ID,
 } from "./dom.ts";
+import { showsCopyNotice, showsGame } from "./game-visibility.ts";
 import { icon } from "./icons.ts";
 import { type Localized, messagesFor } from "./messages.ts";
 import { linkPlan, linkView } from "./operator-links.ts";
@@ -41,23 +42,11 @@ export type View = {
   /**
    * Where the game iframe is mounted (W-37). It is built once and never
    * re-rendered, so the frame survives every update; it is hidden unless the
-   * round is shown ready (W-26, W-31).
+   * round is shown ready (W-26, W-31), or a book round's result is shown (W-55;
+   * game-visibility.ts).
    */
   readonly gameHost: HTMLElement;
   readonly update: (state: WrapperState, cause: ChangeCause) => void;
-};
-
-/**
- * Whether the game is shown: `active` once the shell's checks passed, or
- * `resolving` (W-31).
- */
-const showsGame = (state: WrapperState): boolean => {
-  const status = state.snapshot?.status;
-  return (
-    state.blocking === undefined &&
-    state.check?.verdict === "ready" &&
-    (status === "active" || status === "resolving")
-  );
 };
 
 const languageOf = (state: WrapperState): Localized =>
@@ -78,6 +67,9 @@ export const createView = (
   const links = el("div", { class: "se-actions se-links" });
   const gameHost = el("div", { class: "se-game" });
   gameHost.hidden = true;
+  // In the frame's place when a book round's copy failed closed (W-55).
+  const gameNotice = el("p", { class: "se-notice se-notice--game" });
+  gameNotice.hidden = true;
   const live = el("div", {
     class: "se-visually-hidden",
     "aria-live": "polite",
@@ -85,7 +77,14 @@ export const createView = (
   });
   const root = el("div", { class: "se-wrapper" }, [
     notices,
-    el("main", { class: "se-main" }, [alert, status, gameHost, ended, links]),
+    el("main", { class: "se-main" }, [
+      alert,
+      status,
+      gameHost,
+      gameNotice,
+      ended,
+      links,
+    ]),
     live,
   ]);
   host.replaceChildren(root);
@@ -136,7 +135,8 @@ export const createView = (
       state.blocking === "configuration-error" ||
       state.blocking === "session-ended" ||
       state.blocking === "other-tab" ||
-      state.blocking === "unsupported-browser";
+      state.blocking === "unsupported-browser" ||
+      state.blocking === "session-changed";
 
     section(
       notices,
@@ -271,6 +271,14 @@ export const createView = (
   const updateAll = (state: WrapperState, cause: ChangeCause): void => {
     update(state, cause);
     gameHost.hidden = !showsGame(state);
+    const notice = showsCopyNotice(state);
+    const text = notice
+      ? messagesFor(state.snapshot?.context.language).messages[
+          "notice.gameCantShow"
+        ]
+      : "";
+    if (gameNotice.textContent !== text) gameNotice.textContent = text;
+    gameNotice.hidden = !notice;
   };
 
   return Object.freeze({ root, gameHost, update: updateAll });

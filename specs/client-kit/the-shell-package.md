@@ -26,12 +26,14 @@ are in brackets.
   (`createControllerBridge` with its option, result, and state types) with the
   `se.controller/1` message types (`CONTROLLER_SCHEMA`, `ROUND_STATUSES`,
   `HelloMessage`, `ActionMessage`, `SnapshotMessage`, `RejectMessage`,
-  `GameSnapshot`, `GameStep`, `Pick`, `RejectReason`, and the unions), the
-  operator channel (`createOperatorChannel`, `HANDSHAKE_TIMEOUT_MS`, and the
-  types `OperatorChannel`, `OperatorChannelState`, `OperatorCheck`,
-  `OperatorMessageEvent`, `OperatorWindow`, `HandshakeOutcome`, and
-  `HandshakeRefusal`) with the `se.operator/1` message types (`OPERATOR_SCHEMA`,
-  `MAX_RESIZE_HEIGHT`, `OperatorHello`, `WelcomeMessage`, `ResizeMessage`, and
+  `GameSnapshot`, `GameStep`, `GamePlaybackSnapshot`, `GameBookDraw`,
+  `GameBookEvent`, `GameEventData`, `GameJsonValue`, `Pick`, `RejectReason`, and
+  the unions), the operator channel (`createOperatorChannel`,
+  `HANDSHAKE_TIMEOUT_MS`, and the types `OperatorChannel`,
+  `OperatorChannelState`, `OperatorCheck`, `OperatorMessageEvent`,
+  `OperatorWindow`, `HandshakeOutcome`, and `HandshakeRefusal`) with the
+  `se.operator/1` message types (`OPERATOR_SCHEMA`, `MAX_RESIZE_HEIGHT`,
+  `OperatorHello`, `WelcomeMessage`, `ResizeMessage`, and
   `OperatorBoundMessage`), and the UI's Snapshot reader (`createSnapshotReader`
   with `SnapshotReader`, `SnapshotReaderOptions`, and `SnapshotRead`, and the
   re-exported `ValidSnapshot` and `ValidPlayProblem` of the `snapshot` package),
@@ -54,14 +56,15 @@ are in brackets.
   exported, as types only, at the subpath
   `@intraverse/se-client-shell/controller` (`src/controller.ts`, a `types`
   condition only, no value): the message types, `GameSnapshot`, `GameStep`,
-  `Pick`, `Presentation`, `RoundStatus`, and `RejectReason`, for the
-  `reference-game` app ([The reference game](./the-reference-game.md)). Key
-  custody, the signer lock, the transcript state, the tip check, its decision,
-  the `CreateRoundAuth` checks, the round's verdict, the round flows, the pick
-  use case, and the token keeper are internal: the UI gets use cases and
-  read-only state, never a signing capability ([Packages](./packages.md)). The
-  round flows are reached only through the session's use cases (decided with the
-  session, 2026-10-17).
+  `GamePlaybackSnapshot`, `GameBookDraw`, `GameBookEvent`, `GameEventData`,
+  `GameJsonValue`, `Pick`, `Presentation`, `RoundStatus`, and `RejectReason`,
+  for the `reference-game` app ([The reference game](./the-reference-game.md)).
+  Key custody, the signer lock, the transcript state, the tip check, its
+  decision, the `CreateRoundAuth` checks, the round's verdict, the round flows,
+  the pick use case, and the token keeper are internal: the UI gets use cases
+  and read-only state, never a signing capability ([Packages](./packages.md)).
+  The round flows are reached only through the session's use cases (decided with
+  the session, 2026-10-17).
 - **The launch code (W-1, W-1a).** `takeLaunchCode(location, history)` reads
   `location.hash` and `location.href` once, removes the fragment with
   `history.replaceState(null, "", <href without the fragment>)` whenever the URL
@@ -419,6 +422,28 @@ are in brackets.
   case is the gate and MUST re-check W-23 against the shell's own latest
   validated Snapshot and refuse a step it has already signed (W-15). The bridge
   logs nothing.
+- **Book playback in the shell (W-50 to W-56, #146; built).** The session's
+  start (`startSessionRound`) holds a round whose first Snapshot is `playback`
+  as a book round (`book-round.ts`): no transcript state, nothing signed, a pick
+  or a cash-out refused `not_legal` with no request, a verdict that is `ready`
+  from the start and `failed` ("this round failed verification") once W-52's
+  values change, and an evidence of the start's request (its `idempotencyKey`,
+  bet, and key address), each distinct `randomnessProof`, the first values, and
+  each differing set. A later Snapshot of the round that carries no
+  `randomnessProof` after one that did counts as a change. Every validated
+  Snapshot passes the session's W-53 guard (`session-presentation.ts`) before
+  the round's rules; the first one it refuses closes the game's bridge, and
+  every use case then answers `{ kind: "session-changed" }` with nothing read,
+  started, signed, or forwarded; the guard keeps the four fields' first and
+  changed values, and nothing else. Until the re-vendor, the shell validates
+  every Snapshot (a read, an action's answer, a `ROUND_ACTIVE` problem's
+  embedded one) through `book-status.ts`, which refuses a book round at
+  `active`, `resolving`, or `canceled` with one issue at `/status`
+  (`/snapshot/status` in a problem). The bridge builds each Snapshot's copy when
+  it is given it (before the `hello` too): a `playback` copy that fails closed
+  is neither kept nor sent, the game keeps the last copy it was sent (sent at
+  the `hello` if none was yet), and the optional `onCopy(copied)` option tells
+  the Wrapper `false`, then `true` once a later copy is built.
 - **The operator channel (W-49b to W-49d, ADR-006).**
   `createOperatorChannel({ parent })` takes the operator page's window (only its
   `postMessage`) and touches no global; the Wrapper routes the page's `message`

@@ -66,7 +66,10 @@ const parseStep = (value: unknown): GameStep | undefined => {
   });
 };
 
-const parseContext = (value: unknown): GameSnapshot["context"] | undefined => {
+/** The copy's `context`, the same for both presentations. */
+export const parseContext = (
+  value: unknown,
+): GameSnapshot["context"] | undefined => {
   const fields = plainFields(value);
   if (
     fields === undefined ||

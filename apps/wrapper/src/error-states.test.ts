@@ -194,17 +194,20 @@ describe("Snapshot rejected (W-28)", () => {
 });
 
 describe("degraded states, each distinct (W-44)", () => {
-  const HEADINGS: Readonly<Record<Exclude<BlockingState, "loading">, string>> =
-    {
-      "configuration-error": m["state.configuration"],
-      "session-ended": m["state.sessionEnded"],
-      "other-tab": m["state.otherTab"],
-      "unsupported-browser": m["state.unsupported"],
-      "verification-failed": m["state.verificationFailed"],
-      "chain-unverified": m["state.chainUnverified"],
-      "out-of-sync": m["state.outOfSync"],
-      "snapshot-rejected": m["state.rejected"],
-    };
+  // A changed session (W-53) is shown as "this round failed verification" by
+  // the spec, so it shares that heading; it is tested in book-round.test.ts.
+  const HEADINGS: Readonly<
+    Record<Exclude<BlockingState, "loading" | "session-changed">, string>
+  > = {
+    "configuration-error": m["state.configuration"],
+    "session-ended": m["state.sessionEnded"],
+    "other-tab": m["state.otherTab"],
+    "unsupported-browser": m["state.unsupported"],
+    "verification-failed": m["state.verificationFailed"],
+    "chain-unverified": m["state.chainUnverified"],
+    "out-of-sync": m["state.outOfSync"],
+    "snapshot-rejected": m["state.rejected"],
+  };
 
   it("gives every blocking state its own heading", () => {
     expect(new Set(Object.values(HEADINGS)).size).toBe(
