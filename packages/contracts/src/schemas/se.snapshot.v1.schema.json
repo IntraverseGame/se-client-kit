@@ -59,7 +59,7 @@
       "then": { "properties": { "status": { "not": { "enum": ["active", "resolving", "canceled"] } } } }
     },
     {
-      "$comment": "idle: no round in front of the player, so no round-scoped fields. proofs is also rejected at its own location, so a proof served on idle (a round creation authorization included) is named where it sits.",
+      "$comment": "idle: no round in front of the player, so no round-scoped fields. proofs is rejected at its own location only, so a proof served on idle (a round creation authorization included) is named where it sits, and once.",
       "if": { "properties": { "status": { "const": "idle" } } },
       "then": {
         "not": {
@@ -67,8 +67,7 @@
             { "required": ["roundId"] },
             { "required": ["step"] },
             { "required": ["currentMultiplier"] },
-            { "required": ["bankedAmount"] },
-            { "required": ["proofs"] }
+            { "required": ["bankedAmount"] }
           ]
         },
         "properties": { "proofs": { "not": {} } }

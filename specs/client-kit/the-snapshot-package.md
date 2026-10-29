@@ -24,7 +24,9 @@ Part of the [Client kit spec](../client-kit.md), section
   with a schema, whose issues for an extra member are at the object, since the
   member's name is document content); `allOf` and the `then`/`else` of an `if`
   report their subschemas' own issues; so the first issue of every `invalid/`
-  vector is at its `failsAt` pointer (T-5).
+  vector is at its `failsAt` pointer, and every issue it reports for one is at
+  that pointer or below it, since each `invalid/` vector breaks only its own
+  rule (T-5).
 - **The keyword profile.** The evaluator interprets the schema as data (no
   generated code, no `eval`, no `new Function`; ADR-001 decision 6) and supports
   exactly the keywords the vendored schema uses: the annotations `$schema`,

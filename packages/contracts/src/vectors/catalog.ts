@@ -117,7 +117,7 @@ import vector110 from "./snapshot/invalid/payout-on-resolving.json" with { type:
 import vector111 from "./snapshot/invalid/payout-on-starting.json" with { type: "json" };
 import vector112 from "./snapshot/invalid/payout-value-number.json" with { type: "json" };
 import vector113 from "./snapshot/invalid/presentation-config-mismatch.json" with { type: "json" };
-import vector114 from "./snapshot/invalid/presentation-playback-with-config-model.json" with { type: "json" };
+import vector114 from "./snapshot/invalid/presentation-playback-with-config-model-starting.json" with { type: "json" };
 import vector115 from "./snapshot/invalid/problem-default-code-internal-retryable.json" with { type: "json" };
 import vector116 from "./snapshot/invalid/problem-hidden-state-in-snapshot.json" with { type: "json" };
 import vector117 from "./snapshot/invalid/problem-retryable-mismatch.json" with { type: "json" };
@@ -303,7 +303,7 @@ export const snapshotVectors: SnapshotVectors = {
     "payout-on-starting": vector111,
     "payout-value-number": vector112,
     "presentation-config-mismatch": vector113,
-    "presentation-playback-with-config-model": vector114,
+    "presentation-playback-with-config-model-starting": vector114,
     "problem-default-code-internal-retryable": vector115,
     "problem-hidden-state-in-snapshot": vector116,
     "problem-retryable-mismatch": vector117,

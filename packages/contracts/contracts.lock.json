@@ -12,8 +12,8 @@
       "path": "src/schemas/se.snapshot.v1.schema.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 schema",
-      "sourceCommit": "dee600092ec32ff1eb6e8afe962e9eb102902cce",
-      "sha256": "c82067784e1e8108e3860790c01d5f8dfc65e56a210774c5a594a15e4519c5cf"
+      "sourceCommit": "80ac5b85a02503069ce1649c1ad7c2f9e704afab",
+      "sha256": "a1a77842543dedbc8f91d7d0345d01c8967607cdca27d4a03bd5f8a261cc01ed"
     },
     {
       "path": "src/schemas/verify.v1.openapi.yaml",
@@ -478,11 +478,11 @@
       "sha256": "7cf505aebd0dd8ed2025549c21bbd5ef9545f4e13066d1dcf467bbc83dc006e3"
     },
     {
-      "path": "src/vectors/snapshot/invalid/presentation-playback-with-config-model.json",
+      "path": "src/vectors/snapshot/invalid/presentation-playback-with-config-model-starting.json",
       "source": "se-backend",
-      "sourceName": "se.snapshot/1 vectors/invalid/presentation-playback-with-config-model.json",
-      "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
-      "sha256": "8efd5fda09bb14f959a1abc11f352506d0d72fa97c122da12d10c0d0872ef43d"
+      "sourceName": "se.snapshot/1 vectors/invalid/presentation-playback-with-config-model-starting.json",
+      "sourceCommit": "80ac5b85a02503069ce1649c1ad7c2f9e704afab",
+      "sha256": "8060b98ce830be88278bb590747ad95286ac4ec52f995f884b9deb70298d6f48"
     },
     {
       "path": "src/vectors/snapshot/invalid/problem-default-code-internal-retryable.json",

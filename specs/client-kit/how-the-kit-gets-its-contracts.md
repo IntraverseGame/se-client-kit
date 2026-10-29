@@ -48,14 +48,14 @@ Rules:
    paths in them are given in a file named by `--sources`, kept outside this
    repository. Vectors are append-only: the script refuses to change or remove a
    locked vector unless it is given `--allow-vector-change`, which is legitimate
-   only before the first release. It was used five times: for the pre-release
+   only before the first release. It was used six times: for the pre-release
    exception of rule 4, for the signing vectors of contracts release 1.0.0
    (their `_comment` changed), for the kernel's `kernel/public/v1/seed` set at
    se-backend `9294d22` (its reference vector's description now names the
-   `shuffle-draw` set; its inputs and expected values are unchanged), and for a
-   book round's status flow at se-backend `dee6000` and its follow-up at
-   `65f9086` (rule 4). Generated files are rewritten by
-   `tools/generate-contracts.ts --write`.
+   `shuffle-draw` set; its inputs and expected values are unchanged), for a book
+   round's status flow at se-backend `dee6000` and its follow-up at `65f9086`,
+   and for the invalid vectors' own-rule sync at se-backend `80ac5b8` (rule 4).
+   Generated files are rewritten by `tools/generate-contracts.ts --write`.
 2. **Verify offline.** The `contracts` job recomputes each copied file's SHA-256
    and fails when it differs from the lock, and fails when the generated types
    in `contracts` differ from a regeneration of the committed documents.
@@ -345,6 +345,23 @@ Rules:
    [Verify page](../verify-page.md)), and its body reader ignores the new
    members (`verify-body.test.ts`). The generated `PlayApiComponents` and
    `VerifyApiComponents` carry them; no public type name is added.
+
+   **Every invalid vector breaks only its own rule** (the Snapshot schema and
+   vectors synced from se-backend `80ac5b8`; the Play and verify documents, the
+   kernel sets, and the signing vectors stay at the commits above; decided by
+   the human, 2026-10-29): each vendored `invalid/` vector breaks only its own
+   rule, so every issue is at or below its `failsAt`, and the kit's T-5 checks
+   that with its own validator, beside the first issue at `failsAt`. The
+   schema's `idle` rule rejects `proofs` at `/proofs` only and no longer also at
+   the document (`""`); validity is unchanged, and
+   `invalid/create-round-auth-on-idle`, unedited, now fails at `/proofs` only.
+   The backend removed `invalid/presentation-playback-with-config-model` (a
+   config round at `resolving` with a `playback` presentation, which also failed
+   at `/status` and `/proofs`) and added
+   `invalid/presentation-playback-with-config-model-starting` (`failsAt`
+   `/model`), the same rule on a `starting` round with that one failure. The kit
+   synced the removal with `--allow-vector-change` (rule 1). No other vendored
+   vector changed, and the generated types did not change.
 
 5. **Review before publish.** Every file copied into this public repository is
    reviewed as

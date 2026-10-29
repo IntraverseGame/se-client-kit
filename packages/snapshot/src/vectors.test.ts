@@ -55,6 +55,10 @@ const validators: Record<
 const run = (vector: Vector): ValidationResult<unknown> =>
   validators[vector.definition](vector.input);
 
+/** Whether a JSON Pointer is `pointer` itself or a location inside it. */
+const isAtOrBelow = (path: string, pointer: string | undefined): boolean =>
+  pointer !== undefined && (path === pointer || path.startsWith(`${pointer}/`));
+
 const valid = Object.entries(snapshotVectors.valid).map(([name, file]) => ({
   name,
   vector: readVector(name, file),
@@ -94,6 +98,18 @@ describe("Snapshot vectors", () => {
     expect(issues[0]?.instancePath).toBe(vector.failsAt);
     expect(issues.map(issue => issue.keyword)).not.toContain("unsupported");
   });
+
+  it.each(invalid)(
+    "reports every issue of invalid/$name at or below its failsAt",
+    ({ vector }) => {
+      // Each invalid vector breaks only its own rule: no issue the validator
+      // reports falls outside the vector's failsAt.
+      const outside = issuesOf(run(vector))
+        .map(issue => issue.instancePath)
+        .filter(path => !isAtOrBelow(path, vector.failsAt));
+      expect(outside).toEqual([]);
+    },
+  );
 
   it.each(signature)("accepts signature/$name as a Snapshot", ({ vector }) => {
     expect(vector.definition).toBe("Snapshot");
