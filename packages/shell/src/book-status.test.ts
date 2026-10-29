@@ -1,29 +1,28 @@
-// T-22 (#146, W-54): the shell's interim book-status rule. A book round shows
-// exactly `idle`, `starting`, `won`, and `lost`; the vendored schema still
-// allows `active`, `resolving`, and `canceled` on one, so the shell refuses
-// them itself, after the validator, as failing validation at `/status`, on
-// every path a Snapshot reaches it: a read, an action's answer, and a typed
-// error's embedded Snapshot. No test here relies on
-// `valid/book-playback-resolving-placeholder` as a valid book Snapshot.
+// T-22 (#146, W-54): a book round shows exactly `idle`, `starting`, `won`, and
+// `lost`. The vendored schema refuses a `playback` Snapshot at `active`,
+// `resolving`, or `canceled`, so the `snapshot` validator does, with its first
+// issue at `/status`, and the shell, which validates every Snapshot with it,
+// refuses one as failing validation (W-28) on every path a Snapshot reaches
+// it: a read, an action's answer, and a typed error's embedded Snapshot. The
+// shell has no book-status rule of its own.
 
 import { snapshotVectors } from "@intraverse/se-client-contracts/testing";
 import { ProblemError } from "@intraverse/se-client-play-client";
-import { validateSnapshot } from "@intraverse/se-client-snapshot";
+import {
+  validatePlayProblem,
+  validateSnapshot,
+} from "@intraverse/se-client-snapshot";
 import { describe, expect, it } from "vitest";
 
-import {
-  BOOK_STATUS_ISSUE,
-  validateSessionProblem,
-  validateSessionSnapshot,
-} from "./book-status.ts";
 import { bookInput } from "./fixtures/book.ts";
 import { createFakePlay, ok } from "./fixtures/fake-play.ts";
 import { snapshot, vectorInput } from "./fixtures/vectors.ts";
 import { roundSnapshotOf, snapshotOf } from "./round-request.ts";
 import { createSnapshotReader, snapshotReadOfError } from "./snapshot-read.ts";
 
-const bookNames = Object.keys(snapshotVectors.valid).filter(name =>
-  name.startsWith("book-playback-"),
+/** Every vendored valid Snapshot vector of a book round. */
+const bookNames = Object.keys(snapshotVectors.valid).filter(
+  name => vectorInput("valid", name)["presentation"] === "playback",
 );
 
 /** A book round's input at `status`, from the `starting` fixture's round. */
@@ -32,56 +31,47 @@ const bookAt = (status: string): Record<string, unknown> => ({
   status,
 });
 
-describe("the book-status rule (W-54)", () => {
+/** The first issue's location of a rejection; none for an acceptance. */
+const firstIssueAt = (
+  result:
+    | ReturnType<typeof validateSnapshot>
+    | ReturnType<typeof validatePlayProblem>,
+): string | undefined =>
+  result.ok ? undefined : result.issues[0].instancePath;
+
+describe("the book status flow, from the validator (W-54)", () => {
   it.each(["active", "resolving", "canceled"])(
-    "refuses a book Snapshot at %s, naming /status, though the vendored schema allows it",
+    "the validator refuses a book Snapshot at %s, naming /status",
     status => {
-      const input = bookAt(status);
-      // The validator follows the vendored schema exactly.
-      expect(validateSnapshot(input).ok).toBe(true);
-      expect(validateSessionSnapshot(input)).toEqual({
-        ok: false,
-        issues: [BOOK_STATUS_ISSUE],
-      });
-      expect(BOOK_STATUS_ISSUE.instancePath).toBe("/status");
+      expect(firstIssueAt(validateSnapshot(bookAt(status)))).toBe("/status");
     },
   );
 
   it.each(["idle", "starting", "won", "lost"] as const)(
     "accepts a book Snapshot at %s",
     status => {
-      expect(validateSessionSnapshot(bookInput(status)).ok).toBe(true);
+      expect(() => snapshotOf(bookInput(status))).not.toThrow();
     },
   );
 
-  it("takes every vendored valid book vector but the resolving placeholder", () => {
-    const refused = bookNames.filter(
-      name => !validateSessionSnapshot(vectorInput("valid", name)).ok,
-    );
-    expect(refused).toEqual(["book-playback-resolving-placeholder"]);
+  it("takes every vendored valid book vector", () => {
+    expect(bookNames.length).toBeGreaterThanOrEqual(7);
+    for (const name of bookNames) {
+      expect(() => snapshotOf(vectorInput("valid", name))).not.toThrow();
+    }
   });
 
   it("leaves a steps round at active, resolving, and canceled alone", () => {
     for (const status of ["active", "resolving", "canceled"] as const) {
-      expect(validateSessionSnapshot(snapshot(status)).ok).toBe(true);
+      expect(() => snapshotOf(snapshot(status))).not.toThrow();
     }
   });
 
-  it("keeps the validator's own first issue for a document that fails the schema", () => {
-    const input = { ...bookAt("active"), extra: true };
-    expect(validateSnapshot(input).ok).toBe(false);
-    expect(validateSessionSnapshot(input)).toEqual(validateSnapshot(input));
-  });
-
-  it("refuses a typed error whose embedded Snapshot is a book round at active", () => {
+  it("the validator refuses a typed error whose embedded Snapshot is a book round at active", () => {
     const body = vectorInput("valid", "problem-round-active");
-    const steps = validateSessionProblem(body);
-    expect(steps.ok).toBe(true);
-    const book = { ...body, snapshot: bookAt("active") };
-    expect(validateSessionProblem(book)).toEqual({
-      ok: false,
-      issues: [{ ...BOOK_STATUS_ISSUE, instancePath: "/snapshot/status" }],
-    });
+    expect(validatePlayProblem(body).ok).toBe(true);
+    const result = validatePlayProblem({ ...body, snapshot: bookAt("active") });
+    expect(firstIssueAt(result)).toBe("/snapshot/status");
   });
 });
 

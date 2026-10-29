@@ -156,16 +156,15 @@ describe("narrowing by presentation", () => {
     expect(bookModel(snapshot)).toBe("book");
   });
 
-  // T-22 (#146): every vendored valid book vector is accepted and narrows to a
-  // book round. `book-playback-resolving-placeholder` is among them as
-  // vendored today; the next sync moves it to `invalid/` (W-54), and the shell
-  // refuses it until then.
-  const bookVectors = Object.keys(snapshotVectors.valid).filter(name =>
-    name.startsWith("book-playback-"),
+  // T-22 (#146): every vendored valid book vector (`book-playback-*` and the
+  // one round of `book-lifecycle-*`) is accepted and narrows to a book round.
+  const bookVectors = Object.keys(snapshotVectors.valid).filter(
+    name =>
+      name.startsWith("book-playback-") || name.startsWith("book-lifecycle-"),
   );
 
   it("finds the vendored valid book vectors", () => {
-    expect(bookVectors.length).toBeGreaterThanOrEqual(4);
+    expect(bookVectors.length).toBeGreaterThanOrEqual(7);
   });
 
   it.each(bookVectors)("narrows %s to a book round", name => {

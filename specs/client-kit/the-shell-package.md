@@ -452,15 +452,16 @@ are in brackets.
   the round's rules; the first one it refuses closes the game's bridge, and
   every use case then answers `{ kind: "session-changed" }` with nothing read,
   started, signed, or forwarded; the guard keeps the four fields' first and
-  changed values, and nothing else. Until the re-vendor, the shell validates
-  every Snapshot (a read, an action's answer, a `ROUND_ACTIVE` problem's
-  embedded one) through `book-status.ts`, which refuses a book round at
-  `active`, `resolving`, or `canceled` with one issue at `/status`
-  (`/snapshot/status` in a problem). The bridge builds each Snapshot's copy when
-  it is given it (before the `hello` too): a `playback` copy that fails closed
-  is neither kept nor sent, the game keeps the last copy it was sent (sent at
-  the `hello` if none was yet), and the optional `onCopy(copied)` option tells
-  the Wrapper `false`, then `true` once a later copy is built.
+  changed values, and nothing else. The shell validates every Snapshot (a read,
+  an action's answer, a `ROUND_ACTIVE` problem's embedded one) with the
+  `snapshot` validator, which refuses a book round at `active`, `resolving`, or
+  `canceled` as the vendored schema does, first at `/status` (`/snapshot/status`
+  in a problem); the shell has no status rule of its own for a book round. The
+  bridge builds each Snapshot's copy when it is given it (before the `hello`
+  too): a `playback` copy that fails closed is neither kept nor sent, the game
+  keeps the last copy it was sent (sent at the `hello` if none was yet), and the
+  optional `onCopy(copied)` option tells the Wrapper `false`, then `true` once a
+  later copy is built.
 - **The operator channel (W-49b to W-49d, ADR-006).**
   `createOperatorChannel({ parent })` takes the operator page's window (only its
   `postMessage`) and touches no global; the Wrapper routes the page's `message`

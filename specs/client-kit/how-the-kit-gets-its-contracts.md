@@ -48,12 +48,14 @@ Rules:
    paths in them are given in a file named by `--sources`, kept outside this
    repository. Vectors are append-only: the script refuses to change or remove a
    locked vector unless it is given `--allow-vector-change`, which is legitimate
-   only before the first release. It was used three times: for the pre-release
+   only before the first release. It was used five times: for the pre-release
    exception of rule 4, for the signing vectors of contracts release 1.0.0
-   (their `_comment` changed), and for the kernel's `kernel/public/v1/seed` set
-   at se-backend `9294d22` (its reference vector's description now names the
-   `shuffle-draw` set; its inputs and expected values are unchanged). Generated
-   files are rewritten by `tools/generate-contracts.ts --write`.
+   (their `_comment` changed), for the kernel's `kernel/public/v1/seed` set at
+   se-backend `9294d22` (its reference vector's description now names the
+   `shuffle-draw` set; its inputs and expected values are unchanged), and for a
+   book round's status flow at se-backend `dee6000` and its follow-up at
+   `65f9086` (rule 4). Generated files are rewritten by
+   `tools/generate-contracts.ts --write`.
 2. **Verify offline.** The `contracts` job recomputes each copied file's SHA-256
    and fails when it differs from the lock, and fails when the generated types
    in `contracts` differ from a regeneration of the committed documents.
@@ -270,6 +272,78 @@ Rules:
    the vectors as they are, with `--allow-vector-change` (rule 1). After the
    first release no such exception exists: `/1` takes additive changes only, and
    a released vector file is never edited or removed.
+
+   **A book round's status flow** (the Snapshot schema, its vectors, and the
+   Play API and verify API documents synced from se-backend `dee6000`; that sync
+   recorded `dee6000` for the Play document and `13bcee0` for the verify
+   document, the last commits that touched them, and the follow-up below moved
+   the Play document to `f2da535`; a second pre-release change that is not
+   additive, decided in [Book playback](../wrapper/book-playback.md), W-54): the
+   schema refuses a `playback` Snapshot whose `status` is `active`, `resolving`,
+   or `canceled`, so a book round shows `idle`, `starting` (no `proofs`, then
+   `randomnessProof` once bound), then `won` or `lost`, and a round voided or
+   refused before its draw shows `idle`. Its descriptions state that a session
+   keeps one `presentation`, `config.kind`, and `config.model` across its
+   Snapshots (the kit's W-53). The backend removed
+   `valid/book-playback-resolving-placeholder`, a book round at `resolving` from
+   before its book engine, and added `invalid/book-status-active`, `-resolving`,
+   and `-canceled` (`failsAt` `/status`); the kit synced the removal with
+   `--allow-vector-change` (rule 1). No other vendored vector changed. The
+   vectors add one book round of one session: `valid/book-lifecycle-idle` (no
+   round; `config.rtp` 24/25), `-starting-funded` (the bet reserved, no
+   `proofs`), `-starting-bound` (`randomnessProof` without `roundSecret`), and
+   `-lost` (the draw of row 0, multiplier 0, with its events, `roundSecret`, and
+   a `payout` of 0), one `roundId`, `version` 4 to 7. The `snapshot` validator
+   takes the status rule from the schema, the shell's interim rule is gone, and
+   the Wrapper's T-24 plays the round against the fake Play API
+   ([Testing and CI](./testing-and-ci.md)).
+
+   **Its follow-up** (the Snapshot vectors and the Play API document synced from
+   se-backend `65f9086`; the lock records `f2da535` for the Play document, the
+   last commit that touched it; the schema and the verify document stay at the
+   commits above): with the status rule, three older book vectors failed at
+   `/status` before their own rule, so their first issue was no longer their
+   `failsAt`, which T-5 requires. The backend removed
+   `invalid/blindness-draw-before-resolution` and
+   `invalid/create-round-auth-on-book` (both on a book round at `resolving`) and
+   `invalid/blindness-draw-on-canceled` (a draw on `canceled`, which
+   `invalid/book-status-canceled` now covers), and added
+   `invalid/blindness-draw-before-resolution-starting` (`failsAt` `/config`) and
+   `invalid/create-round-auth-on-book-starting` (`failsAt`
+   `/proofs/createRoundAuth`), each on a `starting` book round with that one
+   failure. The kit synced the removals with `--allow-vector-change` (rule 1).
+   It also added `valid/book-lifecycle-won`, the other ending of the same round:
+   `won` at `version` 7, the draw of row 2 (multiplier 2) with its `reveal`,
+   `win`, and `end` events, a `payout` of 200 (€2.00), and the balance with it
+   credited. T-24 plays both endings. No other vendored vector changed. The Play
+   API document adds an optional `gamePath` to the redeem answer
+   (`RedeemResponse`): the path of the game's page on `gameOrigin`, an absolute
+   path that starts and ends with `/` (`/` is the origin's root), fixed for the
+   session; the game is framed at `gameOrigin` followed by `gamePath`, and
+   messages are still exchanged by `gameOrigin` only, since the path is not a
+   trust boundary. The server always sends it, and an absent one reads as `/`.
+   The generated `PlayApiComponents` carries it; the kit does not read it yet
+   (#164), so the Wrapper frames the game at `gameOrigin`'s root as before.
+
+   The Play API document, last synced at `9ffdcc0`, catches up with the schema
+   and restates it: `BookConfig` gains the optional `rtp` (`BookRtp`, as in the
+   schema since `13bcee0`), and its descriptions state the book status flow
+   (`getSnapshot`, `RoundStatus`, `BookConfig`) and the one presentation per
+   session (`presentation`). One change of meaning: the 422 `Unprocessable`
+   response now says that `INSUFFICIENT_FUNDS`, `LIMIT_EXCEEDED`, and
+   `PLAYER_RESTRICTED` name a book round's debit the operator refused, while a
+   config round's refused debit is still `FAILED_PRECONDITION`. The kit already
+   handles each of those codes by its `code` (W-42), so nothing changes. The
+   verify API document adds what a verifier reads of a book round: `book`
+   (`BookVerification`: the Stake `mode`, the `drawn` row, the mode's `cost`,
+   and its table's `merkleRoot`, `entryCount`, and `totalWeight`),
+   `recomputed.draw` (`DrawnRow`: `index` and `multiplierMilli`, a base-10
+   string), a `packageHash` description that names the keccak256 hash of a book
+   game's Stake package, and the `configuration` and `payout` checks of a book
+   round. All are optional. The verify page reads no book round yet (#156;
+   [Verify page](../verify-page.md)), and its body reader ignores the new
+   members (`verify-body.test.ts`). The generated `PlayApiComponents` and
+   `VerifyApiComponents` carry them; no public type name is added.
 
 5. **Review before publish.** Every file copied into this public repository is
    reviewed as

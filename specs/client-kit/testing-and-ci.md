@@ -475,7 +475,12 @@ development-only, so it may import the test-only entry of `contracts`.
   (`valid/cashorcrash-cash-out-*` for the cash-out and
   `valid/cashorcrash-last-row-*` for the last surviving move, each issued for
   the same action key, signer, domain, entropy source, entropy chain id, and
-  randomness block, which the harness checks when it loads)
+  randomness block, which the harness checks when it loads), and T-24 on the
+  vendored book round of one session (`valid/book-lifecycle-*`: `idle`, the
+  start answered `starting` with no `proofs`, a read `starting` bound, and a
+  read `won`, or in a second run `lost`, and a start answered 401
+  `SESSION_REVOKED`; a book round carries no `CreateRoundAuth`, and the start's
+  `actionKey` is the same scripted key, its bet the idle Snapshot's default)
   (`harness/round-play.ts`, `harness/round-vector.ts`): the seeded random source
   gives the Wrapper's key draw the `signed-action/coinflip-cancel` vector's test
   key, read from `contracts`' test-only entry at run time and never copied into

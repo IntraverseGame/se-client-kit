@@ -1,0 +1,137 @@
+{
+  "vector": "snapshot/valid/book-lifecycle-lost",
+  "description": "playback, lost: the same round after its draw. Row 0 of the mode's table, multiplier 0: the events show a reveal with no matching gems and the end. Payout 0 (a credit of 0), roundSecret revealed, the round recorded. The draw and the lost status arrive together.",
+  "definition": "Snapshot",
+  "expected": "valid",
+  "input": {
+    "schema": "se.snapshot/1",
+    "version": 7,
+    "presentation": "playback",
+    "model": "book",
+    "context": {
+      "sessionId": "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N",
+      "language": "de",
+      "country": "DE",
+      "device": "mobile",
+      "links": {
+        "lobby": "https://luckybet.example.com/lobby",
+        "deposit": "https://luckybet.example.com/cashier"
+      },
+      "theme": {
+        "appearance": "dark"
+      },
+      "view": {
+        "playerName": "Kai",
+        "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png"
+      }
+    },
+    "status": "lost",
+    "roundId": "01927c61-4d5e-7f6a-9b7c-8d9e0f1a2b3c",
+    "bet": {
+      "balance": {
+        "value": "9900",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 99.0,
+        "formatted": "€99.00"
+      },
+      "minBet": {
+        "value": "10",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 0.1,
+        "formatted": "€0.10"
+      },
+      "maxBet": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "suggestedBets": [
+        {
+          "value": "100",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 1.0,
+          "formatted": "€1.00"
+        },
+        {
+          "value": "500",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 5.0,
+          "formatted": "€5.00"
+        },
+        {
+          "value": "1000",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 10.0,
+          "formatted": "€10.00"
+        }
+      ],
+      "defaultBet": {
+        "value": "100",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 1.0,
+        "formatted": "€1.00"
+      }
+    },
+    "proofs": {
+      "randomnessProof": {
+        "source": "ethereum:block",
+        "blockNumber": 21000123,
+        "roundSecretHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "blockValue": "0x3333333333333333333333333333333333333333333333333333333333333333",
+        "blockExplorerUrl": "https://explorer.example.com/block/21000123",
+        "roundSecret": "0x4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "record": {
+        "chainId": 8453,
+        "roundId": "0x01927c614d5e7f6a9b7c8d9e0f1a2b3c00000000000000000000000000000000",
+        "txHash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "explorerUrl": "https://explorer.example.com/tx/0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    "payout": {
+      "value": "0",
+      "decimals": 2,
+      "unit": "EUR",
+      "normalized": 0.0,
+      "formatted": "€0.00"
+    },
+    "config": {
+      "kind": "book",
+      "packageHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "model": "base",
+      "draw": {
+        "index": 0,
+        "payoutMultiplier": 0,
+        "events": [
+          {
+            "index": 0,
+            "type": "reveal",
+            "data": {
+              "gems": [
+                "red",
+                "blue",
+                "green"
+              ]
+            }
+          },
+          {
+            "index": 1,
+            "type": "end"
+          }
+        ]
+      },
+      "rtp": {
+        "fraction": "24/25",
+        "decimal": "0.9600"
+      }
+    }
+  }
+}

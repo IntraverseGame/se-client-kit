@@ -5,7 +5,8 @@ export type paths = {
     /**
      * Exchange a launch code for a play token
      * @description Redeems the single-use launch code of a launch URL and returns the
-     * session's first play token and the origin to frame the game at. A code
+     * session's first play token and where to frame the game: its origin and
+     * the path of its page on that origin. A code
      * is redeemed at most once: a second call, an expired code, and an
      * unknown code are the same 401. A lost response cannot be repeated; the
      * player needs a new launch.
@@ -155,6 +156,14 @@ export type paths = {
      * never repeats it. The round and `bet.balance` are read separately, so
      * `bet.balance` may be newer than the round; the next read shows both
      * as they are. Reading does not reset the session's idle timeout.
+     *
+     * A book game (`presentation: playback`) shows `idle`, then `starting`
+     * (with no `proofs`, then with `proofs.randomnessProof` once the round
+     * is bound), then `won` or `lost` with its draw; a book round is never
+     * `active`, `resolving` or `canceled`, and one voided or refused before
+     * its draw shows `idle`. A session plays one game version, so
+     * `presentation`, `config.kind` and `config.model` never change across
+     * its Snapshots; a client may treat a change as a verification failure.
      */
     get: operations["getSnapshot"];
   };
@@ -184,6 +193,11 @@ export type components = {
        * @example https://games.example.com
        */
       gameOrigin: string;
+      /**
+       * @description The path of the game's page on `gameOrigin`: frame the URL `gameOrigin` followed by `gamePath`. An absolute path that starts and ends with `/`, with segments of letters, digits, `-`, `.`, `_`, or `~` and never `.` or `..`, such as `/coin-flip/`; `/` is the origin's root. It is the same for the whole session. Several games may share one origin under different paths, so the path is not a trust boundary: exchange messages by `gameOrigin` only. This server always sends it; read it as `/` when it is absent.
+       * @example /coin-flip/
+       */
+      gamePath?: string;
     };
     RefreshResponse: {
       /** @description The new bearer token. Secret. */
@@ -244,7 +258,7 @@ export type components = {
       schema: "se.snapshot/1";
       /** @description Per-session, monotonically increasing Snapshot counter. Not the schema version. */
       version: number;
-      /** @description Client contract the game renders: steps (StepConfig) or playback (BookConfig). */
+      /** @description Client contract the game renders: steps (StepConfig) or playback (BookConfig). One per session: a session plays one game version, so presentation, config.kind and config.model never change across its Snapshots; a client may treat a change as a verification failure. */
       presentation: string;
       /** @description Game model behind the round. Informational; the client branches on presentation. */
       model: string;
@@ -262,7 +276,7 @@ export type components = {
       config: components["schemas"]["GameConfig"];
       proofs?: components["schemas"]["FairnessContext"];
     };
-    /** @description Round lifecycle phase. New values only behind a client capability flag. */
+    /** @description Round lifecycle phase. New values only behind a client capability flag. A playback (book) round shows idle, starting (no proofs, then randomnessProof once bound), then won or lost; never active, resolving or canceled. */
     RoundStatus: string;
     /** @description UUIDv7, canonical lowercase text form. */
     RoundId: string;
@@ -341,14 +355,22 @@ export type components = {
       /** @description The losing option. Present only after this step (or the whole round) resolved. */
       losingIndex?: number;
     };
-    /** @description playback presentation. Placeholder in se.snapshot/1: the shape is frozen; its details are not specified yet. */
+    /** @description playback presentation of a book game: its Stake package and mode, the mode's exact RTP, and, on won and lost only, the draw with the drawn book's events. A book round is idle, starting, then won or lost; never active, resolving or canceled. kind and model are fixed for the session. */
     BookConfig: {
       /** @enum {string} */
       kind: "book";
       packageHash: components["schemas"]["Hash32"];
       /** @description Stake mode name from the package's index.json. */
       model: string;
+      rtp?: components["schemas"]["BookRtp"];
       draw?: components["schemas"]["BookDraw"];
+    };
+    /** @description The mode's exact return to player per unit wagered, computed from its table by the certifier (the signed verdict covers the package's RTP bound, not this value): shown before the first bet. Optional in /1 (added 2026-10-26); the server sends it on every book game whose version stores it. */
+    BookRtp: {
+      /** @description The exact RTP, a reduced fraction of 1: "n" or "n/d" ("24/25"). The value to verify against. */
+      fraction: string;
+      /** @description Display only: the fraction rounded down to 4 decimal places ("0.9600"). Never compute with it. */
+      decimal: string;
     };
     BookDraw: {
       index: number;
@@ -513,8 +535,9 @@ export type components = {
      * @description The request cannot be served as it is: `LIMIT_EXCEEDED` or
      * `FAILED_PRECONDITION` (for example the round is not active, new rounds
      * are blocked, or the operator refused the debit).
-     * `INSUFFICIENT_FUNDS` and `PLAYER_RESTRICTED` are not sent yet: for
-     * now a debit the operator refused is `FAILED_PRECONDITION`.
+     * `INSUFFICIENT_FUNDS`, `LIMIT_EXCEEDED` and `PLAYER_RESTRICTED` name a
+     * book round's debit that the operator refused; a config round's refused
+     * debit is still `FAILED_PRECONDITION` for now.
      */
     Unprocessable: {
       content: {
@@ -537,7 +560,8 @@ export type operations = {
   /**
    * Exchange a launch code for a play token
    * @description Redeems the single-use launch code of a launch URL and returns the
-   * session's first play token and the origin to frame the game at. A code
+   * session's first play token and where to frame the game: its origin and
+   * the path of its page on that origin. A code
    * is redeemed at most once: a second call, an expired code, and an
    * unknown code are the same 401. A lost response cannot be repeated; the
    * player needs a new launch.
@@ -821,6 +845,14 @@ export type operations = {
    * never repeats it. The round and `bet.balance` are read separately, so
    * `bet.balance` may be newer than the round; the next read shows both
    * as they are. Reading does not reset the session's idle timeout.
+   *
+   * A book game (`presentation: playback`) shows `idle`, then `starting`
+   * (with no `proofs`, then with `proofs.randomnessProof` once the round
+   * is bound), then `won` or `lost` with its draw; a book round is never
+   * `active`, `resolving` or `canceled`, and one voided or refused before
+   * its draw shows `idle`. A session plays one game version, so
+   * `presentation`, `config.kind` and `config.model` never change across
+   * its Snapshots; a client may treat a change as a verification failure.
    */
   getSnapshot: {
     responses: {

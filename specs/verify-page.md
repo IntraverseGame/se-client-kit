@@ -50,7 +50,9 @@ Out of scope:
 
 - the verify API itself and its response body (the backend's, by name: the
   verify API document);
-- book rounds (`playback`), which the first release does not ship;
+- book rounds (`playback`): the Wrapper plays them (W-50), and the vendored
+  verify API document describes their verification (`book`, `recomputed.draw`),
+  but the page does not read those fields yet (#156);
 - the on-chain record (`proofs.record`) read against the registry, and ZK proof
   verification: shown when present, never claimed as checked (a later increment,
   like W-27's deferred evidence check);

@@ -1,0 +1,145 @@
+{
+  "vector": "snapshot/valid/book-lifecycle-won",
+  "description": "playback, won: the same round as snapshot/valid/book-lifecycle-starting-bound, drawn on row 2 of the mode's table, multiplier 2: the events show a reveal of three matching gems, the win and the end. Payout 2.00 EUR on the 1.00 EUR bet, credited to the balance; roundSecret revealed, the round recorded. The draw and the won status arrive together. An alternative ending to snapshot/valid/book-lifecycle-lost.",
+  "definition": "Snapshot",
+  "expected": "valid",
+  "input": {
+    "schema": "se.snapshot/1",
+    "version": 7,
+    "presentation": "playback",
+    "model": "book",
+    "context": {
+      "sessionId": "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N",
+      "language": "de",
+      "country": "DE",
+      "device": "mobile",
+      "links": {
+        "lobby": "https://luckybet.example.com/lobby",
+        "deposit": "https://luckybet.example.com/cashier"
+      },
+      "theme": {
+        "appearance": "dark"
+      },
+      "view": {
+        "playerName": "Kai",
+        "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png"
+      }
+    },
+    "status": "won",
+    "roundId": "01927c61-4d5e-7f6a-9b7c-8d9e0f1a2b3c",
+    "bet": {
+      "balance": {
+        "value": "10100",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 101.0,
+        "formatted": "€101.00"
+      },
+      "minBet": {
+        "value": "10",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 0.1,
+        "formatted": "€0.10"
+      },
+      "maxBet": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "suggestedBets": [
+        {
+          "value": "100",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 1.0,
+          "formatted": "€1.00"
+        },
+        {
+          "value": "500",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 5.0,
+          "formatted": "€5.00"
+        },
+        {
+          "value": "1000",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 10.0,
+          "formatted": "€10.00"
+        }
+      ],
+      "defaultBet": {
+        "value": "100",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 1.0,
+        "formatted": "€1.00"
+      }
+    },
+    "proofs": {
+      "randomnessProof": {
+        "source": "ethereum:block",
+        "blockNumber": 21000123,
+        "roundSecretHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "blockValue": "0x3333333333333333333333333333333333333333333333333333333333333333",
+        "blockExplorerUrl": "https://explorer.example.com/block/21000123",
+        "roundSecret": "0x4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "record": {
+        "chainId": 8453,
+        "roundId": "0x01927c614d5e7f6a9b7c8d9e0f1a2b3c00000000000000000000000000000000",
+        "txHash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "explorerUrl": "https://explorer.example.com/tx/0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    "payout": {
+      "value": "200",
+      "decimals": 2,
+      "unit": "EUR",
+      "normalized": 2.0,
+      "formatted": "€2.00"
+    },
+    "config": {
+      "kind": "book",
+      "packageHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "model": "base",
+      "draw": {
+        "index": 2,
+        "payoutMultiplier": 2,
+        "events": [
+          {
+            "index": 0,
+            "type": "reveal",
+            "data": {
+              "gems": [
+                "blue",
+                "blue",
+                "blue"
+              ]
+            }
+          },
+          {
+            "index": 1,
+            "type": "win",
+            "data": {
+              "line": "triple",
+              "payoutMultiplier": 200
+            }
+          },
+          {
+            "index": 2,
+            "type": "end"
+          }
+        ]
+      },
+      "rtp": {
+        "fraction": "24/25",
+        "decimal": "0.9600"
+      }
+    }
+  }
+}

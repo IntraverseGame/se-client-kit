@@ -34,19 +34,8 @@ const namesOf = (definition: string): readonly string[] =>
     name => fileOf(name).definition === definition,
   );
 
-/**
- * The vendored valid vectors the shell refuses until the next sync: a book
- * round at `resolving` (W-54), which never reaches the UI, so no test takes it
- * as a valid book Snapshot.
- */
-const REFUSED_BY_THE_SHELL: ReadonlySet<string> = new Set([
-  "book-playback-resolving-placeholder",
-]);
-
-/** The names of every `valid/` vector of a Snapshot the session hands the UI. */
-export const SNAPSHOT_VECTORS: readonly string[] = namesOf("Snapshot").filter(
-  name => !REFUSED_BY_THE_SHELL.has(name),
-);
+/** The names of every `valid/` vector of a Snapshot. */
+export const SNAPSHOT_VECTORS: readonly string[] = namesOf("Snapshot");
 
 /** The names of every `valid/` vector of a typed error. */
 export const PROBLEM_VECTORS: readonly string[] = namesOf("PlayProblem");

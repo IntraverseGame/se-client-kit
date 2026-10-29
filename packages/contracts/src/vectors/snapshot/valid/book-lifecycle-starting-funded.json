@@ -1,0 +1,93 @@
+{
+  "vector": "snapshot/valid/book-lifecycle-starting-funded",
+  "description": "playback, starting: the round of snapshot/valid/book-lifecycle-idle after its 1.00 EUR bet was reserved and before its randomness is bound, so it carries no proofs yet. A book round reserves the bet before it binds.",
+  "definition": "Snapshot",
+  "expected": "valid",
+  "input": {
+    "schema": "se.snapshot/1",
+    "version": 5,
+    "presentation": "playback",
+    "model": "book",
+    "context": {
+      "sessionId": "ses_01J9ZK3M7Q2W5X8Y4T6R1V0B9N",
+      "language": "de",
+      "country": "DE",
+      "device": "mobile",
+      "links": {
+        "lobby": "https://luckybet.example.com/lobby",
+        "deposit": "https://luckybet.example.com/cashier"
+      },
+      "theme": {
+        "appearance": "dark"
+      },
+      "view": {
+        "playerName": "Kai",
+        "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png"
+      }
+    },
+    "status": "starting",
+    "roundId": "01927c61-4d5e-7f6a-9b7c-8d9e0f1a2b3c",
+    "bet": {
+      "balance": {
+        "value": "9900",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 99.0,
+        "formatted": "€99.00"
+      },
+      "minBet": {
+        "value": "10",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 0.1,
+        "formatted": "€0.10"
+      },
+      "maxBet": {
+        "value": "10000",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 100.0,
+        "formatted": "€100.00"
+      },
+      "suggestedBets": [
+        {
+          "value": "100",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 1.0,
+          "formatted": "€1.00"
+        },
+        {
+          "value": "500",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 5.0,
+          "formatted": "€5.00"
+        },
+        {
+          "value": "1000",
+          "decimals": 2,
+          "unit": "EUR",
+          "normalized": 10.0,
+          "formatted": "€10.00"
+        }
+      ],
+      "defaultBet": {
+        "value": "100",
+        "decimals": 2,
+        "unit": "EUR",
+        "normalized": 1.0,
+        "formatted": "€1.00"
+      }
+    },
+    "config": {
+      "kind": "book",
+      "packageHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "model": "base",
+      "rtp": {
+        "fraction": "24/25",
+        "decimal": "0.9600"
+      }
+    }
+  }
+}

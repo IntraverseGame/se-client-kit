@@ -1,8 +1,9 @@
 {
-  "vector": "snapshot/valid/book-playback-resolving-placeholder",
-  "description": "playback placeholder: book round awaiting the draw, no draw present, no fairness proof.",
+  "vector": "snapshot/invalid/book-status-resolving",
+  "description": "A playback round is never resolving: a book round has no move and no player cancel to wait for, and its draw comes with its won or lost status.",
   "definition": "Snapshot",
-  "expected": "valid",
+  "expected": "invalid",
+  "failsAt": "/status",
   "input": {
     "schema": "se.snapshot/1",
     "version": 2,

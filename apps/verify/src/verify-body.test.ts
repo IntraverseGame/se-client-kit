@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { withField, wonBody } from "./fixtures/verify-body.ts";
+import { asRecord, withField, wonBody } from "./fixtures/verify-body.ts";
 import type { RoundEvidence } from "./round-evidence.ts";
 import { formatAmount } from "./verify-amount.ts";
 import { parseEvidence } from "./verify-body.ts";
@@ -133,6 +133,28 @@ describe("a round found", () => {
   it("ignores a verdict field the API might add", () => {
     const evidence = evidenceOf({ ...body(), verified: true });
     expect(evidence).not.toHaveProperty("verified");
+  });
+
+  it("reads a body with the document's book fields as before, and takes none of them", () => {
+    // `book` and `recomputed.draw` are optional in the vendored verify API
+    // document (a book round's mode, table, and draw); the page does not read
+    // book rounds yet (#156), so they change nothing it reads.
+    const plain = evidenceOf(body());
+    const drawn = { index: 41, multiplierMilli: "1940" };
+    const withBook = withField("book", {
+      mode: "base",
+      drawn,
+      cost: "1",
+      merkleRoot: `0x${"ab".repeat(32)}`,
+      entryCount: 100,
+      totalWeight: "1000000",
+    });
+    const recomputed = asRecord(withBook["recomputed"]);
+    const evidence = evidenceOf({
+      ...withBook,
+      recomputed: { ...recomputed, draw: drawn },
+    });
+    expect(evidence).toEqual(plain);
   });
 
   it("never reads the API's checks or its recomputed kind as a result", () => {

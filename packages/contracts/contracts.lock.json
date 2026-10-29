@@ -5,22 +5,22 @@
       "path": "src/schemas/play.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "play/v1 OpenAPI document",
-      "sourceCommit": "9ffdcc0a3f5a3b066916ca0a4653288265db6bb1",
-      "sha256": "a2793c4cdd95568c3a9c558299f257af1e08627bf68422f427ca97a3a259c5b4"
+      "sourceCommit": "f2da5356d69c99ae185618637bb5a1ebfc5f7143",
+      "sha256": "2e30238695849fccfb056a25a5474eadb3fc75c1e4067af03101124a5a9906ed"
     },
     {
       "path": "src/schemas/se.snapshot.v1.schema.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 schema",
-      "sourceCommit": "13bcee0c65afb99c97dcfc02f1443818e8ac25e0",
-      "sha256": "f2b6e1ab0ec8f914032402d6c708f58e3373fb7bb5cc102de52f1a993bd036f7"
+      "sourceCommit": "dee600092ec32ff1eb6e8afe962e9eb102902cce",
+      "sha256": "c82067784e1e8108e3860790c01d5f8dfc65e56a210774c5a594a15e4519c5cf"
     },
     {
       "path": "src/schemas/verify.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "verify/v1 OpenAPI document",
-      "sourceCommit": "9ffdcc0a3f5a3b066916ca0a4653288265db6bb1",
-      "sha256": "c1e50560f40fb2a3ea668d73c3485c52f4d320e4da4525bb1ed04862706ea72f"
+      "sourceCommit": "13bcee0c65afb99c97dcfc02f1443818e8ac25e0",
+      "sha256": "2c8b37ba49a6de9f5ee83d3d20e62a842c280a000b94134c620ec08038f61fd9"
     },
     {
       "path": "src/vectors/kernel/v1/derive.json",
@@ -205,18 +205,11 @@
       "sha256": "b4055e757ba8c02c49dff5c17add87909d06dcba69ddb6ea254cc7b240fc5535"
     },
     {
-      "path": "src/vectors/snapshot/invalid/blindness-draw-before-resolution.json",
+      "path": "src/vectors/snapshot/invalid/blindness-draw-before-resolution-starting.json",
       "source": "se-backend",
-      "sourceName": "se.snapshot/1 vectors/invalid/blindness-draw-before-resolution.json",
-      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
-      "sha256": "32c26a0c2d61b3ca87e6642a9a5b29217ad3a619de613b1f52f81666886db31a"
-    },
-    {
-      "path": "src/vectors/snapshot/invalid/blindness-draw-on-canceled.json",
-      "source": "se-backend",
-      "sourceName": "se.snapshot/1 vectors/invalid/blindness-draw-on-canceled.json",
-      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
-      "sha256": "bd9bf8580a44f5272b7b64ef7c1da78ba132df15cc3638765343d49c2f284f59"
+      "sourceName": "se.snapshot/1 vectors/invalid/blindness-draw-before-resolution-starting.json",
+      "sourceCommit": "65f9086c1b2fffde0965abfdf8ce4cf1bf8f71fb",
+      "sha256": "f258b96c21616a4149f7227a0b4145d177837643a5284c17ceab3113f35ce523"
     },
     {
       "path": "src/vectors/snapshot/invalid/blindness-loser-of-unplayed-step.json",
@@ -282,6 +275,27 @@
       "sha256": "61aff227749f06b02b7285bada44a7983555c5ea3ebf7a7e4828ce7f9eede1f8"
     },
     {
+      "path": "src/vectors/snapshot/invalid/book-status-active.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/book-status-active.json",
+      "sourceCommit": "dee600092ec32ff1eb6e8afe962e9eb102902cce",
+      "sha256": "fd6bc2aac92902de3743e8840a5ae53cb01410d0afa42c2753ccd107339bff4b"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/book-status-canceled.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/book-status-canceled.json",
+      "sourceCommit": "dee600092ec32ff1eb6e8afe962e9eb102902cce",
+      "sha256": "7ad3b84aa9940acf8dfdba3a259447e12912c42247d813d9fc81ca93f1ceca25"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/book-status-resolving.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/book-status-resolving.json",
+      "sourceCommit": "dee600092ec32ff1eb6e8afe962e9eb102902cce",
+      "sha256": "7c09cf87c6ee052c985b905f9c41abfcf0040850aa302e48face6869eba4c241"
+    },
+    {
       "path": "src/vectors/snapshot/invalid/close-reason-on-active.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 vectors/invalid/close-reason-on-active.json",
@@ -338,11 +352,11 @@
       "sha256": "0d4f3c69f510a6ba9fbae5672142992ea9ebe0c424cf219cdf4988649643d6e8"
     },
     {
-      "path": "src/vectors/snapshot/invalid/create-round-auth-on-book.json",
+      "path": "src/vectors/snapshot/invalid/create-round-auth-on-book-starting.json",
       "source": "se-backend",
-      "sourceName": "se.snapshot/1 vectors/invalid/create-round-auth-on-book.json",
-      "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
-      "sha256": "e11539e525460a5f6095c29efa114284cb60539a717f00111ae53aa3f8c135fc"
+      "sourceName": "se.snapshot/1 vectors/invalid/create-round-auth-on-book-starting.json",
+      "sourceCommit": "65f9086c1b2fffde0965abfdf8ce4cf1bf8f71fb",
+      "sha256": "cc0bb53c46833abde601a650e406288abbdbb08771e558da5fbe413dafbc280e"
     },
     {
       "path": "src/vectors/snapshot/invalid/create-round-auth-on-idle.json",
@@ -744,11 +758,39 @@
       "sha256": "4860a328a2843d9ca5563b0ccfa1f9b61af6c30bdb9215e04af17e49f797db67"
     },
     {
-      "path": "src/vectors/snapshot/valid/book-playback-resolving-placeholder.json",
+      "path": "src/vectors/snapshot/valid/book-lifecycle-idle.json",
       "source": "se-backend",
-      "sourceName": "se.snapshot/1 vectors/valid/book-playback-resolving-placeholder.json",
-      "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
-      "sha256": "68619bad17bfc2fb2d8b8c32187963ef7e03b2c883fe141229e8e5de321749cd"
+      "sourceName": "se.snapshot/1 vectors/valid/book-lifecycle-idle.json",
+      "sourceCommit": "dee600092ec32ff1eb6e8afe962e9eb102902cce",
+      "sha256": "cfec6e644d39d0a7bd488b61220285edc1d539753bd87401420f8fb8dcb051fc"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/book-lifecycle-lost.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/book-lifecycle-lost.json",
+      "sourceCommit": "dee600092ec32ff1eb6e8afe962e9eb102902cce",
+      "sha256": "8174719866b9a804cfbd6ae3b94a1c1d2627342a00b8b65da6c699b95da1a4b4"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/book-lifecycle-starting-bound.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/book-lifecycle-starting-bound.json",
+      "sourceCommit": "dee600092ec32ff1eb6e8afe962e9eb102902cce",
+      "sha256": "376502699e511b3dd7c28c85cd25fcdca090fe1926137a39955551bb148e25d1"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/book-lifecycle-starting-funded.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/book-lifecycle-starting-funded.json",
+      "sourceCommit": "dee600092ec32ff1eb6e8afe962e9eb102902cce",
+      "sha256": "bf84828063efcecec7c9d8f0f5d049103f1871f3bf851e152fbc05f1fd0c66a1"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/book-lifecycle-won.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/book-lifecycle-won.json",
+      "sourceCommit": "65f9086c1b2fffde0965abfdf8ce4cf1bf8f71fb",
+      "sha256": "39ddaa7e34f898ab8719677d00859b68d03e29f68456de4892d58689d3a76276"
     },
     {
       "path": "src/vectors/snapshot/valid/book-playback-won-payout.json",
