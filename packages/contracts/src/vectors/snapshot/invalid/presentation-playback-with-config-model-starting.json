@@ -1,6 +1,6 @@
 {
-  "vector": "snapshot/invalid/presentation-playback-with-config-model",
-  "description": "playback is book-model only: a config round has no table to play back.",
+  "vector": "snapshot/invalid/presentation-playback-with-config-model-starting",
+  "description": "playback is book-model only: a config round has no table to play back, here on a starting round, which is otherwise valid.",
   "definition": "Snapshot",
   "expected": "invalid",
   "failsAt": "/model",
@@ -26,7 +26,7 @@
         "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png"
       }
     },
-    "status": "resolving",
+    "status": "starting",
     "roundId": "01927c5e-8b3a-7f21-9c4d-5e6f7a8b9c0d",
     "bet": {
       "balance": {
