@@ -12,19 +12,29 @@ import {
   nested,
   optional,
   PATTERN,
+  type Read,
   shape,
   text,
 } from "./verify-readers.ts";
+
+/**
+ * Base-10 text matching `pattern`, at most an amount's 78 digits: the
+ * multiplier and the total weight are read as `bigint`, so no unbounded text
+ * reaches `BigInt` (V-21).
+ */
+const digits =
+  (pattern: RegExp) =>
+  (v: unknown): Read<string> =>
+    typeof v === "string" && v.length <= AMOUNT_MAX_LENGTH
+      ? text(v, pattern)
+      : Bad;
 
 /** A `DrawnRow` (V-21): an `int64` index from 0, read as `bigint`. */
 export const drawnRow = nested(s => {
   const read = shape(s, {
     index: v => int(v, 0),
     // Capped as an amount is (78 digits), so no unbounded text reaches `BigInt`.
-    multiplierMilli: v =>
-      typeof v === "string" && v.length <= AMOUNT_MAX_LENGTH
-        ? text(v, PATTERN.amount)
-        : Bad,
+    multiplierMilli: digits(PATTERN.amount),
   });
   return read === Bad
     ? Bad
@@ -42,7 +52,8 @@ export const book = nested(s => {
     cost: v => optional(v, x => text(x, PATTERN.cost)),
     merkleRoot: v => optional(v, x => text(x, PATTERN.hex32)),
     entryCount: v => optional(v, x => int(x, 1)),
-    totalWeight: v => optional(v, x => text(x, PATTERN.positive)),
+    // Capped as the multiplier is: it is read as `bigint` below.
+    totalWeight: v => optional(v, digits(PATTERN.positive)),
   });
   if (read === Bad) return Bad;
   const { entryCount, totalWeight, ...rest } = read;

@@ -194,6 +194,16 @@ describe("the book fields (V-21)", () => {
     ).toBeUndefined();
   });
 
+  it("caps a total weight at an amount's 78 digits", async () => {
+    const at = `1${"0".repeat(77)}`;
+    expect(
+      evidenceOf(await withBook("totalWeight", at)).book?.totalWeight,
+    ).toBe(10n ** 77n);
+    expect(
+      parseEvidence(await withBook("totalWeight", `1${"0".repeat(78)}`)),
+    ).toBeUndefined();
+  });
+
   it("refuses a malformed `recomputed.draw`", async () => {
     const body = await bookBody();
     const recomputed = asRecord(body["recomputed"]);
