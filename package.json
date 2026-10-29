@@ -343,7 +343,7 @@
     "@changesets/changelog-github": "1.0.1",
     "@changesets/cli": "3.0.3",
     "@types/node": "26.6.5",
-    "jsdom": "30.1.2",
+    "jsdom": "30.1.3",
     "json-schema-to-typescript": "16.0.0",
     "openapi-typescript": "6.7.6",
     "oxfmt": "0.74.0",
