@@ -71,8 +71,9 @@ Part of the [Client kit spec](../client-kit.md), section
   201 characters) and `decimal` (`0.` and four digits, or `1.0000`, a string,
   never a number); `draw` (`index`, `payoutMultiplier`, `events` of `index`,
   `type` of 1 to 64 characters, and an open `data`) only on `won` and `lost`,
-  never on `canceled`; and the Snapshot of a book round has no `step`, no
-  `proofs.fairnessProof`, and no `proofs.createRoundAuth`. That the fraction is
+  never on `canceled`; the Snapshot of a book round has no `step`, no
+  `proofs.fairnessProof`, and no `proofs.createRoundAuth`; and its `status` is
+  never `active`, `resolving`, or `canceled` (W-54). That the fraction is
   reduced, at most 1, and agrees with `decimal` is not checked: the schema does
   not say it, and the kit computes nothing from either (the Wrapper shows
   `decimal` only, W-56). Decided by the human, 2026-10-28: no check on
@@ -95,14 +96,13 @@ Part of the [Client kit spec](../client-kit.md), section
   modify the input, are deterministic, and never reach the fail-closed paths on
   arbitrary JSON or on mutations of the vectors; T-6a's `snapshot` half covers
   amounts above 2^53 and at 2^256 - 1. The book vectors
-  (`valid/book-playback-*`, `invalid/book-rtp-*`,
-  `invalid/create-round-auth-on-book`,
+  (`valid/book-playback-*`, `valid/book-lifecycle-*`, `invalid/book-rtp-*`,
+  `invalid/book-status-*`, `invalid/create-round-auth-on-book-starting`,
   `invalid/allowlist-fairness-proof-on-book`) are among those T-5 replays; a
   narrowing test takes each valid book vector through `isPlaybackPresentation`.
-  The vendored schema still allows `active`, `resolving`, and `canceled` on a
-  book round; the next sync refuses them, and
-  `valid/book-playback-resolving-placeholder` moves to `invalid/` with it. Until
-  then the validator follows the vendored schema, and the shell refuses those
-  statuses itself (W-54; T-22).
+  The vendored schema refuses a book round at `active`, `resolving`, or
+  `canceled`, so the validator does, with its first issue at `/status`
+  (`/snapshot/status` in a typed error), with no rule of its own (W-54; T-22,
+  `book-status.test.ts`).
 - **Not yet.** The render helpers named in [Packages](./packages.md) follow with
   the Wrapper's rendering work.

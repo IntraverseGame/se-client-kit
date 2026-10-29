@@ -90,6 +90,7 @@ export type components = {
       /** @description The struct hash of the last signed action, `T_last`. */
       transcriptHash?: components["schemas"]["Hex32"];
       recomputed?: components["schemas"]["Recomputation"];
+      book?: components["schemas"]["BookVerification"];
       /** @description Every check, once, in this order. */
       checks: components["schemas"]["Check"][];
     };
@@ -114,7 +115,11 @@ export type components = {
       gameCode: string;
       gameId: number;
       gameVersion: number;
-      /** @description SHA-256 of the game package. */
+      /**
+       * @description SHA-256 of the game package; for a book game, the keccak256
+       * `packageHash` of its Stake math package, the key it is published
+       * under in the public object store.
+       */
       packageHash: components["schemas"]["Hex32"];
       terms: components["schemas"]["PayoutTerms"];
     };
@@ -203,6 +208,55 @@ export type components = {
       /** @description The recomputed payout; set when the replay or the expiry rule ended the round. */
       payout?: components["schemas"]["Amount"];
       steps: components["schemas"]["RecomputedStep"][];
+      /**
+       * @description A book round's draw as the kernel recomputes it: the row its
+       * weighted draw picks from the revealed seed over the mode's table.
+       * Set for a book round closed with a seed.
+       */
+      draw?: components["schemas"]["DrawnRow"];
+    };
+    /** @description A row of a book mode's table and what it pays. */
+    DrawnRow: {
+      /**
+       * Format: int64
+       * @description The drawn row, 0-based in the mode's table order (the registry's `drawnIndex`).
+       */
+      index: number;
+      /**
+       * @description The row's payout multiplier in thousandths of the base bet (the
+       * package's hundredths times 10), a base-10 integer string. 0 is a
+       * loss.
+       */
+      multiplierMilli: string;
+    };
+    /**
+     * @description A book round's mode and table, set for every book round. The table
+     * fields are set once the round is closed with a seed: they are
+     * computed from the Stake package `game.packageHash` names, and they are
+     * the values the draw registry's `DrawTypes.Package` carries for this
+     * table (`merkleRoot`, `entryCount`, `totalWeight`; not checked on chain
+     * yet). The base bet the payout is computed on is `bet` divided by
+     * `cost`.
+     */
+    BookVerification: {
+      /** @description The Stake mode the round draws from. */
+      mode: string;
+      /**
+       * @description The row the round drew, as recorded at its draw; set on `won` and
+       * `lost`. `configuration` passes when `recomputed.draw` is this row.
+       */
+      drawn?: components["schemas"]["DrawnRow"];
+      /** @description The mode's cost in base bets, an exact reduced fraction (`1`, `100`, `1/5`). */
+      cost?: string;
+      /** @description The Merkle root of the mode's table (OpenZeppelin `SimpleMerkleTree`, leaves in row order). */
+      merkleRoot?: components["schemas"]["Hex32"];
+      /**
+       * Format: int64
+       * @description The number of rows of the mode's table.
+       */
+      entryCount?: number;
+      /** @description The sum of the table's weights, the length of the weighted draw's line, a base-10 integer string. */
+      totalWeight?: string;
     };
     RecomputedStep: {
       node: number;
@@ -222,8 +276,13 @@ export type components = {
        * hash of action n-1 (`readyHash` for the first). `action_signatures`:
        * every action recovers to the action key `newRound` names.
        * `configuration` and `payout`: the kernel's replay gives the revealed
-       * configuration and the settled payout. `onchain_record` and
-       * `proofs` are not available yet.
+       * configuration and the settled payout. For a book round,
+       * `configuration`: the kernel's weighted draw from the seed over the
+       * mode's table is the round's drawn row, with its multiplier; and
+       * `payout`: `floor(bet / cost × multiplierMilli / 1000)` is the
+       * settled payout. A book round has no `newRound`, `seedHash`,
+       * `readyHash` or actions, so the checks on them are `not_applicable`.
+       * `onchain_record` and `proofs` are not available yet.
        *
        * @enum {string}
        */

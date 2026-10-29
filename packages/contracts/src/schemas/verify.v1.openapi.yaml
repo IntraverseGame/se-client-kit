@@ -170,6 +170,7 @@ components:
           allOf: [{ $ref: "#/components/schemas/Hex32" }]
           description: The struct hash of the last signed action, `T_last`.
         recomputed: { $ref: "#/components/schemas/Recomputation" }
+        book: { $ref: "#/components/schemas/BookVerification" }
         checks:
           type: array
           description: Every check, once, in this order.
@@ -205,7 +206,10 @@ components:
         gameVersion: { type: integer, minimum: 0 }
         packageHash:
           allOf: [{ $ref: "#/components/schemas/Hex32" }]
-          description: SHA-256 of the game package.
+          description: |
+            SHA-256 of the game package; for a book game, the keccak256
+            `packageHash` of its Stake math package, the key it is published
+            under in the public object store.
         terms: { $ref: "#/components/schemas/PayoutTerms" }
     PayoutTerms:
       type: object
@@ -334,6 +338,67 @@ components:
         steps:
           type: array
           items: { $ref: "#/components/schemas/RecomputedStep" }
+        draw:
+          allOf: [{ $ref: "#/components/schemas/DrawnRow" }]
+          description: |
+            A book round's draw as the kernel recomputes it: the row its
+            weighted draw picks from the revealed seed over the mode's table.
+            Set for a book round closed with a seed.
+    DrawnRow:
+      type: object
+      additionalProperties: false
+      required: [index, multiplierMilli]
+      description: A row of a book mode's table and what it pays.
+      properties:
+        index:
+          type: integer
+          format: int64
+          minimum: 0
+          description: The drawn row, 0-based in the mode's table order (the registry's `drawnIndex`).
+        multiplierMilli:
+          type: string
+          pattern: "^(0|[1-9][0-9]*)$"
+          description: |
+            The row's payout multiplier in thousandths of the base bet (the
+            package's hundredths times 10), a base-10 integer string. 0 is a
+            loss.
+    BookVerification:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      description: |
+        A book round's mode and table, set for every book round. The table
+        fields are set once the round is closed with a seed: they are
+        computed from the Stake package `game.packageHash` names, and they are
+        the values the draw registry's `DrawTypes.Package` carries for this
+        table (`merkleRoot`, `entryCount`, `totalWeight`; not checked on chain
+        yet). The base bet the payout is computed on is `bet` divided by
+        `cost`.
+      properties:
+        mode:
+          type: string
+          description: The Stake mode the round draws from.
+        drawn:
+          allOf: [{ $ref: "#/components/schemas/DrawnRow" }]
+          description: |
+            The row the round drew, as recorded at its draw; set on `won` and
+            `lost`. `configuration` passes when `recomputed.draw` is this row.
+        cost:
+          type: string
+          pattern: "^[1-9][0-9]*(/[1-9][0-9]*)?$"
+          description: The mode's cost in base bets, an exact reduced fraction (`1`, `100`, `1/5`).
+        merkleRoot:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: The Merkle root of the mode's table (OpenZeppelin `SimpleMerkleTree`, leaves in row order).
+        entryCount:
+          type: integer
+          format: int64
+          minimum: 1
+          description: The number of rows of the mode's table.
+        totalWeight:
+          type: string
+          pattern: "^[1-9][0-9]*$"
+          description: The sum of the table's weights, the length of the weighted draw's line, a base-10 integer string.
     RecomputedStep:
       type: object
       additionalProperties: false
@@ -375,8 +440,13 @@ components:
             hash of action n-1 (`readyHash` for the first). `action_signatures`:
             every action recovers to the action key `newRound` names.
             `configuration` and `payout`: the kernel's replay gives the revealed
-            configuration and the settled payout. `onchain_record` and
-            `proofs` are not available yet.
+            configuration and the settled payout. For a book round,
+            `configuration`: the kernel's weighted draw from the seed over the
+            mode's table is the round's drawn row, with its multiplier; and
+            `payout`: `floor(bet / cost × multiplierMilli / 1000)` is the
+            settled payout. A book round has no `newRound`, `seedHash`,
+            `readyHash` or actions, so the checks on them are `not_applicable`.
+            `onchain_record` and `proofs` are not available yet.
         result:
           type: string
           enum: [passed, failed, not_applicable]

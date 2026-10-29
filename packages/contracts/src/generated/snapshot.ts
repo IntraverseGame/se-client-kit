@@ -10,7 +10,7 @@ schema: "se.snapshot/1"
  */
 version: number
 /**
- * Client contract the game renders: steps (StepConfig) or playback (BookConfig).
+ * Client contract the game renders: steps (StepConfig) or playback (BookConfig). One per session: a session plays one game version, so presentation, config.kind and config.model never change across its Snapshots; a client may treat a change as a verification failure.
  */
 presentation: ("steps" | "playback")
 /**
@@ -37,7 +37,7 @@ proofs?: FairnessContext
 }
 export type HttpsUrl = string
 /**
- * Round lifecycle phase. New values only behind a client capability flag.
+ * Round lifecycle phase. New values only behind a client capability flag. A playback (book) round shows idle, starting (no proofs, then randomnessProof once bound), then won or lost; never active, resolving or canceled.
  */
 export type RoundStatus = ("idle" | "starting" | "active" | "resolving" | "won" | "lost" | "canceled")
 /**
@@ -95,7 +95,7 @@ schema: "se.snapshot/1"
  */
 version: number
 /**
- * Client contract the game renders: steps (StepConfig) or playback (BookConfig).
+ * Client contract the game renders: steps (StepConfig) or playback (BookConfig). One per session: a session plays one game version, so presentation, config.kind and config.model never change across its Snapshots; a client may treat a change as a verification failure.
  */
 presentation: ("steps" | "playback")
 /**
@@ -211,7 +211,7 @@ selectedIndex?: number
 losingIndex?: number
 }
 /**
- * playback presentation of a book game: its Stake package and mode, the mode's exact RTP, and, on won and lost only, the draw with the drawn book's events.
+ * playback presentation of a book game: its Stake package and mode, the mode's exact RTP, and, on won and lost only, the draw with the drawn book's events. A book round is idle, starting, then won or lost; never active, resolving or canceled. kind and model are fixed for the session.
  */
 export type BookConfig = {
 kind: "book"

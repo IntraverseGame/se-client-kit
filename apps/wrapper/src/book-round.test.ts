@@ -6,7 +6,8 @@
 // place when the `playback` copy failed closed, and the final changed-session
 // state with its lobby row (W-49f). The Snapshots are the vendored
 // `book-playback-won-rtp` vector and the same round's earlier statuses built
-// from it (the vendored set has no book `idle` or `starting` yet).
+// from it: these tests keep their own fixture round, apart from the vendored
+// book round of `book-lifecycle-*` that T-24 plays.
 
 import { describe, expect, it } from "vitest";
 

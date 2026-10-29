@@ -13,7 +13,6 @@ import {
 } from "@intraverse/se-client-snapshot";
 import { describe, expect, it } from "vitest";
 
-import { validateSessionSnapshot } from "./book-status.ts";
 import { CONTROLLER_SCHEMA } from "./controller-protocol.ts";
 import {
   action,
@@ -139,19 +138,10 @@ const inputs = (
     return result.value;
   });
 
-const vectors: readonly ValidSnapshot[] = [
+const pool: readonly ValidSnapshot[] = [
   ...inputs("valid", snapshotVectors.valid),
   ...inputs("signature", snapshotVectors.signature),
 ];
-
-/**
- * What the session hands the bridge: the vectors that also pass the shell's
- * interim book-status rule (W-54), which refuses a book round at `active`,
- * `resolving`, or `canceled` until the next sync.
- */
-const pool: readonly ValidSnapshot[] = vectors.filter(
-  s => validateSessionSnapshot(s).ok,
-);
 
 /** Text that must never reach the game, collected from the pool itself. */
 const forbidden: readonly string[] = [
@@ -239,19 +229,14 @@ const recordSession = async (seed: number): Promise<Recorded> => {
 };
 
 describe("the game receives only allow-listed fields (T-9)", () => {
-  it("the pool is every valid/ and signature/ Snapshot vector the session accepts", () => {
+  it("the pool is every valid/ and signature/ Snapshot vector, each validated", () => {
     const valid = snapshotFiles(snapshotVectors.valid).length;
     const signature = snapshotFiles(snapshotVectors.signature).length;
     // Every signature/ vector is a Snapshot; none is skipped.
     expect(signature).toBe(Object.keys(snapshotVectors.signature).length);
     expect(valid).toBeGreaterThan(0);
     expect(signature).toBeGreaterThan(0);
-    expect(vectors).toHaveLength(valid + signature);
-    // Only the book round the shell refuses until the next sync is left out.
-    const refused = vectors.filter(s => !pool.includes(s));
-    expect(refused.map(s => [s.presentation, s.status])).toEqual([
-      ["playback", "resolving"],
-    ]);
+    expect(pool).toHaveLength(valid + signature);
   });
 
   it("the pool holds createRoundAuth, links, session ids, and book rounds to leak", () => {

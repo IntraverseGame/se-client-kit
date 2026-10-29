@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import { bookInput, bookSnapshot, proofOf } from "./fixtures/book.ts";
 import { createFakeGame, HELLO, mountOf } from "./fixtures/fake-game.ts";
-import { ok } from "./fixtures/fake-play.ts";
+import { ok, problem } from "./fixtures/fake-play.ts";
 import {
   actionKeyOf,
   GAME,
@@ -184,4 +184,39 @@ describe("a book Snapshot at active, resolving, or canceled (W-54)", () => {
       expect(session.round()?.verdict).toBe("ready");
     },
   );
+});
+
+describe("a revoked session during a book round (W-42, W-44)", () => {
+  // The Play API answers 401 `SESSION_REVOKED` to the start and to the read of
+  // a session the operator's wallet refuses; even marked retryable, it ends
+  // the session, and nothing more is sent.
+  it("ends on a start answered SESSION_REVOKED, and sends nothing more", async () => {
+    const opened = await open({ rpc: recordingRpc().rpc });
+    const session = sessionOf(opened);
+    opened.play.answer("getSnapshot", ok(bookSnapshot("idle")));
+    await session.read();
+    opened.play.answer("startRound", problem(401, "SESSION_REVOKED", true));
+    expect(await session.start(ROUND_REQUEST.bet)).toEqual({
+      kind: "session-ended",
+    });
+    expect(session.ended()).toBe(true);
+    expect(opened.play.sent("startRound")).toHaveLength(1);
+    const calls = opened.play.all().length;
+    expect(await session.read()).toEqual({ kind: "session-ended" });
+    expect(opened.play.all()).toHaveLength(calls);
+    expect(opened.clock.dueTimes()).toEqual([]);
+  });
+
+  it("ends on the starting round's read answered SESSION_REVOKED", async () => {
+    const { opened, session } = await startedBook();
+    opened.play.answer("getSnapshot", problem(401, "SESSION_REVOKED", true));
+    expect(await session.read()).toEqual({ kind: "session-ended" });
+    const calls = opened.play.all().length;
+    expect(await session.start(ROUND_REQUEST.bet)).toEqual({
+      kind: "session-ended",
+    });
+    expect(opened.play.all()).toHaveLength(calls);
+    expect(signedSent(opened)).toBe(0);
+    expect(opened.clock.dueTimes()).toEqual([]);
+  });
 });

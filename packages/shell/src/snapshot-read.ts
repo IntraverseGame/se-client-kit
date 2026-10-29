@@ -14,15 +14,13 @@ import {
   ProtocolError,
   type Transport,
 } from "@intraverse/se-client-play-client";
-import type {
-  ValidPlayProblem,
-  ValidSnapshot,
+import {
+  type ValidPlayProblem,
+  type ValidSnapshot,
+  validatePlayProblem,
+  validateSnapshot,
 } from "@intraverse/se-client-snapshot";
 
-import {
-  validateSessionProblem,
-  validateSessionSnapshot,
-} from "./book-status.ts";
 import { redacting } from "./redaction.ts";
 
 export type { ValidPlayProblem, ValidSnapshot };
@@ -56,7 +54,7 @@ const NETWORK: SnapshotRead = Object.freeze({ kind: "network" });
 
 /** A response body that should be a Snapshot, validated. */
 export const snapshotReadOf = (body: unknown): SnapshotRead => {
-  const result = validateSessionSnapshot(body);
+  const result = validateSnapshot(body);
   return result.ok
     ? Object.freeze({ kind: "snapshot", snapshot: result.value })
     : REJECTED;
@@ -70,7 +68,7 @@ export const snapshotReadOf = (body: unknown): SnapshotRead => {
 export const snapshotReadOfError = (error: unknown): SnapshotRead => {
   if (error instanceof NetworkError) return NETWORK;
   if (error instanceof ProblemError) {
-    const problem = validateSessionProblem(error.body);
+    const problem = validatePlayProblem(error.body);
     return problem.ok
       ? Object.freeze({ kind: "problem", problem: problem.value })
       : REJECTED;

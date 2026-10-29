@@ -14,7 +14,7 @@
       "minimum": 0
     },
     "presentation": {
-      "description": "Client contract the game renders: steps (StepConfig) or playback (BookConfig).",
+      "description": "Client contract the game renders: steps (StepConfig) or playback (BookConfig). One per session: a session plays one game version, so presentation, config.kind and config.model never change across its Snapshots; a client may treat a change as a verification failure.",
       "enum": ["steps", "playback"]
     },
     "model": {
@@ -52,6 +52,11 @@
         },
         "not": { "required": ["step"] }
       }
+    },
+    {
+      "$comment": "playback status flow: a book round has no move and no player cancel, and its draw is recorded together with its won or lost status, so a client sees idle, starting (no proofs, then randomnessProof once bound), then won or lost. It is never active, resolving or canceled; a round voided or refused before its draw shows idle.",
+      "if": { "properties": { "presentation": { "const": "playback" } } },
+      "then": { "properties": { "status": { "not": { "enum": ["active", "resolving", "canceled"] } } } }
     },
     {
       "$comment": "idle: no round in front of the player, so no round-scoped fields. proofs is also rejected at its own location, so a proof served on idle (a round creation authorization included) is named where it sits.",
@@ -192,7 +197,7 @@
   ],
   "$defs": {
     "RoundStatus": {
-      "description": "Round lifecycle phase. New values only behind a client capability flag.",
+      "description": "Round lifecycle phase. New values only behind a client capability flag. A playback (book) round shows idle, starting (no proofs, then randomnessProof once bound), then won or lost; never active, resolving or canceled.",
       "enum": ["idle", "starting", "active", "resolving", "won", "lost", "canceled"]
     },
     "RoundId": {
@@ -345,7 +350,7 @@
       }
     },
     "BookConfig": {
-      "description": "playback presentation of a book game: its Stake package and mode, the mode's exact RTP, and, on won and lost only, the draw with the drawn book's events.",
+      "description": "playback presentation of a book game: its Stake package and mode, the mode's exact RTP, and, on won and lost only, the draw with the drawn book's events. A book round is idle, starting, then won or lost; never active, resolving or canceled. kind and model are fixed for the session.",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "packageHash", "model"],

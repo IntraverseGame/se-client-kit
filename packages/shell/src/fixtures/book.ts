@@ -1,8 +1,9 @@
 // Test-only: the Snapshots of one book round (`playback`, W-50 to W-56), built
 // from the vendored `valid/book-playback-won-rtp` vector and validated. The
-// vendored set has no book `idle` or `starting` vector of one round yet (T-24
-// waits on them), so those are the `won` vector with its round's later fields
-// removed; each is validated, so a test never reads an unvalidated document.
+// shell's tests keep this fixture round, apart from the vendored book round of
+// `valid/book-lifecycle-*`: its `idle` and `starting` are the `won` vector with
+// its round's later fields removed; each is validated, so a test never reads
+// an unvalidated document.
 
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 

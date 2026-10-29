@@ -3,14 +3,14 @@
 Part of the [Wrapper spec](../wrapper.md), section
 [Contract](../wrapper.md#contract).
 
-Status: **decided by the human, 2026-10-28 (issue #146)**, to be built. The
+Status: **decided by the human, 2026-10-28 (issue #146)**, built. The
 controller-protocol part was decided in
 [RFC-003](../../rfcs/archived/RFC-003-book-playback-over-the-controller-protocol.md)
 (archived). The backend answered on 2026-10-28 which statuses a book round shows
 (W-54) and that a session's presentation never changes (W-53); the Snapshot
-contract is to state both, and the marker in W-54 names the sync that brings it.
-Until that sync lands, the implementation pull requests say "Refs #146", not
-"Closes #146".
+contract states both since se-backend `dee6000`, which the kit vendors
+([How the kit gets its contracts](../client-kit/how-the-kit-gets-its-contracts.md),
+rule 4).
 
 A **book round** is a round of a book game: its Snapshot has
 `presentation: "playback"`, `model: "book"`, and a `BookConfig` as `config`
@@ -29,7 +29,7 @@ game plays back. The player makes no move during the round.
     scope there). The verify link (W-39) is still shown after a book round ends
     (decided by the human, 2026-10-28); what the page shows for it is that
     issue's
-    <!-- TODO(#156): book rounds on the verify page, once the vendored verify API document covers book rounds. -->.
+    <!-- TODO(#156): book rounds on the verify page; the vendored verify API document carries a book round's `book` and `recomputed.draw` since se-backend `13bcee0`, which the page does not read yet. -->.
 
 - **W-51. Start, and nothing signed.** A book round starts as any round does
   (W-22): the Play API's `start` verb with a fresh `idempotencyKey`, the bet as
@@ -46,7 +46,7 @@ game plays back. The player makes no move during the round.
 
 - **W-52. What the shell checks on a book round.** A book Snapshot never carries
   `proofs.createRoundAuth` or `proofs.fairnessProof`; the schema rejects one
-  that does (`invalid/create-round-auth-on-book`,
+  that does (`invalid/create-round-auth-on-book-starting`,
   `invalid/allowlist-fairness-proof-on-book`, W-28). A `starting` Snapshot of a
   book round may carry no `proofs` at first, and then `randomnessProof`; `won`
   and `lost` carry `randomnessProof` with `roundSecret` (the schema requires
@@ -82,9 +82,10 @@ game plays back. The player makes no move during the round.
   `presentation`, `model`, `config.kind`, and `config.model` are those of its
   first validated Snapshot. The backend has stated that `presentation`,
   `config.kind`, and `config.model` never change within a session, and the
-  Snapshot contract is to say so. A later Snapshot in which any of the four
-  differs is a **changed session**, final for the session like the final states
-  of W-44 (decided by the human, 2026-10-28):
+  vendored Snapshot schema and Play API document say so (se-backend `dee6000`:
+  "a client may treat a change as a verification failure"). A later Snapshot in
+  which any of the four differs is a **changed session**, final for the session
+  like the final states of W-44 (decided by the human, 2026-10-28):
   - the Snapshot is not read into the session, and the Wrapper shows "this round
     failed verification", with the detail "The game changed during this session.
     Reload to continue." (a label under W-48's language rule, decided by the
@@ -104,8 +105,9 @@ game plays back. The player makes no move during the round.
 - **W-54. What the Wrapper shows.** A book round shows exactly four statuses:
   `idle`, `starting`, `won`, and `lost`. The draw closes the round from
   `starting` to `won` or `lost` in one step, with no state between; a void or a
-  refusal shows `idle` (the backend, 2026-10-28; the Snapshot contract is to
-  state it). W-31's table applies, with these differences:
+  refusal shows `idle` (the backend, 2026-10-28; the vendored Snapshot schema
+  and Play API document state it since se-backend `dee6000`). W-31's table
+  applies, with these differences:
 
   | `status`      | The Wrapper shows on a book round                                                                                                                                                                                                                                                                                                                                                                                                 | Input                                    |
   | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
@@ -116,14 +118,12 @@ game plays back. The player makes no move during the round.
   A book Snapshot whose `status` is `active`, `resolving`, or `canceled` fails
   validation (W-28: the generic error state; the shell's validation issue names
   `/status`, and the Wrapper adds no log line for it, decided by the human,
-  2026-10-28). The vendored schema still allows the three on a book round, so
-  until the sync below the shell applies this rule itself, after the `snapshot`
-  validator, which follows the vendored schema exactly; once the schema refuses
-  them, the validator does and the shell's rule is removed. The vendored
-  `valid/book-playback-resolving-placeholder` then moves to `invalid/` (a
-  pre-release change of a vendored vector, rule 1's `--allow-vector-change`),
-  and no kit test may rely on it as a valid book Snapshot.
-  <!-- TODO(#146): re-vendor the Snapshot schema and vectors at the backend commit that refuses `active`, `resolving`, and `canceled` on a book round and states the one-presentation rule; then move the check from the shell to the validator. -->
+  2026-10-28). The vendored schema refuses the three on a book round (since
+  se-backend `dee6000`), so the `snapshot` validator does, with its first issue
+  at `/status`, and the shell has no rule of its own for it. The sync that
+  brought the rule removed `valid/book-playback-resolving-placeholder` (a
+  pre-release change of a vendored vector, rule 1's `--allow-vector-change`) and
+  added `invalid/book-status-active`, `-resolving`, and `-canceled`.
 
   The payout is the Snapshot's `payout`, shown as its `formatted`. The Wrapper
   MUST NOT compute or show an amount from `config.draw.payoutMultiplier`, the

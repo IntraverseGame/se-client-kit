@@ -1,12 +1,11 @@
 {
-  "vector": "snapshot/invalid/blindness-draw-on-canceled",
-  "description": "A book draw is shown only on won and lost, never on canceled.",
+  "vector": "snapshot/valid/book-lifecycle-idle",
+  "description": "playback, idle: a book game before its first bet. No round, no proofs, no draw; config shows the package, the mode and the mode's exact RTP, 24/25. The first Snapshot of one book round played through to lost: idle, starting (funded, then bound), lost.",
   "definition": "Snapshot",
-  "expected": "invalid",
-  "failsAt": "/config",
+  "expected": "valid",
   "input": {
     "schema": "se.snapshot/1",
-    "version": 3,
+    "version": 4,
     "presentation": "playback",
     "model": "book",
     "context": {
@@ -26,8 +25,7 @@
         "playerAvatar": "https://assets.superengine.example.com/v/7d2c9e41.png"
       }
     },
-    "status": "canceled",
-    "roundId": "01927c5e-8b3a-7f21-9c4d-5e6f7a8b9c0d",
+    "status": "idle",
     "bet": {
       "balance": {
         "value": "10000",
@@ -81,42 +79,13 @@
         "formatted": "€1.00"
       }
     },
-    "proofs": {
-      "randomnessProof": {
-        "source": "ethereum:block",
-        "blockNumber": 21000123,
-        "roundSecretHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
-        "blockValue": "0x3333333333333333333333333333333333333333333333333333333333333333",
-        "blockExplorerUrl": "https://explorer.example.com/block/21000123",
-        "roundSecret": "0x4444444444444444444444444444444444444444444444444444444444444444"
-      },
-      "record": {
-        "chainId": 8453,
-        "roundId": "0x01927c5e8b3a7f219c4d5e6f7a8b9c0d00000000000000000000000000000000",
-        "txHash": "0x9999999999999999999999999999999999999999999999999999999999999999",
-        "explorerUrl": "https://explorer.example.com/tx/0x9999999999999999999999999999999999999999999999999999999999999999"
-      }
-    },
     "config": {
       "kind": "book",
       "packageHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "model": "base",
-      "draw": {
-        "index": 41,
-        "payoutMultiplier": 1.94,
-        "events": [
-          {
-            "index": 0,
-            "type": "reveal",
-            "data": {
-              "side": "heads"
-            }
-          },
-          {
-            "index": 1,
-            "type": "win"
-          }
-        ]
+      "rtp": {
+        "fraction": "24/25",
+        "decimal": "0.9600"
       }
     }
   }
