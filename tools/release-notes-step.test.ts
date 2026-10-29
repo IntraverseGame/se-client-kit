@@ -18,7 +18,8 @@ import { jobRange, keyLines, scalarAt, stepRanges } from "./workflow-text.ts";
 // The release workflow's `wrapper-assets` job, after it attaches the tar and
 // its `.sha256`, appends the `gh attestation verify` command (ADR-005,
 // decision 4; runbook, Verify before and after) to the Wrapper release's
-// notes, keeping the changelog text changesets/action wrote
+// notes, keeping the version's CHANGELOG section that the `publish` job's
+// "Create the GitHub releases" step wrote as the notes
 // (.github/workflows/release.yml, step "Add the verify command to the release
 // notes"; the human, 2026-10-28). This test runs the step's own script as
 // Actions runs it (`bash --noprofile --norc -eo pipefail`;
@@ -157,7 +158,7 @@ describe("the wrapper-assets job's release notes step", () => {
     expect(script).not.toContain("${{");
   });
 
-  it("appends the verify command to the changelog the action wrote", () => {
+  it("appends the verify command to the CHANGELOG section the releases step wrote", () => {
     const outcome = run();
     expect(outcome.status).toBe(0);
     expect(outcome.edited).toBe(`${CHANGELOG}\n\n${VERIFY}`);

@@ -29,7 +29,9 @@
 //      version has no tag yet (the Wrapper, which is private and never on
 //      npm, and a library a failed run published without its tag) and
 //      reports each tag to changesets/action through CHANGESETS_OUTPUT; the
-//      action pushes the tags and creates the GitHub releases.
+//      action only pushes the tags, and the `publish` job's "Create the
+//      GitHub releases" step then creates each release, with that version's
+//      CHANGELOG section as its notes.
 //
 // Without `--publish` it publishes nothing. The five tarballs stay in
 // `<out>/packages/`.

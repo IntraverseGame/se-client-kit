@@ -532,7 +532,8 @@ jobs:
           create-storage-record: false
 
   # The tar and its `.sha256` on the Wrapper's GitHub release, which the
-  # action created: the released Wrapper's durable home (ADR-005). It runs no
+  # `publish` job's "Create the GitHub releases" step created (the action only
+  # pushes the tags): the released Wrapper's durable home (ADR-005). It runs no
   # repository code (no checkout).
   wrapper-assets:
     name: wrapper-assets
@@ -604,8 +605,9 @@ jobs:
           sha256sum --check --strict "${WRAPPER_FILE_NAME}.sha256"
           gh release upload "$RELEASE_TAG" "$WRAPPER_FILE_NAME" "${WRAPPER_FILE_NAME}.sha256" \
             --repo "$GITHUB_REPOSITORY"
-      # After the upload: the Wrapper release's notes keep the changelog the
-      # action wrote, and get the artifact's digest and the
+      # After the upload: the Wrapper release's notes keep the version's
+      # CHANGELOG section, which the releases step wrote, and get the
+      # artifact's digest and the
       # `gh attestation verify` command (ADR-005, decision 4; runbook, Verify
       # before and after) appended. The release is read and edited by its
       # exact tag; any API error fails the step, so notes are never written

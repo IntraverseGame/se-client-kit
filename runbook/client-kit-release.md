@@ -325,8 +325,9 @@ past both.
      digest, requires exactly one release for the tag with neither file attached
      yet (it lists every release with `gh api --paginate` and compares each
      `tag_name` exactly), attaches them (`gh release upload`), and then appends
-     to the release's notes, after the changelog the action wrote, the
-     artifact's name and digest and the `gh attestation verify` command of
+     to the release's notes, after the version's CHANGELOG section that the
+     releases step wrote, the artifact's name and digest and the
+     `gh attestation verify` command of
      [Verify before and after](#verify-before-and-after) for the release's
      commit (`gh release edit --notes-file`; the release is read and edited by
      its exact tag). The release asset is the released Wrapper's durable home

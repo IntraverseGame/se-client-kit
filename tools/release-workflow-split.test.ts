@@ -34,8 +34,9 @@ import {
 // job runs no repository tooling, the two changesets/action jobs run it with
 // their write tokens (accepted by ADR-009), the Wrapper's attestation and
 // assets run in jobs of their own, every hand-off is checked against the
-// producing job's digest, and only the action and the assets job write tags,
-// releases, or branches.
+// producing job's digest, and only the action writes tags and branches, only
+// the releases step creates releases, and the assets job only uploads and edits
+// the notes.
 
 const STEPPED_JOBS = jobNames(release).filter(job => job !== "production");
 

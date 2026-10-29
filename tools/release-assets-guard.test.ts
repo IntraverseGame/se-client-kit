@@ -8,9 +8,10 @@ import { runStep } from "./fixtures/workflow-step.ts";
 import { stepRun } from "./release-workflow-lines.ts";
 
 // The release workflow's `wrapper-assets` job attaches the Wrapper's tar and
-// its `.sha256` only to the one release changesets/action created for the
-// tag, and refuses a release that already has those files, a missing release,
-// two releases with the tag, and any API error
+// its `.sha256` only to the one release the `publish` job's "Create the
+// GitHub releases" step created for the tag (changesets/action only pushes
+// the tags), and refuses a release that already has those files, a missing
+// release, two releases with the tag, and any API error
 // (.github/workflows/release.yml, step "Find the Wrapper release"; ADR-009,
 // decision 2). The paginated listing is kept from the earlier
 // `github-release` guard (#158): `gh release view` failed under Actions' `-e`.
