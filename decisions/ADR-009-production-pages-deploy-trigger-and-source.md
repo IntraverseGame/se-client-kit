@@ -3,8 +3,10 @@
 - Status: accepted; supersedes part of
   [ADR-005](./ADR-005-release-attestation-and-artifact-upload.md) (listed in
   [What this supersedes in ADR-005](#what-this-supersedes-in-adr-005))
-- Date: 2026-10-28 (proposed and decided by the human the same day; not built
-  yet: the workflow change is a later pull request, #133)
+- Date: 2026-10-28 (proposed and decided by the human the same day; implemented
+  with #133 in `.github/workflows/release.yml` and
+  `.github/workflows/pages-prod.yml`, whose implementation choices the human
+  accepted on 2026-10-28)
 - Deciders: the human maintainer (the release flow, the deploy source, the
   production environment), the infrastructure owner (the production projects,
   the `pages-prod` environments, the token), the org owners (the GitHub and npm
@@ -27,8 +29,8 @@ changelogs written. It left #133 to say how the production job recognizes that
 merge. ADR-005 (accepted 2026-10-28) made the GitHub release asset the released
 tar's home and left #133 to confirm whether production deploys from it.
 
-Today `release.yml` runs by hand only. A **version** dispatch runs `version`
-(`changeset version`, read-only token) and `version-push` (git only,
+Before this ADR, `release.yml` ran by hand only. A **version** dispatch runs
+`version` (`changeset version`, read-only token) and `version-push` (git only,
 `contents: write`), which force-pushes `changeset-release/main`; a person opens
 the pull request. A **publish** dispatch runs `build` (repository tooling, no
 credential), `publish` (environment `release`, OIDC, `npm publish` of checked
@@ -47,9 +49,10 @@ learns what an earlier one did.
 
 ## Decision
 
-Decided by the human, 2026-10-28. Not built yet: a later pull request changes
-the workflows (#133); until then `release.yml` and `pages.yml` behave as their
-specs and the runbook describe today.
+Decided by the human, 2026-10-28. Implemented (#133): `release.yml` holds the
+release jobs, and `pages-prod.yml` the production jobs (decision 3). The choices
+the implementation made, which the human accepted on 2026-10-28, are recorded
+below where they belong.
 
 ### 1. The release flow: the changesets "version pull request" flow with `changesets/action`
 
@@ -64,16 +67,20 @@ out its own commit, so the release always publishes exactly the bump merge
 commit (called M below).
 
 - **`changesets-mode`** (`contents: read` and `pull-requests: read`, no
-  environment, no secret, no repository tooling: the runner's shell, `git`, and
-  `jq` only): checks out the pushed commit and
+  environment, no secret, no repository tooling: the runner's shell, `git`,
+  `gh`, and `jq` only): checks out the pushed commit and
   - lists the pending changesets, the `.changeset/*.md` files other than
     `.changeset/README.md`, and outputs `pending` (`true` or `false`);
   - checks, read-only, whether the pushed commit is **the merge of the bump pull
     request**: the pull request associated with the commit in the API has head
     ref `changeset-release/main` and a head repository equal to this repository
     (so a fork's branch of the same name cannot match), and was merged into
-    `main`. A second parent cannot serve: the repository squash-merges, so the
-    commit on `main` has no second parent;
+    `main` as this very commit (its merge commit is the pushed commit). The
+    workflow lists the commit's pull requests with
+    `GET /repos/{owner}/{repo}/commits/{sha}/pulls` and checks the head ref, the
+    head repository, the base `main`, `merged_at`, and `merge_commit_sha`. A
+    second parent cannot serve: the repository squash-merges, so the commit on
+    `main` has no second parent;
   - when it is, and no changeset is pending, reads `name` and `version` from
     each publishable package's `package.json` (the five libraries and the
     Wrapper) and looks up each tag `<name>@<version>` with
@@ -81,8 +88,8 @@ commit (called M below).
     token). A version `0.0.0` never counts (it is never released). It outputs
     `release-candidate`: `true` only when the commit is the bump merge, no
     changeset is pending, **and** at least one of those versions has no tag yet.
-
-  <!-- TODO(release, #133): the exact API call that finds the commit's associated pull request (its head ref, head repository, and base), confirmed with `contents: read` and `pull-requests: read`. -->
+    Any API or `git` error fails the job, so an error is never read as "nothing
+    to release".
 
   At most one of the next two jobs runs, on the same commit. When neither output
   is `true` (the usual push to `main`: not the bump merge, or every publishable
@@ -101,10 +108,12 @@ commit (called M below).
 
 - **`version`** (only when `pending` is `true`; **no environment**;
   `contents: write` and `pull-requests: write`; **no `id-token`**): runs the
-  action in version mode (no `publish` input). It runs the version command
-  (`changeset version`) and opens or updates the bump pull request from
-  `changeset-release/main`, titled `chore: bump versions`, with the accumulated
-  version bumps and changelogs.
+  action in version mode (no `publish-script` input). Its `version-script`,
+  `tools/release-version.sh`, runs `changeset version` and then the version-file
+  guard (`tools/release-version-guard.sh`; see Kept, below); the action commits
+  the result on `changeset-release/main` and opens or updates the bump pull
+  request, titled `chore: bump versions`, with the accumulated version bumps and
+  changelogs.
 - **`publish`** (only when `release-candidate` is `true` and
   `RELEASE_PUBLISH_ENABLED` is `true`; environment **`release`**, whose required
   reviewers approve it; `contents: write` and `id-token: write`, and **no
@@ -114,13 +123,60 @@ commit (called M below).
   candidate versions are still untagged (the tags were read when
   `changesets-mode` ran, and the job may have waited for the reviewers; a re-run
   of M's run after a release, or any duplicate, finds them tagged); if every one
-  is tagged by now, it ends with an "already released" notice and runs nothing
-  else. Otherwise it runs the action in publish mode, which publishes the
-  packages that have a version not yet on the registry and creates **a git tag
-  and a GitHub release for each published package**
-  (`createGithubReleases: true`; tags `@intraverse/<package>@<version>`, the
-  Wrapper's `@intraverse/se-client-wrapper@<version>` as today). With nothing to
-  publish it publishes nothing and outputs `published: false`.
+  is tagged by now, it ends with an "already released" notice and publishes
+  nothing (only its releases step, below, still runs). Otherwise it runs
+  `pnpm check` and the release dry run, then the action in publish mode, which
+  publishes the packages that have a version not yet on the registry and pushes
+  **a git tag for each published package** (tags
+  `@intraverse/<package>@<version>`, the Wrapper's
+  `@intraverse/se-client-wrapper@<version>` as before), with
+  `create-github-releases: false`. Its last step creates **a GitHub release for
+  each published package** itself (below).
+
+  The action's `publish-script` is `tools/release-publish.ts --publish` (decided
+  by the human, 2026-10-28, with the implementation). After the readiness,
+  registry, and tarball checks, it publishes each checked tarball not yet on the
+  registry with the **npm CLI of the pinned Node itself**
+  (`npm publish --provenance --access public --ignore-scripts`; the job first
+  requires npm 11.5.1 or later), and then runs `changeset git-tag`, which tags
+  every package whose version has no tag yet and reports the tags to the action.
+  It does not use `changeset publish`, which (confirmed from the
+  `@changesets/cli` 3.0.3 source) publishes with `pnpm publish` in a pnpm
+  workspace and does not create a missing tag for a version it skips as already
+  on npm; with `changeset git-tag`, a re-run finishes a release that published
+  but did not tag.
+
+  In publish mode the action uses **no pull-request API**: it creates the tags
+  at the run's commit (`context.sha`), so `contents: write` is enough. **The
+  workflow creates the GitHub releases itself, after checking the tags**
+  (decided by the human, 2026-10-28, after review). In v2.1.2 a failed tag push
+  (`createRef` at `context.sha`) only logs a warning, and the action then still
+  calls `createRelease` with the tag name alone; for a tag that does not exist,
+  GitHub creates it at the default branch's head, not at M, so a release and a
+  permanent tag could name the wrong commit. So the action runs with
+  `create-github-releases: false`, and the `publish` job's last step:
+  - requires every tag the action reported (`published-packages`) to exist and
+    to point at the run's commit, peeled when annotated; a missing or misplaced
+    tag fails the job before any release is created;
+  - then creates the release of each publishable version whose tag is on M and
+    that has no release yet, with
+    `gh release create <tag> --verify-tag --target <M>` (so `gh` can never
+    create a tag), titled with the tag, its notes the package's `CHANGELOG.md`
+    section for the version (what the action would have written), a prerelease
+    for a prerelease version;
+  - skips the releases that exist, and also runs when the re-check found every
+    version tagged, so **"re-run failed jobs"** on M's run, within GitHub's 30
+    days, finishes a partial release. A full re-run ("re-run all jobs") does
+    not: it runs `changesets-mode` again, which finds every publishable version
+    tagged and ends with "nothing to release", so `publish` never runs; "re-run
+    failed jobs" keeps `changesets-mode`'s earlier `release-candidate=true`. (A
+    tag whose push failed leaves its version untagged, so either kind of re-run
+    pushes it at M, through `changeset git-tag` and the action.)
+  - outputs the Wrapper's tag while the Wrapper's release has no tar attached,
+    which is what starts the Wrapper's jobs (decision 2), so "re-run failed
+    jobs" after a failure there still attests and attaches the Wrapper, and a
+    duplicate of a complete release does not. It needs no permission beyond
+    `contents: write`.
 
 Because `publish` runs only on a release candidate, **the `release` reviewers
 are asked only for a real release**: never for a push that only updates the bump
@@ -133,27 +189,30 @@ the ruleset covers `@intraverse/*@*`, a deleted tag would make a released
 version look unreleased (the publish would then find it on the registry and skip
 it).
 
-**Published but not tagged.** If the action fails after `npm publish` and before
-it creates the tags, the versions are on npm with no tag. The recovery is a
-**manual re-run of M's run**: it is still the bump merge with untagged versions,
-so `publish` asks the reviewers again, and `changeset publish` skips the
-versions already on npm. A later push does not retry it (it is not the bump
-merge). The re-run must come within GitHub's 30 days, as above.
+**Published but not tagged.** If the publish command or the action fails after
+`npm publish` and before the tags exist on the repository, the versions are on
+npm with no tag. The recovery is a **manual re-run of M's run**: it is still the
+bump merge with untagged versions, so `publish` asks the reviewers again; the
+publish command skips the versions the registry already holds with the same
+bytes, and `changeset git-tag` tags them, so the action pushes their tags and
+the releases step creates their releases. A later push does not retry it (it is
+not the bump merge). The re-run must come within GitHub's 30 days, as above.
 
 **The Wrapper is private** (`"private": true`, with the changesets setting
-`privatePackages.tag: true`): `changeset publish` never sends it to npm, but
-tags it and lists it in `publishedPackages`, so the action creates its GitHub
-release. For the Wrapper, released means tagged: its only test is the git tag,
-so `publish` checks out with the tags fetched, or changesets would take every
-Wrapper version for unreleased. Its re-run gap differs from the libraries': with
-no registry version to skip, a re-run of M's run after a failure before the tags
-tags the Wrapper again, so the Wrapper cannot be left untagged by a skip (to
-confirm), while a library that reached npm without its tag depends on the check
-below.
+`privatePackages.tag: true`): it is never sent to npm, but `changeset git-tag`
+tags it, the action lists it in `published-packages`, and the releases step
+creates its GitHub release. For the Wrapper, released means tagged: its only
+test is the git tag, so `publish` checks out with the tags fetched, or
+changesets would take every Wrapper version for unreleased. A re-run of M's run
+after a failure before the tags tags the Wrapper and any library already on npm
+alike, since `changeset git-tag` tags every version that has no tag.
 
-<!-- TODO(release, #133): no concurrency group on the release workflow, the re-check at the start of `publish`, the "already released" and "publishing was off" notices, and the re-run of M's run as the recovery, confirmed when the workflow is built. -->
-<!-- TODO(release, #133): confirm whether `changeset publish` creates the missing tag (and so the GitHub release) for a version it skips as already published; if it does not, the publish command also runs `changeset tag`, or the recovery is a documented step, so a re-run of M's run can finish the release. -->
-<!-- TODO(release, #133): confirm that the action in publish mode needs no `pull-requests` permission (expected: it opens no pull request when no changeset is pending); if it does, `publish` gets `pull-requests: read` or `write` and this ADR is amended. -->
+**Packages that are never released** are in the changesets `ignore` list: the
+e2e suite, the reference game, the verify page, and the Pages proxy
+(`@intraverse/se-client-pages-proxy`; decided by the human, 2026-10-28, with the
+implementation). Without the proxy there, `changeset git-tag` would create a
+permanent `@intraverse/se-client-pages-proxy@0.0.0` tag and release, which the
+tag ruleset would then keep.
 
 The order is: **version bump (the bump pull request merged), then release and
 tags, then the Wrapper's attestation and release assets, then the production
@@ -175,17 +234,24 @@ environment, so trusted publishing keeps requiring `environment: release`
 
 `changesets/action` is a **new Action**. It joins the Actions allow-list in the
 [supply-chain spec](../specs/client-kit/supply-chain.md), pinned by full commit
-SHA (ADR-001 decision 7; `tools/actions-allow-list.test.ts`), with its version,
-SHA, and release date verified on the day the workflow change is made, under the
-same rules as ADR-005 decision 1 (publisher, bundled `dist/`, Dependabot's 7-day
-cooldown).
+SHA (ADR-001 decision 7; `tools/actions-allow-list.test.ts`), under the same
+rules as ADR-005 decision 1 (publisher, bundled `dist/`, Dependabot's 7-day
+cooldown). It is pinned at **v2.1.2**
+(`ae32849d5ba541f9ae29e40e22a623bc13562f51`; decided by the human, 2026-10-28,
+with the implementation), the line for `@changesets/cli` 3.x. Its inputs and
+outputs are kebab-case (`version-script`, `publish-script`, `commit-message`,
+`pr-title`, `published-packages`; `create-github-releases` is set to `false`).
 
-<!-- TODO(release, #133): the pinned version and full commit SHA of `changesets/action`, verified on the day the workflow change is made, in the allow-list table. -->
+The production deploy is a reusable workflow of this repository
+(`pages-prod.yml`, decision 3), so the allow-list's exemption for local Actions
+(`./.github/actions/...`) is widened to the repository's own reusable workflows
+(`./.github/workflows/<name>.yml`), called from a job in `release.yml` only
+(decided by the human, 2026-10-28, with the implementation).
 
 ### 2. The Wrapper's attestation and release assets, in jobs of their own
 
-Keyed on the `publish` job's `published` output and on the Wrapper being in its
-`publishedPackages`:
+Keyed on the `publish` job's `wrapper-tag` output, which its releases step sets
+when the Wrapper's tag is on M and its release has no tar attached yet:
 
 - **`wrapper-build`** (`contents: read`, no environment, no secret): at the
   run's commit (the commit the tags point at), the release dry run builds the
@@ -196,63 +262,84 @@ Keyed on the `publish` job's `published` output and on the Wrapper being in its
   decisions 2 and 3, unchanged);
 - **`wrapper-assets`** (`contents: write`, no repository code): downloads the
   tar and its `.sha256`, checks both against the attested digest, and attaches
-  them to the Wrapper's GitHub release that the action created, refusing a
-  release that already has those assets.
+  them to the Wrapper's GitHub release that the `publish` job created. It
+  refuses unless exactly one release has the Wrapper's tag (drafts included),
+  and refuses a release that already has those assets. After the upload it
+  appends the `gh attestation verify` command to the release's notes (decided by
+  the human, 2026-10-28, with the implementation).
 
 The attestation is verified with `gh attestation verify` as ADR-005 decision 4
 says. The certificate now records a `push` event instead of a
 `workflow_dispatch`; the signer workflow, `--source-ref refs/heads/main`, and
-the commit check are unchanged.
-
-<!-- TODO(release, #133): the workflow file keeps its name, `release.yml`, so ADR-005's `--signer-workflow` and the trusted publishers stay valid; a rename changes both (runbook, Bootstrap step 6). -->
+the commit check are unchanged. The workflow file keeps its name, `release.yml`,
+so ADR-005's `--signer-workflow` and the trusted publishers stay valid; a rename
+would change both (runbook, Bootstrap step 6).
 
 ### 3. The production deploy: the attested release tar
 
 After `wrapper-assets`, in the same run (a tag or release made with the job
-token would start no other workflow). Only `deploy-prod` (and the redeploy
-dispatch's deploy job) is in the concurrency group `pages-prod`
+token would start no other workflow). The production jobs are a **reusable
+workflow**, `.github/workflows/pages-prod.yml` (decided by the human,
+2026-10-28, with the implementation): `release.yml`'s `production` job calls it
+with the Wrapper's new tag after `wrapper-assets`, and a person can dispatch it
+from `main` with a tag to redeploy (below). It holds its five jobs once, for
+both entry points. Only `deploy-prod` is in the concurrency group `pages-prod`
 (`cancel-in-progress: false`), so production deploys never overlap and a staging
-push never touches them; `prod-verify`, `prod-worker`, and `config-prod` are in
-no group, since jobs of one run in one group would cancel each other's pending
-jobs:
+push never touches them; `release-check`, `prod-verify`, `prod-worker`, and
+`config-prod` are in no group, since jobs of one run in one group would cancel
+each other's pending jobs:
 
-- **`prod-verify`** (`contents: read` and the read permission
-  `gh attestation verify` needs; no environment, no secret, no repository code):
+- **`release-check`** (`actions: read`; no checkout, no secret): checks the
+  tag's shape, refuses a dispatch while a release run is not completed (below),
+  and resolves the tag's commit with `git ls-remote`; when the release calls it,
+  the tag must be on the run's own commit;
+- **`prod-verify`** (`contents: read` and `attestations: read`, the read
+  permission `gh attestation verify` is expected to need, to be confirmed on the
+  first real run; no environment, no secret, no checkout, no repository code):
   downloads the tar and its `.sha256` from the Wrapper's GitHub release by tag
   (`gh release download`), checks that the `.sha256` names the tar and matches
   it, runs `gh attestation verify` with ADR-005's flags plus `--source-digest`
   the tag's commit, and outputs the digest;
-- **`prod-worker`** (`contents: read`, no secret): builds the proxy worker with
-  `tsc` at the tag's commit and outputs its digest, as staging does (ADR-008,
-  decision 4); the worker is not attested;
-- **`config-prod`** (`contents: read`; its configuration environment's secrets,
-  read through that environment): builds and validates the two sites'
-  configuration documents in a configuration environment **that holds no deploy
-  credential** (ADR-008, Risks accepted), and outputs their digests;
+- **`prod-worker`** (`contents: read`, no secret; after `prod-verify`, so the
+  attestation proves the tag's commit before any of its code runs; decided by
+  the human, 2026-10-28, after review): builds the proxy worker with `tsc` at
+  the tag's commit and outputs its digest, as staging does (ADR-008, decision
+  4); the worker is not attested;
+- **`config-prod`** (`contents: read`; environment `pages-prod-config`, whose
+  secrets hold the configuration values; after `prod-verify`, like
+  `prod-worker`): builds and validates the two sites' configuration documents at
+  the tag's commit in that configuration environment, **which holds no deploy
+  credential** (ADR-008, Risks accepted; decided by the human, 2026-10-28, with
+  the implementation), and outputs their digests;
 - **`deploy-prod`** (`contents: read`, for the lockfile, as on staging;
-  environment `pages-prod`, which holds the token and the account id, read as
-  that environment's secrets, and has **no required reviewer**): runs no
-  repository code, refuses any download whose SHA-256 is not the digest its
-  producing job output (the Wrapper tar must be `prod-verify`'s), lays out the
-  Wrapper's and the verifier's sites as on staging, and runs
-  `wrangler pages deploy` per production project. Production serves no reference
-  game; it frames the real game origins.
+  environment `pages-prod`, which holds the token, the account id, and the
+  production Pages project names, read as that environment's secrets, and has
+  **no required reviewer**): runs no repository code, refuses any download whose
+  SHA-256 is not the digest its producing job output (the Wrapper tar must be
+  `prod-verify`'s), lays out the Wrapper's and the verifier's sites as on
+  staging, and runs `wrangler pages deploy` per production project. Production
+  serves no reference game; it frames the real game origins.
 
 A manual entry point redeploys a given release by its tag through the same
-verification (a redeploy, or a roll back or forward to a released version).
-**The release always wins** (decided by the human, 2026-10-28): the dispatch
-first checks, read-only (`actions: read`), that no run of the release workflow
-is queued or in progress, and refuses if one is, so a redeploy never replaces a
-release's pending deploy in `pages-prod`. **A window remains**: the check and
-the dispatch's own deploy job are not atomic, so a release run that starts after
-the check could have its pending `deploy-prod` replaced by the dispatch's
-(GitHub keeps one pending job per group). If that happens, use "re-run failed
-jobs" on M's run within 30 days; after that, redeploy by M's tag. Staging is
-unchanged: every push to `main` still deploys `main`'s own build.
+verification (a redeploy, or a roll back or forward to a released version): a
+`workflow_dispatch` of `pages-prod.yml` from `main` with the input `tag` (the
+Wrapper's release tag). **The release always wins** (decided by the human,
+2026-10-28): `release-check` first checks, read-only (`actions: read`), that no
+run of the release workflow is requested, queued, pending, waiting, or in
+progress (`GET /repos/{owner}/{repo}/actions/workflows/release.yml/runs` with
+each `status`), and refuses if one is, so a redeploy never replaces a release's
+pending deploy in `pages-prod`; an API error fails the job. `deploy-prod` does
+not repeat the check. **A window remains**: the check and the dispatch's
+`deploy-prod` are not atomic, so a release run that starts after the check could
+have its pending `deploy-prod` replaced by the dispatch's (GitHub keeps one
+pending job per group). If that happens, use "re-run failed jobs" on M's run
+within 30 days; after that, redeploy by M's tag. Staging is unchanged: every
+push to `main` still deploys `main`'s own build.
 
-<!-- TODO(release, #133): the mechanism of the redeploy dispatch's check that no release run is queued or in progress (`actions: read`, the API call), and whether `deploy-prod` repeats it just before deploying to narrow the window. -->
+The caller's `production` job grants the most the called jobs may ask for
+(`contents: read`, `attestations: read`, `actions: read`); each job of
+`pages-prod.yml` asks for its own, smaller set.
 
-<!-- TODO(release, #133): the production jobs and the redeploy-by-tag entry point (which workflow file, the dispatch input), and the exact read permission of `gh attestation verify`. -->
 <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). The production Pages projects and hostnames, the `pages-prod` and configuration environments, the real operator and game origins, the production verifier origin, the RPC providers, and `tipLagMargin`; hostnames and endpoints are shared out of band, never written in this repository. -->
 
 ### 4. Tags and GitHub releases for every published package
@@ -280,16 +367,19 @@ Superseded (ADR-005 is not rewritten; it carries a pointer to this ADR):
   the publish command, with `contents: write` and `id-token: write`).
 - **The publish-only job running the npm CLI of the pinned Node** (decided
   2026-10-28) as a job boundary: publishing goes through the action's publish
-  command.
-  <!-- TODO(release, #133): which client the publish command uses (the npm CLI of the pinned Node, 11.5.1 or later, keeps trusted publishing as specified; another client must be confirmed to support it). -->
+  command. The client is kept: the publish command runs the npm CLI of the
+  pinned Node (11.5.1 or later) itself (decision 1), so trusted publishing works
+  as specified.
 - **ADR-005 decision 2, in part**: the publishing job's permissions
   (`contents: read` and `id-token: write`) become `contents: write` and
   `id-token: write`; and the `attest` job's condition, shared with `publish`
   ("dispatched from `main`, publish enabled"), becomes the `publish` job's
-  `published` output with the Wrapper in `publishedPackages`.
-- **`github-release` creating the Wrapper's tag and release**: the action
-  creates every tag and release; `wrapper-assets` only attaches the Wrapper's
-  files.
+  `wrapper-tag` output.
+- **`github-release` creating the Wrapper's tag and release**:
+  `changeset git-tag` tags every released package, the action pushes the tags,
+  and the `publish` job's releases step creates every release after checking the
+  tags; `wrapper-assets` only attaches the Wrapper's files and appends the
+  verify command to its notes.
 
 Kept:
 
@@ -317,9 +407,13 @@ Kept:
   3), now confirmed as production's source;
 - the **version-file guard** (only `package.json`, `CHANGELOG.md`, and consumed
   changesets may change), kept as a check after `changeset version` in the
-  version command; it runs in the same job, so it is a sanity check, no longer
-  an isolation boundary.
-  <!-- TODO(release, #133): wire the version-file guard into the action's version command, and keep `tools/release-publish.ts`'s refusals (a private or 0.0.0 library, a registry version with other bytes) in the publish command where they fit. -->
+  version command (`tools/release-version.sh` runs
+  `tools/release-version-guard.sh`); it runs in the same job, so it is a sanity
+  check, no longer an isolation boundary;
+- the **refusals of `tools/release-publish.ts`** (a pending changeset, a private
+  or `0.0.0` library, a `0.0.0` Wrapper, a Wrapper build other than the dry
+  run's, a size budget exceeded, a registry version with other bytes), now in
+  the publish command.
 
 ## Residual risks and mitigations
 
@@ -378,10 +472,11 @@ Kept:
   re-checks the tags, so a duplicate (a later re-run of M's run) stops with
   "already released". Two runs of M at the same moment cannot happen: one push
   gives one run, and GitHub does not re-run a run that is in progress. If it
-  ever did, the second publish would fail on npm's "cannot publish over" refusal
-  (E403), its tag push would be a no-op, its duplicate GitHub release would fail
-  in the API, its `published` would not be `true`, and no second attest or
-  deploy would run: it fails visibly, with no wrong bytes, tags, or deploys.
+  ever did, the second publish would skip a version the registry already holds
+  with the same bytes or fail on npm's "cannot publish over" refusal (E403), its
+  tag push would be a no-op, its duplicate GitHub release would fail in the API,
+  its `published` would not be `true`, and no second attest or deploy would run:
+  it fails visibly, with no wrong bytes, tags, or deploys.
 - **A redeploy can race a release's deploy** in the window described in decision
   3; "re-run failed jobs" on M's run within 30 days, or redeploy by M's tag
   after that.
@@ -398,17 +493,21 @@ Kept:
   within 30 days (above), and the reviewers approve again; after that, a library
   version already on npm stays published but never gets its tag or GitHub
   release, and a version not yet published is skipped; the next bump moves past
-  both. Packages published before a failure keep their tags and releases;
-  re-running M's run publishes what is missing (versions already on the registry
-  are skipped). A failed `attest` or `wrapper-assets` leaves the Wrapper's
+  both. Packages published before a failure stay on npm untagged until the
+  re-run; re-running M's run publishes what is missing (versions already on the
+  registry are skipped) and tags what has no tag. A tag push that fails inside
+  the action only logs a warning there, but the releases step finds the tag
+  missing and fails the job before any release is created, so no release or tag
+  can name another commit; a re-run of M's run pushes the tag at M and creates
+  the releases. A failed `attest` or `wrapper-assets` leaves the Wrapper's
   release without assets and production unchanged; it is fixed by re-running
   those jobs, never by attesting from elsewhere. A failed deploy is re-run, or
   redeployed by tag.
 - **Rollback** is a Pages rollback of each production project, or a redeploy of
   an earlier release by its tag, verified the same way. A pending release
   approval, or even a short "nothing to release" run, blocks redeploy-by-tag
-  (its check refuses while a release run is queued or in progress), but not the
-  Pages rollback, which is the first path under Rollback.
+  (its check refuses while a release run is not completed), but not the Pages
+  rollback, which is the first path under Rollback.
 
 ## Alternatives considered
 
@@ -436,21 +535,29 @@ The options laid out when this ADR was proposed, and not chosen:
   that each run `changesets/action` in one mode.
 - **A new Action** (`changesets/action`) on the allow-list, and two jobs (of the
   three) that run repository tooling with write tokens, one of them with the
-  OIDC token (above).
+  OIDC token (above). The allow-list also exempts the repository's own reusable
+  workflows, called from `release.yml` only.
+- **A second production environment**, `pages-prod-config`, for the
+  configuration values, beside `pages-prod` for the deploy credential and the
+  project names; both must exist, protected, before publishing is turned on.
 - **Production cannot deploy before #154** is done and the first release exists.
   Staging is unaffected.
 - **Settings for #154**: the repository setting "Allow GitHub Actions to create
-  and approve pull requests" is turned on (today's Bootstrap step 4 has it off);
-  the tag ruleset on `@intraverse/*@*`; the trusted publishers trust the release
-  workflow in `release`.
+  and approve pull requests" is turned on (the runbook's Bootstrap step 4; until
+  it is, `version` fails when it opens the pull request); the tag ruleset on
+  `@intraverse/*@*`; the trusted publishers trust the release workflow in
+  `release`.
 - **ADR-008**: its production-trigger amendment note is specified here, and its
-  statement that the release workflow is unchanged no longer holds once this is
-  built. ADR-008 is not rewritten.
-- **Follow-ups** (the implementation pull request): the release workflow, the
-  production jobs, the allow-list row, the tests of the workflows
-  (`tools/pages-workflow.test.ts`, `tools/release-version-guard.test.ts`, and
-  the release workflow's), and the spec, runbook, and memories markers
-  `TODO(release, #133)`.
+  statement that the release workflow is unchanged no longer holds. ADR-008 is
+  not rewritten.
+- **Implemented** (#133): the release workflow, the production workflow
+  `pages-prod.yml`, the allow-list row, the changesets `ignore` entry, and the
+  tests of the workflows and their scripts (among them
+  `tools/release-mode.test.ts`, `tools/release-version-guard.test.ts`,
+  `tools/release-assets-guard.test.ts`, `tools/pages-prod-workflow.test.ts`, and
+  `tools/actions-allow-list.test.ts`), with the spec, runbook, and memories
+  updated. What stays open is the infrastructure owner's (the
+  `TODO(hosting, #133)` marker in decision 3) and the settings of #154.
 
 ## References
 
@@ -462,7 +569,8 @@ The options laid out when this ADR was proposed, and not chosen:
 - [runbook/client-kit-release.md](../runbook/client-kit-release.md).
 - `mimshins/containerized-state`, `.github/workflows/npm-publish.yml` (the
   model).
-- Upstream: the `changesets/action` repository (its `published` and
-  `publishedPackages` outputs, `createGithubReleases`); GitHub Actions
+- Upstream: the `changesets/action` repository, v2.1.2 (its `published` and
+  `published-packages` outputs, `create-github-releases`); the `@changesets/cli`
+  3.0.3 source (`changeset publish`, `changeset git-tag`); GitHub Actions
   documentation on events triggered by `GITHUB_TOKEN` and on concurrency; the
   GitHub CLI manual for `gh attestation verify` and `gh release download`.

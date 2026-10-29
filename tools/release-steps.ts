@@ -1,20 +1,22 @@
-// The steps the release dry run and the release build job share
-// (tools/release-dry-run.ts, tools/release-publish.ts; the procedure is in
-// runbook/client-kit-release.md): running a command with a clean environment,
-// copying the working tree, packing and checking the five libraries, and
-// building the Wrapper's release artifact and holding it to its size budget
-// (tools/size-budget.ts; the consumer import check is in
+// The steps the release dry run and the release workflow's publish command
+// share (tools/release-dry-run.ts, tools/release-publish.ts; the procedure is
+// in runbook/client-kit-release.md): running a command with a clean
+// environment, copying the working tree, packing and checking the five
+// libraries, and building the Wrapper's release artifact and holding it to its
+// size budget (tools/size-budget.ts; the consumer import check is in
 // tools/release-consumer.ts; the store lookup and the publish dry run in
 // tools/release-pnpm.ts). Nothing here reads or writes a credential.
 //
 // The scratch commands get an environment without token-like variables
 // (`scratchEnvironment`). That is hygiene, **not isolation**: a child process
 // of the same user can still read its parent's environment (on Linux,
-// `/proc/<pid>/environ`), so a job that holds a credential, such as the OIDC
-// request token of `id-token: write`, must not run repository tooling at all.
-// That is why the release workflow builds in a `build` job without
-// `id-token` and publishes in a `publish` job that runs no repository tooling
-// (runbook, Release step 3).
+// `/proc/<pid>/environ`). Since ADR-009 the release workflow's `publish` job
+// runs `pnpm check`, the release dry run, and tools/release-publish.ts while it
+// holds `id-token: write` (and `contents: write`), so this code runs next to
+// the OIDC request token: a residual risk ADR-009 accepted (its "Residual
+// risks and mitigations": the `release` environment's reviewers, no job with
+// both the pull-request write and the OIDC token, lifecycle scripts off, the
+// lockfile pins, and reviewed dependency bumps).
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";

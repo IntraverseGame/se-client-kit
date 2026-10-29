@@ -2,21 +2,19 @@ import { describe, expect, it } from "vitest";
 
 import {
   ATTEST,
+  CHANGESETS,
   CHECKOUT,
   DOWNLOAD,
-  gitCalls,
   jobKey,
-  NPM_LINES,
   only,
-  PUSH,
-  pushLines,
   release,
   REPOSITORY_TOOLING,
   runsOf,
   SAFE_GIT,
-  SETUP_NODE,
+  SETUP,
   stepEnv,
   stepScript,
+  stepWith,
   UPLOAD,
   usesOf,
   valuesOf,
@@ -31,103 +29,131 @@ import {
   stepRanges,
 } from "./workflow-text.ts";
 
-// The release workflow's split (.github/workflows/release.yml; ADR-005;
-// runbook, Release): repository tooling runs only in jobs without a write
-// token or an OIDC token, the version change and the tarballs pass between
-// jobs and are checked where they are used, the attestation's inputs, the
-// dry run's uploads, and what is pushed and tagged.
+// What each job of the release workflow runs (.github/workflows/release.yml;
+// ADR-009, decisions 1 and 2, and what it keeps of ADR-005): the read-only mode
+// job runs no repository tooling, the two changesets/action jobs run it with
+// their write tokens (accepted by ADR-009), the Wrapper's attestation and
+// assets run in jobs of their own, every hand-off is checked against the
+// producing job's digest, and only the action and the assets job write tags,
+// releases, or branches.
 
-/** The `run:` scripts of every job but `job`. */
-const scriptsOutside = (job: string): string[] =>
-  jobNames(release)
-    .filter(name => name !== job)
-    .flatMap(name => runsOf(name));
+const STEPPED_JOBS = jobNames(release).filter(job => job !== "production");
 
-/** The jobs that hold a write token or an OIDC token. */
-const TOKEN_JOBS = ["version-push", "publish", "attest", "github-release"];
+/** The `ls-remote` lines of job `job`'s scripts. */
+const lookups = (job: string): string[] =>
+  runsOf(job)
+    .flatMap(script => script.split("\n"))
+    .map(line => line.trim())
+    .filter(line => line.includes("ls-remote"));
 
-describe("the release workflow's split", () => {
-  it("runs repository tooling only in jobs without a write token or an OIDC token", () => {
-    // The jobs that hold `contents: write`, `id-token: write`, or
-    // `attestations: write` use only these Actions, never the local setup
-    // action (an install), and their scripts run no package manager, Node,
-    // or tools/ script; npm appears only as `npm publish`.
-    expect(usesOf("version-push")).toEqual([CHECKOUT, DOWNLOAD]);
-    expect(usesOf("publish")).toEqual([CHECKOUT, SETUP_NODE, DOWNLOAD]);
+describe("the release workflow's jobs", () => {
+  it("runs no repository tooling in changesets-mode, attest, or wrapper-assets", () => {
+    expect(usesOf("changesets-mode")).toEqual([CHECKOUT]);
     expect(usesOf("attest")).toEqual([ATTEST]);
-    expect(usesOf("github-release")).toEqual([DOWNLOAD, DOWNLOAD]);
-    const scripts = TOKEN_JOBS.flatMap(job => runsOf(job));
-    for (const script of scripts) {
-      expect(script).not.toMatch(REPOSITORY_TOOLING);
+    expect(usesOf("wrapper-assets")).toEqual([DOWNLOAD, DOWNLOAD]);
+    for (const job of ["changesets-mode", "attest", "wrapper-assets"]) {
+      for (const script of runsOf(job)) {
+        expect(script).not.toMatch(REPOSITORY_TOOLING);
+      }
     }
-    expect(
-      scripts
-        .flatMap(script => script.split("\n"))
-        .map(line => line.trim())
-        .filter(line => /\bnpm\b/u.test(line)),
-    ).toEqual(NPM_LINES);
-    // npm runs only as `npm --version` and `npm publish`.
-    expect(
-      scripts.flatMap(script =>
-        [...script.matchAll(/(?:^|\$\(|[;&|]\s*)\s*(npm\s+[a-z-]+)/gmu)].map(
-          match => match[1],
+  });
+
+  it("runs changesets/action in version mode in version, with the version-file guard", () => {
+    expect(usesOf("version")).toEqual([CHECKOUT, SETUP, CHANGESETS]);
+    const [from, to] = only(
+      stepRanges(release, jobRange(release, "version")).filter(([start, end]) =>
+        keyLines(release, start, end, 8, "uses").some(
+          index => scalarAt(release, index) === CHANGESETS,
         ),
       ),
-    ).toEqual(["npm --version", "npm publish"]);
-    // The tooling runs where no token can write: the dry run, version (with
-    // a read-only token), and build.
-    for (const job of ["dry-run", "version", "build"]) {
-      expect(usesOf(job)).toContain("./.github/actions/setup");
-    }
-  });
-
-  it("runs version's tooling with a read-only token and hands the push only a patch", () => {
-    expect(stepEnv("version", "Apply the pending changesets")).toEqual([
-      "GITHUB_TOKEN: ${{ github.token }}",
-    ]);
-    expect(usesOf("version")).toEqual([
-      CHECKOUT,
-      "./.github/actions/setup",
-      UPLOAD,
-    ]);
-    expect(stepScript("version-push", "Apply the version change")).toBe(
-      `set -euo pipefail\n${SAFE_GIT} apply "$RUNNER_TEMP/version/version.patch"`,
-    );
-  });
-
-  it("publishes only the tarballs build planned, checked by SHA-256, with npm", () => {
-    expect(stepEnv("publish", "Publish the checked tarballs")).toEqual([
-      "PUBLISH_PLAN: ${{ needs.build.outputs.publish-plan }}",
-    ]);
-    const script = stepScript("publish", "Publish the checked tarballs");
-    expect(script).toContain('sha256sum --check --strict "$plan"');
-    expect(script.indexOf("sha256sum --check")).toBeLessThan(
-      script.indexOf('npm publish "./'),
-    );
-    expect(mappingAt(release, jobKey("build", "outputs"))).toEqual([
-      "publish-plan: ${{ steps.build.outputs.publish-plan }}",
-    ]);
-  });
-
-  it("attests the dry run's Wrapper digest by name and digest, pushing to no registry", () => {
-    const [from, to] = only(
-      stepRanges(release, jobRange(release, "attest")),
-      "attest step",
+      "changesets/action step in version",
     );
     expect(mappingAt(release, keyLine(release, from, to, 8, "with"))).toEqual([
-      "subject-name: ${{ needs.dry-run.outputs.wrapper-file-name }}",
-      "subject-digest: ${{ needs.dry-run.outputs.wrapper-digest }}",
-      "push-to-registry: false",
-      "create-storage-record: false",
+      "version-script: bash tools/release-version.sh",
+      'commit-message: "chore: bump versions"',
+      'pr-title: "chore: bump versions"',
+    ]);
+    expect(runsOf("version")).toEqual([]);
+  });
+
+  it("runs changesets/action in publish mode in publish, after pnpm check and the dry run", () => {
+    expect(usesOf("publish")).toEqual([CHECKOUT, SETUP, CHANGESETS]);
+    expect(valuesOf(release, "publish-script")).toEqual([
+      "pnpm exec tsx tools/release-publish.ts --publish --out ${{ runner.temp }}/publish --expect-wrapper-digest ${{ steps.dry-run.outputs.wrapper-digest }}",
+    ]);
+    expect(stepWith("publish", "Publish and tag").slice(-1)).toEqual([
+      "create-github-releases: false",
+    ]);
+    const names = stepRanges(release, jobRange(release, "publish")).map(
+      ([from, to]) =>
+        keyLines(release, from, to, 8, "name")
+          .map(index => scalarAt(release, index))
+          .join(""),
+    );
+    expect(names).toEqual([
+      "",
+      "Check that a version is still untagged",
+      "",
+      "Check the repository",
+      "Require npm 11.5.1 or later",
+      "Run the release dry run",
+      "Publish and tag",
+      "Create the GitHub releases",
     ]);
   });
 
-  it("uploads the dry run's Wrapper artifact and its .sha256, one file each, kept 14 days", () => {
-    const uploads = stepRanges(release, jobRange(release, "dry-run")).filter(
-      ([from, to]) =>
-        keyLines(release, from, to, 8, "uses").some(
-          index => scalarAt(release, index) === UPLOAD,
+  it("passes no token to a script in version, and in publish only to the releases step, after the tooling ran; the action keeps its default token", () => {
+    const [start, end] = jobRange(release, "version");
+    expect(
+      release
+        .slice(start, end)
+        .filter(line => /GITHUB_TOKEN|GH_TOKEN|github\.token/u.test(line.text)),
+    ).toEqual([]);
+    expect(
+      stepEnv("publish", "Create the GitHub releases").filter(entry =>
+        /TOKEN|token/u.test(entry),
+      ),
+    ).toEqual(["GH_TOKEN: ${{ github.token }}"]);
+    const [publishStart, publishEnd] = jobRange(release, "publish");
+    expect(
+      release
+        .slice(publishStart, publishEnd)
+        .filter(line => /GITHUB_TOKEN|GH_TOKEN|github\.token/u.test(line.text)),
+    ).toHaveLength(1);
+    expect(valuesOf(release, "github-token")).toEqual([]);
+  });
+
+  it("passes the job token only to the mode step and the assets steps", () => {
+    const holders = STEPPED_JOBS.flatMap(job =>
+      stepRanges(release, jobRange(release, job)).flatMap(([from, to]) =>
+        keyLines(release, from, to, 8, "env").flatMap(index =>
+          mappingAt(release, index)
+            .filter(entry => entry.includes("github.token"))
+            .map(entry => `${job} ${entry}`),
         ),
+      ),
+    );
+    expect(holders).toEqual([
+      "changesets-mode GH_TOKEN: ${{ github.token }}",
+      "publish GH_TOKEN: ${{ github.token }}",
+      "wrapper-assets GH_TOKEN: ${{ github.token }}",
+      "wrapper-assets GH_TOKEN: ${{ github.token }}",
+      "wrapper-assets GH_TOKEN: ${{ github.token }}",
+    ]);
+  });
+
+  it("builds the Wrapper twice and uploads it and its .sha256, one file each, kept 14 days", () => {
+    expect(usesOf("wrapper-build")).toEqual([CHECKOUT, SETUP, UPLOAD, UPLOAD]);
+    expect(stepScript("wrapper-build", "Run the release dry run")).toBe(
+      'pnpm exec tsx tools/release-dry-run.ts --out "$RUNNER_TEMP/release-dry-run"',
+    );
+    const uploads = stepRanges(
+      release,
+      jobRange(release, "wrapper-build"),
+    ).filter(([from, to]) =>
+      keyLines(release, from, to, 8, "uses").some(
+        index => scalarAt(release, index) === UPLOAD,
+      ),
     );
     expect(
       uploads.map(([from, to]) =>
@@ -141,70 +167,49 @@ describe("the release workflow's split", () => {
         "retention-days: 14",
       ]),
     );
+    expect(stepScript("wrapper-build", "Name the release")).toContain(
+      '"@intraverse/se-client-wrapper@${BASH_REMATCH[1]}" != "$RELEASE_TAG"',
+    );
   });
 
-  it("pushes only changeset-release/main, and tags only through the GitHub release", () => {
-    expect(pushLines()).toEqual([PUSH]);
-    for (const script of jobNames(release).flatMap(job => runsOf(job))) {
-      expect(script).not.toMatch(/--follow-tags|--mirror|\bgit\s+tag\b/u);
-    }
-    for (const script of scriptsOutside("github-release")) {
-      expect(script).not.toMatch(/\bgh\s+release\b/u);
-    }
-    for (const script of scriptsOutside("build")) {
-      expect(script).not.toMatch(/--tags|refs\/tags/u);
-    }
-    // The build job only looks a tag up, read-only, before anything runs.
-    expect(stepScript("build", "Refuse a release that exists")).toContain(
-      `${SAFE_GIT} ls-remote --tags "\${GITHUB_SERVER_URL}/\${GITHUB_REPOSITORY}.git" "refs/tags/\${RELEASE_TAG}"`,
+  it("attests wrapper-build's Wrapper digest by name and digest, pushing to no registry", () => {
+    const [from, to] = only(
+      stepRanges(release, jobRange(release, "attest")),
+      "attest step",
     );
-    const create = stepScript("github-release", "Create the GitHub release");
+    expect(mappingAt(release, keyLine(release, from, to, 8, "with"))).toEqual([
+      "subject-name: ${{ needs.wrapper-build.outputs.wrapper-file-name }}",
+      "subject-digest: ${{ needs.wrapper-build.outputs.wrapper-digest }}",
+      "push-to-registry: false",
+      "create-storage-record: false",
+    ]);
+  });
+
+  it("checks the Wrapper's files against the attested digest before attaching them to its release", () => {
     expect(
-      create.split("\n").filter(line => /^gh\s/u.test(line.trim())),
+      stepEnv("wrapper-assets", "Attach the Wrapper artifact").join(" "),
+    ).toBe(
+      [
+        "GH_TOKEN: ${{ github.token }}",
+        "RELEASE_TAG: ${{ needs.wrapper-build.outputs.release-tag }}",
+        "WRAPPER_DIGEST: ${{ needs.wrapper-build.outputs.wrapper-digest }}",
+        "WRAPPER_FILE_NAME:",
+        "${{ needs.wrapper-build.outputs.wrapper-file-name }}",
+      ].join(" "),
+    );
+    const attach = stepScript("wrapper-assets", "Attach the Wrapper artifact");
+    expect(
+      attach.split("\n").filter(line => /^gh\s/u.test(line.trim())),
     ).toEqual([
-      'gh release create "$RELEASE_TAG" "$WRAPPER_FILE_NAME" "${WRAPPER_FILE_NAME}.sha256" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$RELEASE_TAG" --notes-file "$notes"',
+      'gh release upload "$RELEASE_TAG" "$WRAPPER_FILE_NAME" "${WRAPPER_FILE_NAME}.sha256" --repo "$GITHUB_REPOSITORY"',
     ]);
-    expect(create.indexOf("sha256sum --check --strict")).toBeLessThan(
-      create.indexOf("gh release create"),
+    expect(attach).toContain(
+      '"$(cat "${WRAPPER_FILE_NAME}.sha256")" != "${WRAPPER_DIGEST#sha256:}  ${WRAPPER_FILE_NAME}"',
     );
-  });
-
-  it("runs every git command of the apply, check, and push steps without hooks or an fsmonitor", () => {
-    const calls = [
-      "Apply the version change",
-      "Check what changeset version changed",
-      "Push the changeset-release/main branch",
-    ].flatMap(name => gitCalls(stepScript("version-push", name)));
-    expect(calls).toHaveLength(7);
-    for (const call of calls)
-      expect(call.startsWith(`${SAFE_GIT} `)).toBe(true);
-    expect(calls.filter(call => /\s(?:commit|push)\s/u.test(call))).toEqual([
-      `${SAFE_GIT} -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit --no-verify --quiet --message "chore(release): version packages"`,
-      PUSH,
-    ]);
-  });
-
-  it("passes a token only to the changeset step, the push step, and the two release steps", () => {
-    expect(
-      stepEnv("version-push", "Push the changeset-release/main branch"),
-    ).toEqual(["GITHUB_TOKEN: ${{ github.token }}"]);
-    expect(valuesOf(release, "GITHUB_TOKEN")).toHaveLength(2);
-    expect(valuesOf(release, "GH_TOKEN")).toEqual([
-      "${{ github.token }}",
-      "${{ github.token }}",
-    ]);
-    expect(stepEnv("github-release", "Refuse a release that exists")).toEqual([
-      "GH_TOKEN: ${{ github.token }}",
-      "RELEASE_TAG: ${{ needs.dry-run.outputs.release-tag }}",
-    ]);
-    expect(stepEnv("github-release", "Create the GitHub release")).toContain(
-      "GH_TOKEN: ${{ github.token }}",
+    expect(attach.indexOf("sha256sum --check --strict")).toBeLessThan(
+      attach.indexOf("gh release upload"),
     );
-    expect(release.filter(line => line.text.includes("secrets."))).toEqual([]);
-  });
-
-  it("refuses an existing release, draft or published, before creating one", () => {
-    const names = stepRanges(release, jobRange(release, "github-release")).map(
+    const names = stepRanges(release, jobRange(release, "wrapper-assets")).map(
       ([from, to]) =>
         keyLines(release, from, to, 8, "name").map(index =>
           scalarAt(release, index),
@@ -213,13 +218,63 @@ describe("the release workflow's split", () => {
     expect(names).toEqual([
       [],
       [],
-      ["Refuse a release that exists"],
-      ["Create the GitHub release"],
+      ["Find the Wrapper release"],
+      ["Attach the Wrapper artifact"],
+      ["Add the verify command to the release notes"],
     ]);
-    const guard = stepScript("github-release", "Refuse a release that exists");
-    expect(guard.split("\n").filter(line => /\bgh\s/u.test(line))).toEqual([
-      `matches="$(gh api --paginate "repos/\${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[] | select(.tag_name == env.RELEASE_TAG) | .tag_name')"`,
+  });
+
+  it("creates no tag or branch in a script; only the releases step creates a release, never a tag, and wrapper-assets only uploads and edits the notes", () => {
+    const scripts = STEPPED_JOBS.flatMap(job => runsOf(job));
+    for (const script of scripts) {
+      expect(script).not.toMatch(
+        /\bgit\s+(?:-c\s+\S+\s+)*(?:tag|push|commit)\b|--follow-tags|--mirror/u,
+      );
+      expect(script).not.toMatch(/\bgh\s+release\s+delete\b/u);
+    }
+    const creates = scripts
+      .flatMap(script => script.split("\n"))
+      .map(line => line.trim())
+      .filter(line => /\bgh\s+release\s+create\b/u.test(line));
+    expect(creates).toEqual([
+      'gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag --target "$GITHUB_SHA" --title "$tag" "${prerelease[@]+"${prerelease[@]}"}" --notes-file "$notes"',
     ]);
-    expect(guard.split("\n")[0]).toBe("set -euo pipefail");
+    expect(stepScript("publish", "Create the GitHub releases")).toContain(
+      "gh release create",
+    );
+    expect(
+      scripts
+        .flatMap(script => script.split("\n"))
+        .map(line => line.trim())
+        .filter(line => /\bgh\s+release\s+edit\b/u.test(line)),
+    ).toEqual([
+      'gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$notes"',
+    ]);
+    // Tags are only looked up, read-only, on the public URL.
+    const found = `found="$(${SAFE_GIT} ls-remote --tags "\${GITHUB_SERVER_URL}/\${GITHUB_REPOSITORY}.git" "$tag" |`;
+    expect(lookups("changesets-mode")).toEqual([found]);
+    expect(lookups("publish")).toEqual([
+      found,
+      `refs="$(${SAFE_GIT} ls-remote --tags "\${GITHUB_SERVER_URL}/\${GITHUB_REPOSITORY}.git" "$ref")"`,
+    ]);
+  });
+
+  it("finds the bump merge with one read-only API call", () => {
+    const mode = stepScript(
+      "changesets-mode",
+      "Decide what this push releases",
+    );
+    expect(
+      mode
+        .split("\n")
+        .map(line => line.trim())
+        .filter(line => /\bgh\s/u.test(line)),
+    ).toEqual([
+      `merges="$(gh api --paginate "repos/\${GITHUB_REPOSITORY}/commits/\${GITHUB_SHA}/pulls?per_page=100" --jq '.[] | select(.head.ref == "changeset-release/main" and .head.repo.full_name == env.GITHUB_REPOSITORY and .base.ref == "main" and .merged_at != null and .merge_commit_sha == env.GITHUB_SHA) | .number')"`,
+    ]);
+    expect(mappingAt(release, jobKey("changesets-mode", "outputs"))).toEqual([
+      "pending: ${{ steps.mode.outputs.pending }}",
+      "release-candidate: ${{ steps.mode.outputs.release-candidate }}",
+    ]);
   });
 });

@@ -92,6 +92,15 @@ describe("the Pages headers step", () => {
     expect(result.verifier).toContain(`connect-src 'self' ${placeholder}`);
   });
 
+  it("writes no game headers, and the same Wrapper and verifier headers, with no game site", () => {
+    const withGame = run(REAL, { rpc: RPC_INPUT });
+    const without = run(REAL, { rpc: RPC_INPUT }, { game: false });
+    expect(without.status).toBe(0);
+    expect(without.game).toBeNull();
+    expect(without.wrapper).toBe(withGame.wrapper);
+    expect(without.verifier).toBe(withGame.verifier);
+  });
+
   it("gives the verifier's site the verify page's headers on every path", () => {
     const result = run(REAL, { rpc: RPC_INPUT });
     expect(result.status).toBe(0);

@@ -68,9 +68,10 @@ the attack surface a player cannot see. The rules:
   `uses:` names an Action that is not on the list, is not pinned by a full
   40-character commit SHA, is pinned to another SHA than the list's, or carries
   another version in its trailing comment, and when the list names an Action no
-  workflow uses. Local Actions (`./.github/actions/...`) are exempt. Adding an
-  Action needs a recorded decision; a Dependabot bump changes the table in the
-  same pull request.
+  workflow uses. Local Actions (`./.github/actions/...`) and the repository's
+  own reusable workflows (`./.github/workflows/<name>.yml`, called from a job:
+  the production deploy, ADR-009) are exempt. Adding an Action needs a recorded
+  decision; a Dependabot bump changes the table in the same pull request.
 
   | Action                             | Version | Commit SHA                                 | Decided in |
   | ---------------------------------- | ------- | ------------------------------------------ | ---------- |
@@ -81,6 +82,7 @@ the attack surface a player cannot see. The rules:
   | `actions/upload-artifact`          | v7.0.2  | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` | ADR-005    |
   | `actions/download-artifact`        | v8.0.2  | `9000827ccba6bdab643e8b6fd33ac0654aef8333` | ADR-008    |
   | `actions/attest-build-provenance`  | v4.2.2  | `4d101475d8b20a2381f78447822ac1eab6504dd8` | ADR-005    |
+  | `changesets/action`                | v2.1.2  | `ae32849d5ba541f9ae29e40e22a623bc13562f51` | ADR-009    |
 
   `actions/attest-build-provenance` v4.2.2 is a composite that runs
   `actions/attest` v4.2.1 (`508db95dd578ae2727ebd6217d5ba78e4fbda05d`), pinned
@@ -89,97 +91,106 @@ the attack surface a player cannot see. The rules:
 
 - **Provenance.** Packages are published from GitHub Actions with npm
   provenance, so each version links to the commit and workflow that built it.
-  **Decided, not built yet**
-  ([ADR-009](../../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
-  the human, 2026-10-28): the release workflow moves to `changesets/action` on
-  every push to `main` (a new Action, pinned by SHA on the allow-list), in three
-  jobs, `changesets-mode` and two that each run the action in one mode, with no
-  concurrency group (each push's run is independent and checks out its own
-  commit). The read-only `changesets-mode`, with no repository tooling, decides
-  from the pending changesets and, when the pushed commit is the merge of the
-  bump pull request (`changeset-release/main`) and none is pending, whether a
-  publishable package's `<name>@<version>` has no git tag yet, checked with
-  `git ls-remote --tags`, no registry and no token (a tag is permanent under the
-  tag ruleset): `version` (no environment, `contents: write` and
-  `pull-requests: write`, no `id-token`) opens or updates the bump pull request,
-  and `publish` (environment `release`, `contents: write` and `id-token: write`,
-  no `pull-requests`) publishes only on a release candidate (no changeset
-  pending and an untagged version), after checking again that the versions are
-  still untagged, so its reviewers are asked only for a real release, never for
-  a push whose publishable versions are all tagged (or `0.0.0`); otherwise the
-  run ends with "nothing to release" (or "publishing was off" while
-  `RELEASE_PUBLISH_ENABLED` is not `true`; the recovery is a manual re-run of
-  the bump merge's run within 30 days, which keeps its commit and reads the
-  current variables). The Wrapper is private: it is tagged and released on
-  GitHub, never published to npm, so its git tag is what marks it released.
-  `version`'s `contents: write` could also create tags or a fake Wrapper
-  release; it has no `id-token`, so it cannot attest, and production verifies
-  the tar with `gh attestation verify`. Both run repository tooling with a write
-  token, which supersedes the rule below and the `version`/`version-push` and
-  `build`/`publish` splits; the attestation, the digest checks,
-  `RELEASE_PUBLISH_ENABLED`, and trusted publishing stay. Every published
-  package gets a tag and a GitHub release; the tag ruleset widens to
-  `@intraverse/*@*` (#154). The description below is the workflow as it is
-  today.
-  <!-- TODO(release, #133): rewrite this Provenance description when the workflow implementation lands (ADR-009). -->
+  The release workflow (`.github/workflows/release.yml`;
+  [ADR-009](../../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
+  decided by the human 2026-10-28) runs `changesets/action` on **every push to
+  `main`**, starts with `permissions: {}`, and has **no concurrency group**
+  (GitHub keeps one pending run per group, so a group would let a later push
+  cancel the bump merge's waiting run; each push's run is independent and checks
+  out its own commit). Its jobs:
+  - `changesets-mode` (`contents: read`, `pull-requests: read`; no environment,
+    no secret, no repository tooling: the runner's shell, git, gh, and jq)
+    outputs `pending` (a `.changeset/*.md` other than its `README.md` exists)
+    and `release-candidate`: `true` only when no changeset is pending, the
+    pushed commit is **the bump merge** (a pull request associated with it,
+    `GET /repos/{owner}/{repo}/commits/{sha}/pulls`, has head ref
+    `changeset-release/main` in this repository, base `main`, was merged, and
+    its merge commit is the pushed commit: the repository squash-merges), and at
+    least one of the five libraries and the Wrapper has a version above `0.0.0`
+    whose tag `<name>@<version>` is missing (`git ls-remote --tags` on the
+    public URL; no registry, no token). Otherwise the run ends with a "nothing
+    to release" notice, or "publishing was off" for a release candidate while
+    `RELEASE_PUBLISH_ENABLED` is not `true` (the recovery is a manual re-run of
+    the bump merge's run within 30 days, which keeps its commit and reads the
+    current variables). Any API or git error fails it.
+  - `version` (only when `pending`; no environment; `contents: write`,
+    `pull-requests: write`; no `id-token`) runs the action in version mode with
+    the version script `tools/release-version.sh`: `changeset version`, then the
+    **version-file guard** `tools/release-version-guard.sh` (only a modified
+    `package.json`, an added or modified `CHANGELOG.md`, neither inside
+    `.changeset/` nor under `.github/`, and a changeset deleted directly under
+    `.changeset/`, never its `README.md`, all regular files; a rename counts as
+    a deletion and an addition; a type or mode change or a path with an unusual
+    character is refused; every git command without hooks or an fsmonitor). The
+    guard runs in the same job as the tooling, so it is a sanity check, not an
+    isolation boundary. The action commits the result to
+    `changeset-release/main` through the API and opens or updates the pull
+    request "chore: bump versions", which, made with the job token, gets no CI
+    (accepted).
+  - `publish` (only on a release candidate and with `RELEASE_PUBLISH_ENABLED`
+    `true`; the protected `release` environment; `contents: write`,
+    `id-token: write`; no `pull-requests`) checks out with the tags, checks
+    again that a version is still untagged (otherwise it ends with "already
+    released" and runs nothing else), runs `pnpm check`, requires npm 11.5.1 or
+    later, runs the release dry run, then the action in publish mode
+    (`create-github-releases: false`) with the publish command
+    `tools/release-publish.ts --publish`: it builds without the task cache,
+    packs and checks the five libraries, refuses what is not ready (the publish
+    gate, `tools/release-readiness.ts`: pending changesets, a `private` or 0.0.0
+    library, a Wrapper at 0.0.0, a Wrapper digest other than the dry run's; and
+    the size budget), skips a version the registry already has only when the
+    registry holds the same bytes (`dist.integrity`), publishes the checked
+    tarballs with the npm CLI of the pinned Node
+    (`npm publish <tarball> --provenance --access public --ignore-scripts`; npm
+    trusted publishing exchanges the OIDC token itself; decided by the human,
+    2026-10-28), and then runs `changeset git-tag`, which tags every package
+    whose version has no tag (the Wrapper, which is private and never on npm,
+    and a library a failed run published without its tag). The action pushes
+    those tags through the API on the run's commit and creates no GitHub release
+    (`create-github-releases: false`: v2.1.2 only warns when a tag push fails,
+    and a release created for a missing tag would tag the default branch's head;
+    decided by the human, 2026-10-28). The job's last step requires every tag
+    the action reported to exist on the run's commit (peeled when annotated),
+    failing before any release otherwise, then creates each missing release with
+    `gh release create <tag> --verify-tag --target <commit>`, its notes the
+    package's changelog entry for the version; it also runs when the re-check
+    found everything tagged, so "Re-run failed jobs" on the bump merge's run,
+    within GitHub's 30 days, finishes a partial release (a full re-run runs
+    `changesets-mode` again, which finds every version tagged and ends with
+    "nothing to release", so `publish` never runs; "Re-run failed jobs" keeps
+    its earlier `release-candidate=true`), and it names the Wrapper's tag while
+    its release has no tar attached. Packages that are never released are in the
+    changesets `ignore` list, so none gets a `0.0.0` tag.
+  - `wrapper-build` (`contents: read`; only when `publish` names the Wrapper's
+    tag) runs the release dry run at the run's commit (the Wrapper artifact
+    built twice, one digest required, its name the released version) and uploads
+    the tar and its `.sha256` (`actions/upload-artifact`, one file each, not
+    zipped, kept **14 days**; ADR-005, decision 5).
+  - `attest` (its own environment `attest`; `contents: read`, `id-token: write`,
+    `attestations: write`; no checkout) attests that name and digest with
+    `actions/attest-build-provenance` (`push-to-registry: false`,
+    `create-storage-record: false`; ADR-005, decisions 2 and 3). The attestation
+    is stored on the repository and in the public Sigstore transparency log; it
+    is not a release asset. A dry run never attests.
+  - `wrapper-assets` (`contents: write`; no checkout, no repository code)
+    downloads the tar and its `.sha256`, checks both against the attested
+    digest, requires exactly one release for the Wrapper's tag with neither file
+    attached (it lists every release with `gh api --paginate`, compares each
+    `tag_name` exactly, and an API error fails the step), and attaches them
+    (`gh release upload`). The GitHub release asset is the released Wrapper's
+    durable home (ADR-005) and production's source.
+  - `production` calls `.github/workflows/pages-prod.yml` with the tag (see The
+    Pages deploy, below).
 
-  The release workflow (`.github/workflows/release.yml`) runs by hand only and
-  starts with `permissions: {}`; each job asks for its own. **No job that holds
-  a write token or an OIDC token runs repository tooling** (decided: stripping
-  variables from a child's environment is not isolation, since a process of the
-  same user can read its parent's environment), so the tooling and the
-  credentials sit in different jobs:
-  - `dry-run` (`contents: read`) runs the release dry run, names the release
-    (the tag `@intraverse/se-client-wrapper@<version>`, the form changesets
-    gives a package's tag), and uploads the Wrapper artifact and its `.sha256`
-    (`actions/upload-artifact`, one file each, not zipped, kept **14 days**;
-    ADR-005, decision 5): a copy for review, never the released artifact.
-  - **The publish path** runs only from `main`, only with the `publish` input,
-    and only when the repository variable `RELEASE_PUBLISH_ENABLED` is `true`:
-    - `build` (`contents: read`, no `id-token`, no environment) refuses a
-      release whose tag exists, then runs `tools/release-publish.ts`: it builds
-      without the task cache, packs and checks the five libraries, refuses what
-      is not ready (the publish gate, `tools/release-readiness.ts`: pending
-      changesets, a `private` or 0.0.0 library, a Wrapper at 0.0.0, a missing or
-      different Wrapper digest; and the size budget), skips a version the
-      registry already has only when the registry holds the same bytes
-      (`dist.integrity`), and writes the **publish plan**, one
-      `<sha256>  <tarball>` line per tarball to publish, in dependency order, as
-      the job output `publish-plan`. It uploads the five tarballs, kept one day.
-    - `publish` (the protected `release` environment; `contents: read` and
-      `id-token: write`) runs no repository tooling: a checkout of
-      `.node-version` alone, `actions/setup-node` (the Node, and so the npm, the
-      repository pins), `actions/download-artifact`, a shell step that fails
-      unless `npm --version` is 11.5.1 or later (the first npm with trusted
-      publishing), and a shell step that refuses a plan line of another shape,
-      checks every planned tarball against its SHA-256
-      (`sha256sum --check --strict`), and runs
-      `npm publish <tarball> --provenance --access public --ignore-scripts` for
-      each, in the plan's order. The npm CLI, not pnpm, publishes (decided by
-      the human, 2026-10-28): npm trusted publishing exchanges the job's OIDC
-      token itself.
-    - `attest` (its own environment `attest`; `contents: read`,
-      `id-token: write`, `attestations: write`; no checkout) attests the dry
-      run's Wrapper digest with `actions/attest-build-provenance`
-      (`subject-name` and `subject-digest`, `push-to-registry: false`,
-      `create-storage-record: false`; ADR-005, decisions 2 and 3). The
-      attestation is stored on the repository and in the public Sigstore
-      transparency log; it is not a release asset. A dry run never attests.
-    - `github-release` (`contents: write`; no checkout, no repository code)
-      downloads the dry run's artifact and its `.sha256`, checks both against
-      the attested digest, refuses when a release already exists for the tag
-      (draft or published: it lists every release with `gh api --paginate`,
-      compares each `tag_name` with the tag exactly, and an API error fails the
-      step), and creates the tag (on the dispatched commit) and the GitHub
-      release with the two files attached. The GitHub release asset is the
-      released Wrapper's durable home (ADR-005, accepted 2026-10-28; production
-      deploys this asset, verified by digest and `gh attestation verify`:
-      ADR-009, decided by the human 2026-10-28, not built yet). A tag ruleset on
-      the release tag pattern (`@intraverse/se-client-wrapper@*`; decided by the
-      human, 2026-10-28) blocks updating and deleting those tags for everyone
-      but the org owners and allows creating them, so this job can tag a release
-      and a released tag never moves; `build` refuses a release whose tag
-      exists, so a run never tries to overwrite one.
+  No job holds both the pull-request write and the OIDC token: `version` has no
+  environment and no `id-token`, so the code it runs can never publish or
+  attest; `publish` has no `pull-requests`; and `release` covers `publish`
+  alone. Both run repository tooling with a write token (accepted by ADR-009,
+  superseding ADR-005's rule that no job holding a write or OIDC token runs
+  repository tooling). A tag ruleset on `@intraverse/*@*` (#154; until then
+  `@intraverse/se-client-wrapper@*`) blocks updating and deleting release tags
+  for everyone but the org owners and allows creating them, so a tag reliably
+  marks "released".
 
   **Precondition** (ADR-005, decision 2): every npm trusted publisher of the
   kit's packages, and any other consumer that trusts this repository's OIDC
@@ -189,33 +200,7 @@ the attack surface a player cannot see. The rules:
   check refuses one). The Wrapper bundle is released as one artifact identified
   by its digest (below), with a SHA-256 manifest of every file and a
   build-provenance attestation. The release jobs restore nothing from a cache
-  (the setup action with `cache: "false"`; `publish` uses `actions/setup-node`
-  with `package-manager-cache: false`).
-
-  **The version pull request** (only from `main`, only with the `version` input,
-  after the dry run; neither job holds an OIDC token or names an environment):
-  - `version` (`contents: read`, `pull-requests: read`) runs `changeset version`
-    with the job's own read-only `GITHUB_TOKEN` (for the changelog generator)
-    and uploads everything it changed as one binary patch
-    (`git diff --cached --binary --no-renames`), kept one day.
-  - `version-push` (`contents: write`) runs no repository tooling: it checks out
-    the same commit, applies the patch (`git apply`), refuses to push anything
-    but what `changeset version` writes, as regular files (a modified
-    `package.json`, an added or modified `CHANGELOG.md`, neither inside
-    `.changeset/`, a changeset deleted directly under `.changeset/`, never its
-    `README.md`; a rename counts as a deletion and an addition, and a type or
-    mode change or a path with an unusual character is refused;
-    `tools/release-version-guard.test.ts` runs the step's script against
-    temporary repositories, directly and through the patch), and force-pushes,
-    with every git command of the apply, check, and push steps run without hooks
-    or an fsmonitor (`core.hooksPath=/dev/null`, `core.fsmonitor=false`,
-    `--no-verify`), the result to `changeset-release/main`; a person opens the
-    version pull request, so Actions never open or approve one.
-
-  A run with both inputs fails in its first job. The code `changeset version`
-  loads (changesets, its changelog generator, the formatter, and their
-  dependencies) now holds only a read-only token; the residual risk the human
-  accepted on 2026-10-18 (that code holding `contents: write`) is closed.
+  (the setup action with `cache: "false"`).
 
 - **Credentials.** The publishing credential is never in the repository. The
   packages publish to the `intraverse` npm organization (scope `@intraverse`,
@@ -257,7 +242,26 @@ the attack surface a player cannot see. The rules:
   workflow uses `actions/upload-artifact` and `actions/download-artifact`,
   pinned by full SHA (ADR-008, decision 7). The proxy (`apps/pages-proxy`) has
   no dependency and no import; its upstream origin and path prefixes are
-  variables of each Pages project, never in the repository or CI.
+  variables of each Pages project, never in the repository or CI. **Production**
+  (`.github/workflows/pages-prod.yml`; ADR-009, decision 3) is called by the
+  release workflow's `production` job after a release, or dispatched by hand
+  from `main` with a released tag. `release-check` (`actions: read`) refuses a
+  dispatch while a run of the release workflow is not completed (the release
+  always wins) and resolves the tag's commit; `prod-verify` (`contents: read`,
+  `attestations: read`; no secret, no repository code) downloads the tar and its
+  `.sha256` from the release by tag, checks them, and runs
+  `gh attestation verify` with ADR-005's flags and `--source-digest` the tag's
+  commit; only after it, so the attestation proves the commit before any of its
+  code runs, `prod-worker` (`contents: read`) builds the worker at that commit
+  and `config-prod` builds the configuration in the environment
+  `pages-prod-config`, which holds no deploy credential, closing the staging
+  risk above for production; and `deploy-prod` (environment `pages-prod`, no
+  required reviewer; `contents: read`) runs no repository code, refuses any
+  download whose SHA-256 is not its producing job's digest, and deploys the
+  Wrapper's and the verifier's sites. Only `deploy-prod` is in the concurrency
+  group `pages-prod`. The production project names, token, and account id are
+  secrets of `pages-prod`, the configuration values secrets of
+  `pages-prod-config`; none is written in the repository.
 - **Bundling.** A package's own source is the only thing in its `dist/`; nothing
   from `node_modules` is ever bundled (`deps` in `tsdown.base.ts`). A kit
   package stays an import (`neverBundle` for the `@intraverse/` scope), a

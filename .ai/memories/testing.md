@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-28 (#146 book playback pull request: the resolving placeholder kept out of every consumer that takes vectors as valid Snapshots; 2026-10-27, preview run evidence: the run at the pin, the browser names not yet measured on the job runner; preview mode of the e2e suite pull request, RFC-002: the `preview` project, `preview-support/`, `preview-guard/`, `tools/e2e-preview-*.test.ts`, the reference game plays any `steps` round; verify e2e rows VT-6 to VT-8 pull request: the link, accessibility, and policy and SRI specs, the `verifyPolicy` option; recorded verify rounds pull request: the backend's won and lost rounds in the e2e fake; verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify e2e fake pull request: the fake verify API, the canned rounds, VT-5's rows; verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-28 (#133: the release and production workflow tests of ADR-009; #146 book playback pull request: the resolving placeholder kept out of every consumer that takes vectors as valid Snapshots; 2026-10-27, preview run evidence: the run at the pin, the browser names not yet measured on the job runner; preview mode of the e2e suite pull request, RFC-002: the `preview` project, `preview-support/`, `preview-guard/`, `tools/e2e-preview-*.test.ts`, the reference game plays any `steps` round; verify e2e rows VT-6 to VT-8 pull request: the link, accessibility, and policy and SRI specs, the `verifyPolicy` option; recorded verify rounds pull request: the backend's won and lost rounds in the e2e fake; verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify e2e fake pull request: the fake verify API, the canned rounds, VT-5's rows; verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -387,35 +387,75 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `apps/wrapper/dist/` to `WRAPPER_BUDGET`; the measuring and judging are pure
   (`tools/size-budget.ts`, covered by `tools/size-budget.test.ts`, which also
   keeps the limits equal to the testing spec's list). The release dry run and
-  the release `build` job's `tools/release-publish.ts` call `checkReleaseSize` directly, so a problem is listed
+  the release `publish` job's `tools/release-publish.ts` call `checkReleaseSize` directly, so a problem is listed
   once; an output without `index.html` (an empty `dist/` too) is a problem.
   **Known gap:** nothing tests that the dry-run and release-build CLIs still call
   `checkReleaseSize` (mutants S8a/S8b survive): they are CLI glue, and a test
   would mean a full dry run in `pnpm check`. On `main` the required `build`
-  job runs `check:size-budget` on the same commit; the release `build` job's
+  job runs `check:size-budget` on the same commit; the release `publish` job's
   digest check does not enforce size by itself.
 - **Workflows:** `tools/workflow-text.ts` is a small block-style reader (no
-  YAML parser in the repository). `tools/release-workflow.test.ts` compares
-  `release.yml`'s values whole (every `if:`, exact permissions per job, the
-  job graph, the push refspec, checkouts, pins) and holds the split: only
-  `publish` and `attest` hold `id-token`, only `version-push` and
-  `github-release` hold `contents: write`, and those four jobs use only their
-  listed Actions (never the setup action) and run no package manager, Node,
-  or `tools/` script; it also checks ci.yml's `check:size-budget` step.
-  `tools/release-version-guard.test.ts` extracts the version-push job's guard
-  script and runs it with bash in temporary git repositories (no user or
-  system git configuration), each case twice: directly, and through the
-  version job's export script and the version-push job's apply script.
-  The tests that run a release.yml step's script use
+  YAML parser in the repository); `tools/release-workflow-lines.ts` reads
+  `release.yml` and `pages-prod.yml` and shares helpers.
+  `tools/release-workflow.test.ts` compares `release.yml`'s layout whole (the
+  push trigger, no concurrency group, every job `if:`, exact permissions per
+  job, no job with both the pull-request write and the OIDC token, the
+  environments, the job graph, checkouts, the `production` call and its
+  permissions equal to what `pages-prod.yml`'s jobs ask, every `run:` step of
+  both workflows `shell: bash` with `set -euo pipefail` first, the publish
+  re-check first and every later publish step gated on it); it also checks
+  ci.yml's `check:size-budget` step. `tools/release-workflow-split.test.ts`
+  holds what each job runs (no repository tooling in `changesets-mode`,
+  `attest`, `wrapper-assets`; the action's inputs; who gets the job token; the
+  14-day uploads; the attest inputs; digest checks before `gh release upload`;
+  no script tags, pushes, or creates a release). `tools/release-mode.test.ts`
+  runs `changesets-mode`'s decision, `publish`'s tag re-check, and the Wrapper
+  release name with stub `gh` (jq on the pull requests) and `git` (ls-remote
+  with git's tail matching): pending changesets, the squash-merge detection
+  (fork, deleted head repository, other head, base, unmerged, other merge
+  commit), 0.0.0, lightweight and annotated tags, exact tag comparison, the
+  "nothing to release" and "publishing was off" notices, and API and git
+  errors failing (shared checkout and stubs:
+  `tools/fixtures/release-mode-checkout.ts`, refs with per-ref commits, a
+  test's own `gh`). `tools/release-publish-steps.test.ts` runs `publish`'s tag
+  re-check. `tools/release-github-releases.test.ts` runs `publish`'s "Create
+  the GitHub releases": a tag on another commit or a missing tag fails with no
+  release, an annotated tag is peeled, existing releases are skipped and the
+  rest created, every create passes `--verify-tag` and `--target`, the notes
+  are the version's CHANGELOG section (a heading inside a code fence is not a
+  section), a prerelease gets `--prerelease`, `wrapper-tag` only while the
+  Wrapper's release has no tar, and the step's place after the action.
+  `tools/release-publish-run.test.ts` runs the `--publish` path of
+  `tools/release-publish.ts` (moved to the pure `tools/release-publish-run.ts`
+  with an injected runner): exact npm argv, only planned tarballs in plan
+  order, every tarball checked against the plan's SHA-256 before any publish,
+  the first failure stops it, and `pnpm exec changeset git-tag` last with the
+  same env (CHANGESETS_OUTPUT). `tools/release-notes-step.test.ts` runs
+  `wrapper-assets`' notes step (after the upload, appends to the changelog,
+  exact tag, a failing `gh` fails). `tools/workflow-shell.test.ts` holds every
+  `run:` step of `release.yml` and `pages-prod.yml` to `shell: bash` with
+  `set -euo pipefail` first. `tools/release-version-guard.test.ts` runs
+  `tools/release-version-guard.sh` with bash in temporary git repositories (no
+  user or system git configuration) and checks the index is left unstaged.
+  The tests that run a workflow step's script use
   `tools/fixtures/workflow-step.ts`, which runs it as Actions runs
   `shell: bash` (`bash --noprofile --norc -eo pipefail`): a test without `-e`
   once missed a step that failed in Actions.
-  `tools/release-github-release-guard.test.ts` runs the github-release
-  job's existing-release step with a stub `gh` that serves pages of releases
-  through jq (no match goes on; a draft, a published release, or a match on a
-  later page refuses; an API error fails).
+  `tools/release-assets-guard.test.ts` runs the wrapper-assets job's release
+  guard with a stub `gh` serving pages of releases through jq (exactly one
+  release with the tag and neither file goes on; files already attached, no
+  release, two releases across pages, or an API error refuse).
   `tools/release-npm-version.test.ts` runs the publish job's npm version
   step with a stub `npm` (11.5.1 and later pass, older and malformed fail).
+  `tools/pages-prod-workflow.test.ts` checks `pages-prod.yml` (triggers, jobs,
+  `prod-worker` and `config-prod` needing `prod-verify`, permissions, environments, `pages-prod` concurrency on `deploy-prod` only,
+  secrets, no production value written, staging's worker and headers scripts
+  reused verbatim, digest checks); `tools/pages-prod-scripts.test.ts` runs
+  `release-check` (refusal while a
+  release run is requested, queued, pending, waiting, or in progress; tag shape;
+  peeled commit; the call path's commit check) and `prod-verify` (the
+  `.sha256` name and bytes, `gh attestation verify` arguments, a failed
+  verification) with stubs.
   `tools/actions-allow-list.test.ts` holds every `uses:` under `.github/` to
   the Actions allow-list table in `specs/client-kit/supply-chain.md`. `tools/pages-workflow.test.ts` checks
   `pages.yml` (gates, permissions, the `pages-stage` environment, the project

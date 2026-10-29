@@ -1,0 +1,592 @@
+name: Pages production
+
+# Deploys a released Wrapper to production (ADR-009, decision 3;
+# runbook/client-kit-release.md, Deploy to Cloudflare Pages): the Wrapper's
+# site and the verifier's site, each with the same-origin API proxy
+# (apps/pages-proxy) as its `_worker.js` and its own `environment-config.json`,
+# as on staging (pages.yml). Production serves no reference game; it frames the
+# real game origins.
+#
+# Two entry points, one set of jobs:
+#   - the release workflow (release.yml, job `production`) calls it after the
+#     Wrapper's release has its assets, with the new tag, in the same run (a
+#     tag or a release made with the job token starts no other workflow);
+#   - a person dispatches it from `main` with a released tag, to redeploy that
+#     release, or to roll back or forward to another one. The release always
+#     wins: a dispatch refuses while a run of the release workflow is queued,
+#     waiting, or in progress (`release-check`), so it never replaces a
+#     release's pending deploy. A Pages rollback is never blocked by this.
+#
+#   - `release-check` (`actions: read`; no checkout, no secret) checks the tag's
+#     shape, refuses a dispatch while a release run is not completed, and
+#     resolves the tag's commit with `git ls-remote` (when called by the
+#     release, it must be the release's own commit);
+#   - `prod-verify` (`contents: read`, `attestations: read`; no checkout, no
+#     secret, no repository code) downloads the tar and its `.sha256` from the
+#     Wrapper's GitHub release by tag, checks that the `.sha256` names the tar
+#     and matches it, and runs `gh attestation verify` with ADR-005's flags and
+#     `--source-digest` the tag's commit;
+#   - `prod-worker` (`contents: read`, no secret), only after `prod-verify`,
+#     so the attestation proves the tag's commit before any of its code runs,
+#     builds the proxy worker with `tsc` at that commit, as staging does (not
+#     attested);
+#   - `config-prod` (environment `pages-prod-config`, which holds no deploy
+#     credential; `contents: read`), also only after `prod-verify`, builds and
+#     validates the two sites' configuration documents from that
+#     environment's values at the tag's commit;
+#   - `deploy-prod` (environment `pages-prod`, no required reviewer: the
+#     `release` approval of `publish` is the human gate; `contents: read`, for
+#     the lockfile that pins wrangler) runs no repository code: it refuses any
+#     download whose SHA-256 is not the digest its producing job output, lays
+#     out the two sites as on staging, and uploads them with wrangler.
+#
+# Only `deploy-prod` is in the concurrency group `pages-prod`, never
+# cancelled: production deploys never overlap; the other jobs are in no group,
+# since jobs of one run in one group would cancel each other's pending jobs.
+# The production values are the infrastructure owner's (#133): the project
+# names, the token, and the account id are secrets of `pages-prod`, and the
+# configuration values secrets of `pages-prod-config`, never written here. Both
+# environments must exist, protected, before publishing is turned on (a run
+# that names an environment that does not exist creates it unprotected).
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: The Wrapper release to deploy, by its tag
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description:
+          The Wrapper release to deploy, by its tag
+          (@intraverse/se-client-wrapper@<version>)
+        type: string
+        required: true
+
+# No job gets a token unless it asks for one below.
+permissions: {}
+
+env:
+  # No task cache (#53).
+  WIREIT_CACHE: none
+
+jobs:
+  # tools/pages-prod-workflow.test.ts runs this job's script.
+  release-check:
+    name: release-check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # The release workflow's runs, read for a dispatch only.
+      actions: read
+    outputs:
+      tag: ${{ steps.check.outputs.tag }}
+      commit: ${{ steps.check.outputs.commit }}
+    steps:
+      # Every run of the release workflow that is not completed (requested,
+      # queued, pending, waiting for a reviewer, or in progress) refuses a
+      # dispatch. Any API or git error fails the step, so an error is never
+      # read as "no release run" or "no tag".
+      - name: Check the release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! [[ $RELEASE_TAG =~ ^@intraverse/se-client-wrapper@[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Not a Wrapper release tag: ${RELEASE_TAG}"
+            exit 1
+          fi
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
+            busy=0
+            for status in requested queued pending waiting in_progress; do
+              count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/runs?status=${status}&per_page=1" --jq '.total_count')"
+              if [ "$count" != 0 ]; then
+                echo "::error::A release run is ${status}: the release always wins; dispatch again once it has finished, or roll back in Pages (runbook/client-kit-release.md, Roll back or deprecate)."
+                busy=1
+              fi
+            done
+            if [ "$busy" -ne 0 ]; then
+              exit 1
+            fi
+          fi
+          ref="refs/tags/${RELEASE_TAG}"
+          refs="$(git -c core.hooksPath=/dev/null -c core.fsmonitor=false ls-remote --tags \
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "$ref")"
+          commit="$(awk -v ref="$ref" '$2 == ref "^{}" { print $1 }' <<< "$refs")"
+          if [ -z "$commit" ]; then
+            commit="$(awk -v ref="$ref" '$2 == ref { print $1 }' <<< "$refs")"
+          fi
+          if ! [[ $commit =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::No tag ${RELEASE_TAG}."
+            exit 1
+          fi
+          if [ "$EVENT_NAME" != workflow_dispatch ] && [ "$commit" != "$GITHUB_SHA" ]; then
+            echo "::error::The tag ${RELEASE_TAG} is not on this run's commit."
+            exit 1
+          fi
+          {
+            echo "tag=${RELEASE_TAG}"
+            echo "commit=${commit}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Deploying ${RELEASE_TAG}, ${commit}."
+
+  # tools/pages-prod-workflow.test.ts runs this job's script.
+  prod-verify:
+    name: prod-verify
+    needs: release-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # The release's assets.
+      contents: read
+      # The attestation, for `gh attestation verify`.
+      attestations: read
+    outputs:
+      wrapper-digest: ${{ steps.verify.outputs.wrapper-digest }}
+      wrapper-file-name: ${{ steps.verify.outputs.wrapper-file-name }}
+    steps:
+      - name: Download and verify the release
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release-check.outputs.tag }}
+          COMMIT: ${{ needs.release-check.outputs.commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="se-client-wrapper-${RELEASE_TAG#@intraverse/se-client-wrapper@}.tar"
+          if ! [[ $name =~ ^se-client-wrapper-[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?\.tar$ ]]; then
+            echo "::error::Not a Wrapper release tag: ${RELEASE_TAG}"
+            exit 1
+          fi
+          mkdir "$RUNNER_TEMP/release"
+          cd "$RUNNER_TEMP/release"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "$name" --pattern "${name}.sha256"
+          line="$(cat "${name}.sha256")"
+          if ! [[ $line =~ ^([0-9a-f]{64})\ \ (.+)$ ]] || [ "${BASH_REMATCH[2]}" != "$name" ]; then
+            echo "::error::${name}.sha256 does not name ${name}."
+            exit 1
+          fi
+          digest="sha256:${BASH_REMATCH[1]}"
+          sha256sum --check --strict "${name}.sha256"
+          gh attestation verify "$name" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "${GITHUB_REPOSITORY}/.github/workflows/release.yml" \
+            --source-ref refs/heads/main \
+            --source-digest "$COMMIT" \
+            --deny-self-hosted-runners
+          {
+            echo "wrapper-digest=${digest}"
+            echo "wrapper-file-name=${name}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Verified ${name}, ${digest}, attested from ${COMMIT}." >> "$GITHUB_STEP_SUMMARY"
+
+  prod-worker:
+    name: prod-worker
+    # After prod-verify: the attestation proves the tag's commit before any
+    # of its code runs.
+    needs: [release-check, prod-verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      worker-digest: ${{ steps.worker.outputs.worker-digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.release-check.outputs.commit }}
+      # No cache: no wireit helper and no pnpm store restore in a deploy build.
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      # The proxy worker, exactly as staging builds it (pages.yml).
+      - name: Build the API proxy worker
+        id: worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec tsc -p apps/pages-proxy/tsconfig.build.json \
+            --sourceMap false --outDir "$RUNNER_TEMP/pages-proxy"
+          mkdir "$RUNNER_TEMP/pages-worker"
+          cp "$RUNNER_TEMP/pages-proxy/worker.js" "$RUNNER_TEMP/pages-worker/_worker.js"
+          digest="sha256:$(sha256sum "$RUNNER_TEMP/pages-worker/_worker.js" | cut -d ' ' -f 1)"
+          echo "worker-digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "API proxy worker: ${digest}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/pages-worker/_worker.js
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+  # Repository code (the Wrapper's validator, through tsx) in a configuration
+  # environment that holds no deploy credential (ADR-008, Risks accepted). The
+  # two documents are public once deployed; the upload is kept one day.
+  config-prod:
+    name: config-prod
+    # After prod-verify: the attestation proves the tag's commit before any
+    # of its code runs.
+    needs: [release-check, prod-verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: pages-prod-config
+    permissions:
+      contents: read
+    outputs:
+      wrapper-config-digest: ${{ steps.config.outputs.wrapper-config-digest }}
+      verifier-config-digest: ${{ steps.config.outputs.verifier-config-digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.release-check.outputs.commit }}
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      # The validator imports the shell, through its built entry point.
+      - name: Build the shell
+        shell: bash
+        run: pnpm --filter @intraverse/se-client-shell run build
+      - name: Build and validate the configuration documents
+        id: config
+        env:
+          PAGES_WRAPPER_ORIGIN: ${{ secrets.PAGES_WRAPPER_ORIGIN }}
+          PAGES_VERIFIER_ORIGIN: ${{ secrets.PAGES_VERIFIER_ORIGIN }}
+          PAGES_CHAIN_PINS: ${{ secrets.PAGES_CHAIN_PINS }}
+          PAGES_RPC_ENDPOINTS: ${{ secrets.PAGES_RPC_ENDPOINTS }}
+          PAGES_RPC_ORIGINS: ${{ secrets.PAGES_RPC_ORIGINS }}
+          PAGES_GAME_ORIGINS: ${{ secrets.PAGES_GAME_ORIGINS }}
+          PAGES_OPERATOR_ORIGINS: ${{ secrets.PAGES_OPERATOR_ORIGINS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/pages-config"
+          pnpm exec tsx apps/wrapper/pages-config-cli.ts --out "$out"
+          for site in wrapper verifier; do
+            digest="sha256:$(sha256sum "$out/${site}-environment-config.json" | cut -d ' ' -f 1)"
+            echo "${site}-config-digest=${digest}" >> "$GITHUB_OUTPUT"
+            echo "${site} configuration document: ${digest}"
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/pages-config/wrapper-environment-config.json
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/pages-config/verifier-environment-config.json
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy-prod:
+    name: deploy-prod
+    needs: [release-check, prod-verify, prod-worker, config-prod]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: pages-prod
+    # Production deploys never overlap and are never cancelled half-way.
+    concurrency:
+      group: pages-prod
+      cancel-in-progress: false
+    permissions:
+      # The checkout, for the lockfile that pins wrangler, and the release's
+      # assets. Nothing else.
+      contents: read
+    steps:
+      # Fails at once, by name, when a setting is missing; prints no value.
+      # All are secrets, so the logs mask them.
+      - name: Require the Pages settings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRAPPER_PROJECT: ${{ secrets.PAGES_WRAPPER_PROJECT }}
+          VERIFIER_PROJECT: ${{ secrets.PAGES_VERIFIER_PROJECT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID WRAPPER_PROJECT VERIFIER_PROJECT; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::The pages-prod environment has no ${name} (runbook/client-kit-release.md, Deploy to Cloudflare Pages)."
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.release-check.outputs.commit }}
+      # The lockfile's dependencies, with lifecycle scripts off and no cache.
+      # Nothing from the repository runs after this: no build, no tools/
+      # script; only wrangler, from the lockfile, below.
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: _worker.js
+          path: ${{ runner.temp }}/download
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: wrapper-environment-config.json
+          path: ${{ runner.temp }}/download
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: verifier-environment-config.json
+          path: ${{ runner.temp }}/download
+      # The tar `prod-verify` verified, downloaded again from the release by
+      # tag and checked against that job's digest below.
+      - name: Download the Wrapper release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release-check.outputs.tag }}
+          WRAPPER_FILE_NAME: ${{ needs.prod-verify.outputs.wrapper-file-name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! [[ $WRAPPER_FILE_NAME =~ ^se-client-wrapper-[A-Za-z0-9.+-]+\.tar$ ]]; then
+            echo "::error::Unexpected Wrapper artifact name."
+            exit 1
+          fi
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "$WRAPPER_FILE_NAME" --dir "$RUNNER_TEMP/download"
+      # The same bytes the producing jobs reported (their digests): the
+      # Wrapper's tar, `prod-verify`'s. The Wrapper's site is the tar unpacked
+      # unchanged; the verifier's site is its `verify/` directory, plus a copy
+      # of its page at the root, as on staging. No game site.
+      - name: Check and unpack the artifacts
+        env:
+          WRAPPER_DIGEST: ${{ needs.prod-verify.outputs.wrapper-digest }}
+          WRAPPER_FILE_NAME: ${{ needs.prod-verify.outputs.wrapper-file-name }}
+          WORKER_DIGEST: ${{ needs.prod-worker.outputs.worker-digest }}
+          WRAPPER_CONFIG_DIGEST:
+            ${{ needs.config-prod.outputs.wrapper-config-digest }}
+          VERIFIER_CONFIG_DIGEST:
+            ${{ needs.config-prod.outputs.verifier-config-digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          download="$RUNNER_TEMP/download"
+          archive="$download/$WRAPPER_FILE_NAME"
+          worker="$download/_worker.js"
+          for pair in "${WRAPPER_FILE_NAME}:$WRAPPER_DIGEST" \
+            "_worker.js:$WORKER_DIGEST" \
+            "wrapper-environment-config.json:$WRAPPER_CONFIG_DIGEST" \
+            "verifier-environment-config.json:$VERIFIER_CONFIG_DIGEST"; do
+            file="${pair%%:*}"
+            expected="${pair#*:}"
+            if ! [[ $expected =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::No digest for ${file}."
+              exit 1
+            fi
+            if [ "sha256:$(sha256sum "$download/$file" | cut -d ' ' -f 1)" != "$expected" ]; then
+              echo "::error::The downloaded ${file} is not the one its job checked."
+              exit 1
+            fi
+          done
+          wrapper="$RUNNER_TEMP/sites/wrapper"
+          verifier="$RUNNER_TEMP/sites/verifier"
+          mkdir -p "$wrapper" "$verifier"
+          tar -x --no-same-owner --no-same-permissions -f "$archive" -C "$wrapper"
+          if [ ! -f "$wrapper/verify/index.html" ]; then
+            echo "::error::The Wrapper artifact has no verify/index.html."
+            exit 1
+          fi
+          cp -R "$wrapper/verify" "$verifier/verify"
+          cp "$wrapper/verify/index.html" "$verifier/index.html"
+          for site in "$wrapper" "$verifier"; do
+            for file in _worker.js _routes.json environment-config.json; do
+              if [ -e "$site/$file" ]; then
+                echo "::error::The Wrapper artifact already has a ${file}."
+                exit 1
+              fi
+            done
+            cp "$worker" "$site/_worker.js"
+          done
+          cp "$download/wrapper-environment-config.json" "$wrapper/environment-config.json"
+          cp "$download/verifier-environment-config.json" "$verifier/environment-config.json"
+          printf '%s\n' '{"version":1,"include":["/play/v1/*","/verify/v1/*"],"exclude":[]}' \
+            > "$wrapper/_routes.json"
+          printf '%s\n' '{"version":1,"include":["/verify/v1/*"],"exclude":[]}' \
+            > "$verifier/_routes.json"
+          echo "Deploying ${WRAPPER_FILE_NAME}, ${WRAPPER_DIGEST}, and the API proxy worker, ${WORKER_DIGEST}." \
+            >> "$GITHUB_STEP_SUMMARY"
+      # The same script as staging's (pages.yml); with no game site, it
+      # writes the Wrapper's and the verifier's `_headers` only.
+      # tools/pages-prod-workflow.test.ts checks that the two are equal.
+      - name: Write the Pages headers files
+        env:
+          SITES: ${{ runner.temp }}/sites
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -f
+          headers_json="$SITES/wrapper/headers.json"
+          config="$SITES/wrapper/environment-config.json"
+          if [ ! -f "$config" ]; then
+            echo "::error::The Wrapper's site has no environment-config.json."
+            exit 1
+          fi
+          if [ ! -f "$headers_json" ]; then
+            echo "::error::The Wrapper artifact has no headers.json."
+            exit 1
+          fi
+          if ! jq --exit-status '
+            type == "object"
+            and all(.[]; type == "object" and all(.[]; type == "string"))
+            and ([.. | strings, (objects | keys[])]
+              | all(test("[[:cntrl:]]") | not))
+            and has("/verify/*")
+            ' "$headers_json" > /dev/null; then
+            echo "::error::headers.json is not path patterns of one-line string headers with a /verify/* rule."
+            exit 1
+          fi
+          origin='^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:[0-9]{1,5})?$'
+          # $1: the list's name; $2: its entries; $3: what an empty list is.
+          source_list() {
+            local name="$1" entries="" entry
+            for entry in $2; do
+              if ! [[ $entry =~ $origin ]]; then
+                echo "::error::${name} holds an entry that is not an https origin." >&2
+                return 1
+              fi
+              entries="${entries}${entry}"$'\n'
+            done
+            if [ -z "$entries" ]; then
+              printf "%s" "$3"
+            else
+              printf "%s" "$entries" | LC_ALL=C sort -u | paste -s -d ' ' -
+            fi
+          }
+          # The origin of each endpoint URL: its scheme and authority.
+          rpc_origins="$(jq --raw-output '
+            [.rpcEndpoints[][].url | capture("^(?<o>[a-z]+://[^/?#]+)").o]
+            | join(" ")' "$config")"
+          game_origins="$(jq --raw-output '.gameOrigins | join(" ")' "$config")"
+          operator_origins="$(jq --raw-output '.operatorOrigins | join(" ")' "$config")"
+          # An empty `connect-src` list leaves `'self'` alone; an empty frame or
+          # ancestor list is `'none'`.
+          connect="$(source_list rpcEndpoints "$rpc_origins" "")"
+          game="$(source_list gameOrigins "$game_origins" "'none'")"
+          ancestors="$(source_list operatorOrigins "$operator_origins" "'none'")"
+          # The Wrapper's origin, for the game's `frame-ancestors`: the origin
+          # of the validated document's `playApiBaseUrl` (the Wrapper's origin
+          # plus `/play/v1`).
+          wrapper_origin="$(jq --raw-output '
+            (.playApiBaseUrl | strings | capture("^(?<o>[^/]+//[^/?#]+)/play/v1$").o)
+            // ""' "$config")"
+          if ! [[ $wrapper_origin =~ $origin ]]; then
+            echo "::error::The Wrapper's configuration document has no Wrapper origin."
+            exit 1
+          fi
+          # The game's ancestors: the Wrapper and, since `frame-ancestors`
+          # checks every ancestor (operator, Wrapper, game), the operator
+          # origins; the Wrapper alone when there are none (never `'none'`
+          # beside an origin).
+          if [ "$ancestors" = "'none'" ]; then
+            game_ancestors="$wrapper_origin"
+          else
+            game_ancestors="$wrapper_origin $ancestors"
+          fi
+          # The reference game's own `<meta>` policy, plus `frame-ancestors`.
+          game_csp="default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors ${game_ancestors}"
+          # $1: a jq filter from headers.json to the site's rules; $2: the file.
+          write_headers() {
+            local target="$2"
+            if [ -e "$target" ]; then
+              echo "::error::The site already has a _headers file."
+              exit 1
+            fi
+            jq --arg gameCsp "$game_csp" "$1" "$headers_json" | jq --raw-output \
+              --arg connect "$connect" --arg game "$game" --arg ancestors "$ancestors" '
+              def fill:
+                gsub(" ?\\{\\{connectOrigins\\}\\}"; if $connect == "" then "" else " " + $connect end)
+                | gsub(" ?\\{\\{verifyConnectOrigins\\}\\}"; if $connect == "" then "" else " " + $connect end)
+                | gsub("\\{\\{gameOrigins\\}\\}"; $game)
+                | gsub("\\{\\{operatorOrigins\\}\\}"; $ancestors);
+              to_entries as $rules
+              | range(0; $rules | length) as $i
+              | $rules[$i] as $rule
+              | $rule.key,
+                ([$rules[0:$i][]
+                  | select(.key | endswith("*"))
+                  | select(.key[0:-1] as $prefix | $rule.key | startswith($prefix))
+                  | .value | keys[]] | unique[] | "  ! \(.)"),
+                ($rule.value | to_entries[] | "  \(.key): \(.value | fill)")
+              ' > "$target"
+            if grep -q '{{' "$target"; then
+              echo "::error::headers.json has a placeholder this step does not fill."
+              exit 1
+            fi
+            if LC_ALL=C grep -qvE '^(/[^[:space:]]*|  ! [A-Za-z-]+|  [A-Za-z-]+: [^[:cntrl:]]+)$' "$target"; then
+              echo "::error::A _headers file has a line Pages would not read as intended."
+              exit 1
+            fi
+            if LC_ALL=C awk 'length($0) > 2000 { found = 1 } END { exit !found }' "$target"; then
+              echo "::error::A _headers line is over the Pages limit of 2000 characters."
+              exit 1
+            fi
+            echo "Wrote $target: $(grep -c '^/' "$target") rules."
+          }
+          write_headers '.' "$SITES/wrapper/_headers"
+          write_headers '{"/*": .["/verify/*"]}' "$SITES/verifier/_headers"
+          # The game's site, where there is one (staging; production serves
+          # no game, and pages-prod.yml runs this same script). The game's
+          # `Permissions-Policy` is the Wrapper's own, from its `/*` rule, so
+          # the two cannot drift.
+          if [ -d "$SITES/game" ]; then
+            if ! jq --exit-status '.["/*"]["Permissions-Policy"] | type == "string"' \
+              "$headers_json" > /dev/null; then
+              echo "::error::headers.json has no Permissions-Policy in its /* rule."
+              exit 1
+            fi
+            write_headers '{"/*": {
+                "Content-Security-Policy": $gameCsp,
+                "Permissions-Policy": .["/*"]["Permissions-Policy"],
+                "Referrer-Policy": "no-referrer",
+                "X-Content-Type-Options": "nosniff"
+              }}' "$SITES/game/_headers"
+          fi
+      # From an empty working directory, so wrangler reads no configuration,
+      # .env file, or functions/ directory of the repository. `--no-bundle`:
+      # the worker is uploaded as `prod-worker` made it. No metrics.
+      - name: Deploy to Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRAPPER_PROJECT: ${{ secrets.PAGES_WRAPPER_PROJECT }}
+          VERIFIER_PROJECT: ${{ secrets.PAGES_VERIFIER_PROJECT }}
+          RELEASE_TAG: ${{ needs.release-check.outputs.tag }}
+          COMMIT: ${{ needs.release-check.outputs.commit }}
+          WRANGLER_SEND_METRICS: "false"
+        shell: bash
+        run: |
+          set -euo pipefail
+          workdir="$(mktemp -d)"
+          mv "$RUNNER_TEMP/sites/wrapper" "$workdir/wrapper"
+          mv "$RUNNER_TEMP/sites/verifier" "$workdir/verifier"
+          cd "$workdir"
+          for site in wrapper verifier; do
+            case "$site" in
+              wrapper) project="$WRAPPER_PROJECT" ;;
+              verifier) project="$VERIFIER_PROJECT" ;;
+            esac
+            "$GITHUB_WORKSPACE/node_modules/.bin/wrangler" pages deploy "$site" \
+              --project-name "$project" \
+              --no-bundle \
+              --branch main \
+              --commit-hash "$COMMIT" \
+              --commit-message "$RELEASE_TAG" \
+              --commit-dirty=false
+          done

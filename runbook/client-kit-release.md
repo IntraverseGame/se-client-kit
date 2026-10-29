@@ -66,36 +66,35 @@ org owners apply the settings; ask them for each.
 2. **The `main` ruleset** (in place; decided by the org owners, 2026-10-27): a
    pull request is required, with review from code owners and every review
    thread resolved; stale approvals are dismissed when new commits are pushed
-   (the `version-push` job force-pushes its branch, so an approval must not
-   outlive the commit it saw); force-pushes and deletion are blocked. Decided
-   deliberately: the required approval count is 0 (the code owner's approval is
-   the required review), no status check is required (keep `ci-ok` green before
-   merging; the ruleset does not enforce it), and organization admins and
-   repository admins may bypass the ruleset. GitHub never lets an author approve
-   their own pull request, and there is one code owner, so a pull request the
-   code owner authors merges only through the repository-admin bypass. Also a
-   **tag ruleset** on the release tag pattern
-   (`@intraverse/se-client-wrapper@*`; decided by the human, 2026-10-28): it
-   blocks updating and deleting those tags for everyone but the org owners, so a
-   released tag never moves, and it allows creating them, so the release
-   workflow's `github-release` job tags each release with the job's own token
-   (Release, step 3). The `build` job refuses a release whose tag exists, so a
-   run never tries to overwrite one. No job that runs repository tooling holds a
-   write token. With ADR-009's release flow (decided, not built) every published
-   package is tagged, so the pattern widens to `@intraverse/*@*` (decided by the
-   human, 2026-10-28), and the `version` and `publish` jobs, which run
-   repository tooling, hold `contents: write`.
+   (the `version` job force-pushes `changeset-release/main`, so an approval must
+   not outlive the commit it saw); force-pushes and deletion are blocked.
+   Decided deliberately: the required approval count is 0 (the code owner's
+   approval is the required review), no status check is required (keep `ci-ok`
+   green before merging; the ruleset does not enforce it), and organization
+   admins and repository admins may bypass the ruleset. GitHub never lets an
+   author approve their own pull request, and there is one code owner, so a pull
+   request the code owner authors merges only through the repository-admin
+   bypass. Also a **tag ruleset** on the release tag pattern
+   **`@intraverse/*@*`** (ADR-009; decided by the human, 2026-10-28; until #154
+   it covers `@intraverse/se-client-wrapper@*`): it blocks updating and deleting
+   those tags for everyone but the org owners, so a released tag never moves and
+   a tag reliably marks "released", and it allows creating them, so the release
+   workflow's `publish` job (through `changesets/action`) tags each released
+   package with the job's own token (Release, step 3). `changesets-mode` and
+   `publish` read the tags before releasing, so a run never tries to overwrite
+   one. The `version` and `publish` jobs run repository tooling and hold
+   `contents: write` (accepted by ADR-009).
    <!-- TODO(org owners, #154): create the tag ruleset above, on `@intraverse/*@*` (ADR-009); needed before the first real publish. -->
 3. **Secret scanning and push protection** on (they are). Dependabot alerts and
    security updates on. **Private vulnerability reporting** on, so a reporter
    can open a private advisory from the Security tab
    ([SECURITY.md](../SECURITY.md)).
-4. **Actions settings:** read-only default workflow token; Actions may not
-   create or approve pull requests; first-time and outside contributors'
-   workflows need approval (GitHub's "Fork pull request workflows" setting).
-   With ADR-009's release flow (decided, not built), `changesets/action` opens
-   the bump pull request, so the repository setting "Allow GitHub Actions to
-   create and approve pull requests" is turned on. The job token can then
+4. **Actions settings:** read-only default workflow token; first-time and
+   outside contributors' workflows need approval (GitHub's "Fork pull request
+   workflows" setting). The release workflow's `version` job opens the bump pull
+   request with `changesets/action` (ADR-009), so the repository setting "Allow
+   GitHub Actions to create and approve pull requests" is turned on; until it
+   is, `version` fails when it opens the pull request. The job token can then
    approve a pull request, but a `github-actions[bot]` approval is not a code
    owner's approval, so the `main` ruleset still holds; an org owner confirms
    it.
@@ -115,10 +114,12 @@ org owners apply the settings; ask them for each.
    anywhere. Trusted publishing is configured per package on npmjs.com, for each
    of the five packages, trusting this repository, the workflow `release.yml`,
    and the environment `release` (the environment is required: ADR-005's
-   precondition). The workflow's `publish` job publishes with the npm CLI that
-   comes with the pinned Node (decided by the human, 2026-10-28), which
-   exchanges the OIDC token itself; trusted publishing needs npm 11.5.1 or
-   later.
+   precondition). The workflow's `publish` job publishes through its publish
+   command (`tools/release-publish.ts --publish`, run by `changesets/action`)
+   with the npm CLI that comes with the pinned Node (decided by the human,
+   2026-10-28), which exchanges the OIDC token itself; trusted publishing needs
+   npm 11.5.1 or later. The workflow file keeps its name, `release.yml`: a
+   rename changes every trusted publisher and ADR-005's `--signer-workflow`.
    <!-- TODO(org owners, #154): configure the npm trusted publisher of each of the five packages (repository, `release.yml`, environment `release`). -->
 7. **The attestation environment `attest` and the OIDC precondition**
    ([ADR-005](../decisions/ADR-005-release-attestation-and-artifact-upload.md),
@@ -137,12 +138,17 @@ org owners apply the settings; ask them for each.
    publishers exist:
    - a reviewed pull request removes `"private": true` from the five libraries'
      `package.json` and the "not published to npm yet" line from their READMEs
-     (the `build` job refuses a private package);
+     (the publish command refuses a private package);
    - an org owner sets the repository **variable** (not a secret)
      `RELEASE_PUBLISH_ENABLED` to `true`. Until it is `true`, the workflow's
-     `build`, `publish`, `attest`, and `github-release` jobs are skipped, and
-     neither the `release` nor the `attest` environment is named by a run.
-     Setting it back to anything else turns publishing off again;
+     `publish` job and every job after it are skipped, and neither the `release`
+     nor the `attest` environment, nor the production environments, is named by
+     a run. Setting it back to anything else turns publishing off again. Do not
+     merge a bump pull request while it is off (Release);
+   - before it is set, the production environments `pages-prod` and
+     `pages-prod-config` exist, protected
+     ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages), Production):
+     the first release deploys production in the same run;
    - after the first real publish, the one-time rehearsal in
      [Roll back or deprecate](#roll-back-or-deprecate).
    <!-- TODO(org owners, #154): the reviewed pull request that removes `private`, then RELEASE_PUBLISH_ENABLED, once steps 5 to 7 are done and the trusted publishers exist. -->
@@ -186,66 +192,55 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
 
 ### Release
 
-**Decided, not built yet**
-([ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
-the human, 2026-10-28): the release workflow moves to `changesets/action` on
-every push to `main`, in three jobs: `changesets-mode` (read-only, no repository
-tooling), which decides what the run does, and two that each run the action in
-one mode. Each push's run is independent (no concurrency group), so a later push
-never cancels the bump merge's run. With pending changesets, `version` (no
-environment, no OIDC token) opens or updates the bump pull request
-(`changeset-release/main`, `chore: bump versions`), which gets no CI; review and
-merge it. When the pushed commit is the merge of the bump pull request, no
-changeset is pending, and a publishable package's `<name>@<version>` has no git
-tag yet, the run is a release candidate and `publish` runs (environment
-`release`, whose reviewers are asked only then, and only while
-`RELEASE_PUBLISH_ENABLED` is `true`): it publishes, creates a tag and a GitHub
-release per published package, and later jobs attest the Wrapper tar, attach it
-to the Wrapper's release, and deploy production. `publish` checks again that the
-versions are still untagged and otherwise ends with "already released". The
-reviewers are never asked for a push whose publishable versions are all tagged
-(or `0.0.0`): it ends with "nothing to release". A release candidate while
-`RELEASE_PUBLISH_ENABLED` is not `true` ends with "publishing was off"; once it
-is `true`, re-run the bump merge's run by hand (a re-run keeps its commit but
-reads the variables as they are then), since later pushes never publish it.
-**Rule** (decided by the human, 2026-10-28): do not merge a bump pull request
-while publishing is off, and re-run a failed release run within 30 days
-(GitHub's re-run limit); after that, a library version already on npm stays
-published but never gets its tag or GitHub release, and a version not yet
-published is skipped; the next bump moves past both. The Wrapper is never
-published to npm; its git tag marks it released. If a run published to npm but
-failed before creating the tags, re-run the bump merge's run by hand within 30
-days: approve it, and the versions already on npm are skipped. A pending release
-approval, or a short "nothing to release" run, blocks a production redeploy by
-tag but not a Pages rollback. The version and publish dispatches below then go
-away. The steps below are the workflow as it is today.
-<!-- TODO(release, #133): rewrite this section (the job table, steps 2, 3, and 5) when the workflow implementation lands (ADR-009). -->
+The kit uses changesets, and the release workflow
+(`.github/workflows/release.yml`) runs `changesets/action` on **every push to
+`main`**
+([ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md)).
+Every Action is pinned by full commit SHA and on the Actions allow-list
+([supply-chain spec](../specs/client-kit/supply-chain.md), Pinned toolchain).
+The workflow starts with `permissions: {}` and has **no concurrency group**:
+each push's run is independent and checks out its own commit, so a later push
+never cancels the bump merge's run. Its jobs:
 
-The kit uses changesets. The release workflow (`.github/workflows/release.yml`)
-runs only by hand (`workflow_dispatch`). Every Action is pinned by full commit
-SHA and on the Actions allow-list
-([supply-chain spec](../specs/client-kit/supply-chain.md), Pinned toolchain);
-the workflow starts with `permissions: {}`, and no job that holds a write token
-or an OIDC token runs repository tooling. Its jobs:
+| Job               | Runs                                                        | Permissions                                                     | Environment | Repository tooling                                            |
+| ----------------- | ----------------------------------------------------------- | --------------------------------------------------------------- | ----------- | ------------------------------------------------------------- |
+| `changesets-mode` | every push to `main`                                        | `contents: read`, `pull-requests: read`                         | none        | no (shell, git, gh, jq)                                       |
+| `version`         | changesets pending                                          | `contents: write`, `pull-requests: write`                       | none        | yes (`changeset version`, the version-file guard)             |
+| `publish`         | a release candidate and `RELEASE_PUBLISH_ENABLED` `true`    | `contents: write`, `id-token: write`                            | `release`   | yes (`pnpm check`, the dry run, the publish command)          |
+| `wrapper-build`   | the Wrapper's release has no tar yet                        | `contents: read`                                                | none        | yes (the dry run)                                             |
+| `attest`          | after `wrapper-build`                                       | `contents: read`, `id-token: write`, `attestations: write`      | `attest`    | no (`attest-build-provenance` only)                           |
+| `wrapper-assets`  | after `attest`                                              | `contents: write`                                               | none        | no (`gh release upload`)                                      |
+| `production`      | after `wrapper-assets` (`.github/workflows/pages-prod.yml`) | at most `contents: read`, `attestations: read`, `actions: read` | its jobs'   | see [Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages) |
 
-| Job              | Runs                           | Permissions                                                | Environment | Repository tooling                     |
-| ---------------- | ------------------------------ | ---------------------------------------------------------- | ----------- | -------------------------------------- |
-| `dry-run`        | always                         | `contents: read`                                           | none        | yes (the dry run)                      |
-| `version`        | **version**, from `main`       | `contents: read`, `pull-requests: read`                    | none        | yes (`changeset version`)              |
-| `version-push`   | after `version`, if it changed | `contents: write`                                          | none        | no (git only)                          |
-| `build`          | the publish gate               | `contents: read`                                           | none        | yes (`tools/release-publish.ts`)       |
-| `publish`        | after `build`                  | `contents: read`, `id-token: write`                        | `release`   | no (`npm publish` of checked tarballs) |
-| `attest`         | after `publish`                | `contents: read`, `id-token: write`, `attestations: write` | `attest`    | no (`attest-build-provenance` only)    |
-| `github-release` | after `attest`                 | `contents: write`                                          | none        | no (`gh release create`)               |
+`changesets-mode` decides, read-only. A changeset is pending when `.changeset/`
+holds a `*.md` file other than its `README.md`: then `version` runs. With none
+pending, the pushed commit is **the bump merge** when a pull request associated
+with it (`GET /repos/{owner}/{repo}/commits/{sha}/pulls`) has head
+`changeset-release/main` in this repository (a fork's branch of the same name
+never matches), base `main`, was merged, and was merged as this very commit (the
+repository squash-merges). For the bump merge, it reads `name` and `version` of
+the five libraries and the Wrapper and looks up each `<name>@<version>` tag with
+`git ls-remote --tags` on the public URL (no registry, no token; a version
+`0.0.0` never counts). The run is a **release candidate** when at least one of
+those versions has no tag. Otherwise the run ends there with a "nothing to
+release" notice; a release candidate while `RELEASE_PUBLISH_ENABLED` is not
+`true` ends with a "publishing was off" notice. Any API or git error fails the
+job instead.
 
-The publish gate: started from `main` with **publish** ticked, and the variable
-`RELEASE_PUBLISH_ENABLED` is `true` (Bootstrap step 8); `publish` also waits for
-a required reviewer of the `release` environment. The jobs that run repository
-tooling use the setup action with `cache: "false"`: no pnpm store cache, and no
-wireit task cache (no workflow uses one, and the release build steps set
-`WIREIT_CACHE=none`), so nothing is restored from a cache into a release build.
-Lifecycle scripts stay off throughout (`allowBuilds`, `--ignore-scripts`, and
-the tarball check refuses any lifecycle script in a published manifest).
+The jobs that run repository tooling use the setup action with `cache: "false"`:
+no pnpm store cache, and no wireit task cache, so nothing is restored from a
+cache into a release build. Lifecycle scripts stay off throughout
+(`allowBuilds`, `--ignore-scripts`, and the tarball check refuses any lifecycle
+script in a published manifest).
+
+**Rule** (decided by the human, 2026-10-28): **do not merge a bump pull request
+while publishing is off, and re-run a failed release run within 30 days**
+(GitHub's re-run limit). Later pushes are never the bump merge, so they never
+publish it; the recovery is always a manual re-run of the bump merge's run (a
+re-run keeps its commit but reads the variables as they are then). After 30
+days, a library version already on npm stays published but never gets its tag or
+GitHub release, and a version not yet published is skipped; the next bump moves
+past both.
 
 1. A pull request that changes a published package or the Wrapper includes a
    changeset (`pnpm changeset`) naming the packages and the bump (major for a
@@ -254,103 +249,121 @@ the tarball check refuses any lifecycle script in a published manifest).
    a **major**. Before 1.0, a breaking change is a **minor** bump (decided by
    the human, 2026-10-28). Its CI runs `release-dry-run` (below), so a changeset
    that would break a tarball fails before merge.
-2. **Version pull request.** The changesets are applied (`changeset version`:
-   versions and changelogs) in a pull request of their own. Review it: the
+2. **The bump pull request.** On every push to `main` with changesets pending,
+   `version` runs the action in version mode: its version script
+   (`tools/release-version.sh`) runs `changeset version` (versions and
+   changelogs, from `@changesets/changelog-github`, which calls the GitHub API
+   with the job token the action passes it) and then the **version-file guard**
+   (`tools/release-version-guard.sh`), which refuses anything but a modified
+   `package.json`, an added or modified `CHANGELOG.md` (neither inside
+   `.changeset/` nor under `.github/`), or a changeset deleted directly under
+   `.changeset/` (never its `README.md`), all regular files: a rename counts as
+   a deletion and an addition, and a type or mode change or a path with a
+   character outside `A-Z a-z 0-9 . _ / @ -` is refused. The action then commits
+   the result to `changeset-release/main` (through the API, signed by GitHub)
+   and opens or updates the pull request **"chore: bump versions"**. It runs in
+   the same job as the tooling, so the guard is a sanity check, not an isolation
+   boundary. The job has no environment and no OIDC token, so the code it runs
+   can never publish or attest.
+
+   The bump pull request gets **no CI** (made with the job token, it starts no
+   workflow run; accepted by the human): CI runs on `main` after the merge, and
+   `publish` runs `pnpm check` again before it publishes. Review it: the
    versions, the changelogs, and that the lock file's contract entries match
-   what the notes say. The changelogs come from `@changesets/changelog-github`
-   (repository `IntraverseGame/se-client-kit`), which calls the GitHub API when
-   `changeset version` runs, so it needs a `GITHUB_TOKEN`: the token the Actions
-   runtime provides to a job, with the least permissions the job needs, passed
-   to the step as an environment variable. It is never a stored secret or a
-   personal token, and it is never committed. Nothing else needs it: install,
-   build, `changeset status`, and the dry run work offline.
+   what the notes say. Never commit to the branch by hand (the next push to
+   `main` regenerates it); fix a note in its changeset on `main`.
 
-   To make it, start the release workflow from `main` with **version** ticked
-   and **publish** not ticked (a run with both ticked fails in its first step,
-   and nothing runs). After the `dry-run` job passes, two jobs make the branch:
-   - **`version`** checks out `main` with its whole history (changesets reads
-     the commit that added each changeset; no credential is left in
-     `.git/config`), runs `pnpm exec changeset version` with the job's read-only
-     `GITHUB_TOKEN` (`contents: read`, `pull-requests: read`), and uploads
-     everything it changed as one binary patch, kept one day. With no pending
-     changeset it uploads nothing, and `version-push` is skipped.
-   - **`version-push`** runs no repository tooling. It checks out the same
-     commit, applies the patch (`git apply`, which refuses a path outside the
-     tree, inside `.git`, or beyond a symbolic link), and refuses to push
-     anything but a modified `package.json`, an added or modified `CHANGELOG.md`
-     (neither inside `.changeset/`, where changesets would read it as a pending
-     changeset), or a changeset deleted directly under `.changeset/` (never its
-     `README.md`), all regular files: a rename counts as a deletion and an
-     addition, and a type or mode change or a path with a character outside
-     `A-Z a-z 0-9 . _ / @ -` is refused. Only then does it commit the result
-     (every git command of the apply, check, and push steps with
-     `core.hooksPath=/dev/null` and `core.fsmonitor=false`, the commit and the
-     push with `--no-verify`) as `github-actions[bot]`
-     (`chore(release): version packages`) and **force-push** it to the branch
-     `changeset-release/main` with its `contents: write` token; the token
-     reaches git through a credential helper that reads the environment, never
-     the command line.
+3. **Publish.** Merge the bump pull request (squash). Its push is the bump
+   merge; when a version is untagged, the run is a release candidate and
+   `publish` waits for a required reviewer of `release`. On approval:
+   - it checks again, with `git ls-remote --tags`, that a version is still
+     untagged (the job may have waited); if every one is tagged by now, it ends
+     with an "already released" notice and runs nothing else;
+   - it runs `pnpm check`, requires npm 11.5.1 or later (the first npm with
+     trusted publishing), and runs the release dry run (the Wrapper built twice
+     with one digest);
+   - it runs the action in publish mode with the publish command
+     `tools/release-publish.ts --publish`, which builds from the lockfile
+     without the task cache, packs the five libraries, runs the same tarball and
+     consumer checks as the dry run, and refuses to go on
+     (`tools/release-readiness.ts`) while a changeset is pending, a library is
+     still `private` or at `0.0.0`, the Wrapper is at `0.0.0`, or the Wrapper
+     build differs from the dry run's digest. A version the registry already has
+     is skipped only when the registry's `dist.integrity` equals the local
+     tarball's SHA-512; other bytes under the same version fail. It publishes
+     **the checked tarballs** with the npm CLI of the pinned Node
+     (`npm publish <tarball> --provenance --access public --ignore-scripts`, npm
+     trusted publishing: no npm token anywhere), in dependency order, then runs
+     `changeset git-tag`, which tags every package whose version has no tag yet:
+     the published libraries, the Wrapper (private: never on npm, its tag is
+     what marks it released), and a library a failed run published without its
+     tag. The action pushes those tags on the merge commit; it creates no GitHub
+     release (`create-github-releases: false`). Packages that are never released
+     (`e2e`, `reference-game`, `verify`, `pages-proxy`) are in the changesets
+     `ignore` list, so nothing tags them.
+   - The job's last step, **"Create the GitHub releases"**, then requires every
+     tag the action reported to exist on the merge commit (an annotated tag is
+     peeled to its commit); a missing or misplaced tag fails the job before any
+     release is made. Only then does it create **a GitHub release per tag** on
+     that commit
+     (`gh release create <tag> --verify-tag --target <commit> --title <tag>`, so
+     it never creates a tag), with the package's `CHANGELOG.md` section for the
+     version as notes, as the action would have written them, and a prerelease
+     for a prerelease version. A release that exists is skipped, so "Re-run
+     failed jobs" on the run finishes a partial release. The workflow does this
+     itself because the action, when a tag push fails, only warns and then
+     creates the release anyway, which makes GitHub create the tag at the
+     default branch's head instead of the merge commit (decided by the human,
+     2026-10-28).
+   - When the Wrapper's release has no tar yet, **`wrapper-build`** builds its
+     artifact twice at the same commit (one digest required, and its name must
+     be the released version) and uploads the tar and its `.sha256` (kept 14
+     days); **`attest`** attests that name and digest
+     (`actions/attest-build-provenance`, in the `attest` environment; stored on
+     the repository and in the public Sigstore transparency log); and
+     **`wrapper-assets`** downloads both files, checks them against the attested
+     digest, requires exactly one release for the tag with neither file attached
+     yet (it lists every release with `gh api --paginate` and compares each
+     `tag_name` exactly), attaches them (`gh release upload`), and then appends
+     to the release's notes, after the changelog the action wrote, the
+     artifact's name and digest and the `gh attestation verify` command of
+     [Verify before and after](#verify-before-and-after) for the release's
+     commit (`gh release edit --notes-file`; the release is read and edited by
+     its exact tag). The release asset is the released Wrapper's durable home
+     (ADR-005). These jobs run while the Wrapper's release has no tar attached,
+     so "Re-run failed jobs" on a run that failed after the tags still attests
+     and attaches the Wrapper, and a duplicate of a complete release does not.
+   - **`production`** then deploys that release
+     ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages), Production).
 
-   Actions never open a pull request here (Bootstrap step 4), so a person opens
-   the pull request from `changeset-release/main` into `main`; the job's summary
-   names the commit. The branch is regenerated on every run: never commit to it
-   by hand (the next run overwrites it); fix a note in its changeset on `main`
-   and run the job again. A push made with `GITHUB_TOKEN` starts no workflow, so
-   when the job updates the branch of a pull request that is already open, close
-   and reopen the pull request to run its checks on the new commit. The code
-   `changeset version` loads holds only a read-only token, so the residual risk
-   accepted on 2026-10-18 (that code holding `contents: write`) is closed.
+   **Published but not tagged.** If the run fails after `npm publish` and before
+   the tags, re-run the bump merge's run by hand within 30 days: it is still a
+   release candidate, the reviewers approve again, the versions already on npm
+   with the same bytes are skipped, and `changeset git-tag` tags them. **Tagged
+   but without its releases.** If the run fails after every tag exists (in the
+   releases step), use **"Re-run failed jobs"** on the bump merge's run, within
+   GitHub's 30 days, never "Re-run all jobs": a full re-run runs
+   `changesets-mode` again, which finds every publishable version tagged and
+   ends with "nothing to release", so `publish` and its releases step never run,
+   while "Re-run failed jobs" keeps `changesets-mode`'s earlier
+   `release-candidate=true`. With every version tagged, `publish` then publishes
+   nothing, and the releases step checks the tags again, creates the missing
+   releases, and starts the Wrapper's jobs if its release has no tar yet. A tag
+   the action failed to push leaves its version untagged, so either kind of
+   re-run works there, as for "Published but not tagged": the re-run's
+   `changeset git-tag` and the action push it on the merge commit.
 
-3. **Publish.** After the version pull request is merged, start the release
-   workflow from `main` with **publish** ticked. The `dry-run` job runs first,
-   reports the Wrapper digest, names the release
-   (`@intraverse/se-client-wrapper@<version>`, the tag changesets gives the
-   Wrapper), and uploads the Wrapper artifact and its `.sha256` (kept 14 days,
-   for review). Then:
-   - **`build`** refuses a release whose tag exists, then runs
-     `tools/release-publish.ts`, which builds from the lockfile without the task
-     cache, packs the five libraries, runs the same tarball and consumer checks
-     as the dry run, and refuses to go on (`tools/release-readiness.ts`) while a
-     changeset is pending, a library is still `private` or at `0.0.0`, the
-     Wrapper is at `0.0.0`, or the Wrapper build differs from the dry run's
-     digest. That check is the guard the kit relies on against publishing a
-     `private` package. A version the registry already has is skipped only when
-     the registry's `dist.integrity` equals the local tarball's SHA-512; other
-     bytes under the same version fail the job. It writes the publish plan (the
-     SHA-256 and file name of each tarball to publish, in dependency order) and
-     uploads the five tarballs, kept one day.
-   - **`publish`** waits for a required reviewer of `release`. On approval it
-     fails unless the npm is 11.5.1 or later, downloads the tarballs, refuses a
-     plan line of another shape, checks each planned tarball's SHA-256, and
-     publishes **the checked tarballs themselves**
-     (`npm publish <tarball> --provenance --access public --ignore-scripts`), in
-     the plan's order. It runs no repository tooling: only a checkout of
-     `.node-version`, `actions/setup-node`, the download, and npm.
-   - **`attest`** attests the dry run's Wrapper digest
-     (`actions/attest-build-provenance`, in the `attest` environment). The
-     attestation is stored on the repository (GitHub's attestations API) and in
-     the public Sigstore transparency log; it is not a release asset. A dry run
-     never attests.
-   - **`github-release`** downloads the dry run's artifact and its `.sha256`,
-     checks both against the attested digest, and creates the tag on the
-     dispatched commit and the GitHub release, with the tar and its `.sha256`
-     attached and notes that give the digest and the `gh attestation verify`
-     command. The release asset is the released Wrapper's durable home
-     (ADR-005).
 4. Record in the release notes the contracts the release was built against: the
    Play API prefix, the Snapshot schema id, and the signing vector set (edit the
    GitHub release; its notes already give the Wrapper artifact's digest).
-5. **Deploy.** Merging the version pull request (step 2) deploys `main` to the
-   staging Pages projects, as every push does, and is the decided trigger of the
-   production deploy (the human, 2026-10-27; ADR-008), which is not built yet
-   (#133; [Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages),
-   Production).
+5. **Deploy.** Every push to `main` deploys `main` to the staging Pages
+   projects; a release deploys production in the same run (step 3).
 
 ### Dry run
 
 `pnpm release:dry-run` (locally), the `release-dry-run` CI job, and the release
-workflow's `dry-run` job run `tools/release-dry-run.ts`. It needs no credential
-and no network, and publishes nothing:
+workflow's `publish` and `wrapper-build` jobs run `tools/release-dry-run.ts`. It
+needs no credential and no network, and publishes nothing:
 
 1. It copies the working tree (the files git would commit, so uncommitted
    changes are included locally; in CI it is the commit) into two scratch
@@ -358,8 +371,12 @@ and no network, and publishes nothing:
    scripts off. Its commands get an environment without token-like variables,
    with pnpm's install-before-run off and an empty npm user configuration (no
    `~/.npmrc` is read). That keeps them from using a credential by accident; it
-   is not a security boundary (Release, step 3: no job that holds a credential
-   runs repository tooling).
+   is not a security boundary. Since ADR-009, the release workflow's `publish`
+   job runs `pnpm check`, the dry run, and `tools/release-publish.ts` while it
+   holds `id-token: write` (and `contents: write`): a residual risk ADR-009
+   accepted, kept small by the `release` environment's reviewers, two jobs that
+   never hold both the pull-request write and the OIDC token, lifecycle scripts
+   off, and the lockfile pins (Release).
 2. In each copy it runs `changeset version` (with the changelog generator off,
    since that one calls the GitHub API) and `pnpm build` without the task cache.
 3. In the first copy it runs `check:build-output` and `check:package-files`,
@@ -431,7 +448,8 @@ After publishing:
    release's digest (`shasum -a 256 -c se-client-wrapper-<version>.tar.sha256`),
    unpack it, recompute the SHA-256 of every file and compare with
    `integrity-manifest.json`; verify the attestation with the GitHub CLI
-   (ADR-005, decision 4; the release notes give the same command):
+   (ADR-005, decision 4; the Wrapper release's notes give the same command, and
+   the production deploy's `prod-verify` runs it):
 
    ```sh
    gh attestation verify se-client-wrapper-<version>.tar \
@@ -449,11 +467,11 @@ After publishing:
 4. **Compatibility:** the release notes' contract versions match what the
    backend serves in the target environment. Do not promote a Wrapper whose Play
    prefix or Snapshot schema the backend does not serve.
-5. **Promotion** is a push from this repository, to staging only (production is
-   to come): a merge to `main` deploys `main`'s Wrapper artifact to the staging
-   Cloudflare Pages projects (the Pages workflow; see
-   [Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages)), and its deploy
-   job logs the digest it deployed. After it, play one round in that environment
+5. **Promotion** is a push from this repository: a merge to `main` deploys
+   `main`'s Wrapper artifact to the staging Cloudflare Pages projects, and a
+   release deploys its attested tar to production in the same run (see
+   [Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages)); each deploy job
+   logs the digest it deployed. After it, play one round in that environment
    from a test launch (the launch page URL, then `#`, then the bare launch
    code), and check there is no console error, the address bar no longer shows
    the code once the page has loaded, and a reload shows "Your session has
@@ -638,28 +656,49 @@ Expected after a switch, not an alarm: a staging round played on the old chain
 (anvil, before the switch) cannot be verified on staging's verify page
 afterwards, because check 6 then reads the new chain (Somnia's public testnet).
 
-**Production (not built yet, #133).** A production deploy runs when the
-changesets version pull request is merged into `main` (the versions bumped and
-the changelogs written; [Release](#release), step 2): that release is then
-deployed to the production projects too (the human, 2026-10-27; ADR-008). It is
-a second deploy environment (`pages-prod`, with the same names inside), a
-configuration environment with no deploy credential, and second config and
-deploy jobs with the production project names (ADR-008). Nothing reacts to that
-merge today beyond the staging deploy every push gets: the release workflow
-pushes the version branch and publishes only by hand, and the merge itself
-triggers nothing else. **Decided, not built yet**
-([ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
-the human, 2026-10-28): the production deploy runs in the release workflow's run
-that publishes the merged bump pull request, after the Wrapper's tar is attested
-and attached to its GitHub release. A job with no secret downloads the tar and
-its `.sha256` by tag, checks the digest, and runs `gh attestation verify`
-([Verify before and after](#verify-before-and-after), step 2, plus
-`--source-digest`); the proxy worker is built with `tsc` at the tag's commit;
-the configuration is built in an environment with no deploy credential; and
-`deploy-prod` (environment `pages-prod`, no required reviewer) refuses any other
-digest. A redeploy or a rollback to an earlier release goes by its tag, through
-the same checks. Nothing reaches production until the publish path is on (#154).
-<!-- TODO(release, #133): the production deploy jobs, their redeploy-by-tag entry point, and the steps above, once the workflow implementation lands (ADR-009). -->
+**Production** (`.github/workflows/pages-prod.yml`;
+[ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
+decision 3). A release deploys production in the same run: the release
+workflow's `production` job calls `pages-prod.yml` with the Wrapper's new tag
+after `wrapper-assets` (a tag or a release made with the job token starts no
+other workflow). Production serves the Wrapper's and the verifier's sites, each
+with the proxy worker and its configuration document, as on staging; it serves
+no reference game, and frames the real game origins. Its jobs:
+
+| Job             | Permissions                            | Environment         | What it does                                                                                                                                                                                                                                                  |
+| --------------- | -------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `release-check` | `actions: read`                        | none                | checks the tag's shape, refuses a dispatch while a release run is not completed, and resolves the tag's commit (`git ls-remote`; when the release calls it, the release's own commit)                                                                         |
+| `prod-verify`   | `contents: read`, `attestations: read` | none                | downloads the tar and its `.sha256` from the Wrapper's release by tag, checks that the `.sha256` names the tar and matches it, and runs `gh attestation verify` ([Verify before and after](#verify-before-and-after)) with `--source-digest` the tag's commit |
+| `prod-worker`   | `contents: read`                       | none                | after `prod-verify` (the attestation proves the commit before its code runs), builds the proxy worker with `tsc` at the tag's commit, with staging's own script (not attested)                                                                                |
+| `config-prod`   | `contents: read`                       | `pages-prod-config` | after `prod-verify`, builds and validates the two configuration documents from that environment's secrets (the same seven names as staging's) at the tag's commit; that environment holds no deploy credential                                                |
+| `deploy-prod`   | `contents: read`                       | `pages-prod`        | runs no repository code: downloads the tar again by tag, refuses any download whose SHA-256 is not its producing job's digest, lays out the two sites, writes their `_headers` with staging's own script, and runs `wrangler pages deploy`                    |
+
+Only `deploy-prod` is in the concurrency group `pages-prod`
+(`cancel-in-progress: false`), so production deploys never overlap and a staging
+run never touches them. `pages-prod` has **no required reviewer**: the `release`
+approval of `publish` is the human gate, and the deploy refuses any tar whose
+attestation does not verify. `pages-prod` holds the secrets
+`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PAGES_WRAPPER_PROJECT`, and
+`PAGES_VERIFIER_PROJECT` (the production project names); `pages-prod-config`
+holds `PAGES_WRAPPER_ORIGIN`, `PAGES_VERIFIER_ORIGIN`, `PAGES_CHAIN_PINS`,
+`PAGES_RPC_ENDPOINTS`, `PAGES_RPC_ORIGINS`, `PAGES_GAME_ORIGINS`, and
+`PAGES_OPERATOR_ORIGINS`. Both are created, protected and restricted to `main`,
+before publishing is turned on (Bootstrap step 8). Nothing reaches production
+until the publish path is on (#154).
+
+**Redeploy, roll back, or roll forward by tag.** Run the "Pages production"
+workflow by hand from `main` with the tag
+`@intraverse/se-client-wrapper@<version>` of a released Wrapper: it goes through
+the same checks. **The release always wins**: the dispatch refuses while a run
+of the release workflow is requested, queued, pending, waiting for its
+reviewers, or in progress (even a short "nothing to release" run), so it never
+replaces a release's pending deploy; run it again once that run has finished. A
+window remains (the check and the deploy are not atomic): if a release run that
+started after the check has its pending `deploy-prod` replaced by the
+dispatch's, use "re-run failed jobs" on that release run within 30 days, or
+redeploy its tag after that. A **Pages rollback** of each production project
+([Roll back or deprecate](#roll-back-or-deprecate)) is never blocked by a
+release run.
 <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). The production projects and hostnames, the `pages-prod` and configuration environments and their secrets, the operator and game origins, the RPC providers, and `tipLagMargin`; shared out of band, never written in this repository. -->
 
 **After the first deploy** (the real test: zone-wide settings can still answer
@@ -730,9 +769,11 @@ revokes the old token. Record the date (the secret name and date only).
 
 - **A bad Wrapper deploy:** roll the Pages projects back to the previous
   deployment ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages),
-  Rollback). Then fix forward here: a changeset, a patch release, and a new
-  digest. Nothing in this repository is rolled back; a released artifact is
-  never rebuilt in place.
+  Rollback), or, for production, redeploy an earlier release by its tag (the
+  "Pages production" workflow, which a running release run blocks; a Pages
+  rollback is never blocked). Then fix forward here: a changeset, a patch
+  release, and a new digest. Nothing in this repository is rolled back; a
+  released artifact is never rebuilt in place.
 - **A bad npm version:** do not unpublish a version others may depend on. An org
   owner, signed in to npm with two-factor (never from CI, never with a token in
   a file), runs
@@ -803,77 +844,74 @@ token:
   release workflow. Deprecate it and republish from the workflow.
 - **The publish job waits.** It needs an approval from a required reviewer of
   the `release` environment.
-- **The publish path is skipped.** `build`, `publish`, `attest`, and
-  `github-release` run only from `main`, with **publish** ticked, and with the
-  variable `RELEASE_PUBLISH_ENABLED` set to `true` (Bootstrap step 8).
-- **The `build` job says "The tag ... exists".** That Wrapper version is
-  released already; a release is never redone. Release a new version with a
-  changeset.
-- **The `build` job says "Not ready to publish".** A changeset is pending (merge
-  the version pull request first), a library is still `private` or at `0.0.0`
-  (Bootstrap step 8), the Wrapper is at `0.0.0`, `--expect-wrapper-digest` is
-  missing, or the Wrapper build differs from the dry run's.
+- **The publish path is skipped.** `publish` and the jobs after it run only on a
+  release candidate (the bump merge, no changeset pending, a version above 0.0.0
+  without its tag) and with the variable `RELEASE_PUBLISH_ENABLED` set to `true`
+  (Bootstrap step 8). `changesets-mode`'s notice says which: "nothing to
+  release" or "publishing was off". For the latter, re-run the bump merge's run
+  by hand once the variable is `true`, within 30 days (Release).
+- **The `publish` job says "Already released".** Every publishable version was
+  tagged by the time the job ran (a re-run after a release, or a duplicate):
+  nothing ran, nothing to do.
+- **The `publish` job's releases step says "The tag ... does not exist" or "is
+  on ..., not on this run's commit".** No GitHub release was created. A missing
+  tag means the action's tag push failed (it only warns): re-run the bump
+  merge's run within 30 days, and `changeset git-tag` and the action push it on
+  the merge commit. A tag on another commit was made by something else (the tag
+  ruleset lets only the org owners move or delete one): treat it as an incident
+  (Escalation) before an org owner deletes it and the run is re-run.
+- **The `publish` job says "Not ready to publish".** A changeset is pending, a
+  library is still `private` or at `0.0.0` (Bootstrap step 8), the Wrapper is at
+  `0.0.0`, or the Wrapper build differs from the dry run's. Nothing was
+  published. Fix the cause on `main`, then re-run the bump merge's run within 30
+  days (a fix on `main` changes nothing for that run's commit: a cause in the
+  commit itself needs a new changeset and a new bump).
 - **The `publish` job says npm "cannot publish with trusted publishing".** The
   Node in `.node-version` brings an npm older than 11.5.1. Nothing was
   published. Move `.node-version` to a Node whose npm is 11.5.1 or later in a
-  reviewed pull request, then start a new publish run.
-- **The `publish` job refuses the plan or a checksum.** A plan line has another
-  shape, or a downloaded tarball is not the bytes `build` checked. Nothing after
-  it was published. Treat a checksum mismatch as an incident (Escalation) before
-  running again.
-- **The `attest` job failed after `publish`.** The packages are on npm, and the
-  Wrapper is not deployable (a deploy refuses an unattested digest). Re-run the
-  failed jobs of the same run (`attest`, then `github-release`); never attest
-  from elsewhere.
-- **The `publish` job failed after some packages were published.** Do not re-run
-  the job: its plan is a fixed output of that run's `build`, and `npm publish`
-  refuses a version the registry already has, so a re-run fails on the first
-  package that went out. Fix the cause and start a **new** publish run from
-  `main`. Its `build` asks the registry again and leaves out every version the
-  registry holds with the same bytes (the build is reproducible), so only the
-  rest are published; its `publish` needs a `release` reviewer's approval again.
-  If `main` has moved and a package's bytes now differ under the same version,
-  `build` stops with "The registry disagrees": release a new version with a
-  changeset instead.
-- **The `attest` or `github-release` job cannot be re-run any more.** The dry
-  run's artifact is kept 14 days, and GitHub re-runs a run's jobs only for a
-  limited time. Start a new publish run from `main` (the same caveat on a moved
-  `main` applies): `build` finds every package on npm with these bytes and plans
-  nothing, `publish` publishes nothing (it still needs the approval), `attest`
-  attests the same digest again (a second attestation of the same bytes is
-  harmless), and `github-release` creates the release from the new dry run's
-  artifact. Compare the new run's Wrapper digest with the first run's: they are
-  equal when `main` has not moved. If `main` has moved and the Wrapper's bytes
-  differ, do not release them under this version: release a new version with a
-  changeset (decided by the human, 2026-10-28). This works only while the
-  release's tag does not exist (next entry).
-- **The `github-release` job failed.** The packages are published and the
-  Wrapper attested. With files to attach, `gh release create` makes a draft
-  release first and creates the tag only when it publishes the draft after the
-  uploads, so a failed upload may leave a **draft release** behind and no tag.
-  Before creating one, the job lists every release of the repository, drafts
-  included (`gh api --paginate`), and refuses when any has exactly the tag ("A
-  release for … exists already"); an API error fails the step instead of
-  counting as "no release". So a re-run or a new run never adds a second one. An
-  org owner checks the releases page:
-  - **a draft, or a release without its files:** finish it by hand from the
-    failed run's dry-run artifact (download the tar and its `.sha256`, run
-    `sha256sum --check --strict`, compare the digest with the `attest` job's
-    subject, then `gh release upload <tag> <tar> <tar>.sha256`, and publish the
-    draft, which creates the tag on its target commit), or delete it and start
-    again as below;
-  - **nothing was created** (for example a tag ruleset that blocks creation on
-    the release tag pattern, against Bootstrap step 2: an org owner corrects
-    it): re-run the failed job of the same run, or, once the re-run window or
-    the artifact has expired, start a new publish run as in the entry above;
-  - **a published release or its tag exists but is incomplete or wrong:** a new
-    run stops in `build` because the tag exists. Finish it by hand as above, or
-    delete the release and its tag (the tag ruleset lets only the org owners
-    delete a tag) and start a new publish run.
-- **The `build` job says "The registry disagrees".** A version being released is
-  already on npm with other bytes. Never overwrite it: bump the version with a
-  changeset and release again; if the published bytes are not ours, treat it as
-  a security incident (Escalation).
+  reviewed pull request, then release a new version with a changeset.
+- **The `publish` job failed after some packages were published, or before the
+  tags.** Re-run the bump merge's run by hand within 30 days. It is still a
+  release candidate (a version is untagged), the reviewers approve again, the
+  publish command skips every version the registry holds with the same bytes,
+  publishes the rest, and `changeset git-tag` tags them all. After 30 days, a
+  library version already on npm stays published but never gets its tag or
+  GitHub release; the next bump moves past it.
+- **The `publish` job says "The registry disagrees".** A version being released
+  is already on npm with other bytes. Never overwrite it: bump the version with
+  a changeset and release again; if the published bytes are not ours, treat it
+  as a security incident (Escalation).
+- **The `attest` or `wrapper-assets` job failed.** The packages are on npm and
+  tagged, and the Wrapper's release has no files, so production is unchanged (a
+  deploy refuses a release without an attested tar). Re-run the failed jobs of
+  the same run; never attest from elsewhere. Once they cannot be re-run any more
+  (14 days for the artifact, 30 for the run), an org owner builds and attaches
+  nothing by hand: release a new version with a changeset.
+- **The wrapper-assets job failed** with "Expected one release" or "already has
+  the Wrapper's files". It lists every release of the repository, drafts
+  included (`gh api --paginate`), and requires exactly one with the tag and
+  neither file attached; an API error fails the step instead. A missing release
+  cannot follow a successful `publish` job (its releases step creates every
+  release after checking the tags); if one is missing anyway, use "Re-run failed
+  jobs" on the bump merge's run within 30 days (its releases step creates it). A
+  full re-run ("Re-run all jobs") runs `changesets-mode` again, which finds
+  every version tagged and ends with "nothing to release", so `publish` never
+  runs; "Re-run failed jobs" keeps its earlier `release-candidate=true`. An org
+  owner deletes a partial upload from the release (`gh release delete-asset`);
+  then re-run the failed jobs. If only the last step ("Add the verify command to
+  the release notes") failed, the files are attached, so a re-run stops at
+  "already has the Wrapper's files": an org owner appends the command of
+  [Verify before and after](#verify-before-and-after), with the release's
+  commit, to the notes by hand (`gh release edit <tag> --notes-file <file>`,
+  keeping the changelog text).
+- **The `production` jobs failed.** Nothing was deployed, or the deploy failed
+  part-way. Re-run the failed jobs of the same run, or redeploy the release by
+  its tag ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages)). A
+  `prod-verify` failure (the `.sha256` or the attestation) is an incident
+  (Escalation): never deploy around it.
+- **A redeploy by tag says "A release run is ...".** The release always wins:
+  wait for that run to finish, then dispatch again. To restore production at
+  once, use a Pages rollback, which is never blocked.
 - **"the Wrapper output has no index.html, so it is not a release build"** (or
   `verify/index.html`; `check:size-budget`, the dry run, or the `build` job).
   `apps/wrapper/dist/` exists but is empty or lacks a page (the Wrapper's, or
@@ -889,18 +927,16 @@ token:
   [the testing spec](../specs/client-kit/testing-and-ci.md) together (a test
   keeps them equal), saying why in the pull request. Never raise it to make a
   release pass unexamined.
-- **The `version-push` job says "changed more than it should".**
-  `changeset version` changed something other than a modified `package.json`, an
-  added or modified `CHANGELOG.md`, or a deleted changeset; each
-  `Unexpected change:` line names the status and the path. Nothing was pushed.
-  Find out what wrote it before running the job again.
-- **The release run failed at once with "Tick either version or publish, not
-  both".** The `dry-run` job's first step refuses a run with both inputs, so
-  nothing ran. Start the `version` run, merge its pull request, then start a
-  `publish` run on its own.
-- **The version pull request's checks did not run after the job pushed.** A push
-  made with the job's `GITHUB_TOKEN` starts no workflow: close and reopen the
-  pull request.
+- **The `version` job says "changed more than it should".** `changeset version`
+  changed something other than a modified `package.json`, an added or modified
+  `CHANGELOG.md`, or a deleted changeset; each `Unexpected change:` line names
+  the status and the path. Nothing was pushed. Find out what wrote it before the
+  next push to `main`.
+- **The `version` job cannot open the pull request.** The setting "Allow GitHub
+  Actions to create and approve pull requests" is off (Bootstrap step 4).
+- **The bump pull request has no checks.** Expected: it is made with the job
+  token, which starts no workflow (ADR-009). CI runs on `main` after the merge,
+  and `publish` runs `pnpm check` before it publishes.
 - **The dry run reports "not reproducible".** Two builds of the same files gave
   different bytes. Keep the scratch copies (`--keep`), compare the two
   `apps/wrapper/dist/` trees (or the two tarballs) with `diff -r`, and find what
