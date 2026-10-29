@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-10-29 (Snapshot contract re-vendor at se-backend `80ac5b8`: T-5 also checks that every issue of an `invalid/` vector is at or below its `failsAt`; 2026-10-28, #133: the release and production workflow tests of ADR-009; #146 book contract re-vendor: the placeholder filters removed, T-24's `won` and `lost` runs on `valid/book-lifecycle-*` in all three projects, at se-backend `65f9086`; 2026-10-27, preview run evidence: the run at the pin, the browser names not yet measured on the job runner; preview mode of the e2e suite pull request, RFC-002: the `preview` project, `preview-support/`, `preview-guard/`, `tools/e2e-preview-*.test.ts`, the reference game plays any `steps` round; verify e2e rows VT-6 to VT-8 pull request: the link, accessibility, and policy and SRI specs, the `verifyPolicy` option; recorded verify rounds pull request: the backend's won and lost rounds in the e2e fake; verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify e2e fake pull request: the fake verify API, the canned rounds, VT-5's rows; verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-10-29 (verify book rounds, #156: VT-11's `book-*.test.ts` over `fixtures/book-body.ts` and `fixtures/book-run.ts`, check 5 and 7 replaying `kernel/public/v1/seed`, the canned book rounds and `verifyRounds: "book"`, `verify-page-book.spec.ts`, VT-6's book round; Snapshot contract re-vendor at se-backend `80ac5b8`: T-5 also checks that every issue of an `invalid/` vector is at or below its `failsAt`; 2026-10-28, #133: the release and production workflow tests of ADR-009; #146 book contract re-vendor: the placeholder filters removed, T-24's `won` and `lost` runs on `valid/book-lifecycle-*` in all three projects, at se-backend `65f9086`; 2026-10-27, preview run evidence: the run at the pin, the browser names not yet measured on the job runner; preview mode of the e2e suite pull request, RFC-002: the `preview` project, `preview-support/`, `preview-guard/`, `tools/e2e-preview-*.test.ts`, the reference game plays any `steps` round; verify e2e rows VT-6 to VT-8 pull request: the link, accessibility, and policy and SRI specs, the `verifyPolicy` option; recorded verify rounds pull request: the backend's won and lost rounds in the e2e fake; verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify e2e fake pull request: the fake verify API, the canned rounds, VT-5's rows; verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -33,7 +33,10 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   seeds they name as `keccak256` of a text. Checks 5 and 7 are tested with
   evidence built from those vectors (the reference seed, and Coin Flip's
   (2, 1) from the n = 2, k = 1 derive chain); `roundSecretHash` has no vector,
-  so its expected value is a constant computed outside the kit. ShuffleDraw's
+  so its expected value is a constant computed outside the kit. A book round's
+  checks 5 and 7 (`book-verdict.test.ts`) replay the `seed` set through the
+  page's whole run: the seed from each vector's block value and secret, and
+  `roundSecretHash` as SHA-256 of each vector's seed against its `seedHash`. ShuffleDraw's
   rejection limit, which the `shuffle-draw` set states, has its own unit tests
   (`drawLimit`, `acceptDraw`), since no vector rejects. VT-10, the verify page's shared-origin rule, is a text scan
   in `tools/shared-origin.test.ts` over `apps/verify`'s non-test sources and
@@ -355,11 +358,25 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `test.use({ verifyRounds: "recorded" })` to pin their signer, registry, and
   entropy source and give block N its recorded hash on `verifyRpc`; the rows are
   `verify-page-recorded.spec.ts` (checks 5 and 7 recomputed and matching, a
-  tampered loser names check 7, a tampered round secret check 5).
+  tampered loser names check 7, a tampered round secret check 5). Book rounds
+  (#156): `harness/verify-book-rounds.ts` builds `bookRound(ending)` and
+  `tamperedBookRound(ending, check)` (5 to 8) from `valid/book-lifecycle-won`
+  and `-lost`, computing `commitment.roundSecretHash` and `reveal.seed` with
+  SHA-256 (the vector's `roundSecretHash` is a placeholder); set
+  `test.use({ verifyRounds: "book" })` so `verifyRpc` gives block N the
+  vector's `blockValue` (`harness/verify-round-sets.ts` resolves each
+  `verifyRounds` value's pins and block). The rows are
+  `verify-page-book.spec.ts` (V-8's book reason, a tampered copy per check,
+  axe) and `fake-verify-book-rounds.spec.ts`; `harness/json-paths.ts`'s
+  `changedPaths` holds a tampered copy to one changed field. In the unit
+  tests, `fixtures/book-body.ts` writes the same rounds as a body (Web Crypto
+  SHA-256) and `fixtures/book-run.ts` runs `verifyRound` over them.
   VT-6 to VT-8 are built: `verify-link.spec.ts` uses `round-play.ts`'s `test`
   (the Wrapper plays a win) and installs the verify page, fake verify API, and a
   configuration with `verifyBaseUrl` on the Wrapper's origin itself (a later
-  route wins), then follows the verify link into a new page.
+  route wins), then follows the verify link into a new page; its book round
+  (T-24's, won) is built over the hash the round fixtures' fake RPC gives
+  block N (`bookRound(ending, blockHash(N, "a"))`).
   `verify-page-accessibility.spec.ts` (axe per state) and
   `verify-page-keyboard.spec.ts` (keyboard, focus, live regions, 200 % zoom) are
   VT-7; the form error is announced by the polite region, a failure by

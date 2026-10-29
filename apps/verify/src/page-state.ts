@@ -10,12 +10,13 @@ import type { VerifyConfig } from "./environment-config.ts";
 import { loadEnvironmentConfig } from "./load-config.ts";
 import type { RoundEvidence } from "./round-evidence.ts";
 import { normalizeRoundId, parseRoute, roundUrl } from "./round-id.ts";
+import type { RoundReport } from "./round-report.ts";
 import {
   createVerifyApi,
   type VerifyApi,
   type VerifyApiResult,
 } from "./verify-api.ts";
-import { type RoundReport, verifyRound } from "./verify-round.ts";
+import { verifyRound } from "./verify-round.ts";
 
 export type PageState =
   /** The configuration is being read; nothing else is known yet. */

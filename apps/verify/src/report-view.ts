@@ -8,7 +8,7 @@ import type { Comparison } from "./fairness-checks.ts";
 import { MESSAGES as M } from "./messages.ts";
 import { notCheckedSection } from "./not-checked-view.ts";
 import { isOneStepTwoOptions } from "./round-evidence.ts";
-import type { RoundReport, Verdict } from "./verify-round.ts";
+import { ENDED, type RoundReport, type Verdict } from "./round-report.ts";
 import {
   iconOf,
   type Parts,
@@ -38,12 +38,12 @@ const comparison = (p: Parts, c: Comparison): HTMLElement =>
       p.el("dl", { class: "vp-rows" }, [
         row(
           p,
-          `${c.name}, ${M["checks.recomputed"]}`,
+          `${c.name}, ${c.labels?.recomputed ?? M["checks.recomputed"]}`,
           c.recomputed ?? M["checks.absent"],
         ),
         row(
           p,
-          `${c.name}, ${M["checks.evidence"]}`,
+          `${c.name}, ${c.labels?.evidence ?? M["checks.evidence"]}`,
           c.evidence ?? M["checks.absent"],
         ),
       ]),
@@ -82,17 +82,52 @@ const checksList = (
   ),
 ];
 
-/** V-6: the round id, the shape, the result, and the payout (not checked). */
+/**
+ * V-20: a book round's result and payout, each labelled as the verify API's,
+ * never as established.
+ */
+const reported = (report: RoundReport): Detail[] => {
+  const { evidence } = report;
+  if (!ENDED.has(evidence.status)) return [];
+  const as = `(${M["round.asReported"]})`;
+  return [
+    {
+      label: `${M["round.result"]} ${as}`,
+      value: M[`result.${evidence.status as "won" | "lost" | "canceled"}`],
+    },
+    ...(evidence.payout === undefined
+      ? []
+      : [
+          {
+            label: `${M["round.payout"]} ${as}`,
+            value: evidence.payout.formatted,
+          },
+        ]),
+  ];
+};
+
+/**
+ * V-6: the round id, the shape, the result, and the payout (not checked); for
+ * V-20's book reason (`asReported`), the result and the payout labelled as the
+ * verify API's.
+ */
 const summary = (
   p: Parts,
   report: RoundReport,
   established: boolean,
+  asReported = false,
 ): HTMLElement => {
   const { evidence } = report;
   const entries: Detail[] = [{ label: M["round.id"], value: report.roundId }];
-  if (isOneStepTwoOptions(evidence)) {
+  if (evidence.book !== undefined) {
+    entries.push({
+      label: M["round.shape"],
+      value: `${M["round.shapeBook"]} ${evidence.book.mode}`,
+    });
+  } else if (isOneStepTwoOptions(evidence)) {
     entries.push({ label: M["round.shape"], value: M["round.shapeOneStep"] });
   }
+  if (asReported) entries.push(...reported(report));
   if (
     established &&
     (evidence.status === "won" ||
@@ -196,6 +231,18 @@ export const reportView = (p: Parts, report: RoundReport): View => {
             body: [
               paragraph(p, [M[`${verdict.reason}.text`]]),
               summary(p, report, false),
+              ...details,
+            ],
+          };
+        case "book-draw":
+          // V-20: an ended book round whose draw was not recomputed; nothing
+          // to check again, since the same evidence gives the same answer.
+          return {
+            heading: M["bookDraw.heading"],
+            icon: "info",
+            body: [
+              paragraph(p, [M["bookDraw.text"]]),
+              summary(p, report, false, true),
               ...details,
             ],
           };

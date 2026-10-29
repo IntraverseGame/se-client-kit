@@ -5,8 +5,8 @@
 import type { ChainReadFailure } from "./chain-read.ts";
 import type { Comparison } from "./fairness-checks.ts";
 
-/** The seven checks of V-12, by their number. */
-export type CheckId = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+/** The checks of V-12 and V-19, by their number; 8 is a book round's only. */
+export type CheckId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export type CheckStatus =
   /** Every comparison matches. */
@@ -16,7 +16,13 @@ export type CheckStatus =
   /** Check 6 only: the chain could not be read well enough to say (V-7). */
   | "unverified"
   /** The check did not run, with the reason in `note` (V-13). */
-  | "not-checked";
+  | "not-checked"
+  /**
+   * The check has nothing to check for this kind of round, with the reason in
+   * `note` (a book round's checks 2 to 4, V-19). Never shown or counted as
+   * passed.
+   */
+  | "not-applicable";
 
 /** A labelled value, e.g. `created`, or what one RPC endpoint answered. */
 export type Detail = { readonly label: string; readonly value: string };
@@ -45,6 +51,7 @@ export const CHECK_TITLES: Readonly<Record<CheckId, string>> = {
   5: "Commitment and reveal",
   6: "Block N",
   7: "Seed and outcome",
+  8: "The draw",
 };
 
 export const compare = (
@@ -75,6 +82,14 @@ export const notChecked = (id: CheckId, note: string): CheckResult => ({
   id,
   title: CHECK_TITLES[id],
   status: "not-checked",
+  comparisons: [],
+  note,
+});
+
+export const notApplicable = (id: CheckId, note: string): CheckResult => ({
+  id,
+  title: CHECK_TITLES[id],
+  status: "not-applicable",
   comparisons: [],
   note,
 });

@@ -540,16 +540,19 @@ development-only, so it may import the test-only entry of `contracts`.
   body, or an abort (errors with the document's `Problem` body); canned rounds
   in the verify API document's shape, built at run time from the vendored round
   (matching, one tampered field per check, not ended, unknown kernel, a shape of
-  three options) and two rounds the backend recorded (`recorded-rounds/`, a
-  `won` and a `lost` one, so checks 5 and 7 recompute and match, each with a
-  tampered copy); the host's rewrite of `/verify/rounds/*` to the bundle's
-  `verify/index.html`; and the round tests' fake RPC endpoints for check 6. Its
-  own tests are `fake-verify-api.spec.ts`; VT-5 is `verify-page.spec.ts` and
-  `verify-page-recorded.spec.ts`, which run against the bundle's page and fail,
-  with a message, if the bundle lacks it (they never skip). The catch-all route
-  still refuses and records any other request (VT-8's last clause). The
-  remaining rows: VT-6 (`verify-link.spec.ts`: the Wrapper's verify link after a
-  win opens the page in a new page, which reaches V-6), VT-7
+  three options), the vendored book round `won` and `lost` with a tampered copy
+  per check 5 to 8 (`verify-book-rounds.ts`, #156), and two rounds the backend
+  recorded (`recorded-rounds/`, a `won` and a `lost` one, so checks 5 and 7
+  recompute and match, each with a tampered copy); the host's rewrite of
+  `/verify/rounds/*` to the bundle's `verify/index.html`; and the round tests'
+  fake RPC endpoints for check 6. Its own tests are `fake-verify-api.spec.ts`
+  and `fake-verify-book-rounds.spec.ts`; VT-5 is `verify-page.spec.ts`,
+  `verify-page-recorded.spec.ts`, and `verify-page-book.spec.ts`, which run
+  against the bundle's page and fail, with a message, if the bundle lacks it
+  (they never skip). The catch-all route still refuses and records any other
+  request (VT-8's last clause). The remaining rows: VT-6 (`verify-link.spec.ts`:
+  the Wrapper's verify link after a win opens the page in a new page, which
+  reaches V-6, and after T-24's book round, V-8's book reason), VT-7
   (`verify-page-accessibility.spec.ts`, `verify-page-keyboard.spec.ts`: axe on
   every state, keyboard, focus, live regions, 200 % zoom), and VT-8
   (`verify-page-policy.spec.ts`: the page served with the built `headers.json`

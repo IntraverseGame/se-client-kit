@@ -49,6 +49,7 @@ export const STATUS_ICON: Readonly<Record<CheckStatus, IconName>> = {
   mismatch: "mismatch",
   unverified: "unverified",
   "not-checked": "not-checked",
+  "not-applicable": "not-checked",
 };
 
 export const STATUS_TEXT: Readonly<Record<CheckStatus, MessageKey>> = {
@@ -56,6 +57,7 @@ export const STATUS_TEXT: Readonly<Record<CheckStatus, MessageKey>> = {
   mismatch: "check.mismatch",
   unverified: "check.unverified",
   "not-checked": "check.notChecked",
+  "not-applicable": "check.notApplicable",
 };
 
 export type Parts = {

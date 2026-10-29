@@ -13,6 +13,7 @@ import type {
   TermsNodeEvidence,
 } from "./round-evidence.ts";
 import { amount, payout } from "./verify-amount.ts";
+import { book, bookOf, contradictsBook, drawnRow } from "./verify-book.ts";
 import { newRound } from "./verify-new-round.ts";
 import {
   Bad,
@@ -69,7 +70,9 @@ const game = nested(s => {
       maxMultiplierMilli: v => int(v, 1),
     }),
   )(s["terms"]);
-  return read === Bad || terms === Bad ? Bad : { terms: terms.nodes };
+  return read === Bad || terms === Bad
+    ? Bad
+    : { terms: terms.nodes, packageHash: read.packageHash };
 });
 
 const kernel = nested(s =>
@@ -113,6 +116,7 @@ const recomputed = nested(s =>
     kind: v => oneOf(v, REPLAY_KINDS),
     payout: v => optional(v, amount),
     steps: list(replayStep),
+    draw: v => optional(v, drawnRow),
   }),
 );
 
@@ -213,9 +217,11 @@ export const parseEvidence = (body: unknown): RoundEvidence | undefined => {
     actions: list(signedAction),
     transcriptHash: v => optional(v, x => text(x, PATTERN.hex32)),
     recomputed: v => optional(v, recomputed),
+    book: v => optional(v, book),
     checks: list(check),
   });
   if (top === Bad) return undefined;
+  if (contradictsBook(top)) return undefined;
   const steps = playedSteps(top.game.terms, top.recomputed?.steps ?? []);
   if (steps === Bad) return undefined;
 
@@ -286,5 +292,8 @@ export const parseEvidence = (body: unknown): RoundEvidence | undefined => {
           },
         }),
     ...(createRoundAuth === undefined ? {} : { createRoundAuth }),
+    ...(top.book === undefined
+      ? {}
+      : { book: bookOf(top.book, top.game.packageHash, top) }),
   };
 };

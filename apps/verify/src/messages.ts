@@ -59,6 +59,10 @@ export const MESSAGES = {
   "unsupportedShape.text":
     "This page recomputes rounds of one step with two options only. The checks below are what could be checked.",
 
+  "bookDraw.heading": "This round's draw was not recomputed",
+  "bookDraw.text":
+    "This page recomputed the round secret's commitment, block N, and the seed. The drawn row, its multiplier, and the payout are the verify API's, and this page did not check them, so the result below is not established.",
+
   "notFound.heading": "Round not found",
   "notFound.text": "The verification service has no round with this id:",
 
@@ -80,6 +84,8 @@ export const MESSAGES = {
   "round.id": "Round id",
   "round.shape": "Round",
   "round.shapeOneStep": "one step, two options",
+  "round.shapeBook": "a drawn round, mode",
+  "round.asReported": "as the verify API reports it",
   "round.result": "Result",
   "round.reason": "Reason",
   "round.payout": "Payout",
@@ -97,6 +103,7 @@ export const MESSAGES = {
   "check.mismatch": "does not match",
   "check.unverified": "could not be verified",
   "check.notChecked": "not checked",
+  "check.notApplicable": "does not apply",
   "check.degraded": "Chain check not independent (development).",
 
   "notChecked.heading": "Not checked by this page",
@@ -113,6 +120,19 @@ export const MESSAGES = {
   "notChecked.fairnessZk": "Fairness ZK proof",
   "notChecked.verifiedBy": "verified by",
   "notChecked.proofLink": "proof link",
+  "notChecked.notReported": "not reported",
+  "notChecked.mode": "Mode",
+  "notChecked.drawnIndex": "Drawn row",
+  "notChecked.drawnMultiplier": "Drawn row's multiplier",
+  "notChecked.apiDrawIndex": "The verify API's redrawn row",
+  "notChecked.apiDrawMultiplier": "The verify API's redrawn row's multiplier",
+  "notChecked.cost": "Mode's cost, in base bets",
+  "notChecked.merkleRoot": "Table's Merkle root",
+  "notChecked.entryCount": "Table's entry count",
+  "notChecked.totalWeight": "Table's total weight",
+  "notChecked.packageHash": "Game package hash",
+  "notChecked.binding":
+    "Commitment and block N fixed before block N existed (a book round has no signed authorization)",
 
   "icon.matches": "Matches",
   "icon.mismatch": "Does not match",

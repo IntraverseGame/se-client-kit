@@ -99,6 +99,45 @@ export type RecordEvidence = {
   readonly explorerUrl?: string | undefined;
 };
 
+/** A row of a book mode's table and what it pays (`DrawnRow`, V-21). */
+export type DrawnRowEvidence = {
+  /** The row, 0-based in the table's order; `bigint`, never a `number`. */
+  readonly index: bigint;
+  /** The multiplier in thousandths of the base bet, base-10 text. */
+  readonly multiplierMilli: string;
+};
+
+/**
+ * A book round's own evidence (`BookVerification`, V-18 to V-21), with what a
+ * book round's checks read that a config round reads elsewhere. Of it, only the
+ * seed is recomputed (check 7); the rest is shown, not checked (V-13).
+ */
+export type BookEvidence = {
+  /** `book.mode`, shown as text. */
+  readonly mode: string;
+  /** `book.drawn`: the row the round drew, as the API recorded it. */
+  readonly drawn?: DrawnRowEvidence | undefined;
+  /** `book.cost`, a whole number or a fraction, kept as its text. */
+  readonly cost?: string | undefined;
+  readonly merkleRoot?: string | undefined;
+  readonly entryCount?: bigint | undefined;
+  readonly totalWeight?: bigint | undefined;
+  /** `game.packageHash`. */
+  readonly packageHash: string;
+  /**
+   * `recomputed.draw`: the API's own redraw, never the page's result; compared
+   * with `drawn` for consistency only (check 8).
+   */
+  readonly apiDraw?: DrawnRowEvidence | undefined;
+  /** `entropy.chainId`, compared with the pinned chain id (check 6). */
+  readonly entropyChainId?: number | undefined;
+  /**
+   * `reveal.seed`. A book round carries no `seedHash` (so no `fairnessProof`)
+   * as a rule, and check 7 still compares its seed.
+   */
+  readonly seed?: string | undefined;
+};
+
 /** The round's public evidence, from the verify API's `RoundVerification`. */
 export type RoundEvidence = {
   readonly roundId: string;
@@ -127,6 +166,8 @@ export type RoundEvidence = {
   readonly fairnessProof?: FairnessProofEvidence | undefined;
   readonly createRoundAuth?: CreateRoundAuthEvidence | undefined;
   readonly record?: RecordEvidence | undefined;
+  /** Set for a book round only: a body that carries `book` (V-18). */
+  readonly book?: BookEvidence | undefined;
 };
 
 /**

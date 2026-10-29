@@ -41,6 +41,16 @@ const schema = (name: string): string => {
 const patternIn = (text: string): string | undefined =>
   /pattern: "([^"\n]*)"/u.exec(text)?.[1];
 
+/** The `pattern` of property `property` of schema `name` (8-space indent). */
+const patternOf = (name: string, property: string): string | undefined => {
+  const text = schema(name);
+  const start = text.indexOf(`\n        ${property}:\n`);
+  if (start < 0) return undefined;
+  const rest = text.slice(start + 1);
+  const end = rest.slice(1).search(/\n {8}[A-Za-z0-9]+:\n/u);
+  return patternIn(end < 0 ? rest : rest.slice(0, end + 1));
+};
+
 describe("the verify page's reader against the vendored verify API document", () => {
   it.each([
     ["roundId", "RoundId"],
@@ -52,6 +62,25 @@ describe("the verify page's reader against the vendored verify API document", ()
   ] as const)("spells %s as the document's %s", (key, name) => {
     expect(patternIn(schema(name))).toBeDefined();
     expect(reader.PATTERNS[key]).toBe(patternIn(schema(name)));
+  });
+
+  it.each([
+    ["amount", "DrawnRow", "multiplierMilli"],
+    ["cost", "BookVerification", "cost"],
+    ["positive", "BookVerification", "totalWeight"],
+  ] as const)("spells %s as the document's %s.%s (V-21)", (key, name, prop) => {
+    expect(patternOf(name, prop)).toBeDefined();
+    expect(reader.PATTERNS[key]).toBe(patternOf(name, prop));
+  });
+
+  it("holds a book round's int64 fields to integers from their minimum (V-21)", () => {
+    expect(schema("DrawnRow")).toMatch(
+      /index:\n {10}type: integer\n {10}format: int64\n {10}minimum: 0\b/u,
+    );
+    expect(schema("BookVerification")).toMatch(
+      /entryCount:\n {10}type: integer\n {10}format: int64\n {10}minimum: 1\b/u,
+    );
+    expect(schema("BookVerification")).toMatch(/required: \[mode\]/u);
   });
 
   it("spells the house edge's pattern as an amount's", () => {

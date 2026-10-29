@@ -7,8 +7,8 @@ import {
   type PageDeps,
   type PageLocation,
 } from "../page-state.ts";
+import type { RoundReport } from "../round-report.ts";
 import type { VerifyApi, VerifyApiResult } from "../verify-api.ts";
-import type { RoundReport } from "../verify-round.ts";
 import {
   configDocument,
   configFetch,
