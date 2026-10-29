@@ -3,39 +3,49 @@
  * 4.5:1 on both themes, sizes are in rem so the UI reflows at 200 % zoom, every
  * target is at least 44 by 44 CSS pixels (W-47 asks 24), focus is always
  * visible, and motion stops under prefers-reduced-motion. No remote resource:
- * the Content Security Policy allows same-origin styles only.
+ * the Content Security Policy allows same-origin styles only, so the type is
+ * the platform's own sans-serif and monospace faces.
  */
 
 :root {
   color-scheme: light dark;
   --se-bg: #ffffff;
-  --se-fg: #1a1a1a;
-  --se-muted: #4a4a4a;
-  --se-border: #6b6b6b;
-  --se-accent: #0b5cad;
+  --se-panel: #f6f6f8;
+  --se-fg: #3e4248;
+  --se-strong: #101014;
+  --se-muted: #5f646c;
+  --se-border: #e0e1e6;
+  --se-control-border: #80838d;
+  --se-accent: #101014;
   --se-accent-fg: #ffffff;
   --se-win: #136b2f;
   --se-loss: #a1261b;
   --se-error: #a1261b;
   --se-error-bg: #fdecea;
-  --se-notice-bg: #eef3fb;
-  --se-focus: #0b5cad;
+  --se-notice: #a14a12;
+  --se-focus: #101014;
+  --se-radius: 1.25rem;
+  --se-pill: 62.5rem;
+  --se-mono: ui-monospace, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --se-bg: #121212;
-    --se-fg: #f2f2f2;
-    --se-muted: #c4c4c4;
-    --se-border: #9a9a9a;
-    --se-accent: #8cc4ff;
-    --se-accent-fg: #0a0a0a;
+    --se-bg: #111113;
+    --se-panel: #18191b;
+    --se-fg: #b0b4ba;
+    --se-strong: #edeef0;
+    --se-muted: #8b8d98;
+    --se-border: #2e3135;
+    --se-control-border: #696e77;
+    --se-accent: #f4f4f6;
+    --se-accent-fg: #101014;
     --se-win: #7ddc97;
     --se-loss: #ff9c90;
     --se-error: #ff9c90;
     --se-error-bg: #2b1513;
-    --se-notice-bg: #17222f;
-    --se-focus: #8cc4ff;
+    --se-notice: #fda677;
+    --se-focus: #f4f4f6;
   }
 }
 
@@ -53,7 +63,7 @@ body {
 }
 
 .se-wrapper {
-  max-width: 40rem;
+  max-width: 64rem;
   margin: 0 auto;
   padding: 1rem;
 }
@@ -64,14 +74,34 @@ body {
   gap: 1rem;
 }
 
+.se-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border: 0.0625rem solid var(--se-border);
+  border-radius: var(--se-radius);
+  background: var(--se-panel);
+}
+
+.se-status:empty,
+.se-ended:empty {
+  display: none;
+}
+
 .se-heading {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   margin: 0;
+  color: var(--se-strong);
+  font-family: var(--se-mono);
   font-size: 1.5rem;
-  line-height: 1.25;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 h2.se-heading {
@@ -111,17 +141,33 @@ h2.se-heading {
   margin: 0;
 }
 
-.se-field__label {
+.se-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+
+.se-field__label,
+.se-bet legend {
   color: var(--se-muted);
+  font-family: var(--se-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .se-field__value {
-  font-weight: 600;
+  color: var(--se-strong);
+  font-family: var(--se-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
   overflow-wrap: anywhere;
 }
 
 .se-round-id {
-  font-family: ui-monospace, monospace;
+  font-family: var(--se-mono);
   overflow-wrap: anywhere;
 }
 
@@ -139,16 +185,21 @@ h2.se-heading {
   justify-content: center;
   min-width: 2.75rem;
   min-height: 2.75rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--se-pill);
   font: inherit;
 }
 
 .se-button {
-  border: 0.125rem solid var(--se-accent);
+  border: 0.0625rem solid var(--se-accent);
   background: var(--se-accent);
   color: var(--se-accent-fg);
+  font-family: var(--se-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
   cursor: pointer;
+  transition: opacity 0.2s ease-out;
 }
 
 .se-button:disabled {
@@ -159,42 +210,147 @@ h2.se-heading {
 }
 
 .se-link {
-  color: var(--se-accent);
+  border: 0.0625rem solid var(--se-border);
+  background: var(--se-bg);
+  color: var(--se-strong);
   text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.se-link:hover {
+  border-color: var(--se-accent);
+}
+
+.se-bet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .se-bet fieldset {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin: 0 0 1rem;
-  padding: 0.75rem;
-  border: 0.0625rem solid var(--se-border);
-  border-radius: 0.375rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
+.se-bet legend {
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+/*
+ * A bet option is a pill; its radio stays the real control, over the pill. Its
+ * border is all that marks an unselected option, so it keeps 3:1 against the
+ * page and the panel on both themes: WCAG 1.4.11, by the Wrapper's WCAG 2.2
+ * AA target (specs/wrapper.md, Accessibility).
+ */
 .se-choice {
+  position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.25rem;
+  min-width: 2.75rem;
   min-height: 2.75rem;
-  padding: 0 0.5rem;
+  padding: 0 1.25rem;
+  border: 0.0625rem solid var(--se-control-border);
+  border-radius: var(--se-pill);
+  background: var(--se-bg);
+  color: var(--se-strong);
+  font-family: var(--se-mono);
+  font-weight: 700;
+  transition: border-color 0.2s ease-out;
 }
 
 .se-choice input {
-  width: 1.5rem;
-  height: 1.5rem;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   margin: 0;
+  border-radius: inherit;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.se-choice:hover {
+  border-color: var(--se-accent);
+}
+
+.se-choice:has(input:checked) {
+  border-color: var(--se-accent);
+  background: var(--se-accent);
+  color: var(--se-accent-fg);
+}
+
+/* The selected option shows a dot too, so colour never carries it alone. */
+.se-choice:has(input:checked)::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+.se-choice:has(input:focus-visible) {
+  outline: 0.1875rem solid var(--se-focus);
+  outline-offset: 0.125rem;
+}
+
+.se-choice:has(input:disabled) {
+  border-style: dashed;
+  color: var(--se-muted);
+}
+
+.se-choice:has(input:disabled) input {
+  cursor: not-allowed;
 }
 
 .se-choice__note {
   color: var(--se-muted);
+  font-family: system-ui, sans-serif;
+  font-weight: 400;
+}
+
+.se-choice:has(input:checked) .se-choice__note {
+  color: inherit;
+}
+
+.se-status > .se-button,
+.se-bet > .se-button {
+  align-self: flex-start;
+  min-width: 12rem;
+}
+
+.se-button:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.se-game iframe {
+  display: block;
+  width: 100%;
+  min-height: 20rem;
+  max-height: 45rem;
+  aspect-ratio: 16 / 10;
+  border: 0.0625rem solid var(--se-border);
+  border-radius: var(--se-radius);
+  background: var(--se-panel);
+}
+
+@media (max-width: 40rem) {
+  .se-game iframe {
+    aspect-ratio: 3 / 4;
+  }
 }
 
 .se-alert {
-  padding: 1rem;
-  border: 0.125rem solid var(--se-error);
-  border-radius: 0.375rem;
+  padding: 1.25rem;
+  border: 0.0625rem solid var(--se-error);
+  border-left-width: 0.25rem;
+  border-radius: var(--se-radius);
   background: var(--se-error-bg);
 }
 
@@ -215,9 +371,23 @@ h2.se-heading {
   align-items: center;
   gap: 0.5rem;
   margin: 0 0 1rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
-  background: var(--se-notice-bg);
+  padding: 0.5rem 1rem;
+  border: 0.0625rem solid var(--se-border);
+  border-left: 0.25rem solid var(--se-notice);
+  border-radius: 0.75rem;
+  background: var(--se-panel);
+  color: var(--se-strong);
+  font-size: 0.875rem;
+}
+
+.se-notice .se-icon {
+  color: var(--se-notice);
+}
+
+/* A flex box ignores `hidden` unless told: a hidden notice or row is gone. */
+.se-notice[hidden],
+.se-actions[hidden] {
+  display: none;
 }
 
 :focus-visible {
@@ -245,6 +415,21 @@ h2.se-heading {
   border: 0;
 }
 
+/*
+ * The checked option opts out of forced colours to stay Highlight, so its
+ * focus outline, drawn on the Canvas outside the pill, takes a system colour
+ * too instead of the theme's --se-focus (W-45).
+ */
+@media (forced-colors: active) {
+  .se-choice:has(input:checked) {
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+    outline-color: CanvasText;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -257,5 +442,10 @@ h2.se-heading {
   /* The universal rule loses to a class: each animated class is named too. */
   .se-icon--progress {
     animation: none;
+  }
+
+  .se-button,
+  .se-choice {
+    transition: none;
   }
 }
