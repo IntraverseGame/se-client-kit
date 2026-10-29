@@ -9,9 +9,13 @@
 // settles by that closure (`won`, `lost`, or `canceled` with `closeReason:
 // "expired"`), never honored. It changes only with a vendored change of the
 // Snapshot contract.
+// A stale answer or read of the round (W-29, #163: lower in `version` than the
+// round's latest or the cancel's own answers and reads) decides nothing.
 
 import { ProblemError } from "@intraverse/se-client-play-client";
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
+
+import { isStale } from "./snapshot-reading.ts";
 
 /** The required cancel's progress (W-25, W-26). */
 export type CancelState =
@@ -120,3 +124,69 @@ export const refusalOf = (error: ProblemError): CancelRefusal =>
 /** A 422: a resent cancel, or a cancel of a round that is not `active`. */
 export const isRepeat = (error: Error): boolean =>
   error instanceof ProblemError && error.problem.status === 422;
+
+/** What orders the answers and reads the required cancel takes (W-29, #163). */
+export type CancelVersions = {
+  /**
+   * An answer or a read, or `undefined` when there is none or it is a stale
+   * Snapshot of the round: lower in `version` than the round's latest Snapshot
+   * or than any of the cancel's own answers and reads (`isStale`). An equal
+   * `version` is kept, and raises the reference.
+   */
+  readonly current: (
+    read: ValidSnapshot | undefined,
+  ) => ValidSnapshot | undefined;
+};
+
+export const createCancelVersions = (
+  roundId: string,
+  latest: () => ValidSnapshot,
+): CancelVersions => {
+  // The highest `version` of the cancel's own answers and reads of the round.
+  let newest = -1;
+  const current = (
+    read: ValidSnapshot | undefined,
+  ): ValidSnapshot | undefined => {
+    if (read === undefined || !isOfRound(read, roundId)) return read;
+    const version = Math.max(newest, latest().version);
+    if (isStale(read, { version })) return undefined;
+    newest = Math.max(newest, read.version);
+    return read;
+  };
+  return Object.freeze({ current });
+};
+
+/** What a read of the round after the cancel was sent decides (W-25). */
+export type Decided = "ended" | "not-taken" | "sent" | "unsettled" | "none";
+
+/**
+ * `idle` ends it, `active` means it did not take, a result (`canceled`
+ * included) is final, and anything else (`resolving`, another round, no
+ * Snapshot) leaves it unsettled. A Snapshot of the round is read into it
+ * (`intoRound`).
+ */
+export const decideRead = async (
+  snapshot: ValidSnapshot | undefined,
+  roundId: string,
+  intoRound: (snapshot: ValidSnapshot) => Promise<unknown>,
+): Promise<Decided> => {
+  if (snapshot === undefined) return "none";
+  // Not expected since 726f0a2 (`idle` never follows `active`): a defensive
+  // fallback, a round ended with no result to claim.
+  if (snapshot.status === "idle") return "ended";
+  if (!isOfRound(snapshot, roundId)) return "none";
+  if (isResult(snapshot, roundId)) {
+    await intoRound(snapshot);
+    return "sent";
+  }
+  if (snapshot.status === "active") {
+    await intoRound(snapshot);
+    return "not-taken";
+  }
+  // `resolving` is read into the round (W-35 polls it) and settles nothing.
+  if (isUnsettled(snapshot, roundId)) {
+    await intoRound(snapshot);
+    return "unsettled";
+  }
+  return "none";
+};

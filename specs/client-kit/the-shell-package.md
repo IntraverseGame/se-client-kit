@@ -430,16 +430,20 @@ are in brackets.
   config round's `round-flow.ts` (its `observe`, and the cancel's reads into the
   round) and in `book-round.ts`, one rule for both. An equal `version` is read.
   W-16's resend keeps its own rule. The required cancel's own decision
-  (`decide()` in `round-cancel.ts`) does not yet compare versions: a stale
-  cancel read never reaches the round's tracking, checks, or signer, but it can
-  still settle the cancel's state or allow its one resend of the same signed
-  bytes, which signs nothing new (a known gap, #163). An action whose own answer
-  was a stale read (`SessionRound.staleRead`, which names only the last Snapshot
-  observed, compared with the one before the action) answers the UI with it, so
-  the Wrapper drops it and reads again (W-35). So a stale read never moves
-  `latest()` back, sends the verdict back to `checking` or to a required cancel,
-  desynchronizes the transcript (W-19), reopens an ended round (`round-exists`),
-  or reaches the game's copy at the mount.
+  (`round-cancel.ts`, #163) compares versions with the same `isStale` before it
+  settles or resends (the stale answer decided by the human, 2026-10-29): an
+  answer or a read the cancel takes whose `version` is lower than the round's
+  latest Snapshot (its host's `latest`) or than any of the cancel's own answers
+  and reads is stale. A stale answer is taken like an answer that is not this
+  round's Snapshot (it tells nothing, and the Snapshot is read), and a stale
+  read is treated as no read; neither changes the cancel's state, allows its one
+  resend, or is read into the round. An equal `version` is read. An action whose
+  own answer was a stale read (`SessionRound.staleRead`, which names only the
+  last Snapshot observed, compared with the one before the action) answers the
+  UI with it, so the Wrapper drops it and reads again (W-35). So a stale read
+  never moves `latest()` back, sends the verdict back to `checking` or to a
+  required cancel, desynchronizes the transcript (W-19), reopens an ended round
+  (`round-exists`), or reaches the game's copy at the mount.
 - **Book playback in the shell (W-50 to W-56, #146; built).** The session's
   start (`startSessionRound`) holds a round whose first Snapshot is `playback`
   as a book round (`book-round.ts`): no transcript state, nothing signed, a pick
@@ -705,40 +709,45 @@ are in brackets.
     neutral "round ended" with no result claim, and a new round may start);
     `resolving` is read in and settles nothing; another round's Snapshot and a
     failed read settle nothing. Only after an unknown outcome and a read of
-    `active` with no move (not re-issued) is the same cancel sent again, once.
-    After an unknown outcome (a lost send, or an answer that is not this round's
-    Snapshot), a 422, a 503, or a 500 `INTERNAL`, a read that fails or shows
-    another round puts the cancel in `settling` as read 1, with no resend: a
-    later `active` read with no move is `not-taken`, not a resend (decided by
-    human review, 2026-10-18). After an unknown outcome, a read of `active` with
-    no move does the same (read 1, nothing sent) whenever no resend is allowed:
-    after the resend (a second unknown outcome, no third send) or when the read
-    shows a re-issue. After a 400 such a read leaves the cancel `refused` (the
-    round is back to `active` per the contract). There is no `unconfirmed`
-    state: every failed call ends `settling`, or decided by its read (`sent`,
-    `ended`, `not-taken`), or `refused` after a 400; so no state leaves a cancel
-    that may be stored with nothing reading the round (`settling` is read by the
-    poll, `check-later` by `checkAgain`). Every problem a cancel call is
-    answered with is kept in the evidence (`cancelRefusals`: status, code,
-    `requestId`). An answer that is not a Snapshot of this round is an unknown
-    outcome (`snapshot-rejected`, then a read). A failed read counts. After
-    `SETTLING_READS` (30) reads without one that settles it, the state is
-    `check-later` ("still resolving — contact support": a round the engine
-    cannot settle on its own stays `resolving` until it is resolved manually, as
-    the Play API document says since `65504f5`): the fast poll stops, and each
-    `checkAgain` (the "check again" control, or the Wrapper's 30 s background
-    read) reads once under the same rules. The shell reads no clock; the Wrapper
-    owns the timing. While the state is `in-flight`, `settling`, or
-    `check-later`, the round is not over and no new round may start for the
-    session (the guard of a new round reads the flow's `cancel()`); `ended` does
-    not block one. An `active` answer is `not-taken`, as an `active` read is. A
-    final answer (`canceled`, `won`, `lost`) is read into the round at once: the
-    round's result, with no error and no extra read. The shell changes these
-    rules only through a vendored change of the Snapshot contract. Since the
-    Play API document of se-backend `726f0a2` a read after the round ended keeps
-    showing it with its result (a final read, `sent`), so `ended` comes only
-    from an `idle` read, which the backend says never follows `active` (a round
-    is voided only while `starting`): `ended` is kept as a defensive fallback.
+    `active` with no move (not re-issued) is the same cancel sent again, once;
+    the unknown outcome is a lost send only (`isUnknownOutcome`). An answer that
+    is not this round's Snapshot, or is a stale one (W-29), tells nothing: it
+    raises `snapshot-rejected` and earns no resend, and the read decides
+    (`active` is `not-taken`; a failed read or another round's Snapshot is
+    `settling` as read 1). After an unknown outcome, a 422, a 503, or a 500
+    `INTERNAL`, a read that fails or shows another round puts the cancel in
+    `settling` as read 1, with no resend: a later `active` read with no move is
+    `not-taken`, not a resend (decided by human review, 2026-10-18). After an
+    unknown outcome, a read of `active` with no move does the same (read 1,
+    nothing sent) whenever no resend is allowed: after the resend (a second
+    unknown outcome, no third send) or when the read shows a re-issue. After a
+    400 such a read leaves the cancel `refused` (the round is back to `active`
+    per the contract). There is no `unconfirmed` state: every failed call ends
+    `settling`, or decided by its read (`sent`, `ended`, `not-taken`), or
+    `refused` after a 400; so no state leaves a cancel that may be stored with
+    nothing reading the round (`settling` is read by the poll, `check-later` by
+    `checkAgain`). Every problem a cancel call is answered with is kept in the
+    evidence (`cancelRefusals`: status, code, `requestId`). An answer that is
+    not a Snapshot of this round, or is a stale one, tells nothing
+    (`snapshot-rejected`); the read decides, with no resend. A failed read
+    counts. After `SETTLING_READS` (30) reads without one that settles it, the
+    state is `check-later` ("still resolving — contact support": a round the
+    engine cannot settle on its own stays `resolving` until it is resolved
+    manually, as the Play API document says since `65504f5`): the fast poll
+    stops, and each `checkAgain` (the "check again" control, or the Wrapper's 30
+    s background read) reads once under the same rules. The shell reads no
+    clock; the Wrapper owns the timing. While the state is `in-flight`,
+    `settling`, or `check-later`, the round is not over and no new round may
+    start for the session (the guard of a new round reads the flow's
+    `cancel()`); `ended` does not block one. An `active` answer is `not-taken`,
+    as an `active` read is. A final answer (`canceled`, `won`, `lost`) is read
+    into the round at once: the round's result, with no error and no extra read.
+    The shell changes these rules only through a vendored change of the Snapshot
+    contract. Since the Play API document of se-backend `726f0a2` a read after
+    the round ended keeps showing it with its result (a final read, `sent`), so
+    `ended` comes only from an `idle` read, which the backend says never follows
+    `active` (a round is voided only while `starting`): `ended` is kept as a
+    defensive fallback.
   - **Re-issue (W-26).** A re-issued verdict calls `reissue`: picks and the
     cash-out are `not_active`, and `resend` still sends a move or a cash-out
     already signed.
@@ -937,23 +946,23 @@ are in brackets.
   or as the answer) as `not-taken`; Snapshots observed from elsewhere are held
   back before the tracking; 30 reads give `check-later`, where `checkAgain`
   settles on a result or `idle` and stays on another `resolving` or another
-  round; a `canceled` answer of another round is an unknown outcome; a final
-  answer (`canceled`, `won`, `lost`) closes the round with no error and no read;
-  a cancel whose signing throws `lock-not-held` is `unavailable` with nothing
-  sent; the flow's `over()` is `false` while the cancel is `in-flight`,
-  `settling`, or `check-later`, `true` once it is `ended` (on a latest Snapshot
-  that is not over) or `sent` with `canceled`, and follows the latest Snapshot
-  once it is `not-taken`; through the session (a failed tip check from RPC
-  endpoints that disagree), picks and the cash-out are refused, nothing is
-  signed, and a start is refused `round-exists` while the cancel is `in-flight`,
-  `settling`, or `check-later`, also after an `idle` or another round's read,
-  the answer is the round's latest Snapshot and the game is sent nothing from a
-  read from elsewhere (an `idle` or another round's), also while the start
-  itself has the cancel in flight (a second start is then refused `busy`), a
-  read is one counted read (`checkAgain` in `check-later`), a failed counted
-  read answers with its failure and the next one with the round, a start is let
-  through once the cancel is `ended`, an `idle` read is then passed on, and a
-  start, a read that signs the cancel, and a settling read answer with the
+  round; a `canceled` answer of another round tells nothing (the read decides,
+  with no resend); a final answer (`canceled`, `won`, `lost`) closes the round
+  with no error and no read; a cancel whose signing throws `lock-not-held` is
+  `unavailable` with nothing sent; the flow's `over()` is `false` while the
+  cancel is `in-flight`, `settling`, or `check-later`, `true` once it is `ended`
+  (on a latest Snapshot that is not over) or `sent` with `canceled`, and follows
+  the latest Snapshot once it is `not-taken`; through the session (a failed tip
+  check from RPC endpoints that disagree), picks and the cash-out are refused,
+  nothing is signed, and a start is refused `round-exists` while the cancel is
+  `in-flight`, `settling`, or `check-later`, also after an `idle` or another
+  round's read, the answer is the round's latest Snapshot and the game is sent
+  nothing from a read from elsewhere (an `idle` or another round's), also while
+  the start itself has the cancel in flight (a second start is then refused
+  `busy`), a read is one counted read (`checkAgain` in `check-later`), a failed
+  counted read answers with its failure and the next one with the round, a start
+  is let through once the cancel is `ended`, an `idle` read is then passed on,
+  and a start, a read that signs the cancel, and a settling read answer with the
   cancel's result (or, while it settles, the round) and not with the earlier
   failure of the cancel's call or of a read; a re-issue rejects picks and the
   cash-out while a pending resend still goes out; a read that causes the W-16

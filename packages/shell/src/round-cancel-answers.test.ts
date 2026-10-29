@@ -1,7 +1,8 @@
 // T-4b (W-25, W-33): the answers to the shell's own cancel: `resolving`, and a
 // `resolving` read after an unknown outcome, enter `settling`; `canceled` (with
 // or without a `closeReason`), `won`, and `lost` are the round's result; an
-// `active` answer is `not-taken`; another round's answer is an unknown outcome.
+// `active` answer is `not-taken`; another round's answer tells nothing (the
+// read decides, with no resend).
 
 import { describe, expect, it } from "vitest";
 
@@ -77,7 +78,7 @@ describe("a cancel answered with the round's result (W-25, W-33)", () => {
     },
   );
 
-  it("takes a canceled answer of another round as an unknown outcome, not as settling", async () => {
+  it("takes a canceled answer of another round as telling nothing (the read decides, with no resend), not as settling", async () => {
     const { setup, flow } = await cancelRound(s => {
       s.play.answer("cancelRound", ok(otherRound(s, "canceled")));
       s.play.answer("getSnapshot", ok(s.at(0)));

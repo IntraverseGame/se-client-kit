@@ -233,6 +233,7 @@ describe("a signed cancel that differs from its typed data (W-25, W-26)", () => 
       {
         roundId: ROUND_ID,
         reissued: () => false,
+        latest: tracking.latest,
         intoRound: tracking.observe,
       },
       delivery,

@@ -20,6 +20,13 @@
 // Snapshot and a failed read settle nothing. After `SETTLING_READS` reads
 // without a settling one, the state is `check-later`, where each `read` still
 // follows the same rules. Only a vendored Snapshot contract changes them.
+//
+// W-29 (#163): an answer or a read of the round whose `version` is lower than
+// the newest the cancel knows (the round's latest Snapshot, or the cancel's own
+// answers and reads) is stale (`isStale`) and decides nothing: a stale answer
+// tells nothing (the read decides, with no resend), and a stale read is as if
+// no Snapshot was read. Neither settles the cancel,
+// allows its resend, or is read into the round. An equal `version` is read.
 
 import { cancelRound, ProblemError } from "@intraverse/se-client-play-client";
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
@@ -27,9 +34,11 @@ import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 import {
   type CancelRefusal,
   type CancelState,
+  createCancelVersions,
+  type Decided,
+  decideRead,
   isOfRound,
   isRepeat,
-  isResult,
   isUnsettled,
   refusalOf,
   SETTLING_READS,
@@ -77,6 +86,8 @@ export type CancelHost = {
   readonly roundId: string;
   /** Whether the round's `CreateRoundAuth` was re-issued (W-26). */
   readonly reissued: () => boolean;
+  /** The round's latest validated Snapshot, which orders the reads (W-29). */
+  readonly latest: () => ValidSnapshot;
   /** Reads a validated Snapshot into the round, past the cancel's gate. */
   readonly intoRound: (snapshot: ValidSnapshot) => Promise<unknown>;
 };
@@ -100,6 +111,8 @@ export const createRoundCancel = (
   const refusals: CancelRefusal[] = [];
   // The counted read in flight, which a second call joins.
   let reading: Promise<void> | undefined;
+  // W-29: a stale read of the round is no read.
+  const { current } = createCancelVersions(roundId, host.latest);
 
   const sign = (signer: RoundSigner, initial: SettledInitial): Sent =>
     delivery.record(
@@ -141,42 +154,16 @@ export const createRoundCancel = (
   const stillCancelable = (read: ValidSnapshot | undefined): boolean =>
     noMove(read) && !host.reissued();
 
-  /**
-   * What a read of the round after the cancel was sent decides (W-25): `idle`
-   * ends it, `active` means it did not take, a result (`canceled` included) is
-   * final, and anything else (`resolving`, another round, no Snapshot) leaves
-   * it unsettled. A Snapshot of the round is read into it.
-   */
-  const decide = async (
-    snapshot: ValidSnapshot | undefined,
-  ): Promise<"ended" | "not-taken" | "sent" | "unsettled" | "none"> => {
-    if (snapshot === undefined) return "none";
-    // Not expected since 726f0a2 (`idle` never follows `active`): a defensive
-    // fallback, a round ended with no result to claim.
-    if (snapshot.status === "idle") return "ended";
-    if (!ofRound(snapshot)) return "none";
-    if (isResult(snapshot, roundId)) {
-      await host.intoRound(snapshot);
-      return "sent";
-    }
-    if (snapshot.status === "active") {
-      await host.intoRound(snapshot);
-      return "not-taken";
-    }
-    // `resolving` is read into the round (W-35 polls it) and settles nothing.
-    if (unsettled(snapshot)) {
-      await host.intoRound(snapshot);
-      return "unsettled";
-    }
-    return "none";
-  };
+  // What a read decides (W-25); a Snapshot of the round is read into it.
+  const decide = (snapshot: ValidSnapshot | undefined): Promise<Decided> =>
+    decideRead(snapshot, roundId, host.intoRound);
 
   // One counted read under the settling rules (W-25, W-35).
   const settleRead = async (): Promise<void> => {
     reads += 1;
     // Only one counted read runs at a time (`countedRead`), and nothing else
     // changes the state while settling, so the state is still unsettled here.
-    const snapshot = await delivery.fetch();
+    const snapshot = current(await delivery.fetch());
     const decided = await decide(snapshot);
     if (decided === "ended" || decided === "not-taken" || decided === "sent") {
       state = decided;
@@ -201,9 +188,11 @@ export const createRoundCancel = (
         authorization: options.authorization,
       });
       const answer = snapshotOf(result.body);
-      // An answer that is not this round's Snapshot tells nothing: the outcome
-      // is unknown, and the Snapshot is read.
-      if (!ofRound(answer)) throw new ShellError("snapshot-rejected");
+      // An answer that is not this round's Snapshot, or a stale one (W-29),
+      // tells nothing: the read decides, with no resend.
+      if (!ofRound(answer) || current(answer) === undefined) {
+        throw new ShellError("snapshot-rejected");
+      }
       if (unsettled(answer)) {
         // Not read into the round; the counted reads settle it.
         state = "settling";
@@ -223,7 +212,8 @@ export const createRoundCancel = (
       const stored = isRepeat(error) || mayBeStored(error);
       const refused = !unknown && isRefusal(error) && !stored;
       // Still `in-flight`: the read below is the cancel's own.
-      const read = await delivery.fetch();
+      // A stale read (W-29) is no read: it decides nothing.
+      const read = current(await delivery.fetch());
       if (read !== undefined && unsettled(read)) {
         // After any failed call the cancel may have been taken (a 422 may
         // answer a resend while the round is `resolving`): this is the first

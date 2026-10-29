@@ -181,6 +181,12 @@ Part of the [Wrapper spec](../wrapper.md), section
     and the read after a failed call included), every Snapshot of the round that
     does not come from the cancel's own answer or reads is held back from the
     round.
+  - An answer or a read of the round that is stale (W-29: lower in `version`
+    than the round's latest Snapshot or than any of the cancel's own answers and
+    reads; decided by the human, 2026-10-29, #163) decides nothing. A stale
+    answer is taken like an answer for another round: it tells nothing, and the
+    Snapshot is read. A stale read is as if no Snapshot was read. Neither
+    settles the cancel nor allows its resend. An equal `version` is read.
   - A `rounds:cancel` answer of this round that is `resolving` puts the cancel
     in **`settling`**. So does a `resolving` read after **any** failed cancel
     call: a lost send (no answer, or a 503 `UNAVAILABLE` not marked
@@ -265,7 +271,8 @@ Part of the [Wrapper spec](../wrapper.md), section
   - A `rounds:cancel` answer that is `active` is `not-taken`, as an `active`
     read is (one state, one display). An answer that is final (`canceled`,
     `won`, `lost`) is the round's result at once, with no error. An answer that
-    is not a Snapshot of this round is an unknown outcome (W-16).
+    is not a Snapshot of this round, or is a stale one (W-29), tells nothing;
+    the read decides, with no resend.
 
   The shell changes these rules only through a vendored change of the
   player-facing Snapshot contract, never on its own.
