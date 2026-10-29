@@ -337,22 +337,23 @@ development-only, so it may import the test-only entry of `contracts`.
   same session id with a new token: the cloned tab of T-17), play tokens that a
   refresh rotates (the older ones revoked), `Cache-Control: no-store`, deadlines
   from a fixed server time, and the redeem's `gameOrigin`, the one origin on the
-  suite's `gameOrigins`. The launch code, session id, and tokens are derived
-  from a seed with SHA-256, so a run is reproducible. A call the script has no
-  answer for, or a request to an unknown route, is answered `INTERNAL` or
-  `NOT_FOUND` and fails the test. The fake answers an operation only with a
-  status the document lists for it: a problem it writes itself
-  (`UNAUTHENTICATED`, `INVALID_ARGUMENT`) whose status the operation does not
-  list (for example a body sent to `refreshPlayToken`, which lists no 400) fails
-  the test as an unscripted call, answered `INTERNAL` (500, which a type-level
-  check in `play-api-document.ts` requires every operation to list); no status
-  is invented. Field values are not checked against the document's patterns, and
-  responses are not re-validated against the schema at run time (decided,
-  2026-10-17): the compile-time types and the per-vector definition and status
-  check are enough, because a vector's validity is the `snapshot` package's T-5
-  replay and the document's `Snapshot` and `PlayProblem` components are
-  generated from the same schema; and the e2e suite does not import `snapshot`
-  (the dependency direction keeps e2e on `contracts` only).
+  suite's `gameOrigins`, with the `gamePath` `/` (the document's server always
+  sends one; the reference game is served at D's root). The launch code, session
+  id, and tokens are derived from a seed with SHA-256, so a run is reproducible.
+  A call the script has no answer for, or a request to an unknown route, is
+  answered `INTERNAL` or `NOT_FOUND` and fails the test. The fake answers an
+  operation only with a status the document lists for it: a problem it writes
+  itself (`UNAUTHENTICATED`, `INVALID_ARGUMENT`) whose status the operation does
+  not list (for example a body sent to `refreshPlayToken`, which lists no 400)
+  fails the test as an unscripted call, answered `INTERNAL` (500, which a
+  type-level check in `play-api-document.ts` requires every operation to list);
+  no status is invented. Field values are not checked against the document's
+  patterns, and responses are not re-validated against the schema at run time
+  (decided, 2026-10-17): the compile-time types and the per-vector definition
+  and status check are enough, because a vector's validity is the `snapshot`
+  package's T-5 replay and the document's `Snapshot` and `PlayProblem`
+  components are generated from the same schema; and the e2e suite does not
+  import `snapshot` (the dependency direction keeps e2e on `contracts` only).
 - **The launch URL** is `fake.launchUrl(wrapperUrl)`: `<wrapper-url>#<code>`,
   the whole fragment being the launch code (`#lc_…`, no parameter name), the
   form the launch contract uses. The T-rows build their launch URLs with it,

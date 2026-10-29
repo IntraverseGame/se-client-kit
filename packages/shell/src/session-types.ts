@@ -94,7 +94,12 @@ export type GameMountOptions = Omit<
 >;
 
 export type GameMount =
-  | { readonly ok: true; readonly gameOrigin: string }
+  | {
+      readonly ok: true;
+      readonly gameOrigin: string;
+      /** The path of the game's page on D, to frame D plus it (W-37). */
+      readonly gamePath: string;
+    }
   | {
       readonly ok: false;
       /** `session-ended`: the session ended, so it mounts no game (W-37). */

@@ -54,6 +54,12 @@ export type PlaySessionParts = {
   readonly randomUuid: RandomUuid;
   /** D, the redeem answer's `gameOrigin`, fixed at open (W-37). */
   readonly gameOrigin: string;
+  /**
+   * The path of the game's page on D, the redeem answer's `gamePath` (`/` when
+   * it has none), fixed at open (W-37). Not a trust boundary: messages are
+   * matched by D only.
+   */
+  readonly gamePath: string;
   /** The configuration's allow-list of game origins, fixed at open (W-37). */
   readonly gameOrigins: readonly string[];
   /** The Wrapper's own origin, the SE origin, fixed at open. */
@@ -238,16 +244,21 @@ export const createPlaySession = (
     if (!result.ok)
       return Object.freeze({ ok: false, refusal: result.refusal });
     bridge?.close();
+    const mounted: GameMount = Object.freeze({
+      ok: true,
+      gameOrigin: origin,
+      gamePath: parts.gamePath,
+    });
     if (changed()) {
       // A changed session forwards nothing to the game (W-53).
       result.bridge.close();
       bridge = undefined;
-      return Object.freeze({ ok: true, gameOrigin: origin });
+      return mounted;
     }
     bridge = result.bridge;
     const latest = current?.latest() ?? reader.latest();
     if (latest !== undefined) bridge.sendSnapshot(latest);
-    return Object.freeze({ ok: true, gameOrigin: origin });
+    return mounted;
   };
 
   const notifyEnd = (): void => {

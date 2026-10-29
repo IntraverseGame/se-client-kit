@@ -17,6 +17,7 @@ import {
   type StartRoundRequest,
 } from "./play-api.ts";
 import { ProtocolError } from "./protocol-error.ts";
+import { isGameOrigin, isGamePath } from "./redeem-fields.ts";
 import type { RetryClass } from "./retry.ts";
 import { parseDeadline } from "./token-schedule.ts";
 import type { Authorization, PlayResponse, Transport } from "./transport.ts";
@@ -68,9 +69,6 @@ export type RefreshCallOptions<S> = AuthorizedCallOptions & {
 
 const SESSION_ID = /^ses_[0-9a-f]{32}$/u;
 
-/** The document's `maxLength` of `RedeemResponse.gameOrigin`. */
-const MAX_GAME_ORIGIN = 267;
-
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -84,16 +82,6 @@ const isToken = (value: unknown): value is string =>
 
 const isDeadline = (value: unknown): value is string =>
   parseDeadline(value) !== undefined;
-
-/**
- * The document's bounds of `gameOrigin`: 1 to 267 characters, counted as JSON
- * Schema counts them (code points). Whether it is an origin, and an allowed
- * one, is the shell's game bridge's check (W-37), not this one.
- */
-const isGameOrigin = (value: unknown): value is string =>
-  typeof value === "string" &&
-  value.length > 0 &&
-  (value.length <= MAX_GAME_ORIGIN || [...value].length <= MAX_GAME_ORIGIN);
 
 const result = <Body>(response: PlayResponse, body: Body): PlayResult<Body> =>
   Object.freeze({
@@ -116,7 +104,9 @@ const mismatch = (id: PlayOperationId, status: number): ProtocolError =>
  * launch. Throws a `ProtocolError` when the answer lacks a field the shell
  * needs (`sessionId` as `ses_` and 32 hex digits, a non-empty `playToken`, both
  * deadlines as RFC 3339 timestamps with a zone, and `gameOrigin` of 1 to 267
- * characters). The token is returned only as `options.seal` made it.
+ * characters), or a `gamePath` that breaks the document's rule; an answer
+ * without `gamePath` is returned without one (the origin's root). The token is
+ * returned only as `options.seal` made it.
  */
 export const redeemLaunchCode = async <S>(
   transport: Transport,
@@ -136,13 +126,15 @@ export const redeemLaunchCode = async <S>(
   const tokenExpiresAt = field(answer, "tokenExpiresAt");
   const sessionExpiresAt = field(answer, "sessionExpiresAt");
   const gameOrigin = field(answer, "gameOrigin");
+  const gamePath = field(answer, "gamePath");
   if (
     typeof sessionId !== "string" ||
     !SESSION_ID.test(sessionId) ||
     !isToken(playToken) ||
     !isDeadline(tokenExpiresAt) ||
     !isDeadline(sessionExpiresAt) ||
-    !isGameOrigin(gameOrigin)
+    !isGameOrigin(gameOrigin) ||
+    (gamePath !== undefined && !isGamePath(gamePath))
   ) {
     throw mismatch("redeemLaunchCode", response.status);
   }
@@ -154,6 +146,7 @@ export const redeemLaunchCode = async <S>(
       tokenExpiresAt,
       sessionExpiresAt,
       gameOrigin,
+      ...(gamePath === undefined ? {} : { gamePath }),
     }),
   );
 };

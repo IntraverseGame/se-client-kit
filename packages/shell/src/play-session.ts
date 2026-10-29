@@ -39,6 +39,9 @@ import type { SessionOpening } from "./session-types.ts";
 import { openSigningSession } from "./signing-session.ts";
 import { createTokenKeeper } from "./token-keeper.ts";
 
+/** The path of a game at its origin's root, when the redeem answer has none. */
+const ROOT_GAME_PATH = "/";
+
 const opening = (
   kind: Exclude<SessionOpening["kind"], "open">,
 ): SessionOpening => Object.freeze({ kind });
@@ -87,8 +90,10 @@ export const openSessionOver = async (
     disposeSecret(code);
   }
   // D, the launched game's origin, comes from this answer only (W-37);
-  // play-client refused an answer without one of the document's bounds.
+  // play-client refused an answer without one of the document's bounds. So
+  // does the path of the game's page on D: none is D's root.
   const { sessionId, playToken, tokenExpiresAt, gameOrigin } = redeemed.body;
+  const gamePath = redeemed.body.gamePath ?? ROOT_GAME_PATH;
 
   const { registryDomain } = options.config;
   const signing = await openSigningSession({
@@ -156,6 +161,7 @@ export const openSessionOver = async (
     flow,
     randomUuid: options.randomUuid,
     gameOrigin,
+    gamePath,
     gameOrigins: options.gameOrigins,
     ownOrigin: options.ownOrigin,
     // The accepted configuration's, never the UI's (W-37's loopback exemption).

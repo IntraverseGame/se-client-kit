@@ -171,6 +171,37 @@ describe("redeemLaunchCode", () => {
     },
   );
 
+  it.each([
+    ["the root", "/"],
+    ["one segment", "/coin-flip/"],
+    ["nested segments", "/games/A_b.c~d-1/"],
+    ["255 characters", `/${"a/".repeat(127)}`],
+  ])("answers a gamePath of %s as given", async (_name, gamePath) => {
+    h.server.answer("redeemLaunchCode", {
+      kind: "success",
+      body: { ...redeemAnswer, gamePath },
+    });
+    const { body } = await redeemLaunchCode(
+      h.transport,
+      { launchCode: FIXTURE_LAUNCH_CODE },
+      { seal: h.seal },
+    );
+    expect(body.gamePath).toBe(gamePath);
+  });
+
+  it("answers no gamePath when the server sends none", async () => {
+    h.server.answer("redeemLaunchCode", {
+      kind: "success",
+      body: redeemAnswer,
+    });
+    const { body } = await redeemLaunchCode(
+      h.transport,
+      { launchCode: FIXTURE_LAUNCH_CODE },
+      { seal: h.seal },
+    );
+    expect(Object.hasOwn(body, "gamePath")).toBe(false);
+  });
+
   it("drops a field the document does not list", async () => {
     h.server.answer("redeemLaunchCode", {
       kind: "success",

@@ -9,10 +9,11 @@ Part of the [Wrapper spec](../wrapper.md), section
   domain, so a script in the game can never reach the Wrapper's storage or code.
   The Wrapper MUST refuse to mount a game whose origin equals its own, MUST take
   D only from the `sessions:redeem` response's `gameOrigin`
-  (`RedeemResponse.gameOrigin`: the launched game's catalog value, per game
-  version, set by the server), and MUST mount it only when D is on the Wrapper's
-  own allow-list, the environment configuration's `gameOrigins`. It never takes
-  D from the operator's launch URL or launch response or anything else the
+  (`RedeemResponse.gameOrigin` in the vendored Play API document: the origin to
+  frame the game at, and the only origin to exchange messages with, the same for
+  the whole session), and MUST mount it only when D is on the Wrapper's own
+  allow-list, the environment configuration's `gameOrigins`. It never takes D
+  from the operator's launch URL or launch response or anything else the
   operator supplies, a game message, a URL parameter, or the Snapshot.
   - **At mount** the `shell`'s bridge refuses (and does not listen) when D or
     the Wrapper's origin is not a serialized origin as `event.origin` gives it
@@ -48,25 +49,48 @@ Part of the [Wrapper spec](../wrapper.md), section
     parts of 0 to 255 with no leading zero, or `[::1]`) before any label split.
   - **Where D comes from** was decided in human review, 2026-10-17: the
     `sessions:redeem` response's `gameOrigin`, a serialized origin with no path
-    (`https:`, or a loopback `http:` origin in a local environment), which the
-    backend takes from the game catalog. The operator cannot set D, and the
-    launch URL never carries it. `play-client` refuses a redeem answer whose
-    `gameOrigin` is missing, empty, or longer than 267 characters (the
-    document's bounds), so no session opens without D; the shell takes D from
-    that answer only, and the bridge checks it at mount (above). No
+    (`https:`, or a loopback `http:` origin in a local environment), the same
+    for the whole session (the vendored Play API document). The operator cannot
+    set D, and the launch URL never carries it. `play-client` refuses a redeem
+    answer whose `gameOrigin` is missing, empty, or longer than 267 characters
+    (the document's bounds), so no session opens without D; the shell takes D
+    from that answer only, and the bridge checks it at mount (above). No
     `se.operator/1` message carries D, a game id, or any input to the game's
     mount ([Operator embedding](./operator-embedding.md)).
-  - **The frame's URL** is D's root with the Wrapper's own serialized origin as
-    the query parameter `parentOrigin`, built with the `URL` API (decided in
-    human review, 2026-10-17): for example
-    `https://games.example/?parentOrigin=https%3A%2F%2Fplay.example`. It is not
-    a secret. The game checks it against `location.ancestorOrigins[0]` where
-    that exists and talks to nobody when they disagree. The Wrapper sets the
-    frame's `src` only after the bridge accepted D, so a refused D is never
-    loaded, and the frame is kept for the session's life and hidden unless the
-    round is shown ready (`active` after W-26 passed, or `resolving`, W-31). A
-    book round's frame is also shown at `won` and `lost`, for the playback
-    ([W-55](./book-playback.md)).
+  - **The frame's URL** is the game's page on D, at the `sessions:redeem`
+    response's `gamePath` (D's root, `/`, when the answer has none), with the
+    Wrapper's own serialized origin as the query parameter `parentOrigin`, built
+    with the `URL` API (decided in human review, 2026-10-17; the path decided
+    2026-10-28, `RedeemResponse.gamePath` in the vendored Play API document,
+    [how the kit gets its contracts](../client-kit/how-the-kit-gets-its-contracts.md)):
+    for example
+    `https://games.example/?parentOrigin=https%3A%2F%2Fplay.example`, or
+    `https://games.example/coin-flip/?parentOrigin=...` for a game whose page is
+    at `/coin-flip/`. It is not a secret. The game checks it against
+    `location.ancestorOrigins[0]` where that exists and talks to nobody when
+    they disagree. The Wrapper sets the frame's `src` only after the bridge
+    accepted D, so a refused D is never loaded, and the frame is kept for the
+    session's life and hidden unless the round is shown ready (`active` after
+    W-26 passed, or `resolving`, W-31). A book round's frame is also shown at
+    `won` and `lost`, for the playback ([W-55](./book-playback.md)).
+  - **The game's page path** (`RedeemResponse.gamePath`, optional) lets several
+    games share one origin under different paths. `play-client` refuses a redeem
+    answer whose `gamePath` breaks the vendored document's rule (its `pattern`,
+    `minLength`, and `maxLength`: 1 to 255 characters, starting and ending with
+    `/`, segments of 1 to 63 letters, digits, `-`, `.`, `_`, or `~`, never `.`
+    or `..`), so the URL it builds stays on D; an answer without one is D's
+    root. The path is not a trust boundary: every check of this section and W-38
+    is on D, the allow-list stays a list of origins, and games that share D
+    share its storage with each other, never with the Wrapper. Like D, it comes
+    from the redeem answer only.
+  - **Where games share an origin** (decided 2026-10-28). One game origin shared
+    by many games, each under its own path, is accepted for staging; in
+    production one origin per game is recommended and the path stays optional.
+    The reference game stays at `/` on the kit's own game site
+    ([The game's site](../client-kit.md#the-games-site)). Other staging games
+    are deployed from their own source to their own site and origin, never to
+    the kit's, so the two deploys never overwrite each other; that origin is
+    added to the staging Wrapper's `gameOrigins`.
 - **W-38.** A message from the game is accepted only if `event.source` is the
   game frame's `contentWindow` **and** `event.origin` is D. The Wrapper posts to
   the game only with `targetOrigin = D`. Every accepted message MUST be parsed

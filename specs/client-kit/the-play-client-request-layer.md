@@ -109,15 +109,15 @@ gives for its `operationId`: a route the document does not serve, at that
 method, for that `operationId`, does not compile, even between two operations of
 one shape (a move at the cash-out route), and a type test keeps it so.
 
-| Function           | Route                    | Retry class  | Credential | Answers                                                                                 |
-| ------------------ | ------------------------ | ------------ | ---------- | --------------------------------------------------------------------------------------- |
-| `redeemLaunchCode` | `POST /sessions:redeem`  | `never`      | none       | `sessionId`, the sealed `playToken`, `tokenExpiresAt`, `sessionExpiresAt`, `gameOrigin` |
-| `refreshPlayToken` | `POST /sessions:refresh` | `refresh`    | play token | the sealed `playToken`, `tokenExpiresAt`                                                |
-| `startRound`       | `POST /rounds:start`     | `start`      | play token | the round's Snapshot, `unknown`                                                         |
-| `continueRound`    | `POST /rounds:continue`  | `idempotent` | play token | the round's Snapshot, `unknown`                                                         |
-| `cashOutRound`     | `POST /rounds:cashOut`   | `idempotent` | play token | the round's Snapshot, `unknown`                                                         |
-| `cancelRound`      | `POST /rounds:cancel`    | `never`      | play token | the round's Snapshot, `unknown`                                                         |
-| `getSnapshot`      | `GET /snapshot`          | `idempotent` | play token | the session's Snapshot, `unknown`                                                       |
+| Function           | Route                    | Retry class  | Credential | Answers                                                                                                                         |
+| ------------------ | ------------------------ | ------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `redeemLaunchCode` | `POST /sessions:redeem`  | `never`      | none       | `sessionId`, the sealed `playToken`, `tokenExpiresAt`, `sessionExpiresAt`, `gameOrigin`, and `gamePath` when the answer has one |
+| `refreshPlayToken` | `POST /sessions:refresh` | `refresh`    | play token | the sealed `playToken`, `tokenExpiresAt`                                                                                        |
+| `startRound`       | `POST /rounds:start`     | `start`      | play token | the round's Snapshot, `unknown`                                                                                                 |
+| `continueRound`    | `POST /rounds:continue`  | `idempotent` | play token | the round's Snapshot, `unknown`                                                                                                 |
+| `cashOutRound`     | `POST /rounds:cashOut`   | `idempotent` | play token | the round's Snapshot, `unknown`                                                                                                 |
+| `cancelRound`      | `POST /rounds:cancel`    | `never`      | play token | the round's Snapshot, `unknown`                                                                                                 |
+| `getSnapshot`      | `GET /snapshot`          | `idempotent` | play token | the session's Snapshot, `unknown`                                                                                               |
 
 `PLAY_ROUTES` lists every operation of the document, so it also holds
 `listGrants` (`GET /grants`, the free-bet grants). The kit has no function for
@@ -133,7 +133,13 @@ sends a grant.
   a `gameOrigin` of 1 to 267 characters (code points, as the document's
   `minLength` and `maxLength` count them; the document gives no pattern, so
   whether it is an origin, and an allowed one, is the shell's game bridge's
-  check at mount, W-37); a refresh answer a non-empty `playToken` and
+  check at mount, W-37), and, when it has one, a `gamePath` that meets the
+  document's rule for `RedeemResponse.gamePath` (its `pattern`, `minLength` 1,
+  and `maxLength` 255: an absolute path that starts and ends with `/`, of
+  segments of 1 to 63 letters, digits, `-`, `.`, `_`, or `~`, never `.` or `..`;
+  `isGamePath` in `src/redeem-fields.ts`, tested case by case against the
+  document's pattern). An answer without `gamePath` is returned without one, and
+  the shell reads it as `/` (W-37); a refresh answer a non-empty `playToken` and
   `tokenExpiresAt`. Anything else is a `ProtocolError` whose message names the
   method, path, and status only. The answer is a new frozen object of exactly
   those fields: a field the document does not list is dropped, never passed on.

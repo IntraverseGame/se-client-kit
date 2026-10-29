@@ -86,8 +86,9 @@ structure below.
   the working rule until a second consumer appears; then the types split into
   a `controller` package. Do not add a value to it. The reference game takes its
   parent's origin from its `parentOrigin` URL parameter (checked against
-  `location.ancestorOrigins`): the Wrapper's mount appends it (`gameUrlOf` in
-  `session-wiring.ts`). The tip check and its pass-or-fail decision, the
+  `location.ancestorOrigins`): the Wrapper's mount appends it
+  (`gameUrlOf(gameOrigin, gamePath, ownOrigin)` in `session-wiring.ts`, which
+  frames the page at the redeem answer's `gamePath` on D, `/` when absent). The tip check and its pass-or-fail decision, the
   W-26 `CreateRoundAuth` checks, and the round's verdict
   (`round-verification.ts`, which alone settles `T_0`, typed
   `SettledInitial`, and says when a `PlayerCancel` must be signed), the round
@@ -221,7 +222,10 @@ structure below.
   and the session passes none. Do not move it back into an options type.
   Provisional session input: `bindMode` (the Wrapper wires `tip`). D is the
   redeem answer's `gameOrigin`, fixed at open; no session option gives it, so
-  do not add one back (W-37). W-37's registrable-domain rule is the
+  do not add one back (W-37). The page path on D is the redeem answer's
+  optional `gamePath` (`/` when absent), fixed at open too and returned by an
+  accepted `mountGame` as `GameMount.gamePath`; it is not a trust boundary, so
+  every check stays on D. W-37's registrable-domain rule is the
   last-two-labels comparison of ADR-007 (accepted; built: `serialized-origin.ts`,
   the bridge's `same-site` refusal): do not add a public suffix list. The bridge
   takes the configuration's `environment` from the session (the loopback
