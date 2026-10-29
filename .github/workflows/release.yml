@@ -1,53 +1,47 @@
 name: Release
 
-# Run by hand only (runbook/client-kit-release.md, Release). The `dry-run` job
-# runs every time and publishes nothing; it fails at once, so nothing else runs,
-# when both `version` and `publish` are set (they are never run together). It
-# uploads the Wrapper artifact and its `.sha256`, kept 14 days (ADR-005).
+# Runs on every push to `main` (ADR-009; runbook/client-kit-release.md,
+# Release), with no concurrency group: GitHub keeps one pending run per group,
+# so a group would let a later push cancel the bump merge's waiting run. Each
+# push's run is independent and checks out its own commit.
 #
-# `version` and `version-push` run only when the run was dispatched from `main`
-# with `version` set and `publish` not set. `version` runs `changeset version`
-# (repository tooling) with a read-only token and uploads the change as a
-# patch; `version-push` runs no repository tooling: it applies the patch to the
-# same commit, refuses anything `changeset version` does not write, and pushes
-# the result to `changeset-release/main`, from which a person opens the
-# version pull request (Actions never open one here). Neither names an
-# environment or holds an OIDC token.
+#   - `changesets-mode` (`contents: read`, `pull-requests: read`; no
+#     environment, no secret, no repository tooling: the runner's shell, git,
+#     gh, and jq) decides, read-only, whether changesets are pending
+#     (`pending`), and whether the pushed commit is the squash merge of the bump
+#     pull request (`changeset-release/main` from this repository, merged into
+#     `main`) with no changeset pending and a publishable version above 0.0.0
+#     that has no tag yet (`release-candidate`).
+#   - `version` (only when `pending`; no environment; `contents: write` and
+#     `pull-requests: write`; no `id-token`) runs changesets/action in version
+#     mode: `changeset version` and the version-file guard
+#     (tools/release-version.sh), then the "chore: bump versions" pull request
+#     from `changeset-release/main`. Made with the job token, that pull request
+#     starts no workflow run (accepted: CI runs on `main` after the merge).
+#   - `publish` (only on a release candidate and with the repository variable
+#     RELEASE_PUBLISH_ENABLED `true`; environment `release`, whose required
+#     reviewers approve it; `contents: write` and `id-token: write`; no
+#     `pull-requests`) checks again that a version is still untagged, runs
+#     `pnpm check` and the release dry run, then changesets/action in publish
+#     mode: tools/release-publish.ts publishes with npm trusted publishing (no
+#     npm token anywhere) and tags every released package; the action pushes
+#     the tags (and creates no release); the job's last step checks that every
+#     tag is on this commit and only then creates a GitHub release for each.
+#   - `wrapper-build` (`contents: read`), `attest` (environment `attest`), and
+#     `wrapper-assets` (`contents: write`, no repository code) run only while
+#     the Wrapper's release has no tar attached: they build the Wrapper artifact twice (one digest),
+#     attest it, and attach it and its `.sha256` to the Wrapper's release
+#     (ADR-005, decisions 1 to 5).
+#   - `production` deploys that release to production
+#     (.github/workflows/pages-prod.yml, which verifies its attestation first).
 #
-# The publish path is four jobs, each with its own permissions (ADR-005):
-#   - `build` (no `id-token`, no environment) builds, packs, and checks the
-#     five libraries, refuses what is not ready, and uploads the tarballs with
-#     the plan of what to publish and each tarball's SHA-256;
-#   - `publish` (environment `release`, `id-token: write`) runs no repository
-#     tooling: it checks the downloaded tarballs against the plan and runs
-#     `npm publish` on each (npm trusted publishing; no npm token anywhere);
-#   - `attest` (environment `attest`, `id-token: write`,
-#     `attestations: write`) attests the dry run's Wrapper digest;
-#   - `github-release` (`contents: write`) creates the tag and the GitHub
-#     release with the Wrapper artifact and its `.sha256`.
-# They run only when all of these hold, so nothing publishes before the org
-# owners' settings exist:
-#   - the run was dispatched from `main` with `publish` set and `version` not
-#     set;
-#   - the repository variable RELEASE_PUBLISH_ENABLED is `true` (set by an org
-#     owner once the protected `release` and `attest` environments and the npm
-#     trusted publishers exist; a variable, never a secret);
-#   - for `publish`, a required reviewer of the `release` environment approves
-#     the deployment.
-# Until then neither environment is ever referenced by a run.
+# The usual push is neither: the run ends in `changesets-mode` with a "nothing
+# to release" notice. A release candidate while publishing is off ends with a
+# "publishing was off" notice; the recovery is a manual re-run of the bump
+# merge's run within 30 days, once publishing is on (runbook).
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description:
-          Push the changeset-release/main branch for the version pull request
-          (off by default)
-        type: boolean
-        default: false
-      publish:
-        description: Publish to npm (off by default; the dry run always runs)
-        type: boolean
-        default: false
+  push:
+    branches: [main]
 
 # No job gets a token unless it asks for one below.
 permissions: {}
@@ -58,106 +52,123 @@ env:
   # this states it for every job.
   WIREIT_CACHE: none
 
-concurrency:
-  group: release
-  cancel-in-progress: false
-
 jobs:
-  dry-run:
-    name: dry-run
+  changesets-mode:
+    name: changesets-mode
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     permissions:
+      # The checkout.
       contents: read
+      # The pull request associated with the pushed commit.
+      pull-requests: read
     outputs:
-      wrapper-digest: ${{ steps.dry-run.outputs.wrapper-digest }}
-      wrapper-file-name: ${{ steps.dry-run.outputs.wrapper-file-name }}
-      release-tag: ${{ steps.tag.outputs.release-tag }}
+      pending: ${{ steps.mode.outputs.pending }}
+      release-candidate: ${{ steps.mode.outputs.release-candidate }}
     steps:
-      # `version` and `publish` are exclusive: the version pull request must be
-      # merged before anything is published. Both set fails the run here, with
-      # this message, instead of skipping a job without a word.
-      - name: Refuse version and publish together
-        if: inputs.version && inputs.publish
-        run: |
-          echo "::error::Tick either version or publish, not both: merge the version pull request first, then publish in a run of its own."
-          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # No cache: no wireit helper and no pnpm store restore in a release job.
-      - uses: ./.github/actions/setup
-        with:
-          cache: "false"
-      # Applies the changesets on a scratch copy, packs and checks the five
-      # libraries, builds the Wrapper artifact twice (same digest required), and
-      # holds the Wrapper to its size budget.
-      # The CLI directly, not `pnpm release:dry-run -- --out ...`: wireit
-      # passes extra arguments to a `shell: true` spawn unescaped (Node's
-      # DEP0190 warning).
-      - id: dry-run
-        run:
-          pnpm exec tsx tools/release-dry-run.ts --out
-          "$RUNNER_TEMP/release-dry-run"
-      # The release's tag, the Wrapper's package name and version (the form
-      # changesets gives a package's tag), from the artifact's file name; and
-      # the artifact's path, for the uploads.
-      - name: Name the release
-        id: tag
+      # Pending changesets: the `.changeset/*.md` files other than its
+      # README.md. With none pending, the pushed commit is the bump merge when
+      # a pull request associated with it (GET
+      # /repos/{owner}/{repo}/commits/{sha}/pulls) has head ref
+      # `changeset-release/main` in this repository (so a fork's branch of the
+      # same name cannot match), base `main`, was merged, and its merge commit
+      # is this very commit. This assumes the repository squash-merges, so the
+      # check never looks for a second parent; a true merge commit of the bump
+      # pull request would also pass, which is harmless because GitHub
+      # records that merge commit as the pull request's `merge_commit_sha`, so
+      # it is still the one commit on `main` that carries exactly the reviewed
+      # bump, and the release then tags and publishes that commit. Then each
+      # publishable package's `<name>@<version>` tag
+      # is looked up with `git ls-remote` on the public URL (no registry, no
+      # token); a version 0.0.0 never counts. Any API or git error fails the
+      # step, so an error is never read as "nothing to release".
+      # tools/release-mode.test.ts runs this script.
+      - name: Decide what this push releases
+        id: mode
         env:
-          WRAPPER_FILE_NAME: ${{ steps.dry-run.outputs.wrapper-file-name }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PUBLISH_ENABLED: ${{ vars.RELEASE_PUBLISH_ENABLED }}
         shell: bash
         run: |
           set -euo pipefail
-          pattern='^se-client-wrapper-([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)\.tar$'
-          if [[ ! $WRAPPER_FILE_NAME =~ $pattern ]]; then
-            echo "::error::Unexpected Wrapper artifact name: ${WRAPPER_FILE_NAME}"
-            exit 1
+          shopt -s nullglob
+          pending=false
+          for file in .changeset/*.md; do
+            if [ "$file" != .changeset/README.md ]; then
+              pending=true
+            fi
+          done
+          bump=false
+          if [ "$pending" = false ]; then
+            merges="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls?per_page=100" --jq '.[] | select(.head.ref == "changeset-release/main" and .head.repo.full_name == env.GITHUB_REPOSITORY and .base.ref == "main" and .merged_at != null and .merge_commit_sha == env.GITHUB_SHA) | .number')"
+            if [ -n "$merges" ]; then
+              bump=true
+            fi
+          fi
+          untagged=""
+          if [ "$bump" = true ]; then
+            for manifest in packages/contracts/package.json packages/signing/package.json \
+              packages/snapshot/package.json packages/play-client/package.json \
+              packages/shell/package.json apps/wrapper/package.json; do
+              name="$(jq --raw-output '.name' "$manifest")"
+              version="$(jq --raw-output '.version' "$manifest")"
+              if ! [[ $name =~ ^@intraverse/se-client-[a-z-]+$ && $version =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+                echo "::error::Unexpected name or version in ${manifest}."
+                exit 1
+              fi
+              if [ "$version" = 0.0.0 ]; then
+                continue
+              fi
+              tag="refs/tags/${name}@${version}"
+              found="$(git -c core.hooksPath=/dev/null -c core.fsmonitor=false ls-remote --tags \
+                "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "$tag" |
+                awk -v tag="$tag" '$2 == tag || $2 == tag "^{}"')"
+              if [ -z "$found" ]; then
+                untagged="${untagged} ${name}@${version}"
+              fi
+            done
+          fi
+          candidate=false
+          if [ -n "$untagged" ]; then
+            candidate=true
           fi
           {
-            echo "release-tag=@intraverse/se-client-wrapper@${BASH_REMATCH[1]}"
-            echo "wrapper-path=$RUNNER_TEMP/release-dry-run/wrapper/${WRAPPER_FILE_NAME}"
+            echo "pending=${pending}"
+            echo "release-candidate=${candidate}"
           } >> "$GITHUB_OUTPUT"
-      # The Wrapper artifact and its `.sha256`, one file each, not zipped (the
-      # download is the attested bytes), kept 14 days for a release review
-      # (ADR-005, decision 5). A copy for review, never the released artifact:
-      # that is the GitHub release asset, taken by its digest.
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          path: ${{ steps.tag.outputs.wrapper-path }}
-          archive: false
-          if-no-files-found: error
-          retention-days: 14
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          path: ${{ steps.tag.outputs.wrapper-path }}.sha256
-          archive: false
-          if-no-files-found: error
-          retention-days: 14
+          if [ "$pending" = true ]; then
+            echo "Changesets are pending: the version job opens or updates the bump pull request."
+          elif [ "$candidate" = true ] && [ "${RELEASE_PUBLISH_ENABLED:-}" = true ]; then
+            echo "Release candidate, untagged:${untagged}"
+          elif [ "$candidate" = true ]; then
+            echo "::notice::Publishing was off: nothing was published for${untagged}. Re-run this run within 30 days once RELEASE_PUBLISH_ENABLED is true (runbook/client-kit-release.md, Release)."
+          else
+            echo "::notice::Nothing to release: this push is not the bump merge, or every publishable version is tagged or 0.0.0."
+          fi
 
-  # The version pull request's change (runbook, Release step 2). Only from
-  # `main`, only after the dry run passed on the same commit. The repository
-  # tooling (`changeset version`, its changelog generator, the formatter) runs
-  # here with a read-only token; the push is `version-push`'s.
+  # The bump pull request. Repository tooling (`changeset version`, its
+  # changelog generator, the formatter, the version-file guard) runs here with
+  # a write token, accepted by ADR-009; no environment and no OIDC token, so
+  # nothing here can publish or attest.
   version:
     name: version
-    needs: dry-run
-    if: inputs.version && !inputs.publish && github.ref == 'refs/heads/main'
+    needs: changesets-mode
+    if: needs.changesets-mode.outputs.pending == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      # The checkout. Nothing here can write to the repository.
-      contents: read
-      # @changesets/changelog-github asks the GitHub GraphQL API for each
-      # changeset commit's associated pull request and its author, to link
-      # them in the changelog; with only `contents` granted, every other scope
-      # of the token is `none`, so the pull request lookup needs this read.
-      pull-requests: read
-    outputs:
-      changed: ${{ steps.export.outputs.changed }}
+      # The changeset-release/main branch (its commit is made through the API).
+      contents: write
+      # The bump pull request, opened or updated.
+      pull-requests: write
     steps:
       # The whole history: changesets finds the commit that added each
-      # changeset for the changelog. No credential is left in .git/config.
+      # changeset for the changelog. No credential is left in .git/config: the
+      # action pushes through the API with its `github-token` input.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -166,254 +177,94 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache: "false"
-      # Versions and changelogs. The job's own read-only token, for the
-      # changelog generator's GitHub API calls; never a stored secret.
-      - name: Apply the pending changesets
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: pnpm exec changeset version
-      # Everything `changeset version` changed, as one binary patch with
-      # renames split into a deletion and an addition. It is not checked here:
-      # this job ran the tooling, so `version-push` checks what it applies.
-      - name: Export the version change
-        id: export
-        shell: bash
-        run: |
-          set -euo pipefail
-          git -c core.hooksPath=/dev/null -c core.fsmonitor=false add --all
-          if git -c core.hooksPath=/dev/null -c core.fsmonitor=false diff --cached --quiet; then
-            echo "No pending changesets; nothing to push."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          mkdir "$RUNNER_TEMP/version"
-          git -c core.hooksPath=/dev/null -c core.fsmonitor=false diff --cached --binary --no-renames \
-            > "$RUNNER_TEMP/version/version.patch"
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-      # One file, not zipped, kept one day: it only hands the change to
-      # `version-push`.
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: steps.export.outputs.changed == 'true'
+      # Version mode (no `publish-script`). The version script runs
+      # `changeset version` and refuses anything it does not write
+      # (tools/release-version-guard.sh); the action commits the result on
+      # `changeset-release/main` and opens or updates the pull request.
+      - uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
-          path: ${{ runner.temp }}/version/version.patch
-          archive: false
-          if-no-files-found: error
-          retention-days: 1
+          version-script: bash tools/release-version.sh
+          commit-message: "chore: bump versions"
+          pr-title: "chore: bump versions"
 
-  # The push of the version pull request's branch. It runs no repository
-  # tooling: a checkout of the same commit, the patch `version` uploaded, and
-  # git. It publishes nothing, holds no OIDC token, and names no environment
-  # (naming `release` before the org owners create it would create it
-  # unprotected).
-  version-push:
-    name: version-push
-    needs: version
-    if: >-
-      inputs.version && !inputs.publish && github.ref == 'refs/heads/main' &&
-      needs.version.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      # To push the changeset-release/main branch, the only thing this job
-      # writes (no tag, no release, no pull request).
-      contents: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: version.patch
-          path: ${{ runner.temp }}/version
-      # Into the working tree only; the next step stages and checks it. git
-      # apply refuses a path outside the tree, inside .git, or beyond a
-      # symbolic link.
-      - name: Apply the version change
-        shell: bash
-        run: |
-          set -euo pipefail
-          git -c core.hooksPath=/dev/null -c core.fsmonitor=false apply "$RUNNER_TEMP/version/version.patch"
-      # Only what `changeset version` writes, as regular files, may be pushed:
-      # a modified `package.json`, an added or modified `CHANGELOG.md`, and a
-      # consumed changeset deleted directly under `.changeset/` (never its
-      # README.md); no `package.json` or `CHANGELOG.md` inside `.changeset/`,
-      # which changesets would read as a pending changeset, or under
-      # `.github/`, where a file can change what workflows run. `--no-renames` splits a rename into a deletion and an
-      # addition, so neither half hides; a type or mode change, a path with
-      # any character outside [A-Za-z0-9._/@-], and anything else is refused.
-      # No token in this step. tools/release-version-guard.test.ts runs this
-      # script against temporary git repositories.
-      - name: Check what changeset version changed
-        id: changes
-        shell: bash
-        run: |
-          git -c core.hooksPath=/dev/null -c core.fsmonitor=false add --all
-          if git -c core.hooksPath=/dev/null -c core.fsmonitor=false diff --cached --quiet; then
-            echo "No pending changesets; nothing to push."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          versioned='(^|/)(package\.json|CHANGELOG\.md)$'
-          changelog='(^|/)CHANGELOG\.md$'
-          consumed='^\.changeset/[A-Za-z0-9._-]+\.md$'
-          safe='^[A-Za-z0-9._/@-]+$'
-          changes="$(mktemp)"
-          git -c core.hooksPath=/dev/null -c core.fsmonitor=false diff --cached --no-renames --raw -z \
-            > "$changes"
-          unexpected=0
-          while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
-            read -r old_mode new_mode _ _ status <<< "${meta#:}"
-            allowed=0
-            if [[ $path =~ $safe ]]; then
-              case "$status $old_mode $new_mode" in
-                "M 100644 100644")
-                  [[ $path =~ $versioned && $path != .changeset/* && $path != .github/* ]] &&
-                    allowed=1
-                  ;;
-                "A 000000 100644")
-                  [[ $path =~ $changelog && $path != .changeset/* && $path != .github/* ]] &&
-                    allowed=1
-                  ;;
-                "D 100644 000000")
-                  [[ $path =~ $consumed && $path != .changeset/README.md ]] &&
-                    allowed=1
-                  ;;
-              esac
-            fi
-            if [ "$allowed" -ne 1 ]; then
-              printf 'Unexpected change: %s %q\n' "$status" "$path"
-              unexpected=1
-            fi
-          done < "$changes"
-          rm -f "$changes"
-          if [ "$unexpected" -ne 0 ]; then
-            echo "changeset version changed more than it should; nothing pushed."
-            exit 1
-          fi
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-      # One commit on top of the dispatched `main` commit, force-pushed: the
-      # branch is regenerated on every run, so a fix belongs in a changeset on
-      # `main`, never on this branch. The token reaches git through a
-      # credential helper that reads it from the environment, never through
-      # the command line or .git/config. Only this one branch is pushed: no
-      # tag, no other ref. Every git command of the apply, check, and push
-      # steps runs with no hooks and no fsmonitor (`core.hooksPath=/dev/null`,
-      # `core.fsmonitor=false`, and `--no-verify`).
-      - name: Push the changeset-release/main branch
-        if: steps.changes.outputs.changed == 'true'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          git -c core.hooksPath=/dev/null -c core.fsmonitor=false \
-            -c user.name="github-actions[bot]" \
-            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit --no-verify --quiet --message "chore(release): version packages"
-          git -c core.hooksPath=/dev/null -c core.fsmonitor=false \
-            -c credential.helper= \
-            -c credential.helper='!f() { echo username=x-access-token; echo "password=${GITHUB_TOKEN}"; }; f' \
-            push --no-verify --force "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
-            HEAD:refs/heads/changeset-release/main
-          {
-            echo "## Version branch"
-            echo ""
-            echo "Pushed \`changeset-release/main\` at $(git -c core.hooksPath=/dev/null -c core.fsmonitor=false rev-parse HEAD)."
-            echo "Open the pull request into \`main\` (or close and reopen an"
-            echo "open one so its checks run on the new commit)."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  # The publish path's build: repository tooling, with no OIDC token, no write
-  # token, and no environment.
-  build:
-    name: build
-    needs: dry-run
-    if: >-
-      inputs.publish && !inputs.version && github.ref == 'refs/heads/main' &&
-      vars.RELEASE_PUBLISH_ENABLED == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    outputs:
-      publish-plan: ${{ steps.build.outputs.publish-plan }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # A released Wrapper version is never released again: refused here,
-      # before anything is published. Read-only, with no credential (the
-      # repository is public); a failed lookup fails the step.
-      - name: Refuse a release that exists
-        env:
-          RELEASE_TAG: ${{ needs.dry-run.outputs.release-tag }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          found="$(git -c core.hooksPath=/dev/null -c core.fsmonitor=false ls-remote --tags \
-            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "refs/tags/${RELEASE_TAG}")"
-          if [ -n "$found" ]; then
-            echo "::error::The tag ${RELEASE_TAG} exists: this Wrapper version is released already."
-            exit 1
-          fi
-      # No cache: no wireit helper and no pnpm store restore in a release job.
-      - uses: ./.github/actions/setup
-        with:
-          cache: "false"
-      # Refuses pending changesets, a private or 0.0.0 library, a Wrapper
-      # build that differs from the dry run's, a Wrapper over its size budget,
-      # and a version the registry holds with other bytes; then writes the
-      # publish plan (the step output `publish-plan`: one `<sha256>  <tarball>`
-      # line per tarball to publish, in dependency order).
-      - id: build
-        env:
-          WRAPPER_DIGEST: ${{ needs.dry-run.outputs.wrapper-digest }}
-        run: >-
-          pnpm exec tsx tools/release-publish.ts --out "$RUNNER_TEMP/publish"
-          --expect-wrapper-digest "$WRAPPER_DIGEST"
-      # The five checked tarballs, zipped into one artifact, kept one day: it
-      # only hands them to `publish`, which checks each against the plan.
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: npm-tarballs
-          path: ${{ runner.temp }}/publish/packages
-          if-no-files-found: error
-          retention-days: 1
-
-  # The publish itself. It runs no repository tooling: a checkout of
-  # `.node-version` alone (for the Node, and so the npm, the repository pins),
-  # the tarballs `build` uploaded, and `npm publish`.
+  # The release. Only for the bump merge with an untagged version, only with
+  # publishing on, and only after a required reviewer of `release` approves.
   publish:
     name: publish
-    needs: build
+    needs: changesets-mode
     if: >-
-      inputs.publish && !inputs.version && github.ref == 'refs/heads/main' &&
+      needs.changesets-mode.outputs.release-candidate == 'true' &&
       vars.RELEASE_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     environment: release
     permissions:
-      contents: read
-      # npm provenance and trusted publishing: the job's OIDC token, exchanged
+      # The tags (through the action) and the GitHub releases (the step after
+      # it).
+      contents: write
+      # npm trusted publishing and provenance: the job's OIDC token, exchanged
       # by npm; no npm token is stored anywhere.
       id-token: write
+    outputs:
+      wrapper-tag: ${{ steps.releases.outputs.wrapper-tag }}
     steps:
+      # With the tags: for the Wrapper, released means tagged.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          sparse-checkout: .node-version
-          sparse-checkout-cone-mode: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+          fetch-tags: true
+      # The tags were read when `changesets-mode` ran, and this job may have
+      # waited for the reviewers; a re-run after a release, or any duplicate,
+      # finds them tagged and publishes nothing (only the releases step below
+      # still runs, to finish a partial release).
+      # tools/release-publish-steps.test.ts runs this script.
+      - name: Check that a version is still untagged
+        id: recheck
+        shell: bash
+        run: |
+          set -euo pipefail
+          untagged=""
+          for manifest in packages/contracts/package.json packages/signing/package.json \
+            packages/snapshot/package.json packages/play-client/package.json \
+            packages/shell/package.json apps/wrapper/package.json; do
+            name="$(jq --raw-output '.name' "$manifest")"
+            version="$(jq --raw-output '.version' "$manifest")"
+            if ! [[ $name =~ ^@intraverse/se-client-[a-z-]+$ && $version =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+              echo "::error::Unexpected name or version in ${manifest}."
+              exit 1
+            fi
+            if [ "$version" = 0.0.0 ]; then
+              continue
+            fi
+            tag="refs/tags/${name}@${version}"
+            found="$(git -c core.hooksPath=/dev/null -c core.fsmonitor=false ls-remote --tags \
+              "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "$tag" |
+              awk -v tag="$tag" '$2 == tag || $2 == tag "^{}"')"
+            if [ -z "$found" ]; then
+              untagged="${untagged} ${name}@${version}"
+            fi
+          done
+          if [ -z "$untagged" ]; then
+            echo "::notice::Already released: every publishable version is tagged; nothing was published."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Untagged:${untagged}"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+      # No cache: no wireit helper and no pnpm store restore in a release job.
+      - uses: ./.github/actions/setup
+        if: steps.recheck.outputs.release == 'true'
         with:
-          node-version-file: .node-version
-          package-manager-cache: false
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: npm-tarballs
-          path: ${{ runner.temp }}/tarballs
+          cache: "false"
+      - name: Check the repository
+        if: steps.recheck.outputs.release == 'true'
+        shell: bash
+        run: pnpm check
       # npm trusted publishing needs npm 11.5.1 or later: an older npm (a
       # changed .node-version) fails here, by name, before anything is
       # published. tools/release-npm-version.test.ts runs this script.
       - name: Require npm 11.5.1 or later
+        if: steps.recheck.outputs.release == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -430,47 +281,241 @@ jobs:
             exit 1
           fi
           echo "npm ${version}"
-      # Each line of the plan names one tarball by its SHA-256; every named
-      # tarball must match, and only those are published, in the plan's
-      # order, with provenance, public access, and lifecycle scripts off.
-      - name: Publish the checked tarballs
+      # The release dry run on this commit: the Wrapper built twice with one
+      # digest, which the publish command requires its own build to match.
+      # The CLI directly, not `pnpm release:dry-run -- --out ...`: wireit
+      # passes extra arguments to a `shell: true` spawn unescaped (Node's
+      # DEP0190 warning).
+      - name: Run the release dry run
+        id: dry-run
+        if: steps.recheck.outputs.release == 'true'
+        shell: bash
+        run:
+          pnpm exec tsx tools/release-dry-run.ts --out
+          "$RUNNER_TEMP/release-dry-run"
+      # Publish mode (no changeset is pending). The publish command
+      # (tools/release-publish.ts --publish) refuses what is not ready, runs
+      # `npm publish` on each checked tarball not yet on the registry
+      # (provenance, public access, lifecycle scripts off), then
+      # `changeset git-tag`, which tags every package whose version has no
+      # tag (the Wrapper, and a library published before a failed run). The
+      # action pushes those tags through the API, on this commit. It creates
+      # no GitHub release (`create-github-releases: false`): v2.1.2 only warns
+      # when a tag push fails, and a release created for a missing tag would
+      # tag the default branch's head instead (ADR-009; the human,
+      # 2026-10-28). The next step creates them, after checking the tags.
+      - name: Publish and tag
+        id: changesets
+        if: steps.recheck.outputs.release == 'true'
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          publish-script: >-
+            pnpm exec tsx tools/release-publish.ts --publish --out ${{
+            runner.temp }}/publish --expect-wrapper-digest ${{
+            steps.dry-run.outputs.wrapper-digest }}
+          create-github-releases: false
+      # The GitHub releases, made here instead of by the action. First, every
+      # tag the action reported (`published-packages`) must exist and point
+      # at this run's commit (peeled when annotated); a missing or misplaced
+      # tag fails the job before any release is made. Then, for each
+      # publishable version whose tag is on this commit and that has no
+      # release yet ("re-run failed jobs" finishes a partial release, skipping
+      # those that exist), `gh release create` with `--verify-tag` (gh never creates a
+      # tag) and `--target` this commit, titled with the tag, its notes the
+      # package's CHANGELOG.md section for the version (as the action would
+      # write them), a prerelease for a prerelease version. It also runs when
+      # the re-check found everything tagged, so "re-run failed jobs" on a run
+      # that failed after the tags finishes it. It names the Wrapper's tag while the
+      # Wrapper's release has no tar yet, which starts the Wrapper's jobs.
+      # Any API or git error fails the step.
+      # tools/release-github-releases.test.ts runs this script.
+      - name: Create the GitHub releases
+        id: releases
+        if: >-
+          steps.changesets.outputs.published == 'true' ||
+          steps.recheck.outputs.release == 'false'
         env:
-          PUBLISH_PLAN: ${{ needs.build.outputs.publish-plan }}
+          GH_TOKEN: ${{ github.token }}
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.published-packages }}
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "$PUBLISH_PLAN" ]; then
-            echo "Every version is on the registry with these bytes; nothing to publish."
-            exit 0
-          fi
-          plan="$RUNNER_TEMP/publish-plan.sha256"
-          printf '%s\n' "$PUBLISH_PLAN" > "$plan"
-          line='^[0-9a-f]{64}  intraverse-se-client-[a-z-]+-[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?\.tgz$'
-          while IFS= read -r entry; do
-            if [[ ! $entry =~ $line ]]; then
-              echo "::error::Unexpected publish plan line: ${entry}"
+          published="$(jq --raw-output '.[] | "\(.name)@\(.version)"' <<< "${PUBLISHED_PACKAGES:-[]}")"
+          releases="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[] | "\(.tag_name)\t\([.assets[].name] | join(" "))"')"
+          known=""
+          tags=()
+          failed=0
+          for manifest in packages/contracts/package.json packages/signing/package.json \
+            packages/snapshot/package.json packages/play-client/package.json \
+            packages/shell/package.json apps/wrapper/package.json; do
+            name="$(jq --raw-output '.name' "$manifest")"
+            version="$(jq --raw-output '.version' "$manifest")"
+            if ! [[ $name =~ ^@intraverse/se-client-[a-z-]+$ && $version =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+              echo "::error::Unexpected name or version in ${manifest}."
               exit 1
             fi
-          done < "$plan"
-          cd "$RUNNER_TEMP/tarballs"
-          sha256sum --check --strict "$plan"
+            tag="${name}@${version}"
+            if [ "$version" = 0.0.0 ]; then
+              continue
+            fi
+            known="${known}${tag}"$'\n'
+            required=0
+            if grep -Fxq -- "$tag" <<< "$published"; then
+              required=1
+            fi
+            ref="refs/tags/${tag}"
+            refs="$(git -c core.hooksPath=/dev/null -c core.fsmonitor=false ls-remote --tags \
+              "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "$ref")"
+            commit="$(awk -v ref="$ref" '$2 == ref "^{}" { print $1 }' <<< "$refs")"
+            if [ -z "$commit" ]; then
+              commit="$(awk -v ref="$ref" '$2 == ref { print $1 }' <<< "$refs")"
+            fi
+            if [ -z "$commit" ]; then
+              if [ "$required" -eq 1 ]; then
+                echo "::error::The tag ${tag} does not exist: its push failed. Re-run this run (runbook/client-kit-release.md, Troubleshooting)."
+                failed=1
+              fi
+              continue
+            fi
+            if [ "$commit" != "$GITHUB_SHA" ]; then
+              if [ "$required" -eq 1 ]; then
+                echo "::error::The tag ${tag} is on ${commit}, not on this run's commit ${GITHUB_SHA}."
+                failed=1
+              fi
+              continue
+            fi
+            tags+=("$tag")
+          done
           while IFS= read -r entry; do
-            tarball="${entry#*  }"
-            echo "npm publish ${tarball}"
-            npm publish "./${tarball}" --provenance --access public \
-              --ignore-scripts --registry https://registry.npmjs.org/
-          done < "$plan"
+            if [ -n "$entry" ] && ! grep -Fxq -- "$entry" <<< "$known"; then
+              echo "::error::${entry} is not a publishable package's version."
+              failed=1
+            fi
+          done <<< "$published"
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::No GitHub release was created."
+            exit 1
+          fi
+          wrapper_tag=""
+          for tag in "${tags[@]+"${tags[@]}"}"; do
+            name="${tag%@*}"
+            version="${tag##*@}"
+            existing="$(awk -F '\t' -v tag="$tag" '$1 == tag' <<< "$releases")"
+            if [ -n "$existing" ]; then
+              echo "The release ${tag} exists; skipped."
+            else
+              if [ "$name" = @intraverse/se-client-wrapper ]; then
+                changelog=apps/wrapper/CHANGELOG.md
+              else
+                changelog="packages/${name#@intraverse/se-client-}/CHANGELOG.md"
+              fi
+              entry="$(awk -v version="$version" '
+                fence != "" { if (index($0, fence) == 1) fence = ""; if (found) print; next }
+                /^```/ { match($0, /^`+/); fence = substr($0, 1, RLENGTH); if (found) print; next }
+                /^#+ / {
+                  match($0, /^#+/); depth = RLENGTH
+                  text = substr($0, depth + 2); sub(/[ \t]+$/, "", text)
+                  if (found && depth == level) exit
+                  if (!found && text == version) { found = 1; level = depth; next }
+                }
+                found { print }
+              ' "$changelog" | sed '/./,$!d')"
+              if [ -z "$entry" ]; then
+                echo "::error::No changelog entry for ${tag} in ${changelog}."
+                exit 1
+              fi
+              notes="$RUNNER_TEMP/release-notes-${name#@intraverse/}.md"
+              printf '%s\n' "$entry" > "$notes"
+              prerelease=()
+              if [[ $version == *-* ]]; then
+                prerelease=(--prerelease)
+              fi
+              gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag \
+                --target "$GITHUB_SHA" --title "$tag" "${prerelease[@]+"${prerelease[@]}"}" \
+                --notes-file "$notes"
+              echo "Created the release ${tag}."
+            fi
+            if [ "$name" = @intraverse/se-client-wrapper ] &&
+              [[ " ${existing#*$'\t'} " != *" se-client-wrapper-${version}.tar "* ]]; then
+              wrapper_tag="$tag"
+            fi
+          done
+          if [ -n "$wrapper_tag" ]; then
+            echo "wrapper-tag=${wrapper_tag}" >> "$GITHUB_OUTPUT"
+          fi
 
-  # The Wrapper's build-provenance attestation (ADR-005), of the digest the
-  # dry run reported and `build` rebuilt. No checkout and no copy of the tar:
-  # the subject is the name and the digest. Its own environment, so its OIDC
-  # token can never match a consumer that requires `release`.
+  # The Wrapper artifact of the released commit (the commit the tags point
+  # at): built twice with one digest required, and uploaded with its `.sha256`,
+  # one file each, not zipped, kept 14 days (ADR-005, decision 5).
+  wrapper-build:
+    name: wrapper-build
+    needs: publish
+    if: needs.publish.outputs.wrapper-tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      wrapper-digest: ${{ steps.dry-run.outputs.wrapper-digest }}
+      wrapper-file-name: ${{ steps.dry-run.outputs.wrapper-file-name }}
+      release-tag: ${{ steps.tag.outputs.release-tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No cache: no wireit helper and no pnpm store restore in a release job.
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      - name: Run the release dry run
+        id: dry-run
+        shell: bash
+        run:
+          pnpm exec tsx tools/release-dry-run.ts --out
+          "$RUNNER_TEMP/release-dry-run"
+      # The artifact's name must be the released version's; and the
+      # artifact's path, for the uploads.
+      - name: Name the release
+        id: tag
+        env:
+          RELEASE_TAG: ${{ needs.publish.outputs.wrapper-tag }}
+          WRAPPER_FILE_NAME: ${{ steps.dry-run.outputs.wrapper-file-name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pattern='^se-client-wrapper-([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)\.tar$'
+          if [[ ! $WRAPPER_FILE_NAME =~ $pattern ]]; then
+            echo "::error::Unexpected Wrapper artifact name: ${WRAPPER_FILE_NAME}"
+            exit 1
+          fi
+          if [ "@intraverse/se-client-wrapper@${BASH_REMATCH[1]}" != "$RELEASE_TAG" ]; then
+            echo "::error::The Wrapper artifact ${WRAPPER_FILE_NAME} is not the released ${RELEASE_TAG}."
+            exit 1
+          fi
+          {
+            echo "release-tag=${RELEASE_TAG}"
+            echo "wrapper-path=$RUNNER_TEMP/release-dry-run/wrapper/${WRAPPER_FILE_NAME}"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ steps.tag.outputs.wrapper-path }}
+          archive: false
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ steps.tag.outputs.wrapper-path }}.sha256
+          archive: false
+          if-no-files-found: error
+          retention-days: 14
+
+  # The Wrapper's build-provenance attestation (ADR-005), of the digest
+  # `wrapper-build` reported. No checkout and no copy of the tar: the subject
+  # is the name and the digest. Its own environment, so its OIDC token can
+  # never match a consumer that requires `release`.
   attest:
     name: attest
-    needs: [dry-run, publish]
-    if: >-
-      inputs.publish && !inputs.version && github.ref == 'refs/heads/main' &&
-      vars.RELEASE_PUBLISH_ENABLED == 'true'
+    needs: wrapper-build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: attest
@@ -481,61 +526,70 @@ jobs:
     steps:
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-name: ${{ needs.dry-run.outputs.wrapper-file-name }}
-          subject-digest: ${{ needs.dry-run.outputs.wrapper-digest }}
+          subject-name: ${{ needs.wrapper-build.outputs.wrapper-file-name }}
+          subject-digest: ${{ needs.wrapper-build.outputs.wrapper-digest }}
           push-to-registry: false
           create-storage-record: false
 
-  # The tag and the GitHub release, the released Wrapper's durable home
-  # (ADR-005): the dry run's artifact and its `.sha256`, checked against the
-  # attested digest. It runs no repository code (no checkout).
-  github-release:
-    name: github-release
-    needs: [dry-run, attest]
-    if: >-
-      inputs.publish && !inputs.version && github.ref == 'refs/heads/main' &&
-      vars.RELEASE_PUBLISH_ENABLED == 'true'
+  # The tar and its `.sha256` on the Wrapper's GitHub release, which the
+  # `publish` job's "Create the GitHub releases" step created (the action only
+  # pushes the tags): the released Wrapper's durable home (ADR-005). It runs no
+  # repository code (no checkout).
+  wrapper-assets:
+    name: wrapper-assets
+    needs: [wrapper-build, attest]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      # The tag and the release, the only things this job writes.
+      # The release's assets, the only thing this job writes.
       contents: write
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ needs.dry-run.outputs.wrapper-file-name }}
+          name: ${{ needs.wrapper-build.outputs.wrapper-file-name }}
           path: ${{ runner.temp }}/release
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ needs.dry-run.outputs.wrapper-file-name }}.sha256
+          name: ${{ needs.wrapper-build.outputs.wrapper-file-name }}.sha256
           path: ${{ runner.temp }}/release
-      # No release may exist for the tag yet, draft or published: a failed
-      # upload can leave a draft (which has no tag, so `build` cannot see it),
-      # and creating another would leave two. It lists every release of the
-      # repository, drafts included (the job's token has push access), page
-      # by page, and compares each `tag_name` with the tag exactly (jq's `==`
-      # on the environment value, no pattern). Any API error fails the step
-      # (`set -euo pipefail`), so an error is never read as "no release".
-      - name: Refuse a release that exists
+      # Exactly one release must have the tag, and it must not have the
+      # files yet. It lists every release of the repository, drafts included
+      # (the job's token has push access), page by page, and compares each
+      # `tag_name` with the tag exactly (jq's `==` on the environment value,
+      # no pattern). Any API error fails the step (`set -euo pipefail`), so an
+      # error is never read as "no assets". tools/release-assets-guard.test.ts
+      # runs this script.
+      - name: Find the Wrapper release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.dry-run.outputs.release-tag }}
+          RELEASE_TAG: ${{ needs.wrapper-build.outputs.release-tag }}
+          WRAPPER_FILE_NAME:
+            ${{ needs.wrapper-build.outputs.wrapper-file-name }}
         shell: bash
         run: |
           set -euo pipefail
-          matches="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[] | select(.tag_name == env.RELEASE_TAG) | .tag_name')"
+          matches="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[] | select(.tag_name == env.RELEASE_TAG) | [.assets[].name] | @json')"
+          count=0
           if [ -n "$matches" ]; then
-            echo "::error::A release for ${RELEASE_TAG} exists already (it may be a draft): see runbook/client-kit-release.md, Troubleshooting, \"The github-release job failed\"."
+            count="$(printf '%s\n' "$matches" | wc -l | tr -d ' ')"
+          fi
+          if [ "$count" -ne 1 ]; then
+            echo "::error::Expected one release for ${RELEASE_TAG}, found ${count}: see runbook/client-kit-release.md, Troubleshooting, \"The wrapper-assets job failed\"."
             exit 1
           fi
-          echo "No release for ${RELEASE_TAG} yet."
-      # The tag is made on the dispatched commit by the release itself.
-      - name: Create the GitHub release
+          if jq --exit-status --arg tar "$WRAPPER_FILE_NAME" \
+            'any(.[]; . == $tar or . == ($tar + ".sha256"))' <<< "$matches" > /dev/null; then
+            echo "::error::The release ${RELEASE_TAG} already has the Wrapper's files: see runbook/client-kit-release.md, Troubleshooting, \"The wrapper-assets job failed\"."
+            exit 1
+          fi
+          echo "The release ${RELEASE_TAG} has no Wrapper files yet."
+      - name: Attach the Wrapper artifact
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.dry-run.outputs.release-tag }}
-          WRAPPER_DIGEST: ${{ needs.dry-run.outputs.wrapper-digest }}
-          WRAPPER_FILE_NAME: ${{ needs.dry-run.outputs.wrapper-file-name }}
+          RELEASE_TAG: ${{ needs.wrapper-build.outputs.release-tag }}
+          WRAPPER_DIGEST: ${{ needs.wrapper-build.outputs.wrapper-digest }}
+          WRAPPER_FILE_NAME:
+            ${{ needs.wrapper-build.outputs.wrapper-file-name }}
         shell: bash
         run: |
           set -euo pipefail
@@ -549,8 +603,29 @@ jobs:
             exit 1
           fi
           sha256sum --check --strict "${WRAPPER_FILE_NAME}.sha256"
+          gh release upload "$RELEASE_TAG" "$WRAPPER_FILE_NAME" "${WRAPPER_FILE_NAME}.sha256" \
+            --repo "$GITHUB_REPOSITORY"
+      # After the upload: the Wrapper release's notes keep the version's
+      # CHANGELOG section, which the releases step wrote, and get the
+      # artifact's digest and the
+      # `gh attestation verify` command (ADR-005, decision 4; runbook, Verify
+      # before and after) appended. The release is read and edited by its
+      # exact tag; any API error fails the step, so notes are never written
+      # from an error. tools/release-notes-step.test.ts runs this script.
+      - name: Add the verify command to the release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.wrapper-build.outputs.release-tag }}
+          WRAPPER_DIGEST: ${{ needs.wrapper-build.outputs.wrapper-digest }}
+          WRAPPER_FILE_NAME:
+            ${{ needs.wrapper-build.outputs.wrapper-file-name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)"
           notes="$RUNNER_TEMP/release-notes.md"
           {
+            printf '%s\n\n' "$body"
             echo "Wrapper artifact \`${WRAPPER_FILE_NAME}\`, digest \`${WRAPPER_DIGEST}\`."
             echo ""
             echo "Verify it (runbook/client-kit-release.md, Verify before and after):"
@@ -564,6 +639,19 @@ jobs:
             echo "  --deny-self-hosted-runners"
             echo '```'
           } > "$notes"
-          gh release create "$RELEASE_TAG" "$WRAPPER_FILE_NAME" "${WRAPPER_FILE_NAME}.sha256" \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "$RELEASE_TAG" --notes-file "$notes"
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$notes"
+
+  # The production deploy of the release just made, in this run (a tag or a
+  # release made with the job token starts no other workflow). Its jobs, their
+  # permissions, and its concurrency group are in pages-prod.yml; the
+  # permissions here are the most those jobs may ask for.
+  production:
+    name: production
+    needs: [wrapper-build, wrapper-assets]
+    permissions:
+      contents: read
+      attestations: read
+      actions: read
+    uses: ./.github/workflows/pages-prod.yml
+    with:
+      tag: ${{ needs.wrapper-build.outputs.release-tag }}

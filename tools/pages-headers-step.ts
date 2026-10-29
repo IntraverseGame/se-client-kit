@@ -1,7 +1,9 @@
 // Runs the Pages workflow's headers step (.github/workflows/pages.yml, "Write
 // the Pages headers files") for the tests: its own script, read from the
 // workflow, with bash and jq against temporary site directories (the
-// Wrapper's, the verifier's, and the game's). Used by
+// Wrapper's, the verifier's, and the game's, which production has not; the
+// production deploy, .github/workflows/pages-prod.yml, runs the same script).
+// Used by
 // tools/pages-headers.test.ts and tools/pages-game-site.test.ts.
 
 import { spawnSync } from "node:child_process";
@@ -62,7 +64,11 @@ export type HeadersStep = {
   readonly run: (
     headers: unknown,
     origins?: Origins,
-    options?: { readonly existing?: Site | undefined },
+    options?: {
+      readonly existing?: Site | undefined;
+      /** `false` lays out no game site, as production (pages-prod.yml). */
+      readonly game?: boolean;
+    },
   ) => Result;
   /** Runs the step on `sites` as they are; returns its status and output. */
   readonly runOn: (sites: string) => Pick<Result, "status" | "output">;
@@ -112,7 +118,9 @@ export const headersStep = (): HeadersStep => {
   const run: HeadersStep["run"] = (headers, origins = {}, options = {}) => {
     const sites = directory();
     for (const site of ["wrapper", "verifier", "game"] as const) {
-      mkdirSync(join(sites, site));
+      if (site !== "game" || options.game !== false) {
+        mkdirSync(join(sites, site));
+      }
     }
     writeFileSync(
       join(sites, "wrapper", "headers.json"),

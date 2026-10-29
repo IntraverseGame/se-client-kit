@@ -7,7 +7,9 @@ import { describe, expect, it } from "vitest";
 // "Pinned toolchain"): every `uses:` of an external Action in `.github/` names
 // an Action on the list, pinned by its full 40-character commit SHA, with the
 // list's version in the trailing comment; and every Action on the list is used.
-// Local Actions (`./.github/actions/...`) are exempt.
+// Local Actions (`./.github/actions/...`) and the repository's own reusable
+// workflows (`./.github/workflows/<name>.yml`, ADR-009: the production deploy)
+// are exempt.
 
 const root = join(import.meta.dirname, "..");
 
@@ -138,9 +140,17 @@ describe("the Actions allow-list", () => {
     expect(allowed.filter(entry => !used.has(entry.name))).toEqual([]);
   });
 
-  it("exempts only the repository's own local Actions", () => {
+  it("exempts only the repository's own local Actions and reusable workflows", () => {
     for (const use of uses.filter(entry => entry.value.startsWith("./"))) {
-      expect(use.value).toMatch(/^\.\/\.github\/actions\/[a-z-]+$/u);
+      expect(use.value).toMatch(
+        /^\.\/\.github\/(?:actions\/[a-z-]+|workflows\/[a-z-]+\.yml)$/u,
+      );
+    }
+    // A reusable workflow is called from a job, never from a step.
+    for (const use of uses.filter(entry =>
+      entry.value.startsWith("./.github/workflows/"),
+    )) {
+      expect(use.file).toBe(".github/workflows/release.yml");
     }
   });
 });

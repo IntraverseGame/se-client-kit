@@ -1,8 +1,9 @@
-// CLI: the build step of the release workflow's publish path
-// (.github/workflows/release.yml, job `build`; runbook/client-kit-release.md,
-// Release step 3). It runs in the checkout of the commit being released, after
-// the dry run passed on that commit, in a job that holds no OIDC token and no
-// write token, and it publishes nothing:
+// CLI: the publish command of the release workflow
+// (.github/workflows/release.yml, job `publish`; changesets/action's
+// `publish-script`; ADR-009; runbook/client-kit-release.md, Release). It runs
+// in the checkout of the bump merge, after `pnpm check` and the release dry
+// run passed on that commit, in the job that holds the OIDC token (environment
+// `release`):
 //
 //   1. builds everything without the task cache, packs the five libraries,
 //      and runs the same tarball and consumer checks as the dry run;
@@ -18,14 +19,24 @@
 //   4. writes the publish plan: one `<sha256>  <tarball>` line per tarball to
 //      publish, in dependency order (`sha256sum --check` format), to
 //      `<out>/publish-plan.sha256` and, in Actions, to the step output
-//      `publish-plan`.
+//      `publish-plan`;
+//   5. with `--publish` only (tools/release-publish-run.ts): checks each
+//      planned tarball against the plan's SHA-256, then runs `npm publish
+//      <tarball> --provenance --access public --ignore-scripts` on each, in the
+//      plan's order, with the npm CLI of the pinned Node (npm trusted
+//      publishing exchanges the job's OIDC token itself; no npm token
+//      anywhere), then `changeset git-tag`, which tags every package whose
+//      version has no tag yet (the Wrapper, which is private and never on
+//      npm, and a library a failed run published without its tag) and
+//      reports each tag to changesets/action through CHANGESETS_OUTPUT; the
+//      action only pushes the tags, and the `publish` job's "Create the
+//      GitHub releases" step then creates each release, with that version's
+//      CHANGELOG section as its notes.
 //
-// The five tarballs stay in `<out>/packages/`; the workflow uploads them, and
-// the `publish` job (which holds `id-token: write` and runs no repository
-// tooling) checks each against the plan's SHA-256 and runs
-// `npm publish <tarball>` on it, in the plan's order.
+// Without `--publish` it publishes nothing. The five tarballs stay in
+// `<out>/packages/`.
 //
-// Usage: tsx tools/release-publish.ts --out <directory>
+// Usage: tsx tools/release-publish.ts [--publish] --out <directory>
 //          --expect-wrapper-digest sha256:<hex>
 
 import { randomUUID } from "node:crypto";
@@ -33,6 +44,7 @@ import {
   appendFileSync,
   existsSync,
   readdirSync,
+  readFileSync,
   writeFileSync,
 } from "node:fs";
 import { basename, join, resolve } from "node:path";
@@ -41,6 +53,7 @@ import { parseArgs } from "node:util";
 import { loadVectors } from "./build-output-vectors.ts";
 import { PUBLISHED_PACKAGES, packageNameOf } from "./package-tarball.ts";
 import { checkResolution } from "./release-consumer.ts";
+import { publishPlanned, runShown } from "./release-publish-run.ts";
 import {
   findReadinessProblems,
   type RegistryVersion,
@@ -55,6 +68,7 @@ import {
   readJson,
   run,
   scratchEnvironment,
+  sha256Hex,
 } from "./release-steps.ts";
 
 /** The public npm registry; the kit publishes nowhere else. */
@@ -66,6 +80,7 @@ const { values } = parseArgs({
   options: {
     out: { type: "string" },
     "expect-wrapper-digest": { type: "string" },
+    publish: { type: "boolean", default: false },
   },
 });
 if (values.out === undefined) throw new Error("--out is required.");
@@ -168,4 +183,19 @@ if (stepOutput !== undefined && existsSync(stepOutput)) {
     stepOutput,
     `publish-plan<<${delimiter}\n${planText}${delimiter}\n`,
   );
+}
+
+// The job's own environment (in Actions, its OIDC request variables and the
+// action's CHANGESETS_OUTPUT), not the scratch one: npm exchanges the OIDC
+// token, and `changeset git-tag` reports its tags.
+if (values.publish) {
+  publishPlanned({
+    plan,
+    packagesDirectory: join(out, "packages"),
+    root,
+    env: process.env,
+    registry: `${REGISTRY}/`,
+    sha256Of: path => sha256Hex(readFileSync(path)),
+    run: runShown,
+  });
 }

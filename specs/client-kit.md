@@ -247,27 +247,23 @@ another origin.
    at `https://se-games-stage.pages.dev`, a public origin on another registrable
    domain than the Wrapper's, W-37; see [The game's site](#the-games-site)).
    **Every push to `main` deploys staging**, with no switch (no repository
-   variable gates a job; the human, 2026-10-27). **Production** is decided but
-   not built yet (#133): the production projects are deployed when the
-   changesets version pull request is merged into `main` (the versions bumped
-   and the changelogs written), from that commit, in a deploy environment of
-   their own (`pages-prod`) with their configuration built in an environment
-   with no deploy credential (ADR-008). Nothing triggers it today: the release
-   workflow pushes the version branch and publishes only when started by hand,
-   and the merge runs only the staging deploy. **Decided, not built yet**
-   ([ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
-   the human, 2026-10-28): the release workflow runs `changesets/action` on
-   every push to `main`; with pending changesets it opens or updates the bump
-   pull request, and on the push that merges it, it publishes and creates a tag
-   and a GitHub release per published package. In the same run, separate jobs
-   attest the Wrapper tar, attach it and its `.sha256` to the Wrapper's release,
-   and deploy production: a job with no secret downloads the tar by tag, checks
-   its digest, and runs `gh attestation verify`; the proxy worker is built with
-   `tsc` at the tag's commit; the configuration is built in an environment with
-   no deploy credential; and the deploy job (`pages-prod`, no required reviewer)
-   refuses any other digest. Production cannot deploy before the publish path is
-   on (#154).
-   <!-- TODO(release, #133): this step changes when the workflow implementation lands (ADR-009): the production deploy jobs and the release flow they follow. -->
+   variable gates a job; the human, 2026-10-27). **Production**
+   ([ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md);
+   `.github/workflows/pages-prod.yml`): the release workflow runs
+   `changesets/action` on every push to `main`; with pending changesets it opens
+   or updates the bump pull request, and on the push that merges it, it
+   publishes and creates a tag and a GitHub release per released package. In the
+   same run, separate jobs attest the Wrapper tar, attach it and its `.sha256`
+   to the Wrapper's release, and deploy production (no reference game:
+   production frames the real game origins): a job with no secret downloads the
+   tar by tag, checks its digest, and runs `gh attestation verify` against the
+   tag's commit; the proxy worker is built with `tsc` at the tag's commit; the
+   configuration is built in the environment `pages-prod-config`, which holds no
+   deploy credential; and the deploy job (`pages-prod`, no required reviewer,
+   alone in the concurrency group `pages-prod`) refuses any other digest. A
+   person can redeploy a released tag by dispatching the same workflow, which
+   refuses while a release run is not completed. Production cannot deploy before
+   the publish path is on (#154). Staging:
    - A build job with a read-only token and no secret builds the Wrapper
      artifact twice (the release dry run) and requires one digest, makes the
      reference game's artifact from the dry run's two builds and requires one

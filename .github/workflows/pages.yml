@@ -28,9 +28,10 @@ name: Pages
 #     `frame-ancestors` the Wrapper's and the operators' origins, from the
 #     same document), and
 #     uploads them, unbundled, with the `wrangler` the lockfile pins.
-# A later production deploy is a second environment (`pages-prod`) and a
-# second deploy job with its own trigger and project names (ADR-008): it runs
-# when the changesets version pull request is merged (not built yet, #133).
+# Production is .github/workflows/pages-prod.yml (ADR-009): the attested
+# release tar, deployed by the release workflow after a release, or redeployed
+# by its tag by hand, in the `pages-prod` environment and concurrency group;
+# a staging run never touches it.
 # Every push to `main` deploys staging; there is no switch (the human,
 # 2026-10-27). Every job runs only from `main`, and the `pages-stage`
 # environment must exist, protected, before this runs (a run that names an
@@ -516,19 +517,23 @@ jobs:
           }
           write_headers '.' "$SITES/wrapper/_headers"
           write_headers '{"/*": .["/verify/*"]}' "$SITES/verifier/_headers"
-          # The game's `Permissions-Policy` is the Wrapper's own, from its `/*`
-          # rule, so the two cannot drift.
-          if ! jq --exit-status '.["/*"]["Permissions-Policy"] | type == "string"' \
-            "$headers_json" > /dev/null; then
-            echo "::error::headers.json has no Permissions-Policy in its /* rule."
-            exit 1
+          # The game's site, where there is one (staging; production serves
+          # no game, and pages-prod.yml runs this same script). The game's
+          # `Permissions-Policy` is the Wrapper's own, from its `/*` rule, so
+          # the two cannot drift.
+          if [ -d "$SITES/game" ]; then
+            if ! jq --exit-status '.["/*"]["Permissions-Policy"] | type == "string"' \
+              "$headers_json" > /dev/null; then
+              echo "::error::headers.json has no Permissions-Policy in its /* rule."
+              exit 1
+            fi
+            write_headers '{"/*": {
+                "Content-Security-Policy": $gameCsp,
+                "Permissions-Policy": .["/*"]["Permissions-Policy"],
+                "Referrer-Policy": "no-referrer",
+                "X-Content-Type-Options": "nosniff"
+              }}' "$SITES/game/_headers"
           fi
-          write_headers '{"/*": {
-              "Content-Security-Policy": $gameCsp,
-              "Permissions-Policy": .["/*"]["Permissions-Policy"],
-              "Referrer-Policy": "no-referrer",
-              "X-Content-Type-Options": "nosniff"
-            }}' "$SITES/game/_headers"
       # From an empty working directory, so wrangler reads no configuration,
       # .env file, or functions/ directory of the repository; each site holds
       # only its artifact's files and `_headers`, and the Wrapper's and the

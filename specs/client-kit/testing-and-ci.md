@@ -29,10 +29,11 @@ only); `dependency-review` (pull requests only); `release-dry-run` (the release
 dry run: changesets applied on a scratch copy, the five tarballs packed and
 checked and imported as a consumer would, the Wrapper artifact built twice with
 one digest, and held to the size budget; no token, no network). The release
-itself is a separate workflow, `release` (changesets, provenance, run by hand
-from the default branch only, its `version` and `version-push` jobs making the
-version pull request's branch, its `build`, `publish` (in the protected
-`release` environment), `attest`, and `github-release` jobs publishing;
+itself is a separate workflow, `release` (changesets/action on every push to
+`main`, provenance: `changesets-mode` decides, `version` opens the bump pull
+request, `publish` (in the protected `release` environment) publishes and tags,
+and `wrapper-build`, `attest`, `wrapper-assets`, and `production` attest the
+Wrapper, attach it to its release, and deploy it;
 [release runbook](../../runbook/client-kit-release.md#release)).
 
 Today `contracts` runs the test-only-entry import check, the hash check against
@@ -59,13 +60,14 @@ rows of the Wrapper's test plan that run on the fake Play API, and a smoke run
 on the reference game's build; the others are pending
 ([The e2e harness](#the-e2e-harness)). The workflows hold no secret, run with
 `permissions: {}` at the top and `contents: read` per job (in the release
-workflow, `publish` adds `id-token: write`, for provenance and trusted
-publishing; `attest` adds `id-token: write` and `attestations: write`; `version`
-adds `pull-requests: read`; `version-push` and `github-release` have
-`contents: write` instead; none of `publish`, `attest`, `version-push`, and
-`github-release` runs repository tooling), and pin every Action by full commit
-SHA, on the Actions allow-list ([supply chain](./supply-chain.md), Pinned
-toolchain; `tools/actions-allow-list.test.ts`).
+workflow, `changesets-mode` adds `pull-requests: read`; `version` has
+`contents: write` and `pull-requests: write`; `publish` has `contents: write`
+and `id-token: write`, for provenance and trusted publishing; `attest` adds
+`id-token: write` and `attestations: write`; `wrapper-assets` has
+`contents: write`; no job holds both a pull-request write and an OIDC token),
+and pin every Action by full commit SHA, on the Actions allow-list
+([supply chain](./supply-chain.md), Pinned toolchain;
+`tools/actions-allow-list.test.ts`).
 
 **The size budget** of the Wrapper's release output (`tools/size-budget.ts`,
 unit-tested) is checked by `pnpm check:size-budget` (part of `pnpm check`, and

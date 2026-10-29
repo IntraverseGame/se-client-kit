@@ -26,4 +26,4 @@ structure, a protocol, supply-chain tooling, the agent workflow.
 | [ADR-006](./ADR-006-the-operator-protocol-se-operator-1.md)        | accepted | the operator protocol `se.operator/1`: separate, operator first, lobby and deposit as navigations                                     |
 | [ADR-007](./ADR-007-no-public-suffix-list.md)                      | accepted | W-37's registrable-domain rule by the last two labels, without a public suffix list                                                   |
 | [ADR-008](./ADR-008-pages-deploy-with-wrangler.md)                 | accepted | kit CI deploys the Wrapper and the verifier to Cloudflare Pages from `main`, with a pinned `wrangler` and a same-origin API proxy     |
-| [ADR-009](./ADR-009-production-pages-deploy-trigger-and-source.md) | accepted | releases through `changesets/action` on every push to `main`; production deploys the attested release tar (not built yet, #133)       |
+| [ADR-009](./ADR-009-production-pages-deploy-trigger-and-source.md) | accepted | releases through `changesets/action` on every push to `main`; production deploys the attested release tar (implemented, #133)         |
