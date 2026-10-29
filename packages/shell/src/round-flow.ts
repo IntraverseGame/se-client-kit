@@ -143,6 +143,7 @@ export const createRoundFlow = (
         const verdict = tracking.verdict();
         return verdict.state === "failed" && verdict.failure === "reissued";
       },
+      latest: (): ValidSnapshot => tracking.latest(),
       // Past the cancel's gate (defined below; called only later).
       intoRound: (snapshot: ValidSnapshot): Promise<void> =>
         intoRound(snapshot),

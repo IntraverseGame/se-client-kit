@@ -48,7 +48,12 @@ describe("the required cancel without the signer lock (W-14, W-25)", () => {
     });
     const cancel = createRoundCancel(
       setup.options,
-      { roundId: ROUND_ID, reissued: () => false, intoRound: tracking.observe },
+      {
+        roundId: ROUND_ID,
+        reissued: () => false,
+        latest: tracking.latest,
+        intoRound: tracking.observe,
+      },
       delivery,
     );
     const lockLost = {

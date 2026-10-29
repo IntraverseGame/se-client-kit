@@ -42,12 +42,16 @@ Part of the [Wrapper spec](../wrapper.md), section
   the book round (`book-round.ts`); W-16's resend keeps its own rule (only the
   newest read of the round decides it). A stale read the required cancel's own
   reads take (W-25) never reaches the round's tracking, checks, or transcript
-  state either, but the cancel's own decision does not yet compare versions: a
-  stale read can still settle the cancel's state or allow its one resend, which
-  sends the same signed bytes and signs nothing new (a known gap; follow-up
-  #163 <!-- TODO(W-29, #163): the cancel's decision compares versions before it settles or resends. -->).
-  An action whose own answer was such a stale read hands the UI that answer,
-  which it drops and reads again as above; the round itself never read it in.
+  state either, and the cancel's own decision compares versions with the same
+  `isStale` (`round-cancel.ts`, #163; the stale answer decided by the human,
+  2026-10-29): an answer or a read of the round lower in `version` than the
+  round's latest Snapshot or than any of the cancel's own answers and reads
+  decides nothing. A stale answer is taken like an answer for another round (it
+  tells nothing, so the Snapshot is read, W-25), and a stale read is as if no
+  Snapshot was read; neither settles the cancel's state, allows its one resend,
+  or is read into the round. An equal `version` is read. An action whose own
+  answer was such a stale read hands the UI that answer, which it drops and
+  reads again as above; the round itself never read it in.
 - **W-30.** The Wrapper MUST declare its capabilities when the session starts:
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
   six of R3 and `canceled`, which the cancel path needs). Decided (issue #146,
