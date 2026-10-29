@@ -86,6 +86,6 @@
   },
   "devDependencies": {
     "@intraverse/se-client-shell": "workspace:*",
-    "vite": "8.3.4"
+    "vite": "8.3.5"
   }
 }
