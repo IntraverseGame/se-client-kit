@@ -167,8 +167,9 @@ are in brackets.
     `ownOrigin` (the options, `GameMountOptions`, are only the frame, its
     message listener, and the incompatible-game notice; a list or an origin a
     caller adds is overridden). `gameOrigin()` is D, unchecked (the bridge
-    checks it at mount); `mountGame` refuses `session-ended` once the session
-    ended;
+    checks it at mount); an accepted `mountGame` also returns `gamePath`, the
+    redeem answer's page path on D (`/` when the answer has none; W-37), and
+    `mountGame` refuses `session-ended` once the session ended;
   - `onChange`, `onEnd`, `ended()`, and `end()`. Every answer is a validated
     Snapshot, a validated typed error, or a closed code: no key, token, launch
     code, signature, or transcript. The session logs nothing.

@@ -37,6 +37,7 @@ test.describe("the fake Play API", () => {
       tokenExpiresAt: "2026-10-16T12:15:00.000Z",
       sessionExpiresAt: "2026-10-16T14:00:00.000Z",
       gameOrigin: GAME_ORIGIN,
+      gamePath: "/",
     });
     const again = await call(page, "/play/v1/sessions:redeem", {
       body: { launchCode: fakePlayApi.launchCode },

@@ -322,8 +322,9 @@ Rules:
    session; the game is framed at `gameOrigin` followed by `gamePath`, and
    messages are still exchanged by `gameOrigin` only, since the path is not a
    trust boundary. The server always sends it, and an absent one reads as `/`.
-   The generated `PlayApiComponents` carries it; the kit does not read it yet
-   (#164), so the Wrapper frames the game at `gameOrigin`'s root as before.
+   The generated `PlayApiComponents` carries it. The kit did not read it at this
+   sync; #164 reads it, and the Wrapper frames the game at `gameOrigin` followed
+   by `gamePath` (W-37).
 
    The Play API document, last synced at `9ffdcc0`, catches up with the schema
    and restates it: `BookConfig` gains the optional `rtp` (`BookRtp`, as in the

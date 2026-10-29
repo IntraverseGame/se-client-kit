@@ -19,6 +19,13 @@ export const PAGES_ORIGIN = "https://pages.e2e.test";
 export const GAME_ORIGIN = "https://game.e2e-games.test";
 
 /**
+ * Where the fake Play API's redeem answer places the game: D, and the page path
+ * `/` (D's root, where the reference game is served). The document's server
+ * always sends `gamePath`, so the fake does too (W-37).
+ */
+export const REDEEM_GAME = { gameOrigin: GAME_ORIGIN, gamePath: "/" } as const;
+
+/**
  * The fake operator page A (T-9a): on `operatorOrigins` when a test lists it,
  * with its lobby and deposit pages (`tests/operator`). A registrable domain of
  * its own.

@@ -459,8 +459,9 @@ The staging game origin is `se-games-stage`'s own
 hostname; the Wrapper's and the verifier's hostnames are still never written
 here). Its W-37 comparison key (the last two labels, ADR-007) is `pages.dev`,
 which the Wrapper's custom hostname does not share; a Wrapper on a `*.pages.dev`
-name would be refused as `same-site`. The backend's catalog keeps an origin and
-an optional page path per game version, and the Wrapper frames
+name would be refused as `same-site`. The redeem answer gives the game's origin
+and, in the vendored Play API document, an optional page path on it
+(`RedeemResponse.gamePath`), and the Wrapper frames
 `<game origin><game path>?parentOrigin=...` (`gameUrlOf`, W-37), with `/` when
 the redeem answer has no path. The reference game's page is served at the root.
 This site is the reference game's only: other staging games that share one

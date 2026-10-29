@@ -44,7 +44,7 @@ import {
   type Answer,
   type ProblemBody,
 } from "./fake-play-wire.ts";
-import { GAME_ORIGIN } from "./origins.ts";
+import { REDEEM_GAME } from "./origins.ts";
 import {
   isAcceptedBody,
   isListedStatus,
@@ -168,7 +168,7 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
       playToken: issueToken(),
       tokenExpiresAt: deadline(TOKEN_LIFETIME_MS),
       sessionExpiresAt: deadline(SESSION_LIFETIME_MS),
-      gameOrigin: GAME_ORIGIN,
+      ...REDEEM_GAME,
     };
     await json(route, 200, response);
   };
