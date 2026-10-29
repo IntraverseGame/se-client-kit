@@ -107,9 +107,10 @@ const reported = (report: RoundReport): Detail[] => {
 };
 
 /**
- * V-6: the round id, the shape, the result, and the payout (not checked); for
- * V-20's book reason (`asReported`), the result and the payout labelled as the
- * verify API's.
+ * V-6: the round id, the shape, the result, and the payout (a Coin Flip round's
+ * `won` or `lost` payout was recomputed by check 7, OQ-B9; any other payout is
+ * labelled not checked); for V-20's book reason (`asReported`), the result and
+ * the payout labelled as the verify API's.
  */
 const summary = (
   p: Parts,
@@ -142,9 +143,13 @@ const summary = (
       entries.push({ label: M["round.reason"], value: evidence.closeReason });
     }
     if (evidence.payout !== undefined) {
+      const recomputed =
+        evidence.book === undefined && evidence.status !== "canceled";
       entries.push({
         label: M["round.payout"],
-        value: `${evidence.payout.formatted} (${M["check.notChecked"]})`,
+        value: recomputed
+          ? evidence.payout.formatted
+          : `${evidence.payout.formatted} (${M["check.notChecked"]})`,
       });
     }
   }

@@ -43,9 +43,12 @@ And, for a round of one step with two options, under kernelVersion 1:
   The losing side is StepsDerive's single loser of one step with two options,
   drawn with Keccak-256 from the seed; it must equal the round's losing index,
   and the player's pick against it must give the round's status (`won` or
-  `lost`). A `canceled` round's seed and losing side are recomputed and shown,
-  with no status to compare; a `canceled` round that carries neither reveal
-  shows these two checks as "not checked".
+  `lost`). For `won` and `lost`, the payout follows from that outcome: 0 for a
+  loss, and for a win the payout the kernel gives from the game's terms (its
+  house edge and multiplier cap) and the bet, computed in whole base units; it
+  must equal the round's payout. A `canceled` round's seed and losing side are
+  recomputed and shown, with no status to compare; a `canceled` round that
+  carries neither reveal shows these two checks as "not checked".
 
 A round of another shape is reported as not recomputable: the page shows the
 first list of checks and runs neither derivation.
@@ -58,12 +61,14 @@ public vectors.
 
 ## What it shows without checking
 
-The page labels as not checked the payout amount and its terms, the round's
-player key (`newRound.actionKey`, which the page has no player key to compare
-with), and, when the evidence carries them, the on-chain record, a ZK proof's
-status, and links from the evidence, which are shown as text. The vendored
-verify API document has no field for the on-chain record, the proofs, or such
-links today: its checks for the record and the proofs are "not available yet".
+The page labels as not checked the binding of the payout terms (the signed
+`payoutTermsHash` is not tied to the terms the payout is computed from), a
+payout on a round that did not end `won` or `lost`, the round's player key
+(`newRound.actionKey`, which the page has no player key to compare with), and,
+when the evidence carries them, the on-chain record, a ZK proof's status, and
+links from the evidence, which are shown as text. The vendored verify API
+document has no field for the on-chain record, the proofs, or such links today:
+its checks for the record and the proofs are "not available yet".
 
 The page holds no key, no token, and no session, and it never loads the code
 that holds the player's key.

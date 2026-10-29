@@ -1,7 +1,7 @@
 // A verify API `Amount` (base units as a string, with its decimals) as the page
 // holds it: a `bigint`, and the text it shows (specs/verify-page.md, V-6).
 
-import type { PayoutEvidence } from "./round-evidence.ts";
+import type { BetEvidence, PayoutEvidence } from "./round-evidence.ts";
 import {
   AMOUNT_MAX_LENGTH,
   Bad,
@@ -41,6 +41,14 @@ export const formatAmount = (
   const whole = digits.slice(0, digits.length - decimals);
   const fraction = digits.slice(digits.length - decimals).replace(/0+$/u, "");
   return `${whole}${fraction === "" ? "" : `.${fraction}`} ${currency}`;
+};
+
+/** The round's `bet`, as check 7's payout reads it (OQ-B9). */
+export const bet = (v: unknown): Read<BetEvidence> => {
+  const read = amount(v);
+  return read === Bad
+    ? Bad
+    : { value: read.amount, decimals: read.decimals, currency: read.currency };
 };
 
 export const payout = (v: unknown): Read<PayoutEvidence | undefined> => {

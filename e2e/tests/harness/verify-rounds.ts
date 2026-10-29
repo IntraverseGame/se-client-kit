@@ -28,6 +28,22 @@ export const UNKNOWN_ROUND_ID = "01927c5e-8b3a-7f21-9c4d-5e6f7a8b9c0e";
 /** What the verify page's configuration pins: the same as the round tests'. */
 export const VERIFY_PINS: RoundPins = ROUND_PINS;
 
+/**
+ * The kernel's public vector sets as the verify API lists them
+ * (`kernel.vectorSets`, the vendored document's example): later sets are
+ * appended. The page does not read the list.
+ */
+export const KERNEL_V1_VECTOR_SETS: readonly string[] = [
+  "kernel/public/v1/seed",
+  "kernel/public/v1/shuffle-draw",
+  "kernel/public/v1/steps-derive",
+  "kernel/public/v1/derive",
+  "kernel/public/v1/round-secret-hash",
+  "kernel/public/v1/coin-flip-payout",
+  "kernel/public/v1/weighted-draw",
+  "kernel/public/v1/book-draw",
+];
+
 const isRecord = (value: unknown): value is Json =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -88,7 +104,7 @@ const verifyBody = (snapshot: Json): Json => {
     kernel: {
       name: "the SuperEngine fairness kernel",
       version: snapshot["kernelVersion"] ?? 1,
-      vectorSets: [],
+      vectorSets: [...KERNEL_V1_VECTOR_SETS],
     },
     game: {
       gameCode: "coin-flip",
@@ -101,8 +117,8 @@ const verifyBody = (snapshot: Json): Json => {
           losers: 1,
           next: [],
         })),
-        houseEdgeWad: "20000000000000000",
-        maxMultiplierMilli: 2000,
+        houseEdgeWad: "30000000000000000",
+        maxMultiplierMilli: 4_294_967_295,
       },
     },
     shape: [],

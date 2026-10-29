@@ -27,6 +27,19 @@ const committedPackage = join(
   "contracts",
 );
 
+/** The fairness kernel's public sets, by file name, in lock (path) order. */
+const KERNEL_SETS = [
+  "book-draw",
+  "coin-flip-payout",
+  "derive",
+  "round-secret-hash",
+  "seed",
+  "shuffle-draw",
+  "steps-derive",
+  "weighted-draw",
+];
+const kernelPath = (set: string): string => `src/vectors/kernel/v1/${set}.json`;
+
 let packageDir: string;
 
 beforeEach(() => {
@@ -68,10 +81,7 @@ describe("sync", () => {
       "src/schemas/play.v1.openapi.yaml",
       "src/schemas/se.snapshot.v1.schema.json",
       "src/schemas/verify.v1.openapi.yaml",
-      "src/vectors/kernel/v1/derive.json",
-      "src/vectors/kernel/v1/seed.json",
-      "src/vectors/kernel/v1/shuffle-draw.json",
-      "src/vectors/kernel/v1/steps-derive.json",
+      ...KERNEL_SETS.map(set => kernelPath(set)),
       "src/vectors/signing.json",
       "src/vectors/snapshot/invalid/b.json",
       "src/vectors/snapshot/signature/d.json",
@@ -135,18 +145,9 @@ describe("sync", () => {
       readLock(packageDir)
         .entries.filter(e => e.path.startsWith("src/vectors/kernel/"))
         .map(e => [e.path, e.sourceName]),
-    ).toEqual([
-      ["src/vectors/kernel/v1/derive.json", "kernel/public/v1/derive"],
-      ["src/vectors/kernel/v1/seed.json", "kernel/public/v1/seed"],
-      [
-        "src/vectors/kernel/v1/shuffle-draw.json",
-        "kernel/public/v1/shuffle-draw",
-      ],
-      [
-        "src/vectors/kernel/v1/steps-derive.json",
-        "kernel/public/v1/steps-derive",
-      ],
-    ]);
+    ).toEqual(
+      KERNEL_SETS.map(set => [kernelPath(set), `kernel/public/v1/${set}`]),
+    );
     const changed = memorySource();
     changed.files.set("k/derive.json", '{"k":99}\n');
     expect(() => {

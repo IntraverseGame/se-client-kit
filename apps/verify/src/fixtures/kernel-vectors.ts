@@ -43,7 +43,7 @@ export type KernelVector = {
 
 /**
  * The vectors of one set, by the set's file name: `seed`, `shuffle-draw`,
- * `steps-derive`, `derive`.
+ * `steps-derive`, `derive`, `round-secret-hash`, ... (the catalog's keys).
  */
 export const vectorsOf = (set: string): KernelVector[] => {
   const file = record(kernelVectors.v1[set], set);

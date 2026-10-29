@@ -1,0 +1,1275 @@
+{
+  "set": "kernel/public/v1/book-draw",
+  "kernelVersion": 1,
+  "spec": "SuperEngine fairness kernel, kernelVersion 1: book Draw and Payout, drawAlgorithmVersion 1",
+  "description": "Draw(seed, table) then Payout(bet, multiplierMilli): the outcome of a book round. A table is drawAlgorithmVersion and rows of (weight, multiplierMilli), with 1000 milli = 1x. Checks, in order: drawAlgorithmVersion is 1 (else draw-algorithm-version); then WeightedDraw's checks over the rows' weights in row order (see the weighted-draw set); then 1 <= bet <= 2^128 - 1 (else bet-out-of-range). index, r and acceptedAtCtr are WeightedDraw(seed, weights) unchanged, the multipliers are not an input to the draw, multiplierMilli is the drawn row's, and payout = floor(bet * multiplierMilli / 1000), at most 2^128 - 1 (else payout-too-large)",
+  "vectors": [
+    {
+      "vector": "kernel/public/v1/book-draw/four-row-reference-loss",
+      "description": "Four-row table, weights [690, 250, 50, 10] and multipliers [0, 2000, 5000, 20000] milli, with the reference seed: row 0, a loss",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "1000000"
+      },
+      "expected": {
+        "index": 0,
+        "r": "132",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "0",
+        "payout": "0"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/four-row-pick-1",
+      "description": "Four-row table, a seed that draws row 1 (2x)",
+      "input": {
+        "seed": "bac1766688e7f11f6f3d3f9cc8adc7de9a5e2a11c0505e6a49194e150974851d",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "1000000"
+      },
+      "expected": {
+        "index": 1,
+        "r": "926",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "2000",
+        "payout": "2000000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/four-row-pick-2",
+      "description": "Four-row table, a seed that draws row 2 (5x)",
+      "input": {
+        "seed": "439c994894d982c0d0cf0415ed536450af81f5bb9ca3fb8c1f5dff5b26824ce6",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "1000000"
+      },
+      "expected": {
+        "index": 2,
+        "r": "949",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "5000",
+        "payout": "5000000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/four-row-pick-3",
+      "description": "Four-row table, a seed that draws row 3 (20x)",
+      "input": {
+        "seed": "f7b638dd6481b85c4659067586c9e3d691cf06074e2f43fde92e52f874118a29",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "1000000"
+      },
+      "expected": {
+        "index": 3,
+        "r": "996",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "20000",
+        "payout": "20000000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/four-row-0",
+      "description": "Four-row table, fixed seed 0",
+      "input": {
+        "seed": "712dcac30c8b1789605201edd1ec472aae7bebc6dc7ea0ae584c132250bff2b3",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "1000000"
+      },
+      "expected": {
+        "index": 0,
+        "r": "292",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "0",
+        "payout": "0"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/four-row-1",
+      "description": "Four-row table, fixed seed 1",
+      "input": {
+        "seed": "230490313cc67800acf778ffd43aa010a429aad6cdc59f970473b4953ec62ee3",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "1000000"
+      },
+      "expected": {
+        "index": 1,
+        "r": "868",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "2000",
+        "payout": "2000000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/four-row-2",
+      "description": "Four-row table, fixed seed 2",
+      "input": {
+        "seed": "902ae382e3be0232b1e57132775daeb08d6ce205db5a2b97040742957575e448",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "1000000"
+      },
+      "expected": {
+        "index": 0,
+        "r": "665",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "0",
+        "payout": "0"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/symmetric-9-edge-0",
+      "description": "Nine-row symmetric table, weights [1, 8, 28, 56, 70, 56, 28, 8, 1], a seed that draws edge row 0 (29x) on a bet of 250",
+      "input": {
+        "seed": "efa2abd79a43aadf601070f508763239d4188c70cfc7c9c2e115846f6e521e9e",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "1",
+              "multiplierMilli": "29000"
+            },
+            {
+              "weight": "8",
+              "multiplierMilli": "4000"
+            },
+            {
+              "weight": "28",
+              "multiplierMilli": "1500"
+            },
+            {
+              "weight": "56",
+              "multiplierMilli": "300"
+            },
+            {
+              "weight": "70",
+              "multiplierMilli": "200"
+            },
+            {
+              "weight": "56",
+              "multiplierMilli": "300"
+            },
+            {
+              "weight": "28",
+              "multiplierMilli": "1500"
+            },
+            {
+              "weight": "8",
+              "multiplierMilli": "4000"
+            },
+            {
+              "weight": "1",
+              "multiplierMilli": "29000"
+            }
+          ]
+        },
+        "bet": "250"
+      },
+      "expected": {
+        "index": 0,
+        "r": "0",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "29000",
+        "payout": "7250"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/symmetric-9-edge-8",
+      "description": "Nine-row symmetric table, a seed that draws edge row 8 (29x) on a bet of 250",
+      "input": {
+        "seed": "df39e97d3e1e37067fc37e0b3a6385fe4a9e5c0bda90c011e8b6bec46c95db0a",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "1",
+              "multiplierMilli": "29000"
+            },
+            {
+              "weight": "8",
+              "multiplierMilli": "4000"
+            },
+            {
+              "weight": "28",
+              "multiplierMilli": "1500"
+            },
+            {
+              "weight": "56",
+              "multiplierMilli": "300"
+            },
+            {
+              "weight": "70",
+              "multiplierMilli": "200"
+            },
+            {
+              "weight": "56",
+              "multiplierMilli": "300"
+            },
+            {
+              "weight": "28",
+              "multiplierMilli": "1500"
+            },
+            {
+              "weight": "8",
+              "multiplierMilli": "4000"
+            },
+            {
+              "weight": "1",
+              "multiplierMilli": "29000"
+            }
+          ]
+        },
+        "bet": "250"
+      },
+      "expected": {
+        "index": 8,
+        "r": "255",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "29000",
+        "payout": "7250"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/symmetric-9-centre",
+      "description": "Nine-row symmetric table, a seed that draws the centre row 4 (0.2x) on a bet of 250",
+      "input": {
+        "seed": "d094695767b716110ed9cab4459886a0ddcbb99d778ca5b38660b23e8df60563",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "1",
+              "multiplierMilli": "29000"
+            },
+            {
+              "weight": "8",
+              "multiplierMilli": "4000"
+            },
+            {
+              "weight": "28",
+              "multiplierMilli": "1500"
+            },
+            {
+              "weight": "56",
+              "multiplierMilli": "300"
+            },
+            {
+              "weight": "70",
+              "multiplierMilli": "200"
+            },
+            {
+              "weight": "56",
+              "multiplierMilli": "300"
+            },
+            {
+              "weight": "28",
+              "multiplierMilli": "1500"
+            },
+            {
+              "weight": "8",
+              "multiplierMilli": "4000"
+            },
+            {
+              "weight": "1",
+              "multiplierMilli": "29000"
+            }
+          ]
+        },
+        "bet": "250"
+      },
+      "expected": {
+        "index": 4,
+        "r": "155",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "200",
+        "payout": "50"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/single-row",
+      "description": "one-row table: always row 0; 970 milli on 1,000 pays 970; seed = keccak256(\"book single\")",
+      "input": {
+        "seed": "2f3ad2a7a1dc673fd6a17cadc0f23e62584f4a8b35fb30c5ae248d91995af19e",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "1",
+              "multiplierMilli": "970"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "index": 0,
+        "r": "0",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "970",
+        "payout": "970"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/single-row-2p63",
+      "description": "one-row table of weight 2^63: always row 0; seed = keccak256(\"book single 2p63\")",
+      "input": {
+        "seed": "6a6c25e7c2e08b031d3b4b33406c80f45e0449cd62a5807093669f4af1437f21",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "9223372036854775808",
+              "multiplierMilli": "1500"
+            }
+          ]
+        },
+        "bet": "1000000"
+      },
+      "expected": {
+        "index": 0,
+        "r": "410420075102846577",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "1500",
+        "payout": "1500000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/zero-weights-row1",
+      "description": "table with zero-weight rows [0, 3, 0, 0, 4, 0, 2]: draws row 1; the zero rows' large multipliers are never paid; seed = keccak256(\"book zero row 1 1\")",
+      "input": {
+        "seed": "2b88f54b133289b1664279b30504d8d686e48b490fb73cb91790f4d1827cdcd9",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "0",
+              "multiplierMilli": "99000"
+            },
+            {
+              "weight": "3",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "50000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "50000"
+            },
+            {
+              "weight": "4",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "77000"
+            },
+            {
+              "weight": "2",
+              "multiplierMilli": "0"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "index": 1,
+        "r": "2",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "1000",
+        "payout": "1000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/zero-weights-row4",
+      "description": "table with zero-weight rows [0, 3, 0, 0, 4, 0, 2]: draws row 4; the zero rows' large multipliers are never paid; seed = keccak256(\"book zero row 4 1\")",
+      "input": {
+        "seed": "fbee365a5f2cbf06ccfb06114bb48478148844d8313fe132f81c2fdf4277f643",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "0",
+              "multiplierMilli": "99000"
+            },
+            {
+              "weight": "3",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "50000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "50000"
+            },
+            {
+              "weight": "4",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "77000"
+            },
+            {
+              "weight": "2",
+              "multiplierMilli": "0"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "index": 4,
+        "r": "6",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "2000",
+        "payout": "2000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/zero-weights-row6",
+      "description": "table with zero-weight rows [0, 3, 0, 0, 4, 0, 2]: draws row 6; the zero rows' large multipliers are never paid; seed = keccak256(\"book zero row 6 2\")",
+      "input": {
+        "seed": "e4558a10e8eb8b28aca2cfd3749018ab8643e61e86b20222e60fc3460011387a",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "0",
+              "multiplierMilli": "99000"
+            },
+            {
+              "weight": "3",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "50000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "50000"
+            },
+            {
+              "weight": "4",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "77000"
+            },
+            {
+              "weight": "2",
+              "multiplierMilli": "0"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "index": 6,
+        "r": "7",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "0",
+        "payout": "0"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/boundary-r2",
+      "description": "boundary: table [3, 5, 0, 2], r = 2 draws row 0; seed = keccak256(\"book boundary r 2 0\")",
+      "input": {
+        "seed": "959dc76c3f022c2cde958c0893e66950b984ff884fd74477a6903a1698171136",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "3",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "5",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "9000"
+            },
+            {
+              "weight": "2",
+              "multiplierMilli": "3000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "index": 0,
+        "r": "2",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "1000",
+        "payout": "1000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/boundary-r3",
+      "description": "boundary: table [3, 5, 0, 2], r = 3 draws row 1; seed = keccak256(\"book boundary r 3 7\")",
+      "input": {
+        "seed": "d94200739d23eae08e3f4afe00d707b48b6f43fdba3751614e58f835ea0ebe5e",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "3",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "5",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "9000"
+            },
+            {
+              "weight": "2",
+              "multiplierMilli": "3000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "index": 1,
+        "r": "3",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "2000",
+        "payout": "2000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/boundary-r7",
+      "description": "boundary: table [3, 5, 0, 2], r = 7 draws row 1; seed = keccak256(\"book boundary r 7 0\")",
+      "input": {
+        "seed": "2483e65d7feabc37c1dc61670d562660298e16aabb47dde34323e210a36a1d91",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "3",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "5",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "9000"
+            },
+            {
+              "weight": "2",
+              "multiplierMilli": "3000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "index": 1,
+        "r": "7",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "2000",
+        "payout": "2000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/boundary-r8",
+      "description": "boundary: table [3, 5, 0, 2], r = 8 draws row 3; seed = keccak256(\"book boundary r 8 12\")",
+      "input": {
+        "seed": "15fd9cb4690bf60fe07d9e0bf62e51bfcee8cc7db11fc075e37df9fa1d005a51",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "3",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "5",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "9000"
+            },
+            {
+              "weight": "2",
+              "multiplierMilli": "3000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "index": 3,
+        "r": "8",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "3000",
+        "payout": "3000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/max-total-rare-row",
+      "description": "W = 2^63 exactly: [1, 2^63 - 1], a seed that draws the large row 1; seed = keccak256(\"book max rare 0\")",
+      "input": {
+        "seed": "d1f49a794adee4e3ba8069fc4ec36c5ca413aea7e63fc77accdfd67e0adc892a",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "1",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "9223372036854775807",
+              "multiplierMilli": "0"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "index": 1,
+        "r": "7570327223381027840",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "0",
+        "payout": "0"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/max-total-halves-0",
+      "description": "W = 2^63 as two halves: draws row 0; seed = keccak256(\"book max halves 0 0\")",
+      "input": {
+        "seed": "be4c523dfbb024465311615b584b6e97db2deafde2d31573b5b77984c498571c",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "4611686018427387904",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "4611686018427387904",
+              "multiplierMilli": "3000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "index": 0,
+        "r": "2793201861549634073",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "1000",
+        "payout": "1000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/max-total-halves-1",
+      "description": "W = 2^63 as two halves: draws row 1; seed = keccak256(\"book max halves 1 1\")",
+      "input": {
+        "seed": "049b2eab42bb391ca2bd79b1db3c7c00ffde64a144ff229a41a4b0fe76e1bf22",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "4611686018427387904",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "4611686018427387904",
+              "multiplierMilli": "3000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "index": 1,
+        "r": "8240427942645190957",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "3000",
+        "payout": "3000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/payout-floor",
+      "description": "payout rounds down: 1999 milli on a bet of 1 pays 1; seed = keccak256(\"book floor\")",
+      "input": {
+        "seed": "a519c128a47a2b3e89b8e2f356cc971db626c26c5d879a0f204fd44e868d3ac3",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "1",
+              "multiplierMilli": "1999"
+            }
+          ]
+        },
+        "bet": "1"
+      },
+      "expected": {
+        "index": 0,
+        "r": "0",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "1999",
+        "payout": "1"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/payout-floor-to-zero",
+      "description": "payout rounds down to 0: 333 milli on a bet of 2 pays 0; seed = keccak256(\"book floor zero\")",
+      "input": {
+        "seed": "8caa2c02960f1503a0103a615aeadf98f9914f9c8bdc3bce16bdd1277a1e7021",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "1",
+              "multiplierMilli": "333"
+            }
+          ]
+        },
+        "bet": "2"
+      },
+      "expected": {
+        "index": 0,
+        "r": "0",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "333",
+        "payout": "0"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/payout-zero-multiplier",
+      "description": "multiplier 0 pays 0 on the largest bet; seed = keccak256(\"book zero multiplier\")",
+      "input": {
+        "seed": "ea2e61e58bb875fdb0114faa0311d9a346c813bfc0806ef54775dd01144144d1",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "1",
+              "multiplierMilli": "0"
+            }
+          ]
+        },
+        "bet": "340282366920938463463374607431768211455"
+      },
+      "expected": {
+        "index": 0,
+        "r": "0",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "0",
+        "payout": "0"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/payout-bet-max",
+      "description": "bet 2^128 - 1 at 1x pays 2^128 - 1, the largest payout; seed = keccak256(\"book bet max\")",
+      "input": {
+        "seed": "5b6c268b62e1a0cb1ee941807d920e4901fb09e306b2e2a736b207967045457f",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "1",
+              "multiplierMilli": "1000"
+            }
+          ]
+        },
+        "bet": "340282366920938463463374607431768211455"
+      },
+      "expected": {
+        "index": 0,
+        "r": "0",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "1000",
+        "payout": "340282366920938463463374607431768211455"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/payout-multiplier-max",
+      "description": "multiplier 2^64 - 1 milli on a bet of 1,000,000; seed = keccak256(\"book multiplier max\")",
+      "input": {
+        "seed": "ddca29534aaf32b7da1a0baafad625bf6e19e5de1b0c193c82b446c6366e4ad7",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "1",
+              "multiplierMilli": "18446744073709551615"
+            }
+          ]
+        },
+        "bet": "1000000"
+      },
+      "expected": {
+        "index": 0,
+        "r": "0",
+        "acceptedAtCtr": 0,
+        "multiplierMilli": "18446744073709551615",
+        "payout": "18446744073709551615000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/invalid-version-0",
+      "description": "drawAlgorithmVersion 0 is unknown",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "table": {
+          "drawAlgorithmVersion": 0,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "error": "draw-algorithm-version"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/invalid-version-2",
+      "description": "drawAlgorithmVersion 2 is unknown",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "table": {
+          "drawAlgorithmVersion": 2,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "error": "draw-algorithm-version"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/invalid-seed-31",
+      "description": "a 31-byte seed",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "error": "seed-length"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/invalid-empty",
+      "description": "a table with no rows",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": []
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "error": "weights-empty"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/invalid-all-zero",
+      "description": "every weight is 0",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "0",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "0",
+              "multiplierMilli": "2000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "error": "weight-total-zero"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/invalid-total-2p63p1",
+      "description": "total weight 2^63 + 1",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "9223372036854775808",
+              "multiplierMilli": "1000"
+            },
+            {
+              "weight": "1",
+              "multiplierMilli": "1000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "error": "weight-total-too-large"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/invalid-bet-zero",
+      "description": "bet 0",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "0"
+      },
+      "expected": {
+        "error": "bet-out-of-range"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/invalid-bet-2p128",
+      "description": "bet 2^128",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "340282366920938463463374607431768211456"
+      },
+      "expected": {
+        "error": "bet-out-of-range"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/invalid-payout-too-large",
+      "description": "bet 2^128 - 1 at 1.001x pays more than 2^128 - 1",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed39",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "1",
+              "multiplierMilli": "1001"
+            }
+          ]
+        },
+        "bet": "340282366920938463463374607431768211455"
+      },
+      "expected": {
+        "error": "payout-too-large"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/invalid-order-version-and-seed",
+      "description": "unknown version and a bad seed: the version is checked first",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed",
+        "table": {
+          "drawAlgorithmVersion": 2,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "1000"
+      },
+      "expected": {
+        "error": "draw-algorithm-version"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-draw/invalid-order-seed-and-bet",
+      "description": "a bad seed and bet 0: the draw's checks run before the bet",
+      "input": {
+        "seed": "b33d4958038d5d1cfad2089458798264866da6b6576e9345a9111ebf4a48ed",
+        "table": {
+          "drawAlgorithmVersion": 1,
+          "entries": [
+            {
+              "weight": "690",
+              "multiplierMilli": "0"
+            },
+            {
+              "weight": "250",
+              "multiplierMilli": "2000"
+            },
+            {
+              "weight": "50",
+              "multiplierMilli": "5000"
+            },
+            {
+              "weight": "10",
+              "multiplierMilli": "20000"
+            }
+          ]
+        },
+        "bet": "0"
+      },
+      "expected": {
+        "error": "seed-length"
+      }
+    }
+  ]
+}

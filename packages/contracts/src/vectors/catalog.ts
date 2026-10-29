@@ -155,10 +155,14 @@ import vector148 from "./snapshot/typed-data/coinflip-pick.json" with { type: "j
 import vector149 from "./snapshot/typed-data/pick-multi-path.json" with { type: "json" };
 import vector150 from "./snapshot/signed-action/cashorcrash-cash-out.json" with { type: "json" };
 import vector151 from "./snapshot/signed-action/coinflip-cancel.json" with { type: "json" };
-import vector152 from "./kernel/v1/derive.json" with { type: "json" };
-import vector153 from "./kernel/v1/seed.json" with { type: "json" };
-import vector154 from "./kernel/v1/shuffle-draw.json" with { type: "json" };
-import vector155 from "./kernel/v1/steps-derive.json" with { type: "json" };
+import vector152 from "./kernel/v1/book-draw.json" with { type: "json" };
+import vector153 from "./kernel/v1/coin-flip-payout.json" with { type: "json" };
+import vector154 from "./kernel/v1/derive.json" with { type: "json" };
+import vector155 from "./kernel/v1/round-secret-hash.json" with { type: "json" };
+import vector156 from "./kernel/v1/seed.json" with { type: "json" };
+import vector157 from "./kernel/v1/shuffle-draw.json" with { type: "json" };
+import vector158 from "./kernel/v1/steps-derive.json" with { type: "json" };
+import vector159 from "./kernel/v1/weighted-draw.json" with { type: "json" };
 import signing from "./signing.json" with { type: "json" };
 
 /** Every vector is data of unknown shape: a consumer validates what it reads. */
@@ -352,9 +356,13 @@ export const snapshotVectors: SnapshotVectors = {
 
 export const kernelVectors: KernelVectors = {
   v1: {
-    "derive": vector152,
-    "seed": vector153,
-    "shuffle-draw": vector154,
-    "steps-derive": vector155,
+    "book-draw": vector152,
+    "coin-flip-payout": vector153,
+    "derive": vector154,
+    "round-secret-hash": vector155,
+    "seed": vector156,
+    "shuffle-draw": vector157,
+    "steps-derive": vector158,
+    "weighted-draw": vector159,
   },
 };

@@ -89,6 +89,12 @@ test.describe("the recorded rounds", () => {
       expect(
         changedPaths(recordedRound(kind), tamperedRecordedRound(kind, "loser")),
       ).toEqual(["recomputed.steps.0.losers.0"]);
+      expect(
+        changedPaths(
+          recordedRound(kind),
+          tamperedRecordedRound(kind, "payout"),
+        ),
+      ).toEqual(["payout.amount"]);
     }
   });
 

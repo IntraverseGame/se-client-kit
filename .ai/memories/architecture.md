@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-10-29 (#156 verify book rounds: a body with `book` is a book round, `verify-book.ts`, `book-checks.ts`, `book-fairness.ts`, `round-report.ts`, the `not-applicable` check status and V-8's `book-draw` reason; #146 book contract re-vendor: the Snapshot schema and vectors at se-backend `dee6000`, the book status rule now the validator's, the shell's interim `book-status.ts` removed; #146 book playback pull request: the session's `SessionRound` (a `RoundFlow` or a `BookRound`), the W-53 guard and `session-changed`, the bridge's `playback` copy and `onCopy`; #136: the verify API is read same-origin only, verify-page.md D-10; 2026-10-27, #3: CODEOWNERS active, the npm org claimed; open-marker deferrals: production hosting is #133; #133: `apps/pages-proxy`, the Pages API proxy, outside the dependency graph; 2026-10-20: verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify page states pull request: `apps/verify`'s states, view, checks 1 to 4 and 6, configuration read, and the verify API read; operator launch contract pull request, #42: the shell's operator channel and `serialized-origin.ts`, the Wrapper's operator gate, dispatch, and links; verify kernel pull request: `apps/verify` with the kernel derivations of checks 5 and 7, `signing`'s raw `keccak256`; start resend pull request: `startMayBeStored`, W-22's one resend of a start whose round may exist; Play API document: a start, move, or cash-out may be stored after a lost response, `UNAVAILABLE`, or `INTERNAL`; Play API document: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-10-29 (kernel sets of se-backend bc4f4adf, #156: check 5 replays `round-secret-hash`; earlier: #156 verify book rounds: a body with `book` is a book round, `verify-book.ts`, `book-checks.ts`, `book-fairness.ts`, `round-report.ts`, the `not-applicable` check status and V-8's `book-draw` reason; #146 book contract re-vendor: the Snapshot schema and vectors at se-backend `dee6000`, the book status rule now the validator's, the shell's interim `book-status.ts` removed; #146 book playback pull request: the session's `SessionRound` (a `RoundFlow` or a `BookRound`), the W-53 guard and `session-changed`, the bridge's `playback` copy and `onCopy`; #136: the verify API is read same-origin only, verify-page.md D-10; 2026-10-27, #3: CODEOWNERS active, the npm org claimed; open-marker deferrals: production hosting is #133; #133: `apps/pages-proxy`, the Pages API proxy, outside the dependency graph; 2026-10-20: verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify page states pull request: `apps/verify`'s states, view, checks 1 to 4 and 6, configuration read, and the verify API read; operator launch contract pull request, #42: the shell's operator channel and `serialized-origin.ts`, the Wrapper's operator gate, dispatch, and links; verify kernel pull request: `apps/verify` with the kernel derivations of checks 5 and 7, `signing`'s raw `keccak256`; start resend pull request: `startMayBeStored`, W-22's one resend of a start whose round may exist; Play API document: a start, move, or cash-out may be stored after a lost response, `UNAVAILABLE`, or `INTERNAL`; Play API document: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
 ---
 
 # Architecture (agent context)
@@ -290,13 +290,17 @@ structure below.
   when `value` > 0 as a `bigint`; absent shows nothing; never computed (W-34).
 - The fairness kernel's public vector sets (the SuperEngine fairness kernel,
   kernelVersion 1: `kernel/public/v1/seed`, `shuffle-draw`, `steps-derive`,
-  `derive`) are
+  `derive`, `round-secret-hash`, `coin-flip-payout`, `weighted-draw`,
+  `book-draw`; each a group of `tools/contracts-groups.ts`) are
   vendored as data only, under `vectors/kernel/v1/`, each locked under its set
   id. The only kernel logic is the verify page's (`apps/verify`): Seed,
-  SeedHash, `roundSecretHash`, ShuffleDraw (`shuffleDraw`, any label), and
-  StepsDerive over it, keyed on the kernel version (`kernels.ts`, version 1
+  SeedHash, `roundSecretHash`, ShuffleDraw (`shuffleDraw`, any label),
+  StepsDerive over it, and Coin Flip's payout (`coinFlipSchedule`,
+  `coin-flip-payout.ts`), keyed on the kernel version (`kernels.ts`, version 1
   only), with SHA-256 from Web Crypto and the raw `keccak256` `signing`
-  exports; its tests replay all four sets. The
+  exports; its tests replay `seed`, `shuffle-draw`, `steps-derive`, `derive`,
+  `round-secret-hash`, and `coin-flip-payout` (no book draw or book payout is
+  computed: OQ-B8). The
   bundle's path in its source repository never appears here: it lives only in
   the sync's sources file, outside the repository.
 
@@ -430,9 +434,17 @@ structure below.
   spec's "The evidence"). A-1 to A-4 were decided by the human on 2026-10-20; A-5 (what a round
   without entropy or commitment does, the decoded `newRound`, the written
   payout text) is settled: a voided or refused round is its own V-8 state, with no "check again". The fairness kernel's public vectors are in `contracts`
-  (`kernelVectors.v1`, 81 vectors in four sets, from se-backend `9294d22`),
-  with none yet for Coin Flip's payouts or `roundSecretHash`, which the page
-  checks against its definition.
+  (`kernelVectors.v1`, 194 vectors in eight sets: `seed` and `shuffle-draw`
+  locked at se-backend `9294d22`, `steps-derive` and `derive` at `ad36bc4`,
+  `round-secret-hash`, `coin-flip-payout`, `weighted-draw`, and `book-draw` at
+  `bc4f4adf`, each set's commit in `contracts.lock.json`; the verify API's
+  `kernel.vectorSets` lists them in that order, later sets appended). Check 5
+  replays `round-secret-hash` (OQ-B10); check 7 recomputes a Coin Flip
+  round's payout from `game.terms`, `bet`, and its recomputed outcome (a loss
+  pays 0) and compares it as V-6's amount text with the body's `payout`
+  (OQ-B9; `payoutTermsHash` still taken as signed, not tied to `game.terms`);
+  a book round's draw and payout stay not checked (OQ-B8). All decided by the
+  human 2026-10-29.
   Its checks 5 and 7 follow the SuperEngine fairness kernel, kernelVersion 1
   (public; SHA-256 commitments and seed via Web Crypto, StepsDerive with the raw
   `keccak256` that `signing` exports). ShuffleDraw's input checks, hashed
@@ -466,9 +478,10 @@ structure below.
   `readyHash`, or signed actions); `verifyRound` hands it to
   `verifyBookRound` (`book-checks.ts`): checks 1, 5 (plain SHA-256), 6 (with
   `entropy.chainId` held to the pin), and 7 (the seed, via `book-fairness.ts`)
-  recomputed, 2 to 4 `not-applicable`, 8 (the draw) not checked (no kernel
-  vector, no table in the API; `TODO(kernel vectors, #156)`,
-  `TODO(verify API, #156)`), and an ended `won`/`lost` one is V-8's
+  recomputed, 2 to 4 `not-applicable`, 8 (the draw) not checked (the
+  weighted draw needs every row's weight and the API carries only the drawn
+  row, the root, the count, and the total weight; `TODO(verify API, #156)`),
+  and an ended `won`/`lost` one is V-8's
   `book-draw` reason, never V-6. The verdict's types and the parts both kinds
   of round share live in `round-report.ts`.
 

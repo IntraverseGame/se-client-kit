@@ -1,6 +1,7 @@
 // The SuperEngine fairness kernel, kernelVersion 1: its commitments and its
 // seed (specs/verify-page.md, V-12 checks 5 and 7), pinned by the public vector
-// set `kernel/public/v1/seed`. SHA-256 is Web Crypto's, with no library.
+// sets `kernel/public/v1/seed` and `kernel/public/v1/round-secret-hash`.
+// SHA-256 is Web Crypto's, with no library.
 
 import { KernelError, type KernelErrorCode } from "./kernel-error.ts";
 
@@ -41,8 +42,8 @@ export const seedHashOf = (seed: Uint8Array): Promise<Uint8Array> =>
 
 /**
  * The round secret's commitment, `roundSecretHash = SHA-256(roundSecret)`, over
- * its raw 32 bytes. No kernel vector pins it yet: it is checked against this
- * definition alone.
+ * its raw 32 bytes (not its hex text); any other length is `secret-length`.
+ * Pinned by `kernel/public/v1/round-secret-hash`.
  */
 export const roundSecretHashOf = (secret: Uint8Array): Promise<Uint8Array> =>
   refuseUnless32(secret, "secret-length") ?? sha256(secret);

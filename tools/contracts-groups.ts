@@ -111,4 +111,32 @@ export const GROUPS: readonly Group[] = [
     sourceName: "kernel/public/v1/shuffle-draw",
     vectors: true,
   },
+  {
+    id: "kernel-vectors-round-secret-hash",
+    kind: "file",
+    destination: "src/vectors/kernel/v1/round-secret-hash.json",
+    sourceName: "kernel/public/v1/round-secret-hash",
+    vectors: true,
+  },
+  {
+    id: "kernel-vectors-coin-flip-payout",
+    kind: "file",
+    destination: "src/vectors/kernel/v1/coin-flip-payout.json",
+    sourceName: "kernel/public/v1/coin-flip-payout",
+    vectors: true,
+  },
+  {
+    id: "kernel-vectors-weighted-draw",
+    kind: "file",
+    destination: "src/vectors/kernel/v1/weighted-draw.json",
+    sourceName: "kernel/public/v1/weighted-draw",
+    vectors: true,
+  },
+  {
+    id: "kernel-vectors-book-draw",
+    kind: "file",
+    destination: "src/vectors/kernel/v1/book-draw.json",
+    sourceName: "kernel/public/v1/book-draw",
+    vectors: true,
+  },
 ];

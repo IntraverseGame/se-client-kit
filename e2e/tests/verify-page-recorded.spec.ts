@@ -1,7 +1,8 @@
 // VT-5 (specs/verify-page.md), the rows for rounds the backend recorded: a
 // `won` and a `lost` Coin Flip round with their reveals, served by the e2e fake
-// of the verify API, so the page recomputes checks 5 and 7 and they match, and
-// a tampered copy of each names the check that fails. The configuration pins
+// of the verify API, so the page recomputes checks 5 and 7 (the payout
+// included) and they match, and a tampered copy of each names the check that
+// fails. The configuration pins
 // what the recordings carry (`harness/recorded-rounds.ts`), and the fake RPC
 // endpoints give block N its recorded hash. The page is the Wrapper's release
 // bundle's `verify/` (unmodified); a bundle without it fails the rows with a
@@ -52,6 +53,9 @@ test.beforeAll(() => {
   if (!verifyPageBuilt()) throw new Error(VERIFY_PAGE_NOT_BUILT);
 });
 
+/** The payout each recording settled with, as the page writes it (OQ-B9). */
+const PAYOUT = { won: "1.94 EUR", lost: "0 EUR" } as const;
+
 test.describe("the verify page, for rounds the backend recorded (VT-5)", () => {
   for (const kind of KINDS) {
     test(`recomputes checks 5 and 7 of a recorded ${kind} round, and it matches`, async ({
@@ -77,6 +81,10 @@ test.describe("the verify page, for rounds the backend recorded (VT-5)", () => {
       // Checks 5 and 7 ran (a check that did not run reads "not checked").
       await expect(checkHeading(page, CHECK[5])).toContainText("matches");
       await expect(checkHeading(page, CHECK[7])).toContainText("matches");
+      // Check 7 recomputed the payout, so the summary does not call it unchecked.
+      const summary = page.locator(".vp-summary");
+      await expect(summary).toContainText(PAYOUT[kind]);
+      await expect(summary).not.toContainText("not checked");
       // Check 6 read the recorded block from both endpoints.
       await expect(page.getByText(recordedBlock().hash).first()).toBeVisible();
       expect(
@@ -95,6 +103,7 @@ test.describe("the verify page, for rounds the backend recorded (VT-5)", () => {
 
     for (const [tamper, check] of [
       ["loser", 7],
+      ["payout", 7],
       ["roundSecret", 5],
     ] as const satisfies readonly (readonly [RecordedTamper, 5 | 7])[]) {
       test(`names check ${String(check)} when a recorded ${kind} round's ${tamper} is tampered`, async ({
