@@ -23,7 +23,12 @@ generated types); what it does not yet carry (the on-chain record and the
 proofs) is still marked `TODO(verify API)`, deferred to #155. The request is
 `play-client`'s `getRoundVerification` (A-1). Its four design decisions were
 made by the human on 2026-10-18, and five more on the kernel derivations on
-2026-10-19 ([Decisions](#decisions)).
+2026-10-19 ([Decisions](#decisions)). **Book rounds** (#156,
+[Book rounds](#book-rounds-v-18-to-v-21), V-18 to V-21) are built: their seven
+questions were decided by the human on 2026-10-29
+([Decisions](#decisions-book-rounds-156)); what the kit cannot check yet (the
+draw, the table, and the payout) is shown as not checked and marked
+`TODO(kernel vectors, #156)` and `TODO(verify API, #156)`.
 
 ## Purpose
 
@@ -41,6 +46,9 @@ In scope, for the first release:
   round id);
 - config rounds of the Coin Flip game (the only game of the first release), in
   the states below;
+- book rounds (`playback`, W-50): the checks the kit can recompute from the
+  verify API's body, with the draw itself shown as not checked until the kernel
+  publishes vectors for it ([Book rounds](#book-rounds-v-18-to-v-21), #156);
 - recomputation with the kit's own code (`signing`, the round id and its
   `bytes32` form, the pinned values of the environment configuration) and a
   quorum read of the entropy chain;
@@ -50,9 +58,10 @@ Out of scope:
 
 - the verify API itself and its response body (the backend's, by name: the
   verify API document);
-- book rounds (`playback`): the Wrapper plays them (W-50), and the vendored
-  verify API document describes their verification (`book`, `recomputed.draw`),
-  but the page does not read those fields yet (#156);
+- recomputing a book round's weighted draw, its table (`merkleRoot`,
+  `entryCount`, `totalWeight`), and its payout: shown, never claimed as checked,
+  until the kernel has public vectors for them and the page can read the table
+  (V-19, check 8);
 - the on-chain record (`proofs.record`) read against the registry, and ZK proof
   verification: shown when present, never claimed as checked (a later increment,
   like W-27's deferred evidence check);
@@ -213,7 +222,7 @@ what happened, and, where the player can act, one control.
   chain", names that check, and offers to check again; it still shows no result
   as established.
 - **V-8. Not recomputable.** The API returned the round, but the page cannot
-  recompute it, for one of four reasons:
+  recompute it, for one of five reasons:
   - the round has not ended (`won`, `lost`, and `canceled` are the ended
     statuses): the page shows what it could check, says the rest waits for the
     round's end, and offers to check again;
@@ -224,7 +233,12 @@ what happened, and, where the player can act, one control.
     (below);
   - the round is not a one-step, two-option config round (A-3): the page says it
     recomputes rounds of that shape only, shows checks 1 to 4 and 6, runs no
-    derivation of checks 5 and 7, and offers no retry.
+    derivation of checks 5 and 7, and offers no retry;
+  - the round is a book round that has ended and its draw (check 8) could not be
+    recomputed (V-20): the page shows the checks it ran, the result and the
+    payout as the verify API reports them, says the draw, the multiplier, and
+    the payout are not checked, and offers no retry. A book round never reaches
+    this state with a failed check (that is V-7).
 
   A **voided** round (`idle` with a `voidReason`) and a **refused** round
   (`idle` with a `rejectCode`, refused before any money moved) will never be
@@ -432,10 +446,15 @@ alone, and the payout is shown, not recomputed (V-13).
   shown only when present; the verify API document has no field for them, its
   `onchain_record` and `proofs` checks being "not available yet", so today none
   is present); and, for a `canceled` round without reveals, checks 5 and 7; and
-  `newRound.actionKey` (A-4: the page has no player key to compare it with).
-  Links from the evidence (`blockExplorerUrl`, `explorerUrl`, `proofLink`) are
-  shown as text, not as links, in the first release: they come from the API the
-  page does not trust.
+  `newRound.actionKey` (A-4: the page has no player key to compare it with). For
+  a book round (V-20), also: the drawn row and its multiplier (check 8), the
+  mode's table (`merkleRoot`, `entryCount`, `totalWeight`), its `cost`, the
+  game's `packageHash`, the payout, and that the round's commitment and block N
+  were fixed before block N existed (a book round has no signed authorization in
+  the document, so the binding of checks 2 and 3 does not apply). Links from the
+  evidence (`blockExplorerUrl`, `explorerUrl`, `proofLink`) are shown as text,
+  not as links, in the first release: they come from the API the page does not
+  trust.
   <!-- TODO(verify API, #155): deferred to #155 (owner: backend). The on-chain record and the proofs, when the document carries them (its `onchain_record` and `proofs` checks); they stay "not available yet" until the backend's on-chain anchoring lands. Reason: the vendored verify API document does not carry them yet. -->
 - **Which package does what.** `signing` for every keccak256 hash and the
   signature recovery (it has no kit dependency at run time); Web Crypto for
@@ -463,20 +482,21 @@ fails the whole body (V-10); a field the page does not know is ignored. The page
 never reads the document's own verdict: `checks` and `recomputed.kind` are
 validated and unused, and the result is the page's own (Security). The map:
 
-| The page's evidence                                     | The document's field                                                                                                                                                                                                                                                   |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `roundId`, `status`, `closeReason`                      | `roundId`, `status` (`idle`, `starting`, `active`, `resolving`, `won`, `lost`, `canceled`), `closeReason` (`expired`)                                                                                                                                                  |
-| `kernelVersion`                                         | `kernel.version` (V-12a)                                                                                                                                                                                                                                               |
-| `newRound`                                              | `commitment.createRoundAuth.newRound`: `abi.encode(NewRound)`, 352 bytes, decoded by the page (below)                                                                                                                                                                  |
-| `createRoundAuth.prepareWindow`, `expiry`, `signature`  | `commitment.createRoundAuth.prepareWindow`, `expiryUnix` (read as a decimal string), `signature`                                                                                                                                                                       |
-| `createRoundAuth.domain`, `signer`                      | `commitment.registryChainId`, `registryAddress` (the `verifyingContract`), `commitment.adminSigner`; compared with the configuration (check 3); the digest uses the configured domain, never these                                                                     |
-| `createRoundAuth.entropyChainId`                        | `entropy.chainId`                                                                                                                                                                                                                                                      |
-| `randomnessProof.source`, `blockNumber`, `blockValue`   | `entropy.source`, `entropy.block` (read as `bigint`), `entropy.value` (optional)                                                                                                                                                                                       |
-| `randomnessProof.roundSecretHash`, `roundSecret`        | `commitment.roundSecretHash`, `reveal.roundSecret`                                                                                                                                                                                                                     |
-| `fairnessProof.seedHash`, `readyHash`, `seed`           | `seedHash`, `readyHash`, `reveal.seed`                                                                                                                                                                                                                                 |
-| `terms`                                                 | `game.terms.nodes` (`options`, `losers`, `next`)                                                                                                                                                                                                                       |
-| `steps` (`optionCount`, `selectedIndex`, `losingIndex`) | `recomputed.steps` (`node`, `option`, `losers`): the API's replay of the round, which the page compares with its own (check 7); `optionCount` is the node's `options`; `losingIndex` is the only entry of `losers` and is absent when the replay names none or several |
-| `payout` (`formatted`, `value`, `unit`)                 | `payout` (`amount`, `currency`, `decimals`); `formatted` is written by the page from the base units and `decimals` by `bigint` arithmetic (`1.94 EUR`), as the document carries no formatted string                                                                    |
+| The page's evidence                                     | The document's field                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roundId`, `status`, `closeReason`                      | `roundId`, `status` (`idle`, `starting`, `active`, `resolving`, `won`, `lost`, `canceled`), `closeReason` (`expired`)                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `kernelVersion`                                         | `kernel.version` (V-12a)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `newRound`                                              | `commitment.createRoundAuth.newRound`: `abi.encode(NewRound)`, 352 bytes, decoded by the page (below)                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `createRoundAuth.prepareWindow`, `expiry`, `signature`  | `commitment.createRoundAuth.prepareWindow`, `expiryUnix` (read as a decimal string), `signature`                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `createRoundAuth.domain`, `signer`                      | `commitment.registryChainId`, `registryAddress` (the `verifyingContract`), `commitment.adminSigner`; compared with the configuration (check 3); the digest uses the configured domain, never these                                                                                                                                                                                                                                                                                                                                        |
+| `createRoundAuth.entropyChainId`                        | `entropy.chainId`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `randomnessProof.source`, `blockNumber`, `blockValue`   | `entropy.source`, `entropy.block` (read as `bigint`), `entropy.value` (optional)                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `randomnessProof.roundSecretHash`, `roundSecret`        | `commitment.roundSecretHash`, `reveal.roundSecret`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `fairnessProof.seedHash`, `readyHash`, `seed`           | `seedHash`, `readyHash`, `reveal.seed`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `terms`                                                 | `game.terms.nodes` (`options`, `losers`, `next`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `steps` (`optionCount`, `selectedIndex`, `losingIndex`) | `recomputed.steps` (`node`, `option`, `losers`): the API's replay of the round, which the page compares with its own (check 7); `optionCount` is the node's `options`; `losingIndex` is the only entry of `losers` and is absent when the replay names none or several                                                                                                                                                                                                                                                                    |
+| `payout` (`formatted`, `value`, `unit`)                 | `payout` (`amount`, `currency`, `decimals`); `formatted` is written by the page from the base units and `decimals` by `bigint` arithmetic (`1.94 EUR`), as the document carries no formatted string                                                                                                                                                                                                                                                                                                                                       |
+| `book` (`mode`, `drawn`, `cost`, `table`, `apiDraw`)    | `book` (`BookVerification`): `mode`, `drawn` (`DrawnRow`: `index`, `multiplierMilli`), `cost`, and the table's `merkleRoot`, `entryCount`, `totalWeight` (V-21); with what a book round's checks read elsewhere in the body: `game.packageHash`, `recomputed.draw` as `apiDraw` (the API's own redraw, never the page's result; compared with `book.drawn` for consistency only, V-19 check 8), `entropy.chainId` (check 6), and `reveal.seed` (check 7: a book round has no `seedHash`, so no `fairnessProof`); a book round only (V-18) |
 
 The page also validates, and does not use, `bet`, `game`'s other fields, `shape`
 beyond A-3, `transcriptHash`, `reveal.configuration`, `actions` (the signed
@@ -505,6 +525,143 @@ needs `seedHash`), and each check that needs what is missing fails on an ended
 round and waits on a round that has not ended (A-2). A `createRoundAuth` without
 `registryChainId`, `registryAddress`, `adminSigner`, or `entropy.chainId` is a
 malformed body (V-10), since the authorization cannot be read without them.
+
+### Book rounds (V-18 to V-21)
+
+Built (#156; [What is built](#what-is-built)). Written to the vendored verify
+API document only: its `BookVerification`, `DrawnRow`, and `Recomputation.draw`
+schemas and its `Check` descriptions for a book round. The document sets `book`
+for every book round, with `mode` always; `drawn` on `won` and `lost`; `cost`,
+`merkleRoot`, `entryCount`, and `totalWeight` once the round is closed with a
+seed; and `recomputed.draw`, the API's own redraw, for a book round closed with
+a seed. It says a book round has no `newRound`, `seedHash`, `readyHash`, or
+signed actions, so its `randomness_target`, `ready_hash`, `transcript`, and
+`action_signatures` checks are `not_applicable`. The Wrapper keeps its verify
+link after a book round ends (W-39), so the page answers every valid book body
+with a round, never with V-10.
+
+**What the kernel's public vectors cover for a book round.** The vendored sets
+are `kernel/public/v1/seed`, `shuffle-draw`, `steps-derive`, and `derive`
+([The kernel's vectors](#what-the-page-recomputes-v-12-v-13)). Of what a book
+round needs, only `kernel/public/v1/seed` applies: its vectors give both
+`Seed(blockValue, secret)` and `SeedHash(seed)` for 32-byte inputs, so they
+replay the seed (check 7) and the SHA-256 of a 32-byte value that both
+commitments of check 5 use. There is no vector for the weighted draw over a book
+mode's table, for the table's Merkle root, or for the payout rule.
+<!-- TODO(kernel vectors, #156): deferred (owner: backend, the fairness kernel). Public kernel vectors for a book round: the weighted draw from a seed over a mode's table (the drawn row and its multiplier), the table's Merkle root, entry count, and total weight, and the payout rule `floor(bet / cost × multiplierMilli / 1000)`; and a `roundSecretHash` vector. Reason: kernel/public/v1 has seed, shuffle-draw, steps-derive, and derive only; until such vectors are vendored, check 8 and the payout are shown as not checked (V-19). -->
+<!-- TODO(verify API, #156): deferred (owner: backend). A way for the page to read a book mode's table (its rows, weights, and multipliers) and prove it against `merkleRoot`: the verify API's body carries only the root, the entry count, and the total weight, so even with a vector the page cannot redraw. Reason: the vendored verify API document does not carry the table or a Merkle proof of the drawn row, and its `SimpleMerkleTree` leaf encoding is not stated. -->
+
+- **V-18. A book round is a body that carries `book`.** A body without `book` is
+  a config round and is read as before. A body that carries `book` together with
+  `commitment.createRoundAuth`, `readyHash`, or a non-empty `actions` is
+  contradictory (the document says a book round has none of them) and fails the
+  body's validation (V-10): the page never picks a kind of round for the API, so
+  a config round cannot be passed off as a book round to skip checks 2 to 4.
+  A-3's shape test does not apply to a book round: `game.terms` and `shape` are
+  validated as before and not read. Kernel versions are read as for a config
+  round (V-12a): a book round of a kernel version the page does not implement is
+  V-8, and check 7 is not run.
+
+- **V-19. The checks for a book round.** The page runs checks 1 to 8 in the same
+  numbering as V-12; each is shown as "matches", "mismatch", "not checked" (with
+  its reason), or "does not apply" (with its reason). "Does not apply" and "not
+  checked" are never shown or counted as passed.
+  - **Check 1, round id.** The body's `roundId` is the id the page asked for.
+    The `bytes32` half does not apply: there is no `newRound`.
+  - **Checks 2 to 4** (entropy target, the backend's signature, ready evidence):
+    do not apply. The round has no signed creation authorization and no ready
+    evidence in the document; the page says so, and lists the binding they would
+    have given under V-13.
+  - **Check 5, commitment and reveal.** Recomputed:
+    `commitment.roundSecretHash = SHA-256(reveal.roundSecret)`, the same rule
+    and code as V-12's check 5 (the SHA-256 of a 32-byte value that
+    `kernel/public/v1/seed`'s `seedHash` results replay; there is no
+    `roundSecretHash` vector, as for a config round). The `seedHash` half
+    applies only when the body carries `seedHash` (the document says a book
+    round has none): when present it is recomputed as `SHA-256(reveal.seed)`,
+    when absent it does not apply. A `won` or `lost` book round always carries
+    `roundSecretHash`, `roundSecret`, and `seed`; a missing one is a mismatch.
+  - **Check 6, block N.** As V-12's check 6: the quorum read of `entropy.block`
+    on the chain the configuration pins for `entropy.source`, and
+    `entropy.value`, when present, equal to the hash the quorum agreed on. A
+    source the configuration does not list fails check 6 (`config`), since check
+    2, which refuses it for a config round, does not apply. When
+    `entropy.chainId` is present it MUST equal the chain id the configuration
+    pins for the source.
+  - **Check 7, seed.** Recomputed: `SHA-256(blockValue || roundSecret)`, with
+    `blockValue` the hash check 6 agreed on, never the API's, MUST equal
+    `reveal.seed`; replayed against `kernel/public/v1/seed`. The outcome half of
+    V-12's check 7 (StepsDerive and the pick) does not apply.
+  - **Check 8, the draw** (book rounds only). What it would check: the kernel's
+    weighted draw from the seed over the mode's table gives `book.drawn` (its
+    `index` and `multiplierMilli`), and the round's `won` or `lost` follows from
+    that row. **Not checked**, with the reason "the kit has no public kernel
+    vector for the weighted draw, and the verify API does not carry the mode's
+    table" (the two TODOs above). The page also compares `book.drawn` with
+    `recomputed.draw` when both are present: this is the API's two values
+    agreeing with each other, not a redraw, so agreement is shown as "the verify
+    API's recorded and redrawn rows agree (not recomputed by this page)" and
+    leaves check 8 "not checked"; disagreement makes check 8 a mismatch (V-7),
+    naming both rows.
+
+  **The payout** of a book round is shown, not checked (V-13): the document's
+  rule is `floor(bet / cost × multiplierMilli / 1000)` over the drawn row's
+  multiplier, which the page has not recomputed, and the kernel has no vector
+  for it (the TODO above). When it is checked, it is computed in `bigint` as
+  `floor(bet × den × multiplierMilli / (num × 1000))` for a `cost` of `num/den`
+  (`den` is 1 when `cost` has no `/`).
+
+- **V-20. What the page shows for a book round.** The summary names the kind of
+  round, not a game: "a drawn round, mode `<mode>`" (the mode as text).
+  - **Not ended** (`idle` with no `voidReason` or `rejectCode`, `starting`, and
+    `active` or `resolving`, which the Snapshot never shows for a book round but
+    the document allows): V-8, "not ended", with "check again", A-2's rules for
+    evidence it does not carry yet.
+  - **Voided or refused**: V-8 as for a config round (A-5 (b)).
+  - **Unknown kernel version**: V-8 as for a config round.
+  - **`won` or `lost`**: a failed check is V-7 (V-7's chain wording when check 6
+    is the only one); otherwise V-8's book reason: heading "This round's draw
+    was not recomputed"; the text says the page recomputed the round secret's
+    commitment, block N, and the seed, and that the drawn row, its multiplier,
+    and the payout are the verify API's and not checked. It shows the result
+    (`won` or `lost`) and the payout's `formatted` text, each labeled "as the
+    verify API reports it", never as established, and offers no retry. When a
+    later increment can run check 8, a book round whose checks all pass or do
+    not apply reaches V-6.
+  - **`canceled`** (the Snapshot refuses it for a book round; the document does
+    not): read, not refused. Checks 1 and 5 to 7 run under V-12's rules for a
+    `canceled` round (reveals not guaranteed: without them checks 5 and 7 are
+    "not checked"); check 8 does not apply (no row was drawn); with no failed
+    check it is V-6, showing `canceled`.
+  - **Shown, not checked** (V-13), each labeled so: `mode`, the drawn row
+    (`index`, and `multiplierMilli` written as a decimal multiplier with three
+    places, `1.940×`, by string or `bigint` arithmetic, never a JS `number`),
+    `recomputed.draw`, `cost` as its text, `merkleRoot`, `entryCount`,
+    `totalWeight`, and `game.packageHash`. A field the body does not carry
+    (`drawn` before the draw, the table before the close) is shown as "not
+    reported", never as an error.
+
+- **V-21. Validating the book fields.** Under the evidence's rules (a field
+  present and malformed fails the whole body, V-10; a field the page does not
+  know is ignored):
+  - `book`: an object with `mode`, a string (shown as text); `drawn`, `cost`,
+    `merkleRoot`, `entryCount`, and `totalWeight` are optional, and their
+    absence on any status is not a validation failure.
+  - `DrawnRow` (`book.drawn` and `recomputed.draw`): `index`, an integer
+    (`int64`) from 0, read as `bigint`; a value that is not a safe integer
+    fails, as `entropy.block` does; `multiplierMilli`, a string matching
+    `^(0|[1-9][0-9]*)$`, read as `bigint` where compared.
+  - `cost`: a string matching `^[1-9][0-9]*(/[1-9][0-9]*)?$`, kept as text; its
+    numerator and denominator are read as `bigint` when used. A fraction not in
+    lowest terms is accepted: the payout rule gives the same floor for any
+    scaling of `num/den`.
+  - `merkleRoot`: `Hex32`. `entryCount`: an integer (`int64`) from 1, read as
+    `bigint`, a value that is not a safe integer failing. `totalWeight`: a
+    string matching `^[1-9][0-9]*$`, read as `bigint`.
+  - The patterns are the document's, held to it by
+    `tools/verify-api-patterns.test.ts` as the others are.
+  - No amount, weight, count, or multiplier of a book round is ever a JS
+    `number`.
 
 ### What is built
 
@@ -548,6 +705,33 @@ version part, VT-2 for checks 5 and 7, and VT-10's source check) are:
   (V-12, check 5) is the caller's (`verify-round.ts`): a `canceled` round with
   neither reveal shows checks 5 and 7 as "not checked", and any other ended
   round missing one fails both.
+- **Book rounds** (V-18 to V-21, #156), with VT-11's unit tests
+  (`book-body.test.ts`, `book-checks.test.ts`, `book-verdict.test.ts`) and
+  VT-4's (`render-book.test.ts`):
+  - `verify-book.ts` validates `book` and `DrawnRow` (V-21) and builds the book
+    round's evidence (`round-evidence.ts`'s `BookEvidence`: the book's fields,
+    `game.packageHash`, `recomputed.draw` as `apiDraw`, `entropy.chainId`, and
+    `reveal.seed`); a body with `book` and `createRoundAuth`, `readyHash`, or a
+    signed action is refused there (V-18). Indexes, counts, and weights are
+    `bigint`; `multiplierMilli` stays its base-10 text and is read as `bigint`
+    where check 8 compares it.
+  - `verifyRound` hands a body with `book` to `verifyBookRound`
+    (`book-checks.ts`), which runs V-19's checks and V-20's verdict:
+    `bookVerdictOf`, and the new V-8 reason `book-draw`. Checks 5 and 7 use the
+    kernel's code through `book-fairness.ts` (`checkBookCommitments`,
+    `checkSeed`); check 7 is titled "Seed" for a book round. A check that does
+    not apply has its own status, `not-applicable` ("does not apply"), never
+    shown or counted as passed. Check 5 needs `roundSecretHash` and
+    `roundSecret` (and `reveal.seed` only when the body has a `seedHash`); check
+    7 needs `roundSecret` and `reveal.seed`; an ended round missing one fails
+    that check with what is missing.
+  - Check 8's two rows are labelled in the view as the verify API's
+    (`recomputed.draw (the verify API's redraw)` and
+    `book.drawn (the verify API's record)`), never as "recomputed" and
+    "evidence" (a `Comparison` may carry its own `labels`).
+  - The verdict's types and the parts both kinds of round share (the kernel
+    check's result, the ended statuses, A-2's wait, the verdict of failed
+    checks, and `isKnownKernel`) are in `round-report.ts`.
 - VT-10's source check runs over `apps/verify` (D-6), HTML included; the
   `<meta>` policy's `worker-src 'none'` part is checked on the page's own HTML
   in the Wrapper's release test (`apps/wrapper/src/release-verify.test.ts`).
@@ -704,6 +888,11 @@ The page around them is built too:
 | offline, or a request blocked by the policy                                         | API unreachable (V-11)                                            |
 | a read replaced by a newer one (submit, retry, back, forward, the form)             | the older API and chain requests are aborted; nothing of it shows |
 | two checks fail                                                                     | every failed check is listed (V-7)                                |
+| a book round that ended, every check it can run passing                             | V-8's book reason: the draw is not recomputed (V-20)              |
+| `book` with `createRoundAuth`, `readyHash`, or signed actions                       | body fails validation: API error (V-10, V-18)                     |
+| a book round without `drawn` or the table fields                                    | read; shown as "not reported" (V-21)                              |
+| `book.drawn` differs from `recomputed.draw`                                         | check 8 fails: mismatch (V-7)                                     |
+| a book round whose `entropy.chainId` is not the configured one                      | check 6 fails: mismatch (V-7)                                     |
 
 ## Security
 
@@ -758,12 +947,13 @@ never reported anywhere.
 | VT-2  | unit                | each check of V-12 against the vendored vectors, each with a passing case and a case per failure: checks 1 to 4 against `created`, `ready`, and the `signature/` Snapshot vectors' `randomnessTarget` and signature verdicts; checks 5 and 7 (SHA-256, the seed, StepsDerive, Coin Flip's outcome) against the fairness kernel's public vectors (the SuperEngine fairness kernel, kernelVersion 1: `kernel/public/v1/seed`, `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`, read through the `contracts` test-only entry as `kernelVectors.v1`), and `roundSecretHash` against its definition until the kernel has a vector for it                                                                                                                                                                                                                                                                                                                                                                                            |
 | VT-3  | unit                | the body's validation: a body the verify API document's schema refuses is an API error, never a partial result; amounts read as `bigint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | VT-3a | unit                | the abort of a read: the verify API port sends the read's signal, ends the request when it aborts, and answers `aborted` (neither V-10 nor V-11); the controller aborts the earlier read when a newer one starts or the form replaces it, shows nothing for an `aborted` answer, and drops a late answer of a replaced read; it is passed to `fetch` as a signal that is not aborted for the read that stands; the same signal reaches the checks of a found round (`verify`, `verifyRound`, `checkBlock`, the chain read): a newer read or the form ends the chain requests in flight, an aborted run shows nothing and is neither a failed check nor an `api-error`, an aborted chain call is not counted as an endpoint that disagreed or did not answer (it rejects with an `AbortError`, not `too-few` or `hash-mismatch`), a call is not sent when the signal is already aborted, an abort during the recompute of checks 5 and 7 rejects too, the caller's signal keeps no listener after a call resolves, fails, times out, or aborts, and a timeout stays "no answer" |
-| VT-4  | component (jsdom)   | every state V-4 to V-11 (V-8's voided and refused included) and the configuration error renders its heading, text, and control, with no inline style; values from the body render as text. jsdom component tests; the axe scan is in the browser rows (VT-7), as for the Wrapper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended; a round of a kernel version the page does not know (V-8); the backend's recorded `won` and `lost` rounds match with checks 5 and 7 recomputed, and a tampered copy of each names check 5 or 7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| VT-6  | e2e, browser        | from the Wrapper: after a round ends, the verify link opens `<verifyBaseUrl>/rounds/{roundId}` in a new page and that page reaches V-6. Built: `verify-link.spec.ts` (a win; the configuration points `verifyBaseUrl` at the Wrapper's origin plus `/verify`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom. Built: `verify-page-accessibility.spec.ts` (axe in 15 cases) and `verify-page-keyboard.spec.ts` (keyboard, focus, live regions, indicator, zoom)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| VT-4  | component (jsdom)   | every state V-4 to V-11 (V-8's voided, refused, and book reasons included, the book reason with the result and payout labeled as the API's) and the configuration error renders its heading, text, and control, with no inline style; values from the body render as text. jsdom component tests; the axe scan is in the browser rows (VT-7), as for the Wrapper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended; a round of a kernel version the page does not know (V-8); a book round's `won` and `lost` (V-20, #156) reach V-8's book reason, never V-10, and a tampered copy names check 5, 6, 7, or 8 (built: `verify-page-book.spec.ts`); the backend's recorded `won` and `lost` rounds match with checks 5 and 7 recomputed, and a tampered copy of each names check 5 or 7                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| VT-6  | e2e, browser        | from the Wrapper: after a round ends, the verify link opens `<verifyBaseUrl>/rounds/{roundId}` in a new page and that page reaches V-6; after a book round ends (T-24's round, #156), the link's page reaches V-8's book reason, never V-10. Built: `verify-link.spec.ts` (a win, and T-24's round won; the configuration points `verifyBaseUrl` at the Wrapper's origin plus `/verify`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| VT-7  | e2e + audit         | accessibility (V-14): axe on every state, keyboard-only use of the form and the retry, focus after a submit, live regions, 200 % zoom. Built: `verify-page-accessibility.spec.ts` (axe in 15 cases), `verify-page-book.spec.ts` (axe on V-8's book reason) and `verify-page-keyboard.spec.ts` (keyboard, focus, live regions, indicator, zoom)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | VT-8  | e2e + build check   | the policy and SRI: the page loads with the `headers.json` policy and no violation, every script and stylesheet carries `integrity`, and no request leaves the configured origins. Built: `verify-page-policy.spec.ts` against the built bundle's own `headers.json` (see the e2e section)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | VT-9  | release dry run     | the page is inside the artifact under `verify/`, two builds give one digest, and its two size measurements are reported and held to their own limits (D-3), apart from the Wrapper's                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| VT-11 | unit                | book rounds (V-18 to V-21, #156; built: `book-body.test.ts`, `book-checks.test.ts`, `book-verdict.test.ts`, and the book patterns in `tools/verify-api-patterns.test.ts`): a body with `book` is a book round and one with `book` and `createRoundAuth`, `readyHash`, or signed actions is an API error; each book field's validation (V-21), a present and malformed one failing the body, an absent one not, `int64` values above 2^53 − 1 failing, and every count, weight, and multiplier a `bigint`; checks 2 to 4 "do not apply" and never counted as passed; check 5 (`roundSecretHash`, and `seedHash` only when present) and check 7's seed against `kernel/public/v1/seed`; check 6 with an unlisted source and with another `entropy.chainId`; check 8 "not checked" with its reason, its agreement with `recomputed.draw` leaving it so, and a disagreement failing it; the verdicts of V-20 (not ended, voided, refused, unknown kernel, `won` and `lost` with V-8's book reason, `canceled` at V-6); the result and payout labeled as the API's                  |
 | VT-10 | unit (source check) | `apps/verify`'s sources never reference `navigator.locks`, `BroadcastChannel`, `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `document.cookie`, `Worker`, `SharedWorker`, or `serviceWorker` (the shared-origin rule), and its `<meta>` policy carries `worker-src 'none'`. Built: `tools/shared-origin.test.ts` scans every non-test source and HTML file of `apps/verify` as text, comments and strings included, for each name as a whole word (`locks`, `cookie`, and `cookieStore` included), with a case per name; the `<meta>` part is checked in `apps/wrapper/src/release-verify.test.ts`, which feeds the page's `index.html` through the release step, and the source HTML itself is checked for no inline script or style and no policy of its own                                                                                                                                                                                                                                                                                                      |
 
 **The e2e fake of the verify API** joins the fake Play API in the e2e harness: a
@@ -771,7 +961,8 @@ route at the configured verify API base on a `.test` origin, answering
 `GET /verify/v1/rounds/{roundId}` from canned rounds, in the vendored verify API
 document's shape, built from the vendored vectors (a matching round, a tampered
 copy, an unfinished round, a `canceled` round without reveals, an unknown kernel
-version, a game of one step with three options), the not-found answer for an
+version, a game of one step with three options, and, for #156, a book round
+`won` and `lost` and a tampered copy of each), the not-found answer for an
 unknown id, a scripted error, and an abort for the unreachable case; the
 harness's RPC routes answer the chain read (agreeing, disagreeing, and silent
 endpoints). It is hermetic like the rest of the harness: no real network, and a
@@ -817,6 +1008,30 @@ In `e2e/tests/harness/` (the suite's harness, never shipped):
   Wrapper's release bundle, which holds the page
   (`apps/wrapper/dist/verify/index.html` with `#verify-root`); a bundle without
   it fails them with a message (they never skip).
+
+- **Book rounds (#156): built.** `verify-book-rounds.ts` builds the canned book
+  rounds at run time from the vendored `valid/book-lifecycle-won` and `-lost`
+  Snapshot vectors (their `roundId`, `randomnessProof`, `payout`, and draw),
+  written as the document's `RoundVerification` body with `book` and
+  `recomputed.draw` (no vendored vector is a verify API body). The harness
+  computes two values with SHA-256: `reveal.seed` as
+  `SHA-256(blockValue || roundSecret)`, and `commitment.roundSecretHash` as
+  `SHA-256(roundSecret)`, since the vector's own `roundSecretHash` is a
+  placeholder that its `roundSecret` does not hash to (a round whose check 5
+  fails could not show V-8's book reason). The mode's `cost` and the table's
+  `merkleRoot`, `entryCount`, and `totalWeight` are made-up values of the right
+  shape (no vector carries them; the page shows them without checking). A
+  tampered copy changes one field per check (5: `commitment.roundSecretHash`, 6:
+  `entropy.chainId`, 7: `reveal.seed`, 8: `recomputed.draw.index`). The
+  `verifyRounds: "book"` option of `verify-page.ts` (resolved by
+  `verify-round-sets.ts`, with `canned` and `recorded`) has the fake RPC
+  endpoints give block N the vector's `blockValue`; VT-6 builds the round over
+  the hash the round fixtures' fake RPC endpoints give block N instead.
+  `fake-verify-book-rounds.spec.ts` tests the canned book rounds (no page load),
+  with `json-paths.ts`'s `changedPaths` shared with `fake-verify-api.spec.ts`;
+  `verify-page-book.spec.ts` is VT-5's book rows and an axe scan of the book
+  reason. No book round is recorded: none had closed on staging when this was
+  written.
 
 - `recorded-rounds.ts` and `recorded-rounds/*.json`: two real Coin Flip rounds,
   one `won` (payout 194) and one `lost`, that the backend recorded on its local
@@ -991,6 +1206,37 @@ validation and shows V-10, not a check 3 mismatch; only a high `s` or an
 out-of-range `r` reaches check 3. The configuration-error state offers "try
 again" for a document that could not be fetched or read, and no control for an
 invalid one (V-3).
+
+### Decisions (book rounds, #156)
+
+Decided by the human on 2026-10-29, each the recommended option (asked as OQ-B1
+to OQ-B7; the spec above was written to them).
+
+- **OQ-B1. Check 5 for a book round** (`roundSecretHash`, no kernel vector):
+  recomputed as plain SHA-256 (V-19). It is the same function on a 32-byte input
+  that `kernel/public/v1/seed`'s `seedHash` results replay, the page's code for
+  it is already that code, and config rounds already check it against its
+  definition (V-12). Rejected: "not checked" until a vector exists.
+- **OQ-B2. The payout** (`floor(bet / cost × multiplierMilli / 1000)`, no
+  vector): not checked until a vector exists (V-13, V-19). Its `multiplierMilli`
+  is the API's drawn row, which the page has not recomputed (check 8), so a
+  "matches" would read as a payout check while proving only arithmetic over an
+  unchecked value; and the rule's rounding has no vector. Coin Flip's payout is
+  shown, not recomputed, for the same reason. Rejected: recomputing it in
+  `bigint` now.
+- **OQ-B3. `book.drawn` against `recomputed.draw`**: compared for consistency,
+  one-sided: a disagreement fails check 8 (V-7), agreement leaves it "not
+  checked" (V-19). Rejected: only showing both.
+- **OQ-B4. The verdict of an ended book round**: V-8's new book reason, so a
+  round whose outcome the page did not recompute never reads "matches" (V-8,
+  V-20). Rejected: V-6 with check 8 "not checked".
+- **OQ-B5. A body with `book` and `createRoundAuth`, `readyHash`, or signed
+  actions**: an API error (V-10, V-18), so the API cannot drop checks 2 to 4 by
+  adding `book`. Rejected: reading it as a book round and ignoring them.
+- **OQ-B6. `entropy.chainId` of a book round** is compared with the chain id the
+  configuration pins for the source, in check 6 (V-19).
+- **OQ-B7. A `canceled` book round** is read under V-12's `canceled` rules, not
+  refused (V-20). Rejected: refusing it as the Snapshot does.
 
 ## References
 

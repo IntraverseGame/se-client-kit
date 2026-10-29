@@ -6,7 +6,7 @@
 import type { CheckResult } from "../check-result.ts";
 import type { PageState, PageView } from "../page-state.ts";
 import type { RoundEvidence } from "../round-evidence.ts";
-import type { RoundReport, Verdict } from "../verify-round.ts";
+import type { RoundReport, Verdict } from "../round-report.ts";
 
 export const ORIGIN = "https://se.example";
 export const CONFIG_URL = `${ORIGIN}/environment-config.json`;
@@ -100,6 +100,33 @@ export const evidence = (
   fairnessProof: { seedHash: HASH, readyHash: HASH, seed: HASH },
   ...overrides,
 });
+
+/** A minimal ended book round's evidence (V-18): won, drawn on row 2. */
+export const bookEvidence = (
+  overrides: Partial<RoundEvidence> = {},
+): RoundEvidence => {
+  const { fairnessProof: _none, ...base } = evidence({
+    payout: { formatted: "2 EUR", value: 200n, unit: "EUR" },
+    terms: [],
+    steps: [],
+  });
+  return {
+    ...base,
+    book: {
+      mode: "base",
+      drawn: { index: 2n, multiplierMilli: "1940" },
+      cost: "1/5",
+      merkleRoot: OTHER_HASH,
+      entryCount: 3n,
+      totalWeight: 1_000_000n,
+      packageHash: HASH,
+      apiDraw: { index: 2n, multiplierMilli: "1940" },
+      entropyChainId: 1,
+      seed: HASH,
+    },
+    ...overrides,
+  };
+};
 
 const matching = (id: CheckResult["id"]): CheckResult => ({
   id,

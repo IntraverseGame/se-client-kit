@@ -29,8 +29,7 @@ import { createFakeRpc, type FakeRpc } from "./fake-rpc.ts";
 import { createFakeVerifyApi, type FakeVerifyApi } from "./fake-verify-api.ts";
 import { expect, test as base } from "./fixtures.ts";
 import { WRAPPER_DIST, WRAPPER_ORIGIN } from "./origins.ts";
-import { recordedBlock, recordedPins } from "./recorded-rounds.ts";
-import { ROUND, ROUND_PINS as VERIFY_PINS } from "./round-vector.ts";
+import { blockFor, pinsFor, type VerifyRounds } from "./verify-round-sets.ts";
 
 /** The page's file in the release bundle. */
 const VERIFY_INDEX = join(WRAPPER_DIST, "verify", "index.html");
@@ -66,7 +65,7 @@ export const verifyUrl = (roundId?: string): string =>
 export const verifyEnvironmentConfig = (
   playApiBaseUrl: string,
   verifyApiBaseUrl: string,
-  pins: RoundPins = VERIFY_PINS,
+  pins: RoundPins = pinsFor("canned"),
 ): Readonly<Record<string, unknown>> => ({
   ...roundEnvironmentConfig(playApiBaseUrl, pins),
   verifyBaseUrl: VERIFY_BASE_URL,
@@ -135,11 +134,13 @@ type VerifyOptions = {
   readonly verifyApiBaseUrl: string;
   /**
    * Which rounds the page is configured for: `canned` (the vendored round the
-   * round tests play, the default) or `recorded` (the backend's recorded won
-   * and lost rounds: their signer, domain, and entropy source pinned, and their
-   * block N with its recorded hash on the fake RPC endpoints).
+   * round tests play, the default), `recorded` (the backend's recorded won and
+   * lost rounds: their signer, domain, and entropy source pinned, and their
+   * block N with its recorded hash on the fake RPC endpoints), or `book` (the
+   * canned book rounds, #156: the round tests' pins, and the book vector's
+   * block N with its `blockValue` on the fake RPC endpoints).
    */
-  readonly verifyRounds: "canned" | "recorded";
+  readonly verifyRounds: VerifyRounds;
   /**
    * Serve the page with the bundle's `headers.json` policy (VT-8) instead of
    * with no response headers.
@@ -181,15 +182,12 @@ export const test = base.extend<VerifyOptions & VerifyFixtures>({
   },
 
   verifyRpc: async ({ context, hermetic: _guard, verifyRounds }, use) => {
-    const recorded = verifyRounds === "recorded";
-    const block = recorded ? recordedBlock() : undefined;
+    const block = blockFor(verifyRounds);
     const rpc = createFakeRpc({
       endpoints: ROUND_RPC_ENDPOINTS,
-      chainId: BigInt(
-        recorded ? recordedPins().entropyChainId : VERIFY_PINS.entropyChainId,
-      ),
-      blockNumber: block?.number ?? ROUND.blockNumber,
-      ...(block === undefined ? {} : { blockNumberHash: block.hash }),
+      chainId: BigInt(pinsFor(verifyRounds).entropyChainId),
+      blockNumber: block.number,
+      ...(block.hash === undefined ? {} : { blockNumberHash: block.hash }),
       allowOrigin: WRAPPER_ORIGIN,
     });
     await rpc.install(context);
@@ -214,7 +212,7 @@ export const test = base.extend<VerifyOptions & VerifyFixtures>({
       verifyEnvironmentConfig(
         playApiBaseUrl,
         verifyApiBaseUrl,
-        verifyRounds === "recorded" ? recordedPins() : VERIFY_PINS,
+        pinsFor(verifyRounds),
       ),
     );
     await serveVerifyPage(

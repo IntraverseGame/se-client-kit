@@ -19,8 +19,8 @@ import {
   stillClock,
 } from "./fixtures/page.ts";
 import { createVerifyPage } from "./page-state.ts";
+import type { RoundReport } from "./round-report.ts";
 import type { VerifyApi, VerifyApiResult } from "./verify-api.ts";
-import type { RoundReport } from "./verify-round.ts";
 
 const found: VerifyApiResult = { kind: "found", evidence: evidence() };
 

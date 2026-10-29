@@ -10,6 +10,7 @@ import type { PageState } from "../page-state.ts";
 import { mountPage } from "../render.ts";
 import type { PageActions } from "../view-parts.ts";
 import {
+  bookEvidence,
   checks,
   evidence,
   HASH,
@@ -171,6 +172,18 @@ export const POLITE_STATES: readonly Case[] = [
       ),
     },
     M["unsupportedShape.heading"],
+    [],
+  ],
+  [
+    "book-draw",
+    {
+      kind: "report",
+      report: report(
+        { kind: "not-recomputable", reason: "book-draw" },
+        { evidence: bookEvidence() },
+      ),
+    },
+    M["bookDraw.heading"],
     [],
   ],
   [

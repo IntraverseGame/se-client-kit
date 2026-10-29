@@ -16,7 +16,8 @@ import {
   signatureVector,
   validSnapshot,
 } from "./fixtures/rounds.ts";
-import { type RoundReport, verdictOf, verifyRound } from "./verify-round.ts";
+import type { RoundReport } from "./round-report.ts";
+import { verdictOf, verifyRound } from "./verify-round.ts";
 
 const HASH_A = `0x${"ab".repeat(32)}`;
 const HASH_B = `0x${"cd".repeat(32)}`;

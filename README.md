@@ -38,7 +38,7 @@ organization (scope `@intraverse`). Nothing is published yet.
 | `shell`          | package | the headless part of the Wrapper: sessions, key custody, transcript, checks |
 | `wrapper`        | app     | the UI, built into a release bundle                                         |
 | `reference-game` | app     | a minimal sandboxed game for tests and as a sample                          |
-| `verify`         | app     | the verify page; today the fairness kernel's derivations only               |
+| `verify`         | app     | the verify page: a round recomputed in the browser from its public evidence |
 | `pages-proxy`    | app     | the Pages sites' same-origin API proxy (a worker; imports nothing)          |
 
 Dependencies point one way: `contracts` (data only) ← `snapshot` and

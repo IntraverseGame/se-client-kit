@@ -19,6 +19,10 @@ export const PATTERNS = {
   signature: "^0x[0-9a-f]{130}$",
   hexBytes: "^0x([0-9a-f]{2})*$",
   amount: "^(0|[1-9][0-9]*)$",
+  /** A book mode's cost in base bets: a whole number or a fraction (V-21). */
+  cost: "^[1-9][0-9]*(/[1-9][0-9]*)?$",
+  /** A whole number from 1, as text: a book table's `totalWeight` (V-21). */
+  positive: "^[1-9][0-9]*$",
 };
 export const PATTERN = {
   roundId: new RegExp(PATTERNS.roundId, "u"),
@@ -27,6 +31,8 @@ export const PATTERN = {
   signature: new RegExp(PATTERNS.signature, "u"),
   hexBytes: new RegExp(PATTERNS.hexBytes, "u"),
   amount: new RegExp(PATTERNS.amount, "u"),
+  cost: new RegExp(PATTERNS.cost, "u"),
+  positive: new RegExp(PATTERNS.positive, "u"),
 };
 export const AMOUNT_MAX_LENGTH = 78;
 export const MAX_DECIMALS = 77;

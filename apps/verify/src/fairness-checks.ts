@@ -18,6 +18,14 @@ export type Comparison = {
   /** The evidence's value, or `undefined` when it carries none. */
   readonly evidence: string | undefined;
   readonly matches: boolean;
+  /**
+   * How the two values are labelled, when the default ("recomputed" and
+   * "evidence") would misstate them: check 8 compares two of the API's values
+   * and recomputes neither.
+   */
+  readonly labels?:
+    | { readonly recomputed: string; readonly evidence: string }
+    | undefined;
 };
 
 export type KernelCheck =
@@ -100,13 +108,14 @@ class NotHex extends Error {
   }
 }
 
-const decode = (field: string, value: string): Uint8Array => {
+/** The bytes of an evidence value; throws `NotHex` for anything else. */
+export const decode = (field: string, value: string): Uint8Array => {
   const bytes = bytesFromHash(value);
   if (bytes === undefined) throw new NotHex(field);
   return bytes;
 };
 
-const compare = (
+export const compare = (
   name: string,
   recomputed: string | undefined,
   evidence: string | undefined,
@@ -117,12 +126,17 @@ const compare = (
   matches: recomputed !== undefined && recomputed === evidence,
 });
 
-type Derived = {
+export type Derived = {
   readonly comparisons: readonly Comparison[];
   readonly values: Readonly<Record<string, string>>;
 };
 
-const recompute = async (
+/**
+ * Runs `derive` under the kernel of `kernelVersion`: "not recomputable" for a
+ * version the page does not implement, "refused" for a value the kernel cannot
+ * take.
+ */
+export const recompute = async (
   kernelVersion: number,
   derive: (kernel: Kernel) => Promise<Derived>,
 ): Promise<KernelCheck> => {

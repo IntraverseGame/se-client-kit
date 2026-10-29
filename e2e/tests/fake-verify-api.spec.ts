@@ -9,6 +9,7 @@ import type { Page } from "@playwright/test";
 import { ROUND_RPC_ENDPOINTS } from "./harness/environment-config.ts";
 import { blockHash } from "./harness/fake-rpc.ts";
 import { createFakeVerifyApi } from "./harness/fake-verify-api.ts";
+import { changedPaths } from "./harness/json-paths.ts";
 import { PAGES_ORIGIN, WRAPPER_ORIGIN } from "./harness/origins.ts";
 import { ROUND, ROUND_PINS } from "./harness/round-vector.ts";
 import { expect, test } from "./harness/verify-page.ts";
@@ -153,29 +154,6 @@ test.describe("the fake verify API", () => {
     expect(fake.reads()).toEqual([]);
   });
 });
-
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-/** The dotted paths whose leaf values differ between two JSON values. */
-const changedPaths = (
-  before: unknown,
-  after: unknown,
-  path = "",
-): readonly string[] => {
-  if (isObject(before) && isObject(after)) {
-    return [
-      ...new Set([...Object.keys(before), ...Object.keys(after)]),
-    ].flatMap(key =>
-      changedPaths(
-        before[key],
-        after[key],
-        path === "" ? key : `${path}.${key}`,
-      ),
-    );
-  }
-  return Object.is(before, after) ? [] : [path];
-};
 
 test.describe("the canned rounds", () => {
   test("hold the vendored round, as the verify API document's fields", () => {

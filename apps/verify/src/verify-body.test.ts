@@ -135,26 +135,18 @@ describe("a round found", () => {
     expect(evidence).not.toHaveProperty("verified");
   });
 
-  it("reads a body with the document's book fields as before, and takes none of them", () => {
-    // `book` and `recomputed.draw` are optional in the vendored verify API
-    // document (a book round's mode, table, and draw); the page does not read
-    // book rounds yet (#156), so they change nothing it reads.
+  it("reads a config round's `recomputed.draw` as nothing (only a book round has a draw)", () => {
     const plain = evidenceOf(body());
-    const drawn = { index: 41, multiplierMilli: "1940" };
-    const withBook = withField("book", {
-      mode: "base",
-      drawn,
-      cost: "1",
-      merkleRoot: `0x${"ab".repeat(32)}`,
-      entryCount: 100,
-      totalWeight: "1000000",
-    });
-    const recomputed = asRecord(withBook["recomputed"]);
+    const recomputed = asRecord(body()["recomputed"]);
     const evidence = evidenceOf({
-      ...withBook,
-      recomputed: { ...recomputed, draw: drawn },
+      ...body(),
+      recomputed: {
+        ...recomputed,
+        draw: { index: 4, multiplierMilli: "1940" },
+      },
     });
     expect(evidence).toEqual(plain);
+    expect(evidence.book).toBeUndefined();
   });
 
   it("never reads the API's checks or its recomputed kind as a result", () => {
