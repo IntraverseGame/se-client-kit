@@ -4,8 +4,9 @@
 // signs the one `PlayerCancel`, whose bytes and signature are the vendored
 // vectors'. The fake then answers it `resolving`, and the cancel's own reads
 // settle it: `canceled` ("this round failed verification and was canceled"),
-// `idle` (a neutral "round ended", with one more read), `active` (it did not
-// take; the round stays failed), or 30 reads of `resolving` ("still resolving
+// `idle` (a neutral "round ended", with one more read), `active` at a version
+// no lower than the answer's (it did not take; the round stays failed; a lower
+// one is stale, W-29), or 30 reads of `resolving` ("still resolving
 // — contact support", then a "check again" that finds the result of a round
 // that had closed before the cancel arrived). A round that had closed before
 // the cancel arrived (se-backend b47b286) is never shown as canceled by the
@@ -186,7 +187,11 @@ test.describe("T-19: the required cancel", () => {
     fakeRpc,
   }) => {
     fakeRpc.behave("p2", "other-hash");
-    scriptCancel(fakePlayApi, [snapshotAnswer("coinflip-active")]);
+    // The read is `active` at the `resolving` answer's version (3): a lower
+    // one, the vendored vector's 2, would be stale and decide nothing (W-29).
+    scriptCancel(fakePlayApi, [
+      { kind: "snapshot-version", vector: "coinflip-active", version: 3 },
+    ]);
     await launchAndStart(page, fakePlayApi);
     await expect(alertPanel(page)).toContainText(TEXT.verificationFailed, {
       timeout: 15_000,
