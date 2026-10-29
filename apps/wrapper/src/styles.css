@@ -15,6 +15,7 @@
   --se-strong: #101014;
   --se-muted: #5f646c;
   --se-border: #e0e1e6;
+  --se-control-border: #80838d;
   --se-accent: #101014;
   --se-accent-fg: #ffffff;
   --se-win: #136b2f;
@@ -36,6 +37,7 @@
     --se-strong: #edeef0;
     --se-muted: #8b8d98;
     --se-border: #2e3135;
+    --se-control-border: #696e77;
     --se-accent: #f4f4f6;
     --se-accent-fg: #101014;
     --se-win: #7ddc97;
@@ -239,7 +241,12 @@ h2.se-heading {
   padding: 0;
 }
 
-/* A bet option is a pill; its radio stays the real control, over the pill. */
+/*
+ * A bet option is a pill; its radio stays the real control, over the pill. Its
+ * border is all that marks an unselected option, so it keeps 3:1 against the
+ * page and the panel on both themes: WCAG 1.4.11, by the Wrapper's WCAG 2.2
+ * AA target (specs/wrapper.md, Accessibility).
+ */
 .se-choice {
   position: relative;
   display: inline-flex;
@@ -249,7 +256,7 @@ h2.se-heading {
   min-width: 2.75rem;
   min-height: 2.75rem;
   padding: 0 1.25rem;
-  border: 0.0625rem solid var(--se-border);
+  border: 0.0625rem solid var(--se-control-border);
   border-radius: var(--se-pill);
   background: var(--se-bg);
   color: var(--se-strong);
@@ -408,12 +415,18 @@ h2.se-heading {
   border: 0;
 }
 
+/*
+ * The checked option opts out of forced colours to stay Highlight, so its
+ * focus outline, drawn on the Canvas outside the pill, takes a system colour
+ * too instead of the theme's --se-focus (W-45).
+ */
 @media (forced-colors: active) {
   .se-choice:has(input:checked) {
     border-color: Highlight;
     background: Highlight;
     color: HighlightText;
     forced-color-adjust: none;
+    outline-color: CanvasText;
   }
 }
 
