@@ -99,6 +99,9 @@ const recomputeFairness = async (
       status,
       selectedIndex: step?.selectedIndex,
       losingIndex: step?.losingIndex,
+      bet: evidence.bet,
+      payoutTerms: evidence.payoutTerms,
+      payout: evidence.payout?.formatted,
     }),
   );
   return [commitments, outcome];

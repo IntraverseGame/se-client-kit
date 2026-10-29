@@ -95,14 +95,15 @@ export const recordedBlock = (): {
 };
 
 /** What a tamper changes: the check it makes fail. */
-export type RecordedTamper = "loser" | "roundSecret";
+export type RecordedTamper = "loser" | "payout" | "roundSecret";
 
 /**
  * The recorded round with one field changed. `loser`: the API's replay names
  * the other option as the loser (`recomputed.steps[0].losers`), so check 7's
  * outcome differs from the recomputed one. `roundSecret`: another round secret,
- * which does not hash to `roundSecretHash` (check 5) and so gives another
- * seed.
+ * which does not hash to `roundSecretHash` (check 5) and so gives another seed.
+ * `payout`: one base unit more than the recorded payout, which check 7
+ * recomputes from Coin Flip's terms, the bet, and the recomputed outcome.
  */
 export const tamperedRecordedRound = (
   kind: RecordedKind,
@@ -118,6 +119,9 @@ export const tamperedRecordedRound = (
     step["losers"] = step["losers"].map((loser: unknown) =>
       loser === 0 ? 1 : 0,
     );
+  } else if (tamper === "payout") {
+    const payout = field(round, "payout");
+    payout["amount"] = String(BigInt(text(payout, "amount")) + 1n);
   } else {
     const reveal = field(round, "reveal");
     reveal["roundSecret"] = `0x${text(reveal, "roundSecret")

@@ -8,6 +8,9 @@
 import { bytesFromHash, type Hash32, hashFromBytes } from "./hex.ts";
 import { KernelError, type KernelErrorCode } from "./kernel-error.ts";
 import { type Kernel, kernelFor } from "./kernels.ts";
+import { payoutOf } from "./outcome-payout.ts";
+import type { BetEvidence, PayoutTermsEvidence } from "./round-evidence.ts";
+import { formatAmount } from "./verify-amount.ts";
 
 /** One value the page recomputed, beside the one the evidence carries. */
 export type Comparison = {
@@ -80,6 +83,12 @@ export type OutcomeEvidence = {
   readonly selectedIndex?: number | undefined;
   /** `config.steps[0].losingIndex`. */
   readonly losingIndex?: number | undefined;
+  /** `bet`, for the payout of a `won` or `lost` round. */
+  readonly bet?: BetEvidence | undefined;
+  /** `game.terms`' house edge and multiplier cap, for the payout. */
+  readonly payoutTerms?: PayoutTermsEvidence | undefined;
+  /** `payout`'s amount as the page writes it (V-6), when the body has one. */
+  readonly payout?: string | undefined;
 };
 
 /** The shape the page recomputes: one step, two options, one of which loses. */
@@ -96,6 +105,10 @@ const FIELD_OF: Readonly<Record<KernelErrorCode, string>> = {
   // step could cause these, and its own checks come first.
   "label-invalid": "steps",
   "m-out-of-range": "steps",
+  "house-edge-out-of-range": "houseEdgeWad",
+  "max-multiplier-out-of-range": "maxMultiplierMilli",
+  "bet-out-of-range": "bet",
+  "payout-too-large": "payout",
 };
 
 class NotHex extends Error {
@@ -221,6 +234,10 @@ const text = (value: number | undefined): string | undefined =>
  * not a whole number in [0, 2) fails that comparison). A `canceled` round has
  * no status to compare with: its seed and losing index are recomputed and
  * shown, and the losing index is compared only when the evidence carries one.
+ * For `won` and `lost`, the payout follows from the recomputed outcome: 0 when
+ * the pick loses, Coin Flip's schedule over `game.terms` and the bet when it
+ * survives, written in the bet's decimals and currency and compared with the
+ * body's `payout` (decided by the human, 2026-10-29, OQ-B9).
  */
 export const checkSeedAndOutcome = (
   kernelVersion: number,
@@ -244,18 +261,27 @@ export const checkSeedAndOutcome = (
         compare("losingIndex", values.losingIndex, text(evidence.losingIndex)),
       );
     }
-    if (!canceled) {
-      comparisons.push(
-        compare(
-          "status",
-          outcomeOf(
-            evidence.selectedIndex,
-            losingIndex,
-            ONE_STEP_TWO_OPTIONS[0].n,
-          ),
-          evidence.status,
-        ),
-      );
-    }
-    return { comparisons, values };
+    if (canceled) return { comparisons, values };
+    const outcome = outcomeOf(
+      evidence.selectedIndex,
+      losingIndex,
+      ONE_STEP_TWO_OPTIONS[0].n,
+    );
+    comparisons.push(compare("status", outcome, evidence.status));
+    const payout = payoutOf(
+      kernel,
+      outcome,
+      evidence.bet,
+      evidence.payoutTerms,
+    );
+    const { bet } = evidence;
+    const written =
+      payout === undefined || bet === undefined
+        ? undefined
+        : formatAmount(payout, bet.decimals, bet.currency);
+    comparisons.push(compare("payout", written, evidence.payout));
+    return {
+      comparisons,
+      values: written === undefined ? values : { ...values, payout: written },
+    };
   });

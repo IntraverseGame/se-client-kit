@@ -168,13 +168,15 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
    `snapshot-vectors-signature`, `snapshot-vectors-typed-data`,
    `snapshot-vectors-signed-action`, `signing-vectors`, `kernel-vectors-seed`,
    `kernel-vectors-shuffle-draw`, `kernel-vectors-steps-derive`,
-   `kernel-vectors-derive` (`tools/contracts-groups.ts` is the list). Each has
-   `name` (the repository, recorded in the lock), `repo` (your local checkout),
-   `ref` (for example the default branch on `origin`) and `path` (the file or
-   directory in that repository). The lock records only public names, so the
-   paths are not in this repository: the source's own documentation names them,
-   or ask its owners. Keep your sources file for the next sync. Copy only the
-   Play and verify OpenAPI documents, the Snapshot schema and vectors, the
+   `kernel-vectors-derive`, `kernel-vectors-round-secret-hash`,
+   `kernel-vectors-coin-flip-payout`, `kernel-vectors-weighted-draw`,
+   `kernel-vectors-book-draw` (`tools/contracts-groups.ts` is the list). Each
+   has `name` (the repository, recorded in the lock), `repo` (your local
+   checkout), `ref` (for example the default branch on `origin`) and `path` (the
+   file or directory in that repository). The lock records only public names, so
+   the paths are not in this repository: the source's own documentation names
+   them, or ask its owners. Keep your sources file for the next sync. Copy only
+   the Play and verify OpenAPI documents, the Snapshot schema and vectors, the
    signing vectors, and the fairness kernel's public sets
    (`kernel/public/v1/*`); never another surface's document.
 3. Run `pnpm exec tsx tools/sync-contracts.ts --sources <file>`. It copies the

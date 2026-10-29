@@ -85,6 +85,30 @@ export const SOURCES: Readonly<Record<string, GroupSource>> = {
     ref: "main",
     path: "k/shuffle-draw.json",
   },
+  "kernel-vectors-round-secret-hash": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "k/round-secret-hash.json",
+  },
+  "kernel-vectors-coin-flip-payout": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "k/coin-flip-payout.json",
+  },
+  "kernel-vectors-weighted-draw": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "k/weighted-draw.json",
+  },
+  "kernel-vectors-book-draw": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "k/book-draw.json",
+  },
 };
 
 export type MemorySource = {
@@ -110,6 +134,10 @@ export const memorySource = (): MemorySource => {
     ["k/steps-derive.json", '{"k":9}\n'],
     ["k/derive.json", '{"k":10}\n'],
     ["k/shuffle-draw.json", '{"k":11}\n'],
+    ["k/round-secret-hash.json", '{"k":12}\n'],
+    ["k/coin-flip-payout.json", '{"k":13}\n'],
+    ["k/weighted-draw.json", '{"k":14}\n'],
+    ["k/book-draw.json", '{"k":15}\n'],
   ]);
   const source: MemorySource = {
     files,

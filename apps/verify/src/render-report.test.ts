@@ -71,13 +71,14 @@ describe("the form (V-4, V-14)", () => {
 });
 
 describe("the report (V-6 to V-8)", () => {
-  it("V-6: shows the round id, the shape, the result, and the payout as given", () => {
+  it("V-6: shows the round id, the shape, the result, and the payout check 7 recomputed", () => {
     const ui = mount();
     ui.show({ kind: "report", report: report({ kind: "matches" }) });
     expect(ui.text()).toContain(ROUND_ID);
     expect(ui.text()).toContain(M["round.shapeOneStep"]);
     expect(ui.text()).toContain(`${M["round.result"]}${M["result.won"]}`);
-    expect(ui.text()).toContain(`€1.94 (${M["check.notChecked"]})`);
+    expect(ui.text()).toContain(`${M["round.payout"]}€1.94`);
+    expect(ui.text()).not.toContain(`€1.94 (${M["check.notChecked"]})`);
   });
 
   it("V-6: a canceled round shows its reason", () => {

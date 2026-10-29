@@ -2,6 +2,11 @@
 // (specs/verify-page.md, V-12a). A round is recomputed only with the kernel of
 // its own version; a version not listed here is never mapped to another one.
 
+import {
+  type CoinFlipStep,
+  type CoinFlipTerms,
+  coinFlipSchedule,
+} from "./coin-flip-payout.ts";
 import { roundSecretHashOf, seedHashOf, seedOf } from "./kernel-v1.ts";
 import {
   type StepLosers,
@@ -26,6 +31,8 @@ export type Kernel = {
     seed: Uint8Array,
     steps: readonly StepTerms[],
   ) => StepLosers[];
+  /** Coin Flip's payout for a bet that survives its one step. */
+  readonly coinFlipPayout: (terms: CoinFlipTerms, bet: bigint) => CoinFlipStep;
 };
 
 const KERNEL_V1: Kernel = Object.freeze({
@@ -34,6 +41,7 @@ const KERNEL_V1: Kernel = Object.freeze({
   seed: seedOf,
   seedHash: seedHashOf,
   stepsDerive,
+  coinFlipPayout: coinFlipSchedule,
 });
 
 const KERNELS: ReadonlyMap<number, Kernel> = new Map([[1, KERNEL_V1]]);

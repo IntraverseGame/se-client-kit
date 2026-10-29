@@ -19,8 +19,22 @@
       "path": "src/schemas/verify.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "verify/v1 OpenAPI document",
-      "sourceCommit": "13bcee0c65afb99c97dcfc02f1443818e8ac25e0",
-      "sha256": "2c8b37ba49a6de9f5ee83d3d20e62a842c280a000b94134c620ec08038f61fd9"
+      "sourceCommit": "bc4f4adf356a7e5b5146e5f80bfb4f62c1e87556",
+      "sha256": "5bf3b6dc1d8c3c0a896e7b949078cc7346ef922d3daef9c6fc19c4cd7abddabb"
+    },
+    {
+      "path": "src/vectors/kernel/v1/book-draw.json",
+      "source": "se-backend",
+      "sourceName": "kernel/public/v1/book-draw",
+      "sourceCommit": "bc4f4adf356a7e5b5146e5f80bfb4f62c1e87556",
+      "sha256": "0051a0581033655839bda06c79dacd96e31c20cfaa4ab906fcddac9feccfea12"
+    },
+    {
+      "path": "src/vectors/kernel/v1/coin-flip-payout.json",
+      "source": "se-backend",
+      "sourceName": "kernel/public/v1/coin-flip-payout",
+      "sourceCommit": "bc4f4adf356a7e5b5146e5f80bfb4f62c1e87556",
+      "sha256": "b79a51a9adbedd2bcc64c8017d1b23ddf0711a0f651563cc6094c95dda544158"
     },
     {
       "path": "src/vectors/kernel/v1/derive.json",
@@ -28,6 +42,13 @@
       "sourceName": "kernel/public/v1/derive",
       "sourceCommit": "ad36bc4b307825092d4107a997ffa4da2cf7e523",
       "sha256": "2d964fcb8a07d713b1dc98526f954a1b7d726c0544b163cd7dbd7c560fe8c3d8"
+    },
+    {
+      "path": "src/vectors/kernel/v1/round-secret-hash.json",
+      "source": "se-backend",
+      "sourceName": "kernel/public/v1/round-secret-hash",
+      "sourceCommit": "bc4f4adf356a7e5b5146e5f80bfb4f62c1e87556",
+      "sha256": "17ef5bc7b8d94ae46dda64e03d64fdc8acc9f3ee5d428955cbbec539ae027615"
     },
     {
       "path": "src/vectors/kernel/v1/seed.json",
@@ -49,6 +70,13 @@
       "sourceName": "kernel/public/v1/steps-derive",
       "sourceCommit": "ad36bc4b307825092d4107a997ffa4da2cf7e523",
       "sha256": "f18593ad52717a7349b3d446b3f12ede0f7252e825d5bc676edb598b1ff05dfa"
+    },
+    {
+      "path": "src/vectors/kernel/v1/weighted-draw.json",
+      "source": "se-backend",
+      "sourceName": "kernel/public/v1/weighted-draw",
+      "sourceCommit": "bc4f4adf356a7e5b5146e5f80bfb4f62c1e87556",
+      "sha256": "e431098fdf576f0fd624ffd437c636975dfb50dade682ab000f911f8bf5f1250"
     },
     {
       "path": "src/vectors/signing.json",

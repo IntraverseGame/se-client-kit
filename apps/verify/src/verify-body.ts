@@ -12,8 +12,9 @@ import type {
   StepEvidence,
   TermsNodeEvidence,
 } from "./round-evidence.ts";
-import { amount, payout } from "./verify-amount.ts";
+import { amount, bet, payout } from "./verify-amount.ts";
 import { book, bookOf, contradictsBook, drawnRow } from "./verify-book.ts";
+import { game } from "./verify-game.ts";
 import { newRound } from "./verify-new-round.ts";
 import {
   Bad,
@@ -47,33 +48,6 @@ const REPLAY_KINDS: ReadonlySet<string> = new Set<
 const CLOSE_REASONS: ReadonlySet<string> = new Set<
   NonNullable<Wire["RoundVerification"]["closeReason"]>
 >(["expired"]);
-
-const termsNode = nested(s =>
-  shape(s, {
-    options: v => int(v, 1, 25),
-    losers: v => int(v, 0, 24),
-    next: list(v => int(v, 0)),
-  }),
-);
-
-const game = nested(s => {
-  const read = shape(s, {
-    gameCode: v => text(v),
-    gameId: v => int(v, 0),
-    gameVersion: v => int(v, 0),
-    packageHash: v => text(v, PATTERN.hex32),
-  });
-  const terms = nested(t =>
-    shape(t, {
-      nodes: list(termsNode),
-      houseEdgeWad: v => text(v, PATTERN.amount),
-      maxMultiplierMilli: v => int(v, 1),
-    }),
-  )(s["terms"]);
-  return read === Bad || terms === Bad
-    ? Bad
-    : { terms: terms.nodes, packageHash: read.packageHash };
-});
 
 const kernel = nested(s =>
   shape(s, {
@@ -207,7 +181,7 @@ export const parseEvidence = (body: unknown): RoundEvidence | undefined => {
     kernel,
     game,
     shape: list(v => int(v, 1, 25)),
-    bet: amount,
+    bet,
     payout,
     commitment: v => optional(v, commitment),
     entropy: v => optional(v, entropy),
@@ -276,6 +250,8 @@ export const parseEvidence = (body: unknown): RoundEvidence | undefined => {
     ...(top.payout === undefined ? {} : { payout: top.payout }),
     shape: top.shape,
     terms: top.game.terms,
+    payoutTerms: top.game.payoutTerms,
+    bet: top.bet,
     steps,
     ...(randomnessProof === undefined ? {} : { randomnessProof }),
     ...(top.seedHash === undefined

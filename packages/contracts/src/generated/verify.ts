@@ -105,7 +105,11 @@ export type components = {
        *   "kernel/public/v1/seed",
        *   "kernel/public/v1/shuffle-draw",
        *   "kernel/public/v1/steps-derive",
-       *   "kernel/public/v1/derive"
+       *   "kernel/public/v1/derive",
+       *   "kernel/public/v1/round-secret-hash",
+       *   "kernel/public/v1/coin-flip-payout",
+       *   "kernel/public/v1/weighted-draw",
+       *   "kernel/public/v1/book-draw"
        * ]
        */
       vectorSets: string[];

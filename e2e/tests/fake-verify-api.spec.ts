@@ -14,6 +14,7 @@ import { PAGES_ORIGIN, WRAPPER_ORIGIN } from "./harness/origins.ts";
 import { ROUND, ROUND_PINS } from "./harness/round-vector.ts";
 import { expect, test } from "./harness/verify-page.ts";
 import {
+  KERNEL_V1_VECTOR_SETS,
   matchingRound,
   notEndedRound,
   refusedRound,
@@ -163,6 +164,17 @@ test.describe("the canned rounds", () => {
       status: "canceled",
     });
     expect(notEndedRound()["status"]).toBe("active");
+    expect(round["kernel"]).toEqual({
+      name: "the SuperEngine fairness kernel",
+      version: 1,
+      vectorSets: [...KERNEL_V1_VECTOR_SETS],
+    });
+    expect(KERNEL_V1_VECTOR_SETS.slice(4)).toEqual([
+      "kernel/public/v1/round-secret-hash",
+      "kernel/public/v1/coin-flip-payout",
+      "kernel/public/v1/weighted-draw",
+      "kernel/public/v1/book-draw",
+    ]);
     expect(unknownKernelRound()["kernel"]).toMatchObject({ version: 2 });
     expect(changedPaths(matchingRound(), unsupportedShapeRound())).toEqual([
       "game.terms.nodes.0.options",

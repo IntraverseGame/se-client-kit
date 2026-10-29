@@ -1,0 +1,176 @@
+{
+  "set": "kernel/public/v1/coin-flip-payout",
+  "kernelVersion": 1,
+  "spec": "SuperEngine fairness kernel, kernelVersion 1: Coin Flip payout",
+  "description": "Schedule(terms, path, bet) for Coin Flip: the terms are one node {\"options\": 2, \"losers\": 1, \"next\": []}, a houseEdgeWad (WAD = 10^18) and a maxMultiplierMilli cap (1000 = 1x); the path is [0]. Checks, in order: houseEdgeWad < WAD (else house-edge-out-of-range); maxMultiplierMilli >= 1 (else max-multiplier-out-of-range); then 1 <= bet <= 2^128 - 1 (else bet-out-of-range); then the payout is at most 2^128 - 1 (else payout-too-large). m_1 = floor(1000 * (WAD - houseEdgeWad) * 2 / WAD); the one step reports node 0, multiplierMilli = min(m_1, maxMultiplierMilli), payout = floor(bet * multiplierMilli / 1000), and rtp = payout / bet * 1/2 as a reduced fraction numerator/denominator",
+  "vectors": [
+    {
+      "vector": "kernel/public/v1/coin-flip-payout/b1000000",
+      "description": "Coin Flip, rho 0.97, B = 1,000,000: m_1 = 1940, RTP exactly 97/100",
+      "input": {
+        "terms": {
+          "nodes": [
+            { "options": 2, "losers": 1, "next": [] }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [0],
+        "bet": "1000000"
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "multiplierMilli": "1940",
+            "payout": "1940000",
+            "rtp": "97/100"
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/coin-flip-payout/b1",
+      "description": "Coin Flip, B = 1: floor(1 * 1940 / 1000) = 1",
+      "input": {
+        "terms": {
+          "nodes": [
+            { "options": 2, "losers": 1, "next": [] }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [0],
+        "bet": "1"
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "multiplierMilli": "1940",
+            "payout": "1",
+            "rtp": "1/2"
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/coin-flip-payout/b33",
+      "description": "Coin Flip, B = 33: floor(33 * 1.94) = 64, so the RTP is a little under rho",
+      "input": {
+        "terms": {
+          "nodes": [
+            { "options": 2, "losers": 1, "next": [] }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [0],
+        "bet": "33"
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "multiplierMilli": "1940",
+            "payout": "64",
+            "rtp": "32/33"
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/coin-flip-payout/edge0",
+      "description": "Coin Flip with no house edge: m_1 = 2000, RTP exactly 1",
+      "input": {
+        "terms": {
+          "nodes": [
+            { "options": 2, "losers": 1, "next": [] }
+          ],
+          "houseEdgeWad": "0",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [0],
+        "bet": "1000000"
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "multiplierMilli": "2000",
+            "payout": "2000000",
+            "rtp": "1/1"
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/coin-flip-payout/edge-max",
+      "description": "Coin Flip with the largest house edge (WAD - 1): m_1 = 0, pays 0",
+      "input": {
+        "terms": {
+          "nodes": [
+            { "options": 2, "losers": 1, "next": [] }
+          ],
+          "houseEdgeWad": "999999999999999999",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [0],
+        "bet": "1000000"
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "multiplierMilli": "0",
+            "payout": "0",
+            "rtp": "0/1"
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/coin-flip-payout/cap-from-start",
+      "description": "maxMultiplierMilli = 1000 caps Coin Flip at 1x",
+      "input": {
+        "terms": {
+          "nodes": [
+            { "options": 2, "losers": 1, "next": [] }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 1000
+        },
+        "path": [0],
+        "bet": "1000000"
+      },
+      "expected": {
+        "steps": [
+          {
+            "node": 0,
+            "multiplierMilli": "1000",
+            "payout": "1000000",
+            "rtp": "1/2"
+          }
+        ]
+      }
+    },
+    {
+      "vector": "kernel/public/v1/coin-flip-payout/bet-max",
+      "description": "Largest bet 2^128 - 1 on Coin Flip: payout floor(B * 1940 / 1000) is above uint128",
+      "input": {
+        "terms": {
+          "nodes": [
+            { "options": 2, "losers": 1, "next": [] }
+          ],
+          "houseEdgeWad": "30000000000000000",
+          "maxMultiplierMilli": 4294967295
+        },
+        "path": [0],
+        "bet": "340282366920938463463374607431768211455"
+      },
+      "expected": {
+        "error": "payout-too-large"
+      }
+    }
+  ]
+}

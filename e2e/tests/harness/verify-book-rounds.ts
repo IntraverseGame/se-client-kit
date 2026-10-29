@@ -16,7 +16,7 @@
 import { createHash } from "node:crypto";
 
 import { validVector } from "./vectors.ts";
-import { VERIFY_PINS } from "./verify-rounds.ts";
+import { KERNEL_V1_VECTOR_SETS, VERIFY_PINS } from "./verify-rounds.ts";
 
 type Json = Record<string, unknown>;
 
@@ -122,7 +122,7 @@ export const bookRound = (
     kernel: {
       name: "the SuperEngine fairness kernel",
       version: 1,
-      vectorSets: [],
+      vectorSets: [...KERNEL_V1_VECTOR_SETS],
     },
     game: {
       gameCode: "book-game",

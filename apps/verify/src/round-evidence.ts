@@ -68,12 +68,33 @@ export type StepEvidence = {
 export type PayoutEvidence = {
   /**
    * The amount in the currency's units, written by this page from the base
-   * units and `decimals` (V-6); never recomputed (V-13).
+   * units and `decimals` (V-6). Compared with check 7's recomputed payout on a
+   * one-step, two-option `won` or `lost` round (OQ-B9); shown, not checked,
+   * otherwise (V-13).
    */
   readonly formatted: string;
   /** Base units, read as `bigint` (never a `number`). */
   readonly value: bigint;
   readonly unit: string;
+};
+
+/** The round's bet (`bet`): base units, with the decimals and currency. */
+export type BetEvidence = {
+  /** Base units, read as `bigint` (never a `number`). */
+  readonly value: bigint;
+  readonly decimals: number;
+  readonly currency: string;
+};
+
+/**
+ * `game.terms` beside its nodes: what Coin Flip's payout is computed from
+ * (check 7). Not tied to the signed `payoutTermsHash` by this page (V-13).
+ */
+export type PayoutTermsEvidence = {
+  /** The house edge as a fraction of 10^18, base-10 text as the body has it. */
+  readonly houseEdgeWad: string;
+  /** The multiplier cap in thousandths. */
+  readonly maxMultiplierMilli: number;
 };
 
 export type RandomnessProofEvidence = {
@@ -156,6 +177,10 @@ export type RoundEvidence = {
   readonly shape: readonly number[];
   /** `game.terms.nodes`. */
   readonly terms: readonly TermsNodeEvidence[];
+  /** `game.terms`' house edge and multiplier cap (check 7's payout). */
+  readonly payoutTerms?: PayoutTermsEvidence | undefined;
+  /** `bet` (check 7's payout). */
+  readonly bet?: BetEvidence | undefined;
   /** The steps the kernel's replay played (`recomputed.steps`), by the API. */
   readonly steps: readonly StepEvidence[];
   /**

@@ -1,6 +1,7 @@
 // VT-1b and VT-2 (specs/verify-page.md): checks 5 and 7 of a Coin Flip round,
 // built from the fairness kernel's public vectors (the reference block value,
-// secret, and seed of `kernel/public/v1/seed`, and Coin Flip's (2, 1) at step
+// secret, and seed of `kernel/public/v1/seed`, that secret's commitment from
+// `kernel/public/v1/round-secret-hash`, and Coin Flip's (2, 1) at step
 // 0 from the n = 2, k = 1 chain of `kernel/public/v1/derive`), each with a
 // passing case and its failures; and the kernel version they are keyed on.
 
@@ -46,10 +47,15 @@ const BLOCK_VALUE = hash(field(reference.input, "blockValue", reference.id));
 const ROUND_SECRET = hash(field(reference.input, "secret", reference.id));
 const SEED = hash(field(reference.expected, "seed", reference.id));
 const SEED_HASH = hash(field(reference.expected, "seedHash", reference.id));
-// SHA-256 of the reference secret's 32 bytes, computed outside the kit (no
-// kernel vector pins roundSecretHash yet).
+// The reference secret's commitment, from `kernel/public/v1/round-secret-hash`.
+const commitment = vector("round-secret-hash", "round-secret-hash/reference");
+if (
+  field(commitment.input, "secret", commitment.id) !==
+  field(reference.input, "secret", reference.id)
+)
+  throw new TypeError("the commitment vector names another secret");
 const ROUND_SECRET_HASH = hash(
-  "3dcb7e7708976aa694fde95ea0c302592bba076de66fa8e3ea0591e670e7dd40",
+  field(commitment.expected, "roundSecretHash", commitment.id),
 );
 
 // Coin Flip's losing index for the reference seed: step 0 of the chain of
@@ -80,6 +86,11 @@ const COMMITMENTS: CommitmentEvidence = {
   seed: SEED,
 };
 
+// Coin Flip's terms, a bet, and its payout, from `kernel/public/v1/coin-flip-payout`.
+const pays = vector("coin-flip-payout", "coin-flip-payout/b1000000");
+const terms = pays.input["terms"] as Record<string, unknown>;
+const EUR = { decimals: 2, currency: "EUR" };
+
 const WON: OutcomeEvidence = {
   blockValue: BLOCK_VALUE,
   roundSecret: ROUND_SECRET,
@@ -87,6 +98,12 @@ const WON: OutcomeEvidence = {
   status: "won",
   selectedIndex: WINNING_PICK,
   losingIndex: LOSING,
+  bet: { value: BigInt(field(pays.input, "bet", pays.id)), ...EUR },
+  payoutTerms: {
+    houseEdgeWad: String(terms["houseEdgeWad"]),
+    maxMultiplierMilli: Number(terms["maxMultiplierMilli"]),
+  },
+  payout: "19400 EUR",
 };
 
 describe("the vectors behind the cases", () => {
@@ -155,11 +172,12 @@ describe("check 7: seed and outcome", () => {
       matches: true,
       values: { seed: SEED, losingIndex: String(LOSING) },
     });
-    expect(compared(won)).toEqual(["seed", "losingIndex", "status"]);
+    expect(compared(won)).toEqual(["seed", "losingIndex", "status", "payout"]);
     const lost = await checkSeedAndOutcome(1, {
       ...WON,
       status: "lost",
       selectedIndex: LOSING,
+      payout: "0 EUR",
     });
     expect(lost).toMatchObject({ kind: "recomputed", matches: true });
   });
@@ -189,9 +207,10 @@ describe("check 7: seed and outcome", () => {
     expect(
       failed(await checkSeedAndOutcome(1, { ...WON, status: "lost" })),
     ).toEqual(["status"]);
+    // The payout follows the recomputed outcome (a loss pays 0), not the status.
     expect(
       failed(await checkSeedAndOutcome(1, { ...WON, selectedIndex: LOSING })),
-    ).toEqual(["status"]);
+    ).toEqual(["status", "payout"]);
   });
 
   it.each([2, -1, 0.5, Number.NaN])(
@@ -201,7 +220,7 @@ describe("check 7: seed and outcome", () => {
         ...WON,
         selectedIndex: pick,
       });
-      expect(failed(check)).toEqual(["status"]);
+      expect(failed(check)).toEqual(["status", "payout"]);
       expect(check).toMatchObject({
         comparisons: expect.arrayContaining([
           expect.objectContaining({ name: "status", recomputed: undefined }),
@@ -212,7 +231,10 @@ describe("check 7: seed and outcome", () => {
 
   it("fails an ended round without its pick or its losing index", async () => {
     const { selectedIndex: _pick, ...noPick } = WON;
-    expect(failed(await checkSeedAndOutcome(1, noPick))).toEqual(["status"]);
+    expect(failed(await checkSeedAndOutcome(1, noPick))).toEqual([
+      "status",
+      "payout",
+    ]);
     const { losingIndex: _losing, ...noLosing } = WON;
     expect(failed(await checkSeedAndOutcome(1, noLosing))).toEqual([
       "losingIndex",

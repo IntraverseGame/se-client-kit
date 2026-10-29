@@ -1,6 +1,6 @@
 // VT-2 (specs/verify-page.md): Seed and SeedHash against the fairness kernel's
-// public vector set `kernel/public/v1/seed`, and `roundSecretHash` against its
-// definition, SHA-256(roundSecret), which no kernel vector pins yet.
+// public vector set `kernel/public/v1/seed`, and the round secret's commitment
+// (check 5) against `kernel/public/v1/round-secret-hash`.
 
 import { describe, expect, it } from "vitest";
 
@@ -62,13 +62,31 @@ describe("kernel/public/v1/seed", () => {
   );
 });
 
-describe("roundSecretHash = SHA-256(roundSecret)", () => {
-  it("is SHA-256 of the secret's raw 32 bytes, not of its text", async () => {
-    const zeros = new Uint8Array(32);
-    expect(hexFromBytes(await roundSecretHashOf(zeros))).toBe(
-      "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
-    );
+const commitmentSet = vectorsOf("round-secret-hash");
+
+describe("kernel/public/v1/round-secret-hash", () => {
+  it("has the vendored set's 9 vectors, 3 of them errors", () => {
+    expect(commitmentSet).toHaveLength(9);
+    expect(commitmentSet.filter(v => v.error !== undefined)).toHaveLength(3);
   });
+
+  it.each(commitmentSet.filter(v => v.error === undefined).map(v => [v.id, v]))(
+    "%s: SHA-256 over the secret's raw 32 bytes",
+    async (_, vector) => {
+      const secret = bytes(field(vector.input, "secret", vector.id));
+      expect(hexFromBytes(await roundSecretHashOf(secret))).toBe(
+        field(vector.expected, "roundSecretHash", vector.id),
+      );
+    },
+  );
+
+  it.each(commitmentSet.filter(v => v.error !== undefined).map(v => [v.id, v]))(
+    "%s: refused with the vector's error",
+    async (_, vector) => {
+      const secret = bytes(field(vector.input, "secret", vector.id));
+      expect(await errorOf(() => roundSecretHashOf(secret))).toBe(vector.error);
+    },
+  );
 
   it.each(seedSet.filter(v => v.error === undefined).map(v => [v.id, v]))(
     "is the hash %s pins for SeedHash, both SHA-256 of 32 bytes",
