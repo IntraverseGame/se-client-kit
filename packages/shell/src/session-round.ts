@@ -1,9 +1,11 @@
 // What the session holds of the current round (session-play.ts,
 // session-reads.ts): a config round's flow (round-flow.ts) or a book round
-// (book-round.ts), through the use cases and read-only state they share.
+// (book-round.ts), through the use cases and read-only state they share, and
+// the read-only `RoundState` the UI is given of it.
 
 import type { FailReason } from "./chain-decision.ts";
 import type { RoundFlow } from "./round-flow.ts";
+import type { RoundState } from "./session-types.ts";
 
 /**
  * What the session reads of a round's verdict: `checking` until W-26 decided,
@@ -30,6 +32,7 @@ export type SessionRound = Pick<
   | "cancel"
   | "lastError"
   | "unconfirmed"
+  | "pending"
   | "staleRead"
   | "observe"
   | "refresh"
@@ -39,4 +42,21 @@ export type SessionRound = Pick<
   | "cashOutOffered"
 > & {
   readonly verdict: () => FlowVerdict;
+};
+
+/** The UI's read-only state of the round: no key, signature, or bytes. */
+export const roundStateOf = (flow: SessionRound): RoundState => {
+  const verdict = flow.verdict();
+  const unconfirmed = flow.unconfirmed();
+  const pending = flow.pending();
+  return Object.freeze({
+    roundId: flow.roundId,
+    verdict: verdict.state,
+    ...(verdict.state === "failed" ? { shown: verdict.shown } : {}),
+    outOfSync: flow.phase() === "out-of-sync",
+    cashOutOffered: flow.cashOutOffered(),
+    cancel: flow.cancel(),
+    ...(unconfirmed === undefined ? {} : { unconfirmed }),
+    ...(pending === undefined ? {} : { pending }),
+  });
 };

@@ -5,8 +5,9 @@
 // (`in-flight`, `settling`, `check-later`; W-25), the round is open whatever
 // the session saw, the UI gets the round's own latest Snapshot, never one
 // from elsewhere (the game is sent nothing from such a read), and a read is
-// the cancel's own (its counted read, or "check again"). Every Snapshot passes
-// the session's one-presentation guard first (W-53): one that changes the
+// the cancel's own (its counted read, or "check again"). The game is given
+// only what W-38's hold allows (game-hold.ts). Every Snapshot passes the
+// session's one-presentation guard first (W-53): one that changes the
 // session is not read in, and from then on the session reads nothing more and
 // answers `session-changed`. Every answer is a validated Snapshot, a validated
 // typed error, or a closed code. It logs nothing.
@@ -21,12 +22,13 @@ import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 import { type CancelState, holdsRound, isOfRound } from "./cancel-state.ts";
 import type { ControllerBridge } from "./controller-bridge.ts";
 import { ShellError } from "./errors.ts";
+import { givenToGame } from "./game-hold.ts";
 import {
   createPresentationGuard,
   type SessionChange,
 } from "./session-presentation.ts";
-import type { SessionRound } from "./session-round.ts";
-import type { SessionRead } from "./session-types.ts";
+import { roundStateOf, type SessionRound } from "./session-round.ts";
+import type { RoundState, SessionRead } from "./session-types.ts";
 import {
   type SnapshotRead,
   type SnapshotReader,
@@ -138,6 +140,10 @@ export type SessionReads = {
   readonly admit: (snapshot: ValidSnapshot) => boolean;
   /** Whether a Snapshot changed the session (W-53). */
   readonly changed: () => boolean;
+  /** The read-only state of the current round (`PlaySession.round`). */
+  readonly round: () => RoundState | undefined;
+  /** The game's copy at its mount, if W-38's hold gives it now. */
+  readonly atMount: () => ValidSnapshot | undefined;
   /** What a changed session kept: the four fields' first and changed values. */
   readonly change: () => SessionChange | undefined;
 };
@@ -154,10 +160,14 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
   // The latest validated Snapshot the round guard saw, of any round.
   let shown: ValidSnapshot | undefined;
 
-  /** Shows a Snapshot to the round guard and to the game. */
+  // Shows a Snapshot to the round guard, and to the game unless W-38's hold
+  // keeps it (the hand-off that made the round `ready` is the release).
   const show = (snapshot: ValidSnapshot): ValidSnapshot => {
     shown = snapshot;
-    host.bridge()?.sendSnapshot(snapshot);
+    const bridge = host.bridge();
+    if (bridge !== undefined && givenToGame(snapshot, current())) {
+      bridge.sendSnapshot(snapshot);
+    }
     return snapshot;
   };
 
@@ -265,6 +275,14 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
     return !flow.over() && shown?.roundId === flow.roundId;
   };
 
+  const atMount = (): ValidSnapshot | undefined => {
+    const flow = current();
+    const latest = flow?.latest() ?? reader.latest();
+    return latest !== undefined && givenToGame(latest, flow)
+      ? latest
+      : undefined;
+  };
+
   return Object.freeze({
     see,
     settle,
@@ -272,6 +290,11 @@ export const createSessionReads = (host: SessionReadsHost): SessionReads => {
     holdsOpenRound,
     admit,
     changed,
+    round: (): RoundState | undefined => {
+      const flow = current();
+      return flow === undefined ? undefined : roundStateOf(flow);
+    },
+    atMount,
     change: guard.change,
   });
 };

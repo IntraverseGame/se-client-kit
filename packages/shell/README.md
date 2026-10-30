@@ -124,6 +124,8 @@ const result = createControllerBridge({
 if (!result.ok) {
   showError("the game cannot be mounted"); // result.refusal says why
 } else {
+  // `PlaySession.mountGame` does this for you and holds an `active` Snapshot
+  // until its round is checked `ready`; a direct caller must do the same.
   result.bridge.sendSnapshot(validatedSnapshot);
 }
 ```
