@@ -25,7 +25,7 @@ import {
   roundRead,
 } from "./fixtures/cancel.ts";
 import { snapshotRead, validSnapshot } from "./fixtures/fake-session.ts";
-import { ACTIVE, activeId, gameShown, wired } from "./fixtures/wired.ts";
+import { ACTIVE, activeId, gamePlayable, wired } from "./fixtures/wired.ts";
 import { messagesFor } from "./messages.ts";
 import { roundEnded } from "./round-input.ts";
 
@@ -38,9 +38,9 @@ describe("ended (W-25, W-33)", () => {
     expect(alertText(ui.host)).toBe("");
     expect(allText(ui.host)).toContain(activeId);
     expect(linkNamed(ui.host, m["action.verify"])).toBeDefined();
-    expect(buttonNamed(ui.host, m["action.start"])).toBeDefined();
+    expect(buttonNamed(ui.host, m["action.playAgain"])).toBeDefined();
     expect(
-      ui.host.querySelectorAll('.se-status input[type="radio"]').length,
+      ui.host.querySelectorAll('.se-controls input[type="radio"]').length,
     ).toBeGreaterThan(0);
     for (const claim of [
       m["status.won"],
@@ -51,7 +51,7 @@ describe("ended (W-25, W-33)", () => {
       expect(allText(ui.host)).not.toContain(claim);
     }
     expect(buttonNamed(ui.host, m["action.cashOut"])).toBeUndefined();
-    expect(gameShown(ui)).toBe(false);
+    expect(gamePlayable(ui)).toBe(false);
   });
 
   it("moves focus to round ended when the player's check again ended it", async () => {
@@ -100,7 +100,7 @@ describe("ended (W-25, W-33)", () => {
     expect(await readsOver(ui, 60_000)).toBe(0);
     // Still "round ended", with the bet selector of that read's `bet`.
     expect(statusHeading(ui.host)).toBe(m["status.ended"]);
-    expect(buttonNamed(ui.host, m["action.start"])).toBeDefined();
+    expect(buttonNamed(ui.host, m["action.playAgain"])).toBeDefined();
   });
 
   it.each<[string, SessionRead]>([
@@ -153,7 +153,7 @@ describe("ended (W-25, W-33)", () => {
       roundId: "01927c5e-8b3a-7f21-9c4d-000000000004",
     } as ValidSnapshot;
     ui.fake.answerStart({ kind: "snapshot", snapshot: starting });
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.playAgain"])?.click();
     await ui.settle();
     expect(ui.fake.starts).toHaveLength(1);
     expect(statusHeading(ui.host)).toBe(m["status.starting"]);

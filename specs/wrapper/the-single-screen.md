@@ -4,14 +4,14 @@ Part of the [Wrapper spec](../wrapper.md), section
 [Contract](../wrapper.md#contract).
 
 Status: **decided by the human, 2026-10-29 and 2026-10-30**
-([RFC-004](../../rfcs/archived/RFC-004-single-screen-wrapper.md), archived). The
-shell's part is built: W-38's hold, applied by the session
-([The hold](./the-game-iframe-and-the-controller-boundary.md)), and
-`RoundState.pending` ([below](#a-pick-during-an-error-or-offline)). The
-Wrapper's part is **to be built**. Until it is built, the Wrapper behaves as the
-other section files say today. Where a requirement elsewhere changes, that file
-says so with the words "when the Wrapper ships the single screen", and this
-file's text replaces the old one then.
+([RFC-004](../../rfcs/archived/RFC-004-single-screen-wrapper.md), archived).
+Built: the shell's part, W-38's hold applied by the session
+([The hold](./the-game-iframe-and-the-controller-boundary.md)) and
+`RoundState.pending` ([below](#a-pick-during-an-error-or-offline)), and the
+Wrapper's: the stage and the bar (`apps/wrapper/src/render.ts`, `stage-view.ts`,
+`bar-view.ts`), what the stage shows and when the frame takes input
+(`stage-plan.ts`), the focus rules (`focus-rules.ts`), and the height
+(`styles.css`, `height-observer.ts`).
 
 The Wrapper is one screen: the game frame stays in one place at one size for the
 whole session, over one control bar that changes in place. The shell keeps every
@@ -216,11 +216,13 @@ common one), so the stage's ratio follows it.
 
   `inert` takes the frame out of the tab order and the accessibility tree and
   blocks the player's input to it; the browser applies it to the frame's
-  document (to be confirmed in the three browser projects, T-14a and T-27). It
-  does not stop the game: its scripts, timers, animation, audio, `postMessage`,
-  and rendering run as before, and the bridge keeps sending it Snapshots
-  (subject to W-38's hold). The scrim is drawn over the inert frame while the
-  round is checked, and the cover in the states the table names.
+  document (`e2e/tests/t14a-inert-frame.spec.ts` checks a click and the Tab key
+  in each browser project; confirmed in Chromium, 2026-10-30; Firefox and WebKit
+  to be confirmed by their CI jobs). It does not stop the game: its scripts,
+  timers, animation, audio, `postMessage`, and rendering run as before, and the
+  bridge keeps sending it Snapshots (subject to W-38's hold). The scrim is drawn
+  over the inert frame while the round is checked, and the cover in the states
+  the table names.
 
   **The rule for games.** A game MUST play its reveal and a book round's
   playback to the end with no player input, and MUST NOT need input outside an

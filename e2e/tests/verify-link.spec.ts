@@ -127,7 +127,7 @@ test.describe("VT-6: the Wrapper's verify link", () => {
       snapshotAnswer("book-lifecycle-won"),
     );
     await launch(page, fakePlayApi);
-    await page.getByRole("button", { name: TEXT.start }).click();
+    await page.getByRole("button", { name: TEXT.placeBet }).click();
     await advanceUntil(page, shows(statusHeading(page), TEXT.won));
 
     const link = page.getByRole("link", { name: TEXT.verify });

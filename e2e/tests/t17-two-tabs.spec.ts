@@ -7,6 +7,7 @@
 import { auditAccessibility } from "./harness/accessibility.ts";
 import { expect, test } from "./harness/fixtures.ts";
 import {
+  coverHeading,
   launch,
   servedFor,
   statusHeading,
@@ -29,10 +30,13 @@ test.describe("T-17: two tabs", () => {
     fakePlayApi.redeemAgain();
     const second = await context.newPage();
     await launch(second, fakePlayApi);
-    await expect(statusHeading(second)).toHaveText(TEXT.otherTab);
-    await expect(second.getByRole("button", { name: TEXT.start })).toHaveCount(
-      0,
-    );
+    await expect(coverHeading(second)).toHaveText(TEXT.otherTab);
+    // Neither start control: "Place bet" at idle, "Play again" on a result.
+    await expect(
+      second.getByRole("button", {
+        name: new RegExp(`^(${TEXT.placeBet}|${TEXT.playAgain})$`, "u"),
+      }),
+    ).toHaveCount(0);
     expect(servedFor(fakePlayApi, "redeemLaunchCode")).toHaveLength(2);
     expect(servedFor(fakePlayApi, "getSnapshot")).toHaveLength(reads);
     expect(servedFor(fakePlayApi, "startRound")).toEqual([]);

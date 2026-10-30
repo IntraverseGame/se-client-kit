@@ -11,6 +11,25 @@ export type Child = Node | string | undefined | false;
 
 export const STATUS_HEADING_ID = "se-status-heading";
 export const ALERT_HEADING_ID = "se-alert-heading";
+/** The stage's cover heading (W-57), the alert's when the cover owns it. */
+export const COVER_HEADING_ID = "se-cover-heading";
+
+/**
+ * What the control bar's slots hold (W-57): the status line (its heading and at
+ * most one line of detail), the primary controls, and the round line. The alert
+ * line and the operator links are render.ts's own.
+ */
+export type BarParts = {
+  readonly status: readonly Child[];
+  readonly controls: readonly Child[];
+  readonly round: readonly Child[];
+};
+
+export const EMPTY_BAR: BarParts = Object.freeze({
+  status: Object.freeze([]),
+  controls: Object.freeze([]),
+  round: Object.freeze([]),
+});
 
 /** An element factory bound to a document. */
 export const elementBuilder = (doc: Document) => {
@@ -68,10 +87,18 @@ export const heading = (
   iconName: IconName | undefined,
   iconLabel: string,
 ): HTMLElement =>
-  el(level, { id, class: "se-heading", tabindex: "-1" }, [
-    iconName === undefined ? undefined : icon(doc, iconName, iconLabel),
-    el("span", {}, [text]),
-  ]);
+  el(
+    level,
+    {
+      ...(id === "" ? {} : { id }),
+      class: "se-heading",
+      tabindex: "-1",
+    },
+    [
+      iconName === undefined ? undefined : icon(doc, iconName, iconLabel),
+      el("span", {}, [text]),
+    ],
+  );
 
 export const field = (el: Builder, label: string, value: string): HTMLElement =>
   el("p", { class: "se-field" }, [
@@ -131,4 +158,22 @@ export const replace = (
     );
     again?.focus({ preventScroll: true });
   }
+};
+
+/** Re-renders a section only when what it shows changed. */
+export type Sections = (
+  target: HTMLElement,
+  signature: string,
+  children: () => readonly Child[],
+) => boolean;
+
+/** The sections of one view, each re-rendered only when its signature moves. */
+export const createSections = (doc: Document): Sections => {
+  const signatures = new Map<HTMLElement, string>();
+  return (target, signature, children) => {
+    if (signatures.get(target) === signature) return false;
+    signatures.set(target, signature);
+    replace(doc, target, children());
+    return true;
+  };
 };

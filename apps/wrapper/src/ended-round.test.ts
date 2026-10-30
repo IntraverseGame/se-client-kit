@@ -62,7 +62,7 @@ describe("the round id and the verify link (W-39, W-40)", () => {
     "%s shows no round id panel before a round ended",
     name => {
       const ui = rendered(snapshotVector(name));
-      expect(ui.host.querySelector(".se-ended")?.childElementCount).toBe(0);
+      expect(ui.host.querySelector(".se-round .se-round-id")).toBeNull();
     },
   );
 
@@ -75,9 +75,9 @@ describe("the round id and the verify link (W-39, W-40)", () => {
         snapshot.roundId,
       );
       expect(
-        ui.host.querySelectorAll('.se-status input[type="radio"]'),
+        ui.host.querySelectorAll('.se-controls input[type="radio"]'),
       ).toHaveLength(snapshot.bet.suggestedBets.length);
-      expect(buttonNamed(ui.host, m["action.start"])).toBeDefined();
+      expect(buttonNamed(ui.host, m["action.playAgain"])).toBeDefined();
     }
   });
 
@@ -105,7 +105,7 @@ describe("the round id and the verify link (W-39, W-40)", () => {
   it("drops them once the round the player started shows, and not on a refused start", () => {
     const won = snapshotVector("coinflip-won");
     const ui = startable(won);
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.playAgain"])?.click();
     expect(ui.started).toHaveLength(1);
     ui.app.accept(
       {
@@ -129,7 +129,7 @@ describe("the round id and the verify link (W-39, W-40)", () => {
   it("shows the new round's id once that round ends", () => {
     const won = snapshotVector("coinflip-won");
     const ui = startable(won);
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.playAgain"])?.click();
     const roundId = "01927c5e-8b3a-7f21-9c4d-000000000003";
     const lost = withFields(snapshotVector("coinflip-lost"), {
       version: won.version + 3,

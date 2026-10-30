@@ -27,6 +27,19 @@
   --se-radius: 1.25rem;
   --se-pill: 62.5rem;
   --se-mono: ui-monospace, monospace;
+  /*
+   * The single screen (W-57): the stage's minimum S (270 CSS pixels at the
+   * default text size, provisional) and the height each slot of the bar
+   * reserves, so no state makes the bar grow and the stage never moves. The
+   * bar's height B depends only on the width and the text size.
+   */
+  --se-stage-min: 16.875rem;
+  --se-status-h: 3.75rem;
+  --se-alert-h: 3.75rem;
+  --se-controls-h: 3.75rem;
+  --se-round-h: 5.75rem;
+  --se-links-h: 3.5rem;
+  --se-scrim: rgb(255 255 255 / 0.72);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -46,6 +59,7 @@
     --se-error-bg: #2b1513;
     --se-notice: #fda677;
     --se-focus: #f4f4f6;
+    --se-scrim: rgb(17 17 19 / 0.72);
   }
 }
 
@@ -53,7 +67,21 @@
   box-sizing: border-box;
 }
 
+/*
+ * The Wrapper fills its iframe's viewport (W-57 "The height"): the document is
+ * exactly the viewport's height (`height: 100%`, never `vh`, so the
+ * standalone page on a phone does not jump with the browser's toolbar), the
+ * scroll bar's gutter is kept so it never changes the width, and so B, and
+ * nothing scrolls sideways from 20rem (320 CSS pixels) up.
+ */
+html {
+  height: 100%;
+  scrollbar-gutter: stable;
+}
+
 body {
+  height: 100%;
+  min-width: 20rem;
   margin: 0;
   background: var(--se-bg);
   color: var(--se-fg);
@@ -62,31 +90,184 @@ body {
   line-height: 1.5;
 }
 
+/*
+ * The stage takes the height the bar leaves, from the layout alone: never a
+ * measured value written back into a style. Below the minimum (S + B) the
+ * stage keeps S and the document scrolls inside the iframe. `#app` is the
+ * page's host element (index.html).
+ */
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
 .se-wrapper {
-  max-width: 64rem;
-  margin: 0 auto;
-  padding: 1rem;
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
 }
 
 .se-main {
+  display: grid;
+  flex: 1 0 auto;
+  grid-template-rows: minmax(var(--se-stage-min), 1fr) auto;
+}
+
+.se-stage {
+  position: relative;
+  min-height: var(--se-stage-min);
+  overflow: hidden;
+  background: var(--se-panel);
+}
+
+.se-game,
+.se-game iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.se-game iframe {
+  display: block;
+  border: 0;
+}
+
+/* The overlay: a translucent scrim, or an opaque cover (W-57). */
+.se-overlay {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+  text-align: center;
+}
+
+.se-overlay[data-form="scrim"] {
+  background: var(--se-scrim);
+}
+
+.se-overlay[data-form="cover"] {
+  background: var(--se-bg);
+}
+
+/* The scrim's line sits on an opaque panel, so it keeps its contrast. */
+.se-overlay__text {
+  margin: 0;
+  padding: 0.75rem 1.25rem;
+  border: 0.0625rem solid var(--se-border);
+  border-radius: var(--se-radius);
+  background: var(--se-panel);
+  color: var(--se-strong);
+}
+
+/*
+ * The control bar: each slot reserves its height; text that does not fit
+ * scrolls inside its slot and never spills onto the stage.
+ */
+.se-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "notices notices"
+    "status controls"
+    "alert links"
+    "round round";
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border-top: 0.0625rem solid var(--se-border);
+  background: var(--se-bg);
+}
+
+.se-notices {
+  grid-area: notices;
+}
+
+.se-notices:empty {
+  display: none;
 }
 
 .se-status {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 1.25rem;
-  border: 0.0625rem solid var(--se-border);
-  border-radius: var(--se-radius);
-  background: var(--se-panel);
+  justify-content: center;
+  grid-area: status;
+  height: var(--se-status-h);
+  overflow-y: auto;
 }
 
-.se-status:empty,
-.se-ended:empty {
-  display: none;
+.se-alert {
+  grid-area: alert;
+  height: var(--se-alert-h);
+  overflow-y: auto;
+}
+
+.se-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  grid-area: controls;
+  height: var(--se-controls-h);
+  overflow-y: auto;
+}
+
+.se-round {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.25rem;
+  grid-area: round;
+  height: var(--se-round-h);
+  overflow-y: auto;
+}
+
+.se-links {
+  align-content: start;
+  align-self: start;
+  grid-area: links;
+  height: var(--se-links-h);
+  padding: 0.3125rem;
+  overflow-y: auto;
+}
+
+/*
+ * Narrow (under 40rem): the slots stack, and the controls and the round line
+ * reserve two rows.
+ */
+@media (max-width: 40rem) {
+  .se-bar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "notices"
+      "status"
+      "alert"
+      "controls"
+      "round"
+      "links";
+  }
+
+  :root {
+    --se-controls-h: 9.25rem;
+    --se-round-h: 8.5rem;
+  }
+}
+
+/*
+ * Below the minimum height the bar stays at the bottom of the viewport while
+ * the stage scrolls under it, so the status line and the money controls stay
+ * in view; only while it takes at most half the viewport (`data-sticky`,
+ * height-observer.ts). A taller bar (a high zoom) is not sticky, and the page
+ * scrolls as a whole with nothing hidden.
+ */
+.se-bar[data-sticky] {
+  position: sticky;
+  bottom: 0;
 }
 
 .se-heading {
@@ -104,8 +285,17 @@ body {
   letter-spacing: 0.02em;
 }
 
-h2.se-heading {
+h2.se-heading,
+.se-status .se-heading {
   font-size: 1.25rem;
+}
+
+.se-alert .se-heading {
+  font-size: 1rem;
+}
+
+.se-overlay .se-heading {
+  justify-content: center;
 }
 
 .se-icon {
@@ -221,23 +411,28 @@ h2.se-heading {
   border-color: var(--se-accent);
 }
 
+/* The bet selector and the start control, on one row of the bar. */
 .se-bet {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
 }
 
 .se-bet fieldset {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
+/* A floated legend joins the row, beside the options it names. */
 .se-bet legend {
-  margin-bottom: 0.5rem;
+  float: inline-start;
+  margin-inline-end: 0.25rem;
   padding: 0;
 }
 
@@ -319,50 +514,22 @@ h2.se-heading {
   color: inherit;
 }
 
-.se-status > .se-button,
-.se-bet > .se-button {
-  align-self: flex-start;
-  min-width: 12rem;
+/* The cash-out control's multiplier, a display value beside its label. */
+.se-button__value {
+  margin-inline-start: 0.5rem;
+  font-weight: 400;
 }
 
 .se-button:hover:not(:disabled) {
   opacity: 0.88;
 }
 
-.se-game iframe {
-  display: block;
-  width: 100%;
-  min-height: 20rem;
-  max-height: 45rem;
-  aspect-ratio: 16 / 10;
-  border: 0.0625rem solid var(--se-border);
-  border-radius: var(--se-radius);
-  background: var(--se-panel);
-}
-
-@media (max-width: 40rem) {
-  .se-game iframe {
-    aspect-ratio: 3 / 4;
-  }
-}
-
-.se-alert {
-  padding: 1.25rem;
+.se-alert:not([data-empty]) {
+  padding: 0.5rem 1rem;
   border: 0.0625rem solid var(--se-error);
   border-left-width: 0.25rem;
-  border-radius: var(--se-radius);
+  border-radius: 0.75rem;
   background: var(--se-error-bg);
-}
-
-.se-alert[data-empty] {
-  padding: 0;
-  border: 0;
-}
-
-.se-notices {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 
 .se-notice {
@@ -370,8 +537,8 @@ h2.se-heading {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  margin: 0 0 1rem;
-  padding: 0.5rem 1rem;
+  margin: 0;
+  padding: 0.25rem 1rem;
   border: 0.0625rem solid var(--se-border);
   border-left: 0.25rem solid var(--se-notice);
   border-radius: 0.75rem;
@@ -386,7 +553,9 @@ h2.se-heading {
 
 /* A flex box ignores `hidden` unless told: a hidden notice or row is gone. */
 .se-notice[hidden],
-.se-actions[hidden] {
+.se-actions[hidden],
+.se-overlay[hidden],
+.se-game[hidden] {
   display: none;
 }
 

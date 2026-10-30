@@ -69,7 +69,7 @@ test.describe("T-15: a move not confirmed (W-16)", () => {
     );
     const sent = network.sent("continueRound").length;
     expect(sent).toBe(2 * attempts.length);
-    const status = page.locator(".se-status");
+    const status = page.locator(".se-bar");
     await expect(status).toContainText(TEXT.unconfirmedDetail);
     await expect(status).toContainText(ROUND.roundId);
     const checkAgain = page.getByRole("button", { name: TEXT.checkAgain });

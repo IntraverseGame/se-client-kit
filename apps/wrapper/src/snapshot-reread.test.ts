@@ -122,7 +122,7 @@ describe("re-reading a Snapshot dropped for a lower version (W-29, W-35)", () =>
     ui.fake.answerStart(starting(active.version));
     ui.fake.reads.length = 0;
     ui.fake.reads.push(starting(active.version + 3));
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.playAgain"])?.click();
     await ui.settle();
     expect(ui.fake.starts).toHaveLength(1);
     expect(statusHeading(ui.host)).toBe(m["status.won"]);

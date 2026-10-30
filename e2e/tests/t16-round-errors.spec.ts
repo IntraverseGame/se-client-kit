@@ -17,9 +17,9 @@ import {
 import { pickCheck, startCheck } from "./harness/round-vector.ts";
 import {
   alertPanel,
+  coverHeading,
   launchAndStart,
   servedFor,
-  statusHeading,
   TEXT,
 } from "./harness/wrapper-page.ts";
 
@@ -37,7 +37,8 @@ test.describe("T-16: the errors of a round in play", () => {
     });
     await callTails(page);
     await expect(alertPanel(page)).toContainText(TEXT.outOfSync);
-    await expect(page.locator("iframe")).toBeHidden();
+    await expect(page.locator("iframe")).toHaveAttribute("inert", "");
+    await expect(page.locator('.se-overlay[data-form="cover"]')).toBeVisible();
     expect(servedFor(fakePlayApi, "continueRound")).toHaveLength(1);
     expect(await auditAccessibility(page)).toEqual([]);
   });
@@ -59,7 +60,7 @@ test.describe("T-16: the errors of a round in play", () => {
         expect: pickCheck,
       });
       await callTails(page);
-      await expect(statusHeading(page)).toHaveText(TEXT.sessionEnded);
+      await expect(coverHeading(page)).toHaveText(TEXT.sessionEnded);
       // The move was the session's last call: no refresh, read, or resend.
       expect(fakePlayApi.served.at(-1)?.operationId).toBe("continueRound");
       expect(servedFor(fakePlayApi, "continueRound")).toHaveLength(1);
@@ -82,7 +83,8 @@ test.describe("T-16: the errors of a round in play", () => {
     await launchAndStart(page, fakePlayApi);
     // The `starting` poll, on the page's clock, reads the rejected Snapshot.
     await advanceUntil(page, shows(alertPanel(page), TEXT.rejected));
-    await expect(page.locator("iframe")).toBeHidden();
+    await expect(page.locator("iframe")).toHaveAttribute("inert", "");
+    await expect(page.locator('.se-overlay[data-form="cover"]')).toBeVisible();
     expect(await auditAccessibility(page)).toEqual([]);
   });
 });

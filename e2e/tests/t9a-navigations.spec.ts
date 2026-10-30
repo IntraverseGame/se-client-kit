@@ -96,7 +96,7 @@ test.describe("T-9a: the lobby and deposit navigations", () => {
     const deposit = frame.getByRole("link", { name: /Make a deposit/u });
     await expect(lobby).toBeVisible();
     await expect(deposit).toBeVisible();
-    await frame.getByRole("button", { name: TEXT.start }).click();
+    await frame.getByRole("button", { name: TEXT.placeBet }).click();
     await expect(lobby).toHaveCount(0);
     await expect(deposit).toHaveCount(0);
     await expect

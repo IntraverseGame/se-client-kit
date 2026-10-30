@@ -9,7 +9,12 @@
 import type { SessionRead, ValidSnapshot } from "@intraverse/se-client-shell";
 import { describe, expect, it } from "vitest";
 
-import { buttonNamed, mount, statusHeading } from "./fixtures/app.ts";
+import {
+  buttonNamed,
+  coverHeading,
+  mount,
+  statusHeading,
+} from "./fixtures/app.ts";
 import { active, failedWith, readsOver } from "./fixtures/cancel.ts";
 import { snapshotRead, validSnapshot } from "./fixtures/fake-session.ts";
 import { at, lowerLoss, onActive } from "./fixtures/reread.ts";
@@ -96,7 +101,8 @@ describe("the re-reads stop at once (W-35)", () => {
     ui.app.dispose();
     port.release(at("coinflip-lost", active.version + 2));
     await ui.settle();
-    expect(statusHeading(ui.host)).toBe(m["status.active"]);
+    // Still the `active` round (no shell holds it here, W-57), not the loss.
+    expect(coverHeading(ui.host)).toBe(m["state.notHeld"]);
     expect(ui.timers.pendingDelays()).toEqual([]);
   });
 });

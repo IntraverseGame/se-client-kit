@@ -55,7 +55,10 @@ const expectRefused = async (
   frame: Frame,
   fake: FakePlayApi,
 ): Promise<void> => {
-  await expect(frame.getByText(TEXT.configuration)).toBeVisible();
+  // The stage's cover, announced politely: its heading (W-57).
+  await expect(
+    frame.getByRole("heading", { name: TEXT.configuration }),
+  ).toBeVisible();
   expect(servedFor(fake, "redeemLaunchCode")).toEqual([]);
   expect(fake.served).toEqual([]);
 };
@@ -96,9 +99,10 @@ const runUntilShown = async (
   await expect
     .poll(
       async () => {
-        if (await frame.getByText(text).isVisible()) return true;
+        const shown = frame.getByRole("heading", { name: text });
+        if (await shown.isVisible()) return true;
         await page.clock.runFor(1000);
-        return frame.getByText(text).isVisible();
+        return shown.isVisible();
       },
       { timeout: 15_000 },
     )

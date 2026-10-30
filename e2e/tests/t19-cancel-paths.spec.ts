@@ -94,7 +94,10 @@ test.describe("T-19: the required cancel", () => {
       await expect(alertPanel(page)).toContainText(shown, { timeout: 15_000 });
       // Signed once, with the vendored bytes (the answer's check).
       expect(servedFor(fakePlayApi, "cancelRound")).toHaveLength(1);
-      await expect(page.locator("iframe")).toBeHidden();
+      await expect(page.locator("iframe")).toHaveAttribute("inert", "");
+      await expect(
+        page.locator('.se-overlay[data-form="cover"]'),
+      ).toBeVisible();
       await expect(page.getByText(TEXT.canceled)).toHaveCount(0);
       expect(await auditAccessibility(page)).toEqual([]);
     });
@@ -150,7 +153,9 @@ test.describe("T-19: the required cancel", () => {
     await expect(page.getByText(TEXT.closedBeforeCancel)).toBeVisible();
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
-    await expect(page.getByRole("button", { name: TEXT.start })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: TEXT.playAgain }),
+    ).toBeVisible();
     expect(await auditAccessibility(page)).toEqual([]);
   });
 
@@ -168,7 +173,9 @@ test.describe("T-19: the required cancel", () => {
     });
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
-    await expect(page.getByRole("button", { name: TEXT.start })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: TEXT.playAgain }),
+    ).toBeVisible();
     await Promise.all(
       [TEXT.won, TEXT.lost, TEXT.canceled].map(claim =>
         expect(page.getByText(claim)).toHaveCount(0),
@@ -200,7 +207,8 @@ test.describe("T-19: the required cancel", () => {
       .poll(() => servedFor(fakePlayApi, "getSnapshot").length)
       .toBe(2);
     expect(servedFor(fakePlayApi, "cancelRound")).toHaveLength(1);
-    await expect(page.locator("iframe")).toBeHidden();
+    await expect(page.locator("iframe")).toHaveAttribute("inert", "");
+    await expect(page.locator('.se-overlay[data-form="cover"]')).toBeVisible();
     expect(await auditAccessibility(page)).toEqual([]);
   });
 
@@ -225,7 +233,9 @@ test.describe("T-19: the required cancel", () => {
     await expect(statusHeading(page)).toHaveText(TEXT.checkLater);
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
-    await expect(page.getByRole("button", { name: TEXT.start })).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: TEXT.playAgain }),
+    ).toHaveCount(0);
     expect(await auditAccessibility(page)).toEqual([]);
     // A round still resolving after the cancel had closed before it arrived:
     // "check again" finds its result (`lost`, a later version than the

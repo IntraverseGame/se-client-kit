@@ -53,7 +53,7 @@ import {
   ROUND_VECTOR,
   startCheck,
 } from "./round-vector.ts";
-import { launchAndStart } from "./wrapper-page.ts";
+import { isPlayable, launchAndStart } from "./wrapper-page.ts";
 
 /** The trace mode of the project a test runs in: `off` unless set. */
 const traceMode = (testInfo: TestInfo): string => {
@@ -207,8 +207,9 @@ export const toReady = async (
 ): Promise<FrameLocator> => {
   scriptRound(fake);
   await launchAndStart(page, fake, scan);
-  // The `starting` poll (W-35) runs on the page's clock.
-  await advanceUntil(page, () => page.locator("iframe").isVisible());
+  // The `starting` poll (W-35) runs on the page's clock. The frame shows from
+  // its mount: the round is ready once it is playable (W-57, W-58).
+  await advanceUntil(page, () => isPlayable(page));
   return gameFrame(page);
 };
 
