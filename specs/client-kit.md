@@ -518,7 +518,7 @@ staging; production should give each game its own origin.
 - **Configuration.** `PAGES_GAME_ORIGINS` (the Wrapper's `gameOrigins`, and so
   its `frame-src`) holds this origin; the infrastructure owner sets it.
 
-<!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). Production hosting: its Pages projects and hostnames, the `pages-prod` environment with its configuration in a separate environment that holds no deploy credential, and the real operator origins behind `frame-ancestors` (staging holds a placeholder). Hostnames are shared out of band, never written in this repository. Reason: ADR-008 deploys staging only; production is to come. -->
+<!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). Production hosting: its Pages projects and hostnames, the `pages-prod` environment with its configuration in a separate environment that holds no deploy credential, and the real operator origins behind `frame-ancestors` (staging's list holds the staging operators' origins since 2026-10-30). Hostnames are shared out of band, never written in this repository. Reason: ADR-008 deploys staging only; production is to come. -->
 
 **The RPC providers** ([wrapper.md](./wrapper.md#configuration)): staging's
 entropy chain is Somnia's public testnet (chain id 50312; the backend,

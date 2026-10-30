@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-28 (#133: ADR-009 built, the changesets/action release flow and pages-prod.yml; staging's entropy chain moves to Somnia's public testnet, 50312, tipLagMargin 100, the switch procedure; #135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
+last-verified: 2026-10-30 (staging's `PAGES_OPERATOR_ORIGINS` holds the staging operators' origins, no longer a placeholder; 2026-10-28, #133: ADR-009 built, the changesets/action release flow and pages-prod.yml; staging's entropy chain moves to Somnia's public testnet, 50312, tipLagMargin 100, the switch procedure; #135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
 ---
 
 # Development workflow
@@ -171,9 +171,11 @@ Several agents and people work in one clone at once. Rules:
 
   `pages-stage` holds secrets only (read with `secrets.`):
   `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PAGES_RPC_ORIGINS`,
-  `PAGES_GAME_ORIGINS`, `PAGES_OPERATOR_ORIGINS` (set; placeholders
-  `https://invalid.example`), and `PAGES_WRAPPER_ORIGIN`,
-  `PAGES_VERIFIER_ORIGIN`, `PAGES_CHAIN_PINS`, `PAGES_RPC_ENDPOINTS` (to set).
+  `PAGES_GAME_ORIGINS`, `PAGES_OPERATOR_ORIGINS` (set; the staging operators'
+  origins since 2026-10-30, bare `https` only, never the Wrapper's, the
+  verifier's, or a game origin, no repeats; appending one is a whole-value
+  `gh secret set` and a redeploy: the runbook), and `PAGES_WRAPPER_ORIGIN`,
+  `PAGES_VERIFIER_ORIGIN`, `PAGES_CHAIN_PINS`, `PAGES_RPC_ENDPOINTS` (set).
   Each Pages project: `SE_API_UPSTREAM_ORIGIN` (set), `SE_API_PATH_PREFIXES`
   (set), compatibility date 2024-11-11 or later (confirmed). Since 2026-10-28
   the infrastructure owner manages the three projects' settings as code: ask

@@ -78,7 +78,7 @@ describe("the Pages headers step", () => {
     expect(result.wrapper).toContain("frame-ancestors 'none'");
   });
 
-  it("accepts the staging placeholder https://invalid.example in every list", () => {
+  it("accepts one https origin in every list", () => {
     const placeholder = "https://invalid.example";
     const result = run(REAL, {
       rpc: [placeholder],
