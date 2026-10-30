@@ -1,4 +1,5 @@
 import {
+  type BaseUnits,
   type Hash32,
   type RoundId,
   type Snapshot,
@@ -35,19 +36,34 @@ const describeStatus = (snapshot: ValidSnapshot): string => {
       expectTypeOf(snapshot.roundId).toEqualTypeOf<undefined>();
       expectTypeOf(snapshot.proofs).toEqualTypeOf<undefined>();
       expectTypeOf(snapshot.payout).toEqualTypeOf<undefined>();
+      expectTypeOf(snapshot.cashOutValue).toEqualTypeOf<undefined>();
       return "idle";
     }
     case "starting": {
       expectTypeOf(snapshot.roundId).toEqualTypeOf<RoundId>();
       expectTypeOf(snapshot.step).toEqualTypeOf<undefined>();
       expectTypeOf(snapshot.payout).toEqualTypeOf<undefined>();
+      expectTypeOf(snapshot.cashOutValue).toEqualTypeOf<undefined>();
       return `starting ${snapshot.roundId}`;
     }
-    case "active":
+    case "active": {
+      expectTypeOf(snapshot.closeReason).toEqualTypeOf<undefined>();
+      expectTypeOf(snapshot.payout).toEqualTypeOf<undefined>();
+      // The schema allows `cashOutValue` here (optional: absent at step 0). What
+      // a renderer reads of it is an `Amount`'s `value` and `formatted`.
+      expectTypeOf(snapshot.cashOutValue?.value).toEqualTypeOf<
+        BaseUnits | undefined
+      >();
+      expectTypeOf(snapshot.cashOutValue?.formatted).toEqualTypeOf<
+        string | undefined
+      >();
+      return `active ${snapshot.proofs.randomnessProof.roundSecretHash}`;
+    }
     case "resolving": {
       expectTypeOf(snapshot.closeReason).toEqualTypeOf<undefined>();
       expectTypeOf(snapshot.payout).toEqualTypeOf<undefined>();
-      return `${snapshot.status} ${snapshot.proofs.randomnessProof.roundSecretHash}`;
+      expectTypeOf(snapshot.cashOutValue).toEqualTypeOf<undefined>();
+      return `resolving ${snapshot.proofs.randomnessProof.roundSecretHash}`;
     }
     case "won":
     case "lost": {
@@ -56,10 +72,12 @@ const describeStatus = (snapshot: ValidSnapshot): string => {
       ).toEqualTypeOf<Hash32>();
       // The schema allows `payout` here (optional, so it may be absent).
       expectTypeOf(snapshot.payout).toEqualTypeOf<Snapshot["payout"]>();
+      expectTypeOf(snapshot.cashOutValue).toEqualTypeOf<undefined>();
       return `${snapshot.status} ${snapshot.proofs.randomnessProof.roundSecret}`;
     }
     case "canceled": {
       expectTypeOf(snapshot.payout).toEqualTypeOf<undefined>();
+      expectTypeOf(snapshot.cashOutValue).toEqualTypeOf<undefined>();
       return `canceled ${snapshot.roundId}`;
     }
     default: {
@@ -90,6 +108,8 @@ const bookModel = (snapshot: ValidSnapshot): string | undefined => {
   }
   expectTypeOf(snapshot.model).toEqualTypeOf<"book">();
   expectTypeOf(snapshot.config.kind).toEqualTypeOf<"book">();
+  // A book round has no cash-out, so no `cashOutValue`.
+  expectTypeOf(snapshot.cashOutValue).toEqualTypeOf<undefined>();
   return snapshot.config.kind;
 };
 

@@ -84,7 +84,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
   | `idle`                                     | the bet selector (`bet.suggestedBets`, defaulting to `bet.defaultBet`, within `minBet` and `maxBet`) and the start button, the balance. A typed error from the call that led here (a void) shows beside it                                                                                                                  | start enabled                                                               |
   | `starting`                                 | "preparing the round"; the game is not shown as ready; the shell is verifying (W-26)                                                                                                                                                                                                                                        | none; cancel is not offered                                                 |
-  | `active`                                   | the game, ready, only after W-26 passed; the multiplier; cash-out when allowed                                                                                                                                                                                                                                              | game picks, cash-out, cancel (if the game offers it, W-25)                  |
+  | `active`                                   | the game, ready, only after W-26 passed; the multiplier; cash-out when allowed, its control showing the Snapshot's `cashOutValue` as `formatted` when it carries one (once the contracts sync vendors the field, below), else the multiplier                                                                                | game picks, cash-out, cancel (if the game offers it, W-25)                  |
   | `active`, a move or cash-out not confirmed | "your move hasn't been confirmed" (or "your cash-out hasn't been confirmed"), "if it never arrives, the round ends by its time limit", the round id, and "check again" in place of the round; the game stays shown, waiting (W-16)                                                                                          | "check again" (a read only); no pick, no cash-out                           |
   | `resolving`                                | the game with inputs disabled, "resolving"                                                                                                                                                                                                                                                                                  | none                                                                        |
   | `won`                                      | the result, the payout as `formatted`, the round id and verify link (W-39)                                                                                                                                                                                                                                                  | the next bet: the bet selector and start, from this Snapshot's `bet` (W-40) |
@@ -117,6 +117,33 @@ Part of the [Wrapper spec](../wrapper.md), section
   `currentMultiplier` or anything else (W-34). `bankedAmount` is reserved for
   partial cash-out, is not served, and is not used.
 
+  **The cash-out value.** se-backend's ADR-050 (decided 2026-10-30) adds
+  `cashOutValue` to `se.snapshot/1`: an `Amount` the server computes that says
+  what `rounds:cashOut` would credit if the player cashed out now (on a free
+  bet, the winnings only). The schema allows it on an `active` round of the
+  `steps` presentation after its first step only, and forbids it at step 0, on
+  every other status, and on `playback`; it is optional. **Not vendored yet**:
+  the kit renders the field once the contracts sync that vendors the new schema
+  and its vectors lands
+  ([How the kit gets its contracts](../client-kit/how-the-kit-gets-its-contracts.md),
+  rule 4; the same release as this behavior). Until then every Snapshot carrying
+  the field fails validation (W-28) and the control shows the multiplier. Once
+  synced, the Wrapper shows it on the bar's cash-out control, as "Cash out"
+  followed by its `formatted`, when the control is offered (W-24) and the
+  Snapshot carries it; a value of 0 (a free bet whose winnings are 0 so far) is
+  shown as served, "Cash out" with the `formatted` of 0, with no inference
+  (W-34). Without the field the control reads "Cash out" with the multiplier as
+  a display value, as before; that is so at step 0, and also when an `active`
+  Snapshot at step 1 or more carries none: while the round's close is still
+  pending, or when the backend does not serve the value yet. The Wrapper reads
+  nothing into the absence (W-29). The round line's multiplier is the same
+  either way. The value is a quote, not money held: a losing pick takes it away,
+  and on `won` the round's `payout` is what the cash-out then credited. The
+  Wrapper never computes it and never checks it against `currentMultiplier`
+  (W-34); the shell does not forward it to the game (W-38: the game's copy is
+  built from an allow-list).
+  <!-- TODO(contracts sync): once the sync that vendors se-backend's ADR-050 lands, drop "Not vendored yet" and the until-then sentence above, and name the vectors as rule 4 does. -->
+
   How the Wrapper reads the shell's checks for this table (the round the shell
   holds, W-26), with every row placed by [W-57](./the-single-screen.md)'s table
   (RFC-004, decided 2026-10-30): the game frame is shown in every row, inert
@@ -132,20 +159,22 @@ Part of the [Wrapper spec](../wrapper.md), section
   bet" at `idle` and "Play again" on a result, with the bet selector preset to
   `defaultBet`. The cash-out control is shown only when the shell offers it
   (W-24: `active`, `ready`, at least one step survived and one left, nothing in
-  flight), and reads "Cash out" with the multiplier as a display value, never an
-  amount (W-34). A move or cash-out whose one W-16 resend was lost too, with the
-  round still `active` and the action neither applied nor refused, is the
-  session's `RoundState.unconfirmed` (`move` or `cash-out`): the Wrapper shows
-  its own state in the bar's status line, the heading announced politely and
-  taking the focus only after the player's own action (W-46), until a read
-  settles the round. Beside it, the session gives the UI `RoundState.pending`
-  (`move` or `cash-out`), derived and read only: the round signer's pending move
-  or cash-out while the signer's phase is `open` or `adopted`, and absent
-  otherwise (absent once a final answer has held signing, `stale`, once the
-  round is out of sync, re-issued, failed, or over, and once the session has
-  ended); it stays set beside `unconfirmed` after the lost resend. The Wrapper
-  reads it only to show "Waiting for your move to be confirmed." while a
-  connection problem, a typed error, or the generic error is shown
+  flight), and reads "Cash out" with the Snapshot's `cashOutValue.formatted`
+  beside it when the Snapshot carries one, else with the multiplier as a display
+  value; never an amount the Wrapper computed (W-34). A move or cash-out whose
+  one W-16 resend was lost too, with the round still `active` and the action
+  neither applied nor refused, is the session's `RoundState.unconfirmed` (`move`
+  or `cash-out`): the Wrapper shows its own state in the bar's status line, the
+  heading announced politely and taking the focus only after the player's own
+  action (W-46), until a read settles the round. Beside it, the session gives
+  the UI `RoundState.pending` (`move` or `cash-out`), derived and read only: the
+  round signer's pending move or cash-out while the signer's phase is `open` or
+  `adopted`, and absent otherwise (absent once a final answer has held signing,
+  `stale`, once the round is out of sync, re-issued, failed, or over, and once
+  the session has ended); it stays set beside `unconfirmed` after the lost
+  resend. The Wrapper reads it only to show "Waiting for your move to be
+  confirmed." while a connection problem, a typed error, or the generic error is
+  shown
   ([A pick during an error or offline](./the-single-screen.md#a-pick-during-an-error-or-offline)).
 
 - **W-32.** `won` is final. The Wrapper MUST NOT show or wait for the operator

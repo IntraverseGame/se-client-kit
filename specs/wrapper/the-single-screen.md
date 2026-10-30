@@ -22,10 +22,11 @@ picks (W-38). What hiding the frame did before, this file keeps by other means:
 Out of scope: the operator page's own controls (fullscreen, theater mode, a real
 or fun toggle, a recent-bets list), which an operator page may build around the
 Wrapper's iframe; a player-initiated cancel (W-25: `se.controller/1` has no verb
-for it); a live cash-out amount before the backend serves one (below); and
-lifecycle events to the operator page, a follow-up that needs `se.operator/2`
-and a new ADR superseding ADR-006 (RFC-004 Q7, decided 2026-10-30; `roundEnded`
-will carry the round id, Q8).
+for it); a cash-out amount the Wrapper would compute itself (W-34: the control
+shows the Snapshot's `cashOutValue` once it is vendored, below); and lifecycle
+events to the operator page, a follow-up that needs `se.operator/2` and a new
+ADR superseding ADR-006 (RFC-004 Q7, decided 2026-10-30; `roundEnded` will carry
+the round id, Q8).
 
 ## The screen
 
@@ -69,10 +70,21 @@ will carry the round id, Q8).
   **Labels** (W-48's language rule applies to each): the start control reads
   "Place bet" at `idle` and "Play again" on a result, with the bet selector
   preset to `defaultBet` as today (RFC-004 Q4). The cash-out control reads "Cash
-  out" with the Snapshot's `currentMultiplier` beside it as a display value
-  (`×1.94`); it shows no amount, since `se.snapshot/1` carries none on an
-  `active` round and W-34 forbids computing one from a multiplier (Q3).
-  <!-- TODO(backend Snapshot contract): a server-computed cash-out value (an `Amount`) on an `active` steps round, asked of the backend; until it is vendored the control shows the multiplier only (RFC-004 Q3). -->
+  out" with the Snapshot's `cashOutValue.formatted` beside it when the Snapshot
+  carries one: the server's quote of what cashing out now credits, which
+  `se.snapshot/1` serves on an `active` steps round after its first step
+  (se-backend's ADR-050, decided 2026-10-30; a value of 0 is shown as served).
+  The field is not vendored yet: the kit renders it once the contracts sync that
+  vendors the new schema and its vectors lands
+  ([How the kit gets its contracts](../client-kit/how-the-kit-gets-its-contracts.md),
+  rule 4; the same release); until then every Snapshot carrying it fails
+  validation (W-28) and the control shows the multiplier. Without a value the
+  control reads "Cash out" with the Snapshot's `currentMultiplier` beside it as
+  a display value (`×1.94`) and no amount: W-34 forbids computing one from a
+  multiplier (Q3), and the Wrapper never checks the value against the multiplier
+  ([W-31](./rendering-from-the-snapshot.md) says when an `active` round carries
+  none).
+  <!-- TODO(contracts sync): once the sync that vendors se-backend's ADR-050 lands, drop the not-vendored-yet sentence above. -->
 
 ### State by state
 
@@ -92,7 +104,7 @@ Wrapper's current labels.
 | A start or cash-out call in flight                                                                              | unchanged; inert for a cash-out (W-58)                                                                                                                                                | unchanged; the pressed control is busy (`aria-disabled`) until the answer; no lobby or deposit (W-49f)                                                                                                                                         | none                                                                                                  | stays on the pressed control; when the control goes, the status heading (W-46)                                        | nothing new                                          |
 | `starting` (config or book)                                                                                     | frame shown, inert; the game shows its own `starting` view                                                                                                                            | status "Preparing the round", detail "The round is being prepared and checked."                                                                                                                                                                | none                                                                                                  | not moved                                                                                                             | the status line                                      |
 | `active`, verdict not yet `ready` (W-26 checking)                                                               | frame shown, inert, the game held at its last copy (W-38's hold); scrim with "The round is being checked before you play."                                                            | status "Preparing the round"                                                                                                                                                                                                                   | none                                                                                                  | not moved                                                                                                             | the status line                                      |
-| `active`, verdict `ready`                                                                                       | frame shown, interactive (the only such row); no overlay                                                                                                                              | status "Your round is in play"; the multiplier; "Cash out" with the multiplier when the shell offers it (W-24); no lobby or deposit                                                                                                            | game picks; cash-out when offered                                                                     | the iframe element, once, when the round the player started becomes ready (W-46); a pick keeps the focus in the frame | the status line                                      |
+| `active`, verdict `ready`                                                                                       | frame shown, interactive (the only such row); no overlay                                                                                                                              | status "Your round is in play"; the multiplier; "Cash out" with `cashOutValue.formatted` when the Snapshot carries one, else with the multiplier, when the shell offers it (W-24); no lobby or deposit                                         | game picks; cash-out when offered                                                                     | the iframe element, once, when the round the player started becomes ready (W-46); a pick keeps the focus in the frame | the status line                                      |
 | `active`, a round the shell does not hold (a `ROUND_ACTIVE` resume, W-42; a round left open by an earlier page) | frame shown, inert, the game held at its last copy (W-38's hold); cover: **new** "This round can't be played here" and **new** "Nothing is signed for it. It ends by its time limit." | empty; no lobby or deposit (W-49f)                                                                                                                                                                                                             | none                                                                                                  | the cover's heading, after the player's start that led to it; otherwise not moved                                     | the cover's heading                                  |
 | `active`, a move or cash-out not confirmed (W-16)                                                               | frame shown, inert; the game waiting                                                                                                                                                  | status "Your move hasn't been confirmed" (or the cash-out's), detail "If it never arrives, the round ends by its time limit."; the round id; "Check again"                                                                                     | "Check again"                                                                                         | the status heading, after the player's own action only                                                                | the status line                                      |
 | `resolving`                                                                                                     | frame shown, inert; the game shows its own `resolving` view                                                                                                                           | status "Resolving", detail "The result is being settled."                                                                                                                                                                                      | none                                                                                                  | not moved                                                                                                             | the status line                                      |
