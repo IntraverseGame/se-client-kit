@@ -578,14 +578,15 @@ enter this repository, an issue, or a log):
      `https://se-games-stage.pages.dev`, the staging game origin (the
      infrastructure owner, 2026-10-27); `PAGES_RPC_ORIGINS` the origin of
      staging's RPC endpoint (below); `PAGES_OPERATOR_ORIGINS` the staging
-     operators' origins (2026-10-30). Every entry must be `https`: the deploy's
-     headers step refuses any other entry (for `PAGES_RPC_ORIGINS`, through
-     `PAGES_RPC_ENDPOINTS`, which it must match), so even `http://localhost`,
-     which the Wrapper's validator accepts, fails the deploy. The
-     configuration's disjoint-origins rule (W-49) refuses an operator list that
-     holds the Wrapper's or the verifier's origin or a game origin (each site's
-     document is checked against its own origin), or a repeated entry; the
-     deploy adds the Wrapper's origin to the game's `frame-ancestors` itself.
+     operators' origins (2026-10-30). Every entry must be `https` and lowercase:
+     the deploy's headers step refuses any other entry (for `PAGES_RPC_ORIGINS`,
+     through `PAGES_RPC_ENDPOINTS`, which it must match), so even
+     `http://localhost`, which the Wrapper's validator accepts, fails the
+     deploy; the validator refuses an uppercase letter too. The configuration's
+     disjoint-origins rule (W-49) refuses an operator list that holds the
+     Wrapper's or the verifier's origin or a game origin (each site's document
+     is checked against its own origin), or a repeated entry; the deploy adds
+     the Wrapper's origin to the game's `frame-ancestors` itself.
      `gh secret set` replaces the whole value, and nobody can read a secret
      back. The exact current list is `operatorOrigins` in the Wrapper site's
      served `<site>/environment-config.json` (public by design); the live

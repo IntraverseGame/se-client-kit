@@ -210,9 +210,9 @@ describe("the Pages sites' configuration documents", () => {
     }
   });
 
-  it("accepts the staging placeholder https://invalid.example", () => {
-    // Staging's pre-RPC placeholders (real values: specs/wrapper.md): one placeholder
-    // endpoint, a quorum of one (preview), and placeholder origin lists.
+  it("accepts one https origin as the RPC endpoint and the game origin, with no operator origin", () => {
+    // One endpoint, a quorum of one (preview), the endpoint's origin as the only
+    // RPC and game origin, and an empty operator list.
     const placeholder = "https://invalid.example";
     expect(
       issuesOf({
@@ -227,7 +227,7 @@ describe("the Pages sites' configuration documents", () => {
     ).toEqual([]);
   });
 
-  it("refuses the same placeholder as a game and an operator origin (W-49)", () => {
+  it("refuses the same origin as a game and an operator origin (W-49)", () => {
     const placeholder = "https://invalid.example";
     expect(
       issuesOf({
