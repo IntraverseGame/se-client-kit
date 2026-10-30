@@ -133,6 +133,29 @@ Part of the [Wrapper spec](../wrapper.md), section
   heading announced politely and taking the focus only after the player's own
   action (W-46), until a read settles the round.
 
+  **In the single screen** (RFC-004, decided 2026-10-30, to be built; it
+  replaces the text above where they differ when the Wrapper ships the single
+  screen). Every row of this table keeps its states and inputs, placed by
+  [W-57](./the-single-screen.md)'s table: the game frame is shown in every row
+  (inert outside a playable round, W-58), the status is the bar's status line,
+  and the next bet stays beside the result, in the bar. "In place of the round"
+  (the unconfirmed state, a failed verification, out of sync) means the bar's
+  status line or the stage's cover, never a hidden frame. A round the shell does
+  not hold is shown with the cover "This round can't be played here" and no
+  control. The start control reads "Place bet" at `idle` and "Play again" on a
+  result, with the bet selector preset to `defaultBet`; the cash-out control
+  reads "Cash out" with the multiplier as a display value, never an amount
+  (W-34). Beside `RoundState.unconfirmed`, the session gives the UI
+  `RoundState.pending` (`move` or `cash-out`), derived and read only: the round
+  signer's pending move or cash-out while the signer's phase is `open` or
+  `adopted`, and absent otherwise (absent once a final answer has held signing,
+  `stale`, once the round is out of sync, re-issued, failed, or over, and once
+  the session has ended); it stays set beside `unconfirmed` after the lost
+  resend. The Wrapper reads it only to show "Waiting for your move to be
+  confirmed." while a connection problem, a typed error, or the generic error is
+  shown
+  ([A pick during an error or offline](./the-single-screen.md#a-pick-during-an-error-or-offline)).
+
 - **W-32.** `won` is final. The Wrapper MUST NOT show or wait for the operator
   credit. The balance it shows is the Snapshot's `bet.balance.formatted`. The
   Snapshot read gets the round and `bet.balance` separately (the Play API
@@ -188,6 +211,13 @@ Part of the [Wrapper spec](../wrapper.md), section
     before the cancel arrived", the round id and the verify link (W-39), and the
     next bet beside it (W-31). A result with no cancel of the shell's gets no
     such line. (Both decided in human review, 2026-10-19.)
+
+  **In the single screen** (RFC-004, decided 2026-10-30, to be built; it
+  replaces the text above where they differ when the Wrapper ships the single
+  screen), the cancel states keep their texts: "this round failed verification"
+  is the stage's cover, with the frame inert, and the cancel's own status
+  ("Resolving", "Still resolving — contact support", "Round ended") is the bar's
+  status line ([W-57](./the-single-screen.md)).
 
   The copy (English): "Still resolving — contact support", "Check again", "Round
   ended", "This round failed verification and was canceled.", "This round failed

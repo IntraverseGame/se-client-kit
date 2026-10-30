@@ -107,6 +107,9 @@ the specs' headings.
   - [Book playback](./wrapper/book-playback.md) — W-50 to W-56 (#146, decided
     2026-10-28): a book round's base-mode playback, nothing signed, its checks,
     the RTP
+  - [The single screen](./wrapper/the-single-screen.md) — W-57, W-58 (RFC-004,
+    decided 2026-10-30, to be built): the stage over one control bar, every
+    state's place in it, the height, when the frame takes input
   - [Error and degraded states](./wrapper.md#error-and-degraded-states) — W-41
     to W-44
   - [Accessibility](./wrapper.md#accessibility) — W-45 to W-48
@@ -117,7 +120,7 @@ the specs' headings.
 - [Errors and edge cases](./wrapper.md#errors-and-edge-cases) ·
   [Security](./wrapper.md#security) ·
   [Observability](./wrapper.md#observability) ·
-  [Test plan](./wrapper.md#test-plan) (T-1 to T-20) ·
+  [Test plan](./wrapper.md#test-plan) (T-1 to T-28) ·
   [What this spec does not own](./wrapper.md#what-this-spec-does-not-own) ·
   [Decided questions](./wrapper.md#decided-questions) (OQ-1 to OQ-8) ·
   [References](./wrapper.md#references)

@@ -160,7 +160,19 @@ are in brackets.
     gate and legality, with nothing signed), the required cancel's state
     (`cancel`: `none` until it is reached; W-25, W-33, W-35), and, only while it
     holds, `unconfirmed` (`move` or `cash-out`): the flow's `unconfirmed()`, the
-    move or cash-out not confirmed (W-16, below);
+    move or cash-out not confirmed (W-16, below); and, decided with the single
+    screen (RFC-004, 2026-10-30; to be built, and it replaces the text before it
+    when the Wrapper ships the single screen), `pending` (`move` or `cash-out`),
+    derived and read only: the round signer's pending move or cash-out
+    (`RoundSigner.pending()`, never a cancel) while the signer's phase
+    (`phase()`) is `open` or `adopted`, and absent otherwise: set from the
+    signature (recorded before its send) until a Snapshot shows the action
+    applied; absent once a final answer has held signing (`stale` after a 400 or
+    409, W-19, where the action stays pending inside the signer until a read
+    shows it applied or out of sync), once the round is out of sync, re-issued,
+    failed, or over, and once the session has ended; kept beside `unconfirmed`
+    after the lost resend; with no signature, key, or bytes
+    ([A pick during an error or offline](../wrapper/the-single-screen.md#a-pick-during-an-error-or-offline));
   - `gameOrigin()` and `mountGame(options)`: the controller bridge for D with
     the session's pick use case, which answers the game and reports the answer's
     Snapshot through `onChange`, and the session's own `gameOrigins` and
@@ -406,18 +418,22 @@ are in brackets.
   `environment` of the configuration it was opened with, beside the allow-list
   and its own origin; the UI's mount cannot. Otherwise it returns
   `{ ok: true, bridge }`: `sendSnapshot` takes a validated Snapshot (ignored
-  when its `version` is below the latest given), `state()` is `awaiting-hello`,
-  `ready`, `incompatible`, or `closed`, and `close()` unsubscribes. A message
-  counts only when its `source` is the frame and its `origin` is D; the parser
-  reads only own data properties of a plain object, so no game code runs. The
-  rules of the message set, the allow-list, and the order of the pick checks are
-  in [W-38](../wrapper/the-game-iframe-and-the-controller-boundary.md). The
-  game's copy of a Snapshot is built field by field from the allow-list, never
-  by removing fields. It posts only with `targetOrigin = D` (a frame that throws
-  on `postMessage` is ignored). The pick use case takes the pick and resolves
-  with `{ accepted: true }` or `{ accepted: false, reason }`: it holds the round
-  and the signing, so the bridge never sees a signed action, a key, or a token;
-  one that throws or rejects answers `not_active`. The bridge's pre-check is an
+  when its `version` is below the latest given; decided with the single screen,
+  RFC-004, to be built, and it replaces the text before it when the Wrapper
+  ships the single screen: an `active` Snapshot is held unless the shell's
+  verdict for its round is `ready`, at mount, at `hello`, and after, by W-38's
+  hold), `state()` is `awaiting-hello`, `ready`, `incompatible`, or `closed`,
+  and `close()` unsubscribes. A message counts only when its `source` is the
+  frame and its `origin` is D; the parser reads only own data properties of a
+  plain object, so no game code runs. The rules of the message set, the
+  allow-list, and the order of the pick checks are in
+  [W-38](../wrapper/the-game-iframe-and-the-controller-boundary.md). The game's
+  copy of a Snapshot is built field by field from the allow-list, never by
+  removing fields. It posts only with `targetOrigin = D` (a frame that throws on
+  `postMessage` is ignored). The pick use case takes the pick and resolves with
+  `{ accepted: true }` or `{ accepted: false, reason }`: it holds the round and
+  the signing, so the bridge never sees a signed action, a key, or a token; one
+  that throws or rejects answers `not_active`. The bridge's pre-check is an
   early filter only (a second pick for the same step can pass it once the first
   settles, before the answering Snapshot arrives, and a test shows it); the use
   case is the gate and MUST re-check W-23 against the shell's own latest

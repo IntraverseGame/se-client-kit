@@ -72,7 +72,14 @@ Part of the [Wrapper spec](../wrapper.md), section
     accepted D, so a refused D is never loaded, and the frame is kept for the
     session's life and hidden unless the round is shown ready (`active` after
     W-26 passed, or `resolving`, W-31). A book round's frame is also shown at
-    `won` and `lost`, for the playback ([W-55](./book-playback.md)).
+    `won` and `lost`, for the playback ([W-55](./book-playback.md)). **In the
+    single screen** (RFC-004, decided 2026-10-30, to be built; it replaces the
+    text above where they differ when the Wrapper ships the single screen), the
+    frame is kept for the session's life at one place and size, and shown from
+    its mount until the session ends, except in the final states (the session
+    ended, another tab, a changed session), where the stage's cover replaces it;
+    when it takes input is
+    [W-58](./the-single-screen.md#when-the-frame-takes-input)'s.
   - **The game's page path** (`RedeemResponse.gamePath`, optional) lets several
     games share one origin under different paths. `play-client` refuses a redeem
     answer whose `gamePath` breaks the vendored document's rule (its `pattern`,
@@ -108,6 +115,31 @@ Part of the [Wrapper spec](../wrapper.md), section
   | game to Wrapper | `action`   | `id`, `verb` (`pick`), `args` (`step`, `option`) | A pick request. It is not an action: the Wrapper validates it (W-23) and builds the signed action.                                           |
   | Wrapper to game | `snapshot` | `snapshot`                                       | A Snapshot that passed W-28, sent on every accepted change: its `steps` copy, or (#146) its `playback` copy.                                 |
   | Wrapper to game | `reject`   | `id`, `reason`                                   | An `action` request that was not accepted. `reason` is a closed list (`not_legal`, `not_active`, `busy`, `invalid`), never a server message. |
+
+  **The hold** (RFC-004, decided 2026-10-30, to be built; it replaces the text
+  above where they differ when the Wrapper ships the single screen). The
+  `snapshot` message is sent on every accepted change, except that the bridge
+  forwards a Snapshot whose `status` is `active` only while the shell's verdict
+  for that Snapshot's round is `ready` (W-26). Every other `active` Snapshot is
+  held, at every point where a Snapshot reaches the bridge (the latest at mount,
+  `session-play.ts`'s `mountGame`; the answer to the first valid `hello`,
+  `controller-bridge.ts`'s `onHello` and `forward`; and every later one,
+  `session-reads.ts`'s `show`):
+  - a round being checked: the game keeps the last copy it was sent (in practice
+    the round's `starting`) until the verdict is `ready`, and the round's latest
+    Snapshot is then forwarded;
+  - a round whose verdict left `ready` (failed, re-issued, or out of sync): no
+    further `active` Snapshot of it is forwarded; its Snapshots that are not
+    `active` (`resolving` under the required cancel, and its result) still are;
+  - a round the shell does not hold, which has no verdict (a `ROUND_ACTIVE`
+    resume, W-42, or a round an earlier page left open, W-11): its `active`
+    Snapshots are never forwarded; its later non-`active` ones are.
+
+  The `hello` is answered with the last copy forwarded, never a held one. The
+  `version` rule (W-29) is unchanged: a held Snapshot is skipped, never sent out
+  of order. A book round has no `active` (W-54) and is unaffected. No message,
+  field, or reason changes, so `se.controller/1` is unchanged: a game sees a
+  round go from `starting` to `active` later than before.
 
   The message set is closed: a `type` outside it is ignored. The operator page
   has its own protocol, `se.operator/1`, with `hello`, `welcome`, and `resize`
