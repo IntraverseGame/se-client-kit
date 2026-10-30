@@ -226,11 +226,14 @@ structure below.
   applies it, `bar-view.ts` holds the bar's slots, and `focus-rules.ts` W-46's
   rules. The page keeps exactly one `role="alert"`: the cover's when it is
   shown "as the alert", the bar's alert line otherwise (its error then plain
-  text, no alert heading id). Each bar slot reserves its height in rem, so the
+  text, no alert heading id). The alert line overlays the status: it has no slot
+  of its own and sits in the status slot (`.se-status-slot`: the status line,
+  then the alert line), which reserves the heading and the taller of the detail
+  and the alert. Each bar slot reserves its height in rem, so the
   bar's height `B` changes only with width or text size; `resize` reports
   `H_min = ceil(B) + S` (`height-observer.ts`, ADR-010), never the body's box,
   and `followBarLayout` sets the bar's `data-sticky` only while it takes at
-  most half the viewport. It also re-checks the alert line's tab stop while it overflows (`markOverflow`, on size changes too). Do not hide the frame, write a measured height into
+  most half the viewport. It also re-checks the status slot's tab stop while it overflows (`markOverflow`, on size changes too). Do not hide the frame, write a measured height into
   a style, or let a state change a slot's height. The rules:
   [the single screen](../../specs/wrapper/the-single-screen.md),
   [the hold](../../specs/wrapper/the-game-iframe-and-the-controller-boundary.md),

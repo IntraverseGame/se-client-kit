@@ -66,6 +66,27 @@ describe("the single screen, a round's rows (T-25)", () => {
     expect(shown.playable).toBe(false);
   });
 
+  it("the alert line overlays the status: it sits in the status slot, under the status line", () => {
+    const screen = screenAfter(readOf("coinflip-idle"));
+    const slot = screen.host.querySelector(".se-bar > .se-status-slot");
+    const status = slot?.querySelector(":scope > .se-status");
+    const alert = slot?.querySelector(':scope > .se-alert[role="alert"]');
+    // The slot is there, empty alert included, before any error shows.
+    expect(status?.nextElementSibling).toBe(alert);
+    expect(screen.host.querySelector(".se-bar > .se-alert")).toBeNull();
+    screen.app.accept(
+      { kind: "problem", problem: problemVector("problem-insufficient-funds") },
+      "poll",
+    );
+    // The same region takes the error: one alert, in the status slot.
+    expect(screen.host.querySelectorAll('[role="alert"]')).toHaveLength(1);
+    expect(slot?.querySelector('[role="alert"]')).toBe(alert);
+    expect(alert?.querySelector("#se-alert-heading")).not.toBeNull();
+    expect(status?.querySelector("#se-status-heading")?.textContent).toBe(
+      m["status.idle"],
+    );
+  });
+
   it("starting: the frame shown and inert, no overlay, preparing the round", () => {
     const shown = shownOf(
       screenAfter(readOf("coinflip-starting-bound", CHECKING)),
