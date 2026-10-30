@@ -4,11 +4,14 @@ Part of the [Wrapper spec](../wrapper.md), section
 [Contract](../wrapper.md#contract).
 
 Status: **decided by the human, 2026-10-29 and 2026-10-30**
-([RFC-004](../../rfcs/archived/RFC-004-single-screen-wrapper.md), archived),
-**to be built**. Until it is built, the Wrapper behaves as the other section
-files say today. Where a requirement elsewhere changes, that file says so with
-the words "when the Wrapper ships the single screen", and this file's text
-replaces the old one then.
+([RFC-004](../../rfcs/archived/RFC-004-single-screen-wrapper.md), archived). The
+shell's part is built: W-38's hold, applied by the session
+([The hold](./the-game-iframe-and-the-controller-boundary.md)), and
+`RoundState.pending` ([below](#a-pick-during-an-error-or-offline)). The
+Wrapper's part is **to be built**. Until it is built, the Wrapper behaves as the
+other section files say today. Where a requirement elsewhere changes, that file
+says so with the words "when the Wrapper ships the single screen", and this
+file's text replaces the old one then.
 
 The Wrapper is one screen: the game frame stays in one place at one size for the
 whole session, over one control bar that changes in place. The shell keeps every
