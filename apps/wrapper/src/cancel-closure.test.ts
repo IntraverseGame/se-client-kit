@@ -66,7 +66,7 @@ describe("after the shell's cancel was sent (W-33)", () => {
     expect(allText(ui.host)).not.toContain(m["detail.canceledUnverified"]);
     expect(allText(ui.host)).not.toContain(m["detail.canceled"]);
     expect(alertText(ui.host)).toBe("");
-    expect(buttonNamed(ui.host, m["action.start"])).toBeDefined();
+    expect(buttonNamed(ui.host, m["action.playAgain"])).toBeDefined();
   });
 
   it("keeps the canceled text when the cancel took", async () => {
@@ -86,7 +86,7 @@ describe("after the shell's cancel was sent (W-33)", () => {
       expect(allText(ui.host)).toContain(m["detail.closedBeforeCancel"]);
       expect(allText(ui.host)).toContain(activeId);
       expect(linkNamed(ui.host, m["action.verify"])).toBeDefined();
-      expect(buttonNamed(ui.host, m["action.start"])).toBeDefined();
+      expect(buttonNamed(ui.host, m["action.playAgain"])).toBeDefined();
       expect(alertText(ui.host)).toBe("");
     },
   );

@@ -44,7 +44,7 @@ test.describe("T-10: a win", () => {
     });
     await callTails(page);
     await expect(statusHeading(page)).toHaveText(TEXT.won);
-    await expect(page.locator(".se-status")).toContainText(
+    await expect(page.locator(".se-round")).toContainText(
       `${TEXT.payout} ${payoutFormatted()}`,
     );
     await expect(page.getByText(ROUND.roundId)).toBeVisible();

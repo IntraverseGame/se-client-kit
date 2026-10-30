@@ -28,7 +28,13 @@ import {
   roundRead,
 } from "./fixtures/cancel.ts";
 import { snapshotRead } from "./fixtures/fake-session.ts";
-import { ACTIVE, activeId, gameShown, round, wired } from "./fixtures/wired.ts";
+import {
+  ACTIVE,
+  activeId,
+  gamePlayable,
+  round,
+  wired,
+} from "./fixtures/wired.ts";
 import { messagesFor } from "./messages.ts";
 
 const m = messagesFor("en").messages;
@@ -39,8 +45,8 @@ describe("while the cancel settles (W-25, W-35)", () => {
     expect(await readsOver(ui, 4_000)).toBeGreaterThanOrEqual(3);
     expect(alertText(ui.host)).toContain(m["state.verificationFailed"]);
     expect(allText(ui.host)).not.toContain(m["detail.canceled"]);
-    expect(buttonNamed(ui.host, m["action.start"])).toBeUndefined();
-    expect(gameShown(ui)).toBe(false);
+    expect(buttonNamed(ui.host, m["action.playAgain"])).toBeUndefined();
+    expect(gamePlayable(ui)).toBe(false);
   });
 
   it("does not poll an active round with no cancel, or one in flight", async () => {
@@ -87,7 +93,7 @@ describe("while the cancel settles (W-25, W-35)", () => {
     expect(allText(ui.host)).toContain(m["detail.canceledUnverified"]);
     expect(allText(ui.host)).not.toContain(m["detail.canceled"]);
     expect(alertText(ui.host)).toBe("");
-    expect(buttonNamed(ui.host, m["action.start"])).toBeDefined();
+    expect(buttonNamed(ui.host, m["action.playAgain"])).toBeDefined();
     expect(await readsOver(ui, 10_000)).toBe(0);
   });
 
@@ -110,9 +116,9 @@ describe("check-later (W-33, W-35)", () => {
     expect(allText(ui.host)).toContain(activeId);
     expect(linkNamed(ui.host, m["action.verify"])).toBeDefined();
     expect(buttonNamed(ui.host, m["action.checkAgain"])).toBeDefined();
-    expect(buttonNamed(ui.host, m["action.start"])).toBeUndefined();
+    expect(buttonNamed(ui.host, m["action.playAgain"])).toBeUndefined();
     expect(allText(ui.host)).not.toContain(m["detail.canceled"]);
-    expect(gameShown(ui)).toBe(false);
+    expect(gamePlayable(ui)).toBe(false);
   });
 
   it("stops the fast poll and reads once every 30 s in the background", async () => {

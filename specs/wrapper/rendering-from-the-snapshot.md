@@ -118,42 +118,34 @@ Part of the [Wrapper spec](../wrapper.md), section
   partial cash-out, is not served, and is not used.
 
   How the Wrapper reads the shell's checks for this table (the round the shell
-  holds, W-26): an `active` round is shown as "preparing the round", with the
-  note that it is being checked, until the shell's verdict is `ready`; then it
-  is shown ready, with the game. A failed verdict shows "this round failed
-  verification" or "could not verify the chain" (W-26a), and an out-of-sync
-  round its state (W-44), in place of the round until it is over. A round the
-  shell does not hold (one resumed from `ROUND_ACTIVE`, W-42) is shown as its
-  status gives it, with no game and no control. The cash-out control is shown
-  only when the shell offers it (W-24: `active`, `ready`, at least one step
-  survived and one left, nothing in flight). A move or cash-out whose one W-16
-  resend was lost too, with the round still `active` and the action neither
-  applied nor refused, is the session's `RoundState.unconfirmed` (`move` or
-  `cash-out`): the Wrapper shows its own state in place of the round, the
-  heading announced politely and taking the focus only after the player's own
-  action (W-46), until a read settles the round.
-
-  **In the single screen** (RFC-004, decided 2026-10-30, to be built; it
-  replaces the text above where they differ when the Wrapper ships the single
-  screen). Every row of this table keeps its states and inputs, placed by
-  [W-57](./the-single-screen.md)'s table: the game frame is shown in every row
-  (inert outside a playable round, W-58), the status is the bar's status line,
-  and the next bet stays beside the result, in the bar. "In place of the round"
-  (the unconfirmed state, a failed verification, out of sync) means the bar's
-  status line or the stage's cover, never a hidden frame. A round the shell does
-  not hold is shown with the cover "This round can't be played here" and no
-  control. The start control reads "Place bet" at `idle` and "Play again" on a
-  result, with the bet selector preset to `defaultBet`; the cash-out control
-  reads "Cash out" with the multiplier as a display value, never an amount
-  (W-34). Beside `RoundState.unconfirmed`, the session gives the UI
-  `RoundState.pending` (`move` or `cash-out`), derived and read only: the round
-  signer's pending move or cash-out while the signer's phase is `open` or
-  `adopted`, and absent otherwise (absent once a final answer has held signing,
-  `stale`, once the round is out of sync, re-issued, failed, or over, and once
-  the session has ended); it stays set beside `unconfirmed` after the lost
-  resend. The Wrapper reads it only to show "Waiting for your move to be
-  confirmed." while a connection problem, a typed error, or the generic error is
-  shown
+  holds, W-26), with every row placed by [W-57](./the-single-screen.md)'s table
+  (RFC-004, decided 2026-10-30): the game frame is shown in every row, inert
+  outside a playable round (W-58), the status is the bar's status line, and the
+  next bet stays beside the result, in the bar. An `active` round is shown as
+  "preparing the round", under the stage's scrim with the note that it is being
+  checked, until the shell's verdict is `ready`; then it is shown ready, with
+  the game playable. A failed verdict shows "this round failed verification" or
+  "could not verify the chain" (W-26a), and an out-of-sync round its state
+  (W-44), on the stage's cover until the round is over. A round the shell does
+  not hold (one resumed from `ROUND_ACTIVE`, W-42) is shown with the cover "This
+  round can't be played here" and no control. The start control reads "Place
+  bet" at `idle` and "Play again" on a result, with the bet selector preset to
+  `defaultBet`. The cash-out control is shown only when the shell offers it
+  (W-24: `active`, `ready`, at least one step survived and one left, nothing in
+  flight), and reads "Cash out" with the multiplier as a display value, never an
+  amount (W-34). A move or cash-out whose one W-16 resend was lost too, with the
+  round still `active` and the action neither applied nor refused, is the
+  session's `RoundState.unconfirmed` (`move` or `cash-out`): the Wrapper shows
+  its own state in the bar's status line, the heading announced politely and
+  taking the focus only after the player's own action (W-46), until a read
+  settles the round. Beside it, the session gives the UI `RoundState.pending`
+  (`move` or `cash-out`), derived and read only: the round signer's pending move
+  or cash-out while the signer's phase is `open` or `adopted`, and absent
+  otherwise (absent once a final answer has held signing, `stale`, once the
+  round is out of sync, re-issued, failed, or over, and once the session has
+  ended); it stays set beside `unconfirmed` after the lost resend. The Wrapper
+  reads it only to show "Waiting for your move to be confirmed." while a
+  connection problem, a typed error, or the generic error is shown
   ([A pick during an error or offline](./the-single-screen.md#a-pick-during-an-error-or-offline)).
 
 - **W-32.** `won` is final. The Wrapper MUST NOT show or wait for the operator
@@ -181,7 +173,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   - `check-later`: "still resolving — contact support" (the status heading,
     announced politely), with the round id and the verify link (W-39) and a
     "check again" control, beside the round's "this round failed verification"
-    (the alert panel, W-26), and still no result, no "your bet was returned",
+    (the stage's cover, W-26), and still no result, no "your bet was returned",
     and no bet selector;
   - `ended`: a neutral "round ended" (the status heading) with the round id and
     the verify link, no win, loss, refund, or bet-returned amount, and no result
@@ -212,12 +204,10 @@ Part of the [Wrapper spec](../wrapper.md), section
     next bet beside it (W-31). A result with no cancel of the shell's gets no
     such line. (Both decided in human review, 2026-10-19.)
 
-  **In the single screen** (RFC-004, decided 2026-10-30, to be built; it
-  replaces the text above where they differ when the Wrapper ships the single
-  screen), the cancel states keep their texts: "this round failed verification"
-  is the stage's cover, with the frame inert, and the cancel's own status
-  ("Resolving", "Still resolving — contact support", "Round ended") is the bar's
-  status line ([W-57](./the-single-screen.md)).
+  The cancel states are placed by [W-57](./the-single-screen.md)'s table
+  (RFC-004, decided 2026-10-30): "this round failed verification" is the stage's
+  cover, with the frame inert, and the cancel's own status ("Resolving", "Still
+  resolving — contact support", "Round ended") is the bar's status line.
 
   The copy (English): "Still resolving — contact support", "Check again", "Round
   ended", "This round failed verification and was canceled.", "This round failed

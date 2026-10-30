@@ -10,15 +10,24 @@ import {
   alertText,
   allText,
   buttonNamed,
+  coverHeading,
   mount,
   statusHeading,
 } from "./fixtures/app.ts";
 import {
   createFakeSession,
+  FAKE_GAME_ORIGIN,
   snapshotRead,
   validSnapshot,
 } from "./fixtures/fake-session.ts";
-import { ACTIVE, gameShown, round, wired } from "./fixtures/wired.ts";
+import {
+  ACTIVE,
+  gamePlayable,
+  gameShown,
+  overlayForm,
+  round,
+  wired,
+} from "./fixtures/wired.ts";
 import { messagesFor } from "./messages.ts";
 import { showOpening } from "./session-wiring.ts";
 
@@ -59,24 +68,37 @@ describe("the shell's checks of the round (W-26, W-31, W-44)", () => {
     });
     expect(statusHeading(ui.host)).toBe(m["status.starting"]);
     expect(allText(ui.host)).toContain(m["detail.verifying"]);
-    expect(gameShown(ui)).toBe(false);
+    // The frame stays in place, inert, under the scrim (W-57, W-58).
+    expect(gameShown(ui)).toBe(true);
+    expect(gamePlayable(ui)).toBe(false);
+    expect(overlayForm(ui)).toBe("scrim");
   });
 
   it("an active round that passed is shown ready, with the game", async () => {
     const ui = await wired(fake => {
       fake.reads.push(snapshotRead(ACTIVE));
       fake.setRound(round());
+      fake.setMount(() => ({
+        ok: true,
+        gameOrigin: FAKE_GAME_ORIGIN,
+        gamePath: "/",
+      }));
     });
     expect(statusHeading(ui.host)).toBe(m["status.active"]);
     expect(gameShown(ui)).toBe(true);
+    expect(gamePlayable(ui)).toBe(true);
+    expect(overlayForm(ui)).toBe("none");
   });
 
-  it("a round the shell does not hold is shown, with no game and no control", async () => {
+  it("a round the shell does not hold shows the cover, an inert frame, and no control", async () => {
     const ui = await wired(fake => {
       fake.reads.push(snapshotRead(ACTIVE));
     });
-    expect(statusHeading(ui.host)).toBe(m["status.active"]);
-    expect(gameShown(ui)).toBe(false);
+    expect(coverHeading(ui.host)).toBe(m["state.notHeld"]);
+    expect(allText(ui.host)).toContain(m["state.notHeldDetail"]);
+    expect(statusHeading(ui.host)).toBe("");
+    expect(gamePlayable(ui)).toBe(false);
+    expect(overlayForm(ui)).toBe("cover");
     expect(buttonNamed(ui.host, m["action.cashOut"])).toBeUndefined();
   });
 
@@ -89,7 +111,8 @@ describe("the shell's checks of the round (W-26, W-31, W-44)", () => {
       fake.setRound(round({ verdict: "failed", shown }));
     });
     expect(alertText(ui.host)).toContain(heading);
-    expect(gameShown(ui)).toBe(false);
+    expect(gamePlayable(ui)).toBe(false);
+    expect(overlayForm(ui)).toBe("cover");
   });
 
   it("an out-of-sync round shows its state (W-19)", async () => {
@@ -107,7 +130,7 @@ describe("the intents (W-22, W-24)", () => {
       fake.reads.push(snapshotRead("coinflip-idle"));
       fake.answerStart(snapshotRead("coinflip-starting"));
     });
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.placeBet"])?.click();
     await ui.settle();
     const { defaultBet } = validSnapshot("coinflip-idle").bet;
     expect(ui.fake.starts).toEqual([
@@ -151,7 +174,7 @@ describe("the intents (W-22, W-24)", () => {
       fake.reads.push(snapshotRead("coinflip-idle"));
       fake.answerStart(snapshotRead("coinflip-starting"));
     });
-    const start = buttonNamed(ui.host, m["action.start"]);
+    const start = buttonNamed(ui.host, m["action.placeBet"]);
     start?.click();
     start?.click();
     await ui.settle();
@@ -171,7 +194,7 @@ describe("the intents (W-22, W-24)", () => {
       fake.reads.push(snapshotRead("coinflip-idle"));
       fake.answerStart({ kind: "refused", reason: "invalid-input" });
     });
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.placeBet"])?.click();
     await ui.settle();
     expect(alertText(ui.host)).toContain(m["error.generic"]);
   });
@@ -181,7 +204,7 @@ describe("the intents (W-22, W-24)", () => {
       fake.reads.push(snapshotRead("coinflip-idle"));
       fake.answerStart({ kind: "refused", reason: "lock-not-held" });
     });
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.placeBet"])?.click();
     await ui.settle();
     expect(allText(ui.host)).toContain(m["state.otherTab"]);
   });

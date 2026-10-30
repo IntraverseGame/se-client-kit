@@ -1,39 +1,30 @@
 // The Wrapper's own UI, rendered into one host element from `WrapperState`
-// (W-28 to W-35, W-39 to W-48). The DOM is built with `createElement` and
-// `textContent` only: no markup string, no inline style or script, so every
-// value from the network is text and the Content Security Policy holds.
+// (W-28 to W-35, W-39 to W-48, W-57, W-58). The DOM is built with
+// `createElement` and `textContent` only: no markup string, no inline style or
+// script, so every value from the network is text and the Content Security
+// Policy holds.
+//
+// One screen (W-57): the stage (the game frame, kept in place, and the overlay
+// over it; stage-view.ts, stage-plan.ts) over one control bar that changes in
+// place (bar-view.ts). The frame is `inert` in every state but a playable
+// round (W-58).
 //
 // Accessibility (W-45 to W-48):
-//   - a status change is announced through a polite live region; an error is
-//     shown in a `role="alert"` panel;
-//   - focus moves to the result or error heading only when the player's own
-//     action caused the change (`cause: "player"`), never after a poll; a
-//     section whose content changes keeps the focused control focused; the
-//     result or error heading takes it back from a focused game frame by
-//     blurring the frame element first;
+//   - a status change is announced through a polite live region (the bar's
+//     status line, or the heading of a cover that is not the alert); an error
+//     through the page's one `role="alert"` region, the bar's alert line or a
+//     cover shown as the alert;
+//   - focus follows W-46 (focus-rules.ts);
 //   - win, loss, and error carry text and an icon with a text alternative
 //     beside the colour;
 //   - every control and state has a text label in the session's language.
 
-import {
-  ALERT_HEADING_ID,
-  type Child,
-  elementBuilder,
-  replace,
-  STATUS_HEADING_ID,
-} from "./dom.ts";
-import { showsCopyNotice, showsGame } from "./game-visibility.ts";
-import { icon } from "./icons.ts";
+import { createBarView } from "./bar-view.ts";
+import { createSections, elementBuilder } from "./dom.ts";
+import { createIntoGame, type FocusInput, focusTarget } from "./focus-rules.ts";
 import { type Localized, messagesFor } from "./messages.ts";
-import { linkPlan, linkView } from "./operator-links.ts";
-import { roundEnded } from "./round-input.ts";
-import { roundView } from "./round-view.ts";
-import {
-  alertContent,
-  alertView,
-  blockingView,
-  roundIdAndVerify,
-} from "./state-views.ts";
+import { stagePlan } from "./stage-plan.ts";
+import { createStageView } from "./stage-view.ts";
 import type { ChangeCause, ViewOptions } from "./view-options.ts";
 import type { WrapperState } from "./wrapper-state.ts";
 
@@ -41,12 +32,17 @@ export type View = {
   readonly root: HTMLElement;
   /**
    * Where the game iframe is mounted (W-37). It is built once and never
-   * re-rendered, so the frame survives every update; it is hidden unless the
-   * round is shown ready (W-26, W-31), or a book round's result is shown (W-55;
-   * game-visibility.ts).
+   * re-rendered, so the frame survives every update in one place and at one
+   * size; it is hidden only in the final states (stage-plan.ts).
    */
   readonly gameHost: HTMLElement;
+  /** The control bar, whose reserved height `resize` reports (W-49d). */
+  readonly bar: HTMLElement;
+  /** The stage, whose minimum height `resize` reports (W-49d). */
+  readonly stage: HTMLElement;
   readonly update: (state: WrapperState, cause: ChangeCause) => void;
+  /** The player started a round: the frame takes the focus once it is ready. */
+  readonly started: () => void;
 };
 
 const languageOf = (state: WrapperState): Localized =>
@@ -59,64 +55,12 @@ export const createView = (
   currentOptions: () => ViewOptions,
 ): View => {
   const el = elementBuilder(doc);
-  const notices = el("div", { class: "se-notices" });
-  const alert = el("div", { class: "se-alert", role: "alert" });
-  const status = el("section", { class: "se-status" });
-  const ended = el("section", { class: "se-ended" });
-  // The lobby and deposit controls (W-49e, W-49f).
-  const links = el("div", { class: "se-actions se-links" });
-  const gameHost = el("div", { class: "se-game" });
-  gameHost.hidden = true;
-  // In the frame's place when a book round's copy failed closed (W-55).
-  const gameNotice = el("p", { class: "se-notice se-notice--game" });
-  gameNotice.hidden = true;
+  const section = createSections(doc);
   const live = el("div", {
     class: "se-visually-hidden",
     "aria-live": "polite",
     "aria-atomic": "true",
   });
-  const root = el("div", { class: "se-wrapper" }, [
-    notices,
-    el("main", { class: "se-main" }, [
-      alert,
-      status,
-      gameHost,
-      gameNotice,
-      ended,
-      links,
-    ]),
-    live,
-  ]);
-  host.replaceChildren(root);
-
-  /**
-   * Blurs the game's iframe element when it has the focus, so the result or
-   * error heading can take it (W-46): some engines do not move the focus out of
-   * a focused frame on `focus()` alone (Firefox with its frames in the parent's
-   * process, as in Playwright's Firefox build).
-   */
-  const blurFocusedGameFrame = (): void => {
-    const active = doc.activeElement;
-    if (active instanceof HTMLIFrameElement && gameHost.contains(active)) {
-      active.blur();
-    }
-  };
-
-  const signatures = new Map<HTMLElement, string>();
-  /** Re-renders a section only when what it shows changed. */
-  const section = (
-    target: HTMLElement,
-    signature: string,
-    children: () => readonly Child[],
-  ): boolean => {
-    if (signatures.get(target) === signature) {
-      return false;
-    }
-    signatures.set(target, signature);
-    replace(doc, target, children());
-    return true;
-  };
-
   let announced = "";
   const announce = (text: string): void => {
     if (text !== announced) {
@@ -124,162 +68,79 @@ export const createView = (
       live.textContent = text;
     }
   };
+  const stage = createStageView(doc, el, section);
+  const bar = createBarView(doc, el, section, announce);
+  const root = el("div", { class: "se-wrapper" }, [
+    el("main", { class: "se-main" }, [stage.element, bar.element]),
+    live,
+  ]);
+  host.replaceChildren(root);
+  const intoGame = createIntoGame();
 
   const update = (state: WrapperState, cause: ChangeCause): void => {
     const options = currentOptions();
     const localized = languageOf(state);
     const m = localized.messages;
     root.setAttribute("lang", localized.language);
-    const { snapshot } = state;
-    const final =
-      state.blocking === "configuration-error" ||
-      state.blocking === "session-ended" ||
-      state.blocking === "other-tab" ||
-      state.blocking === "unsupported-browser" ||
-      state.blocking === "session-changed";
+    const before = doc.activeElement;
+    const frameHadFocus = stage.frameHasFocus();
+    // A control of the bar that holds the focus (W-46's removed-control rule;
+    // a heading is not one).
+    const barControl =
+      before instanceof HTMLElement &&
+      bar.element.contains(before) &&
+      !before.classList.contains("se-heading")
+        ? before
+        : undefined;
+    const plan = stagePlan(m, state, options.calling === true);
+    const cover =
+      plan.overlay.form === "cover" ? plan.overlay.cover : undefined;
+    const coverChanged = stage.show(plan, m, localized.language);
+    const shown = bar.show({
+      state,
+      options,
+      localized,
+      coverOwnsAlert: cover?.alert === true,
+    });
+    const coverHeading = stage.coverHeading();
 
-    section(
-      notices,
-      JSON.stringify([
-        localized.language,
-        state.chainNotIndependent,
-        state.slow,
-      ]),
-      () => [
-        state.chainNotIndependent &&
-          el("p", { class: "se-notice se-notice--chain" }, [
-            icon(doc, "info", m["icon.info"]),
-            el("span", {}, [m["notice.chainNotIndependent"]]),
-          ]),
-        state.slow &&
-          el("p", { class: "se-notice se-notice--slow" }, [
-            icon(doc, "progress", m["icon.progress"]),
-            el("span", {}, [m["notice.slow"]]),
-          ]),
-      ],
-    );
-
-    const error = alertContent(m, state);
-    const alertChanged = section(
-      alert,
-      JSON.stringify([
-        localized.language,
-        error,
-        options.verifyBaseUrl ?? null,
-        options.intents.retry !== undefined,
-      ]),
-      () =>
-        error === undefined
-          ? []
-          : alertView(el, doc, m, error, options, announce),
-    );
-    alert.toggleAttribute("data-empty", error === undefined);
-
-    const showRound = state.blocking === undefined && snapshot !== undefined;
-    // The shell's cancel ended the round (W-33): "round ended" stays, with the
-    // balance of the read that followed (`idle`), until the player starts
-    // another round.
-    const cancelEnded =
-      state.check?.cancel === "ended" ||
-      (state.endedRound?.status === "ended" && snapshot?.status === "idle");
-    const statusChanged = section(
-      status,
-      JSON.stringify([
-        localized.language,
-        state.blocking ?? null,
-        showRound ? snapshot.version : null,
-        showRound ? (state.check ?? null) : null,
-        options.intents.start !== undefined,
-        options.intents.cashOut !== undefined,
-        state.check?.cancel === "check-later",
-        options.intents.checkAgain !== undefined,
-        cancelEnded,
-      ]),
-      () =>
-        showRound
-          ? roundView(
-              el,
-              doc,
-              localized,
-              snapshot,
-              options.intents,
-              state.check,
-              cancelEnded,
-            )
-          : blockingView(el, doc, m, state, options.intents),
-    );
-
-    const endedRound = final ? undefined : state.endedRound;
-    section(
-      ended,
-      JSON.stringify([
-        localized.language,
-        endedRound ?? null,
-        options.verifyBaseUrl ?? null,
-        options.intents.copyText !== undefined,
-      ]),
-      () =>
-        endedRound === undefined
-          ? []
-          : roundIdAndVerify(el, m, endedRound.roundId, options, announce),
-    );
-
-    const plan = linkPlan(state, options.links, options.calling === true);
-    section(links, JSON.stringify([localized.language, plan]), () =>
-      linkView(el, m, plan),
-    );
-    links.hidden = plan.lobby === undefined && plan.deposit === undefined;
-
-    const statusHeadingElement = root.querySelector(`#${STATUS_HEADING_ID}`);
-    if (statusHeadingElement === null) {
-      status.removeAttribute("aria-labelledby");
-    } else {
-      status.setAttribute("aria-labelledby", STATUS_HEADING_ID);
-    }
-
-    // The polite announcement: the state's heading, or the slow notice.
-    const statusHeading = statusHeadingElement?.textContent;
+    // The polite announcement: the status line's heading, the slow notice, or
+    // the heading of a cover that is not the alert.
     if (state.slow) {
       announce(m["notice.slow"]);
-    } else if (statusHeading !== undefined && statusHeading !== null) {
-      announce(statusHeading);
+    } else if (shown.statusHeading?.textContent !== undefined) {
+      announce(shown.statusHeading.textContent);
+    } else if (cover !== undefined && !cover.alert) {
+      announce(cover.heading);
     }
 
-    // A move or cash-out not confirmed (W-16) is a status of the player's own
-    // action: its heading takes the focus when it appears on their action.
-    const unconfirmedShown =
-      showRound &&
-      snapshot.status === "active" &&
-      state.check?.unconfirmed !== undefined;
-    if (cause === "player") {
-      const target =
-        error !== undefined && alertChanged
-          ? root.querySelector<HTMLElement>(`#${ALERT_HEADING_ID}`)
-          : (snapshot !== undefined &&
-                roundEnded(snapshot, state.check?.cancel) &&
-                showRound) ||
-              (unconfirmedShown && statusChanged)
-            ? statusHeadingElement
-            : null;
-      if (target instanceof HTMLElement) {
-        blurFocusedGameFrame();
-        target.focus();
-      }
+    const active = doc.activeElement;
+    const input: FocusInput = {
+      state,
+      cause,
+      plan,
+      cover,
+      coverChanged,
+      coverHeading,
+      bar: shown,
+      frameHadFocus,
+      barControl,
+      focusDropped: active === null || active === doc.body,
+    };
+    const target = focusTarget(input);
+    if (target !== undefined) {
+      stage.blurFocusedFrame();
+      target.focus();
     }
+    intoGame.after(doc, input, stage.frame());
   };
 
-  const updateAll = (state: WrapperState, cause: ChangeCause): void => {
-    update(state, cause);
-    gameHost.hidden = !showsGame(state);
-    const notice = showsCopyNotice(state);
-    const text = notice
-      ? messagesFor(state.snapshot?.context.language).messages[
-          "notice.gameCantShow"
-        ]
-      : "";
-    if (gameNotice.textContent !== text) gameNotice.textContent = text;
-    gameNotice.hidden = !notice;
-  };
-
-  return Object.freeze({ root, gameHost, update: updateAll });
+  return Object.freeze({
+    root,
+    gameHost: stage.gameHost,
+    bar: bar.element,
+    stage: stage.element,
+    update,
+    started: intoGame.started,
+  });
 };

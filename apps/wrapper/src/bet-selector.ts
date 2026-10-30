@@ -9,12 +9,19 @@ import type { Messages } from "./messages.ts";
 import type { SnapshotInput } from "./round-input.ts";
 import type { Intents } from "./view-options.ts";
 
-/** The bet selector and the start control, from `snapshot.bet`. */
+/**
+ * The bet selector and the start control, from `snapshot.bet`, preset to
+ * `defaultBet` (W-31). The control reads "Place bet" at `idle` and "Play again"
+ * beside a result (W-57).
+ */
 export const betSelector = (
   el: Builder,
   m: Messages,
   snapshot: SnapshotInput,
   intents: Intents,
+  label: "action.placeBet" | "action.playAgain" = snapshot.status === "idle"
+    ? "action.placeBet"
+    : "action.playAgain",
 ): HTMLElement => {
   const choice = betChoice(snapshot.bet);
   let selected = choice.selected;
@@ -46,7 +53,7 @@ export const betSelector = (
     start !== undefined &&
       button(
         el,
-        m["action.start"],
+        m[label],
         "start",
         () => {
           const option =

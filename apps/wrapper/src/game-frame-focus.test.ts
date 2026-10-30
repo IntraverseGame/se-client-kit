@@ -104,14 +104,15 @@ describe("focus from a focused game frame (W-46)", () => {
     expect(document.activeElement?.textContent).toBe(m["status.won"]);
   });
 
-  it("leaves a focused game frame alone after a poll", () => {
+  it("a poll that makes a focused frame inert hands the focus to the status heading (the inert-frame rule)", () => {
     const { ui, frame, order } = roundWithFrame();
     frame.focus();
     ui.app.accept(
       { kind: "snapshot", snapshot: snapshotVector("cashorcrash-won-cashout") },
       "poll",
     );
-    expect(order).toEqual([]);
-    expect(document.activeElement).toBe(frame);
+    expect(frame.hasAttribute("inert")).toBe(true);
+    expect(order).toEqual(["frame blur()", "H1 focused"]);
+    expect(document.activeElement?.textContent).toBe(m["status.won"]);
   });
 });

@@ -1,6 +1,8 @@
 // T-9a, a listed operator that sends `hello` (W-49c, W-49d), in every project:
 // `welcome` arrives, the vendored Coin Flip round plays to a win inside the
-// operator's iframe, and `resize` arrives with exactly its fields; T-13's
+// operator's iframe, and `resize` arrives with exactly its fields, one value
+// in every state of the round at one width (`H_min`, W-49d), which the
+// operator page uses as a `min-height` and which then sends nothing more; T-13's
 // secret scan runs over the run and over every message the operator page
 // received. The round harness scripts the session's key (round-play.ts).
 
@@ -48,9 +50,10 @@ test.describe("T-9a: a listed operator's round", () => {
     secretScan.allowLaunchNavigation(launchUrl);
     const frame = await embedWrapper(page, launchUrl);
     await expect(heading(frame)).toHaveText(TEXT.idle);
-    await frame.getByRole("button", { name: TEXT.start }).click();
-    // The `starting` poll (W-35) runs on the page's clock.
-    const game = frame.locator("iframe");
+    await frame.getByRole("button", { name: TEXT.placeBet }).click();
+    // The `starting` poll (W-35) runs on the page's clock; the frame shows
+    // from its mount, so the round is ready once it takes input (W-58).
+    const game = frame.locator("iframe:not([inert])");
     await advanceUntil(page, () => game.isVisible());
     await expect(heading(frame)).toHaveText(TEXT.active);
     fakePlayApi.answer("continueRound", {
@@ -88,6 +91,9 @@ test.describe("T-9a: a listed operator's round", () => {
       message => (message as { height: number }).height,
     );
     expect(repeats(heights)).toEqual([]);
+    // `H_min`: the same in every state at one width, so it was sent once; the
+    // operator page set its `min-height` from it, and nothing more came.
+    expect(heights).toHaveLength(1);
     expect(
       secretsIn(
         received.map(message => JSON.stringify(message)),

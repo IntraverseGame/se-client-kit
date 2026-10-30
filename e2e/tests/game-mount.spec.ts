@@ -1,8 +1,8 @@
 // The game iframe's mount on the release bundle (W-37): D is the redeem
 // answer's `gameOrigin` and nothing else, checked against the configuration's
 // `gameOrigins`. On the list, the sandboxed frame loads the reference game at
-// D, with the Wrapper's origin as `parentOrigin`, and stays hidden while no
-// round is shown ready. Off the list, no frame is left and nothing is ever
+// D, with the Wrapper's origin as `parentOrigin`, and shows from its mount,
+// inert while no round is playable (W-57, W-58). Off the list, no frame is left and nothing is ever
 // requested from D.
 
 import {
@@ -14,7 +14,7 @@ import { GAME_ORIGIN, WRAPPER_ORIGIN } from "./harness/origins.ts";
 import { launch, statusHeading, TEXT } from "./harness/wrapper-page.ts";
 
 test.describe("the game iframe (W-37)", () => {
-  test("mounts the reference game at the redeem answer's D, hidden at idle", async ({
+  test("mounts the reference game at the redeem answer's D, shown and inert at idle", async ({
     page,
     fakePlayApi,
   }) => {
@@ -34,7 +34,8 @@ test.describe("the game iframe (W-37)", () => {
       "sandbox",
       "allow-scripts allow-same-origin",
     );
-    await expect(frame).toBeHidden();
+    await expect(frame).toBeVisible();
+    await expect(frame).toHaveAttribute("inert", "");
     await expect
       .poll(() =>
         page.frames().some(f => f.url().startsWith(`${GAME_ORIGIN}/`)),

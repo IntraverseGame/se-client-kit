@@ -113,7 +113,7 @@ test.describe("T-12: a cash-out and a last-row win", () => {
     await cashOut.click();
 
     await expect(statusHeading(page)).toHaveText(TEXT.won);
-    await expect(page.locator(".se-status")).toContainText(
+    await expect(page.locator(".se-round")).toContainText(
       `${TEXT.payout} ${payoutOf(CASH_OR_CRASH.won).formatted}`,
     );
     await expect(page.getByText(CASH_OR_CRASH_ROUND_ID)).toBeVisible();
@@ -172,7 +172,7 @@ test.describe("T-12: a cash-out and a last-row win", () => {
     // The payout is the Snapshot's own, never one computed from a multiplier.
     const payout = payoutOf(LAST_ROW.won);
     expect(payout).toEqual({ value: "289", formatted: "€2.89" });
-    await expect(page.locator(".se-status")).toContainText(
+    await expect(page.locator(".se-round")).toContainText(
       `${TEXT.payout} ${payout.formatted}`,
     );
     await expect(page.getByText(LAST_ROW_ROUND_ID)).toBeVisible();

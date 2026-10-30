@@ -72,7 +72,7 @@ const focusedHeading = (): string | undefined =>
 describe("focus on a book round's result (W-46, W-55)", () => {
   it("the poll that brings the result of the round the player started takes focus", async () => {
     const { ui, reads } = await atIdle(read(STARTING));
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.placeBet"])?.click();
     expect(focusedHeading()).toBeUndefined();
     reads.length = 0;
     reads.push(read(WON));
@@ -89,7 +89,7 @@ describe("focus on a book round's result (W-46, W-55)", () => {
 
   it("takes focus once: a later poll of the same result moves none", async () => {
     const { ui, reads } = await atIdle(read(STARTING));
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.placeBet"])?.click();
     reads.length = 0;
     reads.push(read(WON));
     await ui.step(500);
@@ -102,7 +102,7 @@ describe("focus on a book round's result (W-46, W-55)", () => {
 
   it("a start that is refused leaves the next poll's result without focus", async () => {
     const { ui } = await atIdle({ kind: "refused" });
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.placeBet"])?.click();
     ui.app.accept(read(STARTING), "poll");
     ui.app.accept(read(WON), "poll");
     expect(focusedHeading()).toBeUndefined();
@@ -119,7 +119,10 @@ describe("a changed round that is over (W-52, W-54)", () => {
     expect(allText(ui.host)).toContain(m["status.won"]);
     expect(allText(ui.host)).toContain("This round failed verification.");
     expect(allText(ui.host)).toContain("€1.94");
-    expect(ui.app.gameHost().hidden).toBe(true);
+    // The cover takes the game's place (W-55, W-57).
+    expect(
+      ui.host.querySelector<HTMLElement>(".se-overlay")?.dataset["form"],
+    ).toBe("cover");
   });
 
   it("a round that did not change shows no such line", () => {

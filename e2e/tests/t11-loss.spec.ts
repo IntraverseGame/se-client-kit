@@ -40,7 +40,9 @@ test.describe("T-11: a loss", () => {
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
     // The next bet is offered beside the result (W-31, W-40).
-    await expect(page.getByRole("button", { name: TEXT.start })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: TEXT.playAgain }),
+    ).toBeVisible();
     expect(servedFor(fakePlayApi, "continueRound")).toHaveLength(1);
     expect(await auditAccessibility(page)).toEqual([]);
   });
@@ -63,7 +65,7 @@ test.describe("T-11: a loss", () => {
     });
     // The loss's own `bet`: €1.00 (the default), €5.00, €10.00.
     await page.getByRole("radio", { name: "€5.00" }).check();
-    await page.getByRole("button", { name: TEXT.start }).click();
+    await page.getByRole("button", { name: TEXT.playAgain }).click();
     await expect(alertPanel(page)).toContainText(
       "Your balance is too low for this bet.",
     );

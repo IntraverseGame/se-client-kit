@@ -17,7 +17,11 @@ import {
 import { visibilityReturns } from "./balance-refresh.ts";
 import { boot } from "./boot.ts";
 import { embeddingOf } from "./embedding.ts";
-import { observeHeight } from "./height-observer.ts";
+import {
+  followBarLayout,
+  observeHeight,
+  stageMinimumOf,
+} from "./height-observer.ts";
 import { createJsonRpcTransport } from "./json-rpc.ts";
 import { ENVIRONMENT_CONFIG_PATH } from "./load-environment-config.ts";
 import { platformTimers } from "./timers.ts";
@@ -79,6 +83,8 @@ if (host !== null) {
           requestFrame: callback => {
             globalThis.requestAnimationFrame(callback);
           },
+          minHeightOf: element =>
+            stageMinimumOf(globalThis.getComputedStyle(element).minHeight),
         },
         onHeight,
       );
@@ -118,5 +124,14 @@ if (host !== null) {
         gameOrigins: config.gameOrigins,
         ownOrigin: globalThis.location.origin,
       }),
+  });
+  // The UI is rendered: the bar is sticky only while it takes at most half the
+  // viewport, and the alert line is reachable while it overflows (W-57).
+  followBarLayout({
+    doc: document,
+    createObserver: onResize => new ResizeObserver(onResize),
+    onViewportResize: onResize => {
+      globalThis.addEventListener("resize", onResize);
+    },
   });
 }

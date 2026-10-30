@@ -1,98 +1,80 @@
-// The states that replace the round (W-44) and the alert panel's errors
-// (W-41 to W-43): the session ended, another tab, the configuration error,
-// a rejected Snapshot, a failed verification, out of sync, a typed error with
-// its `requestId`, and the connection problem; beside a failed verification,
-// a cancel left to check later (W-33). The round id and the verify link
-// (W-39) are round-id-view.ts's.
+// The bar in the states that replace the round (W-44, W-57), and the alert
+// line's errors that do not stop the round (W-41 to W-43): a typed error with
+// its `requestId`, the generic error, and the connection problem. The states
+// that stop the round show on the stage's cover (stage-plan.ts); beside a
+// failed verification the bar keeps a cancel left to check later (W-33). The
+// round id and the verify link (W-39) are round-id-view.ts's.
 
 import { checkLaterView } from "./cancel-views.ts";
 import {
   ALERT_HEADING_ID,
+  type BarParts,
   button,
   type Builder,
   type Child,
+  EMPTY_BAR,
   field,
   heading,
   STATUS_HEADING_ID,
 } from "./dom.ts";
 import { type MessageKey, type Messages, problemMessage } from "./messages.ts";
 import { roundIdAndVerify } from "./round-id-view.ts";
-import type { Intents, ViewOptions } from "./view-options.ts";
-import type { WrapperState } from "./wrapper-state.ts";
+import type { ViewOptions } from "./view-options.ts";
+import { isFinal, type WrapperState } from "./wrapper-state.ts";
 
-/** The non-error states that replace the round (W-44). */
+/**
+ * The bar's slots in a state the stage's cover shows (W-44, W-57): the cancel
+ * left to check later ("still resolving — contact support" and "check again"),
+ * "Resolving" while the required cancel settles on a `resolving` read, and the
+ * round id with the verify link where the table gives them (out of sync, check
+ * later). The cover itself is stage-plan.ts's.
+ */
 export const blockingView = (
   el: Builder,
   doc: Document,
   m: Messages,
   state: WrapperState,
-  intents: Intents,
-): Child[] => {
+  options: ViewOptions,
+  announce: (text: string) => void,
+): BarParts => {
+  const roundId = state.snapshot?.roundId;
+  const roundLine = (): Child[] =>
+    roundId === undefined
+      ? []
+      : roundIdAndVerify(el, m, roundId, options, announce);
   switch (state.blocking) {
-    case "loading": {
-      return [
-        heading(
-          el,
-          doc,
-          "h1",
-          STATUS_HEADING_ID,
-          m["status.loading"],
-          "progress",
-          m["icon.progress"],
-        ),
-      ];
-    }
-    case "session-ended": {
-      // The lobby, the way to relaunch, is a control of its own (W-49f).
-      return [
-        heading(
-          el,
-          doc,
-          "h1",
-          STATUS_HEADING_ID,
-          m["state.sessionEnded"],
-          "info",
-          m["icon.info"],
-        ),
-        el("p", { class: "se-detail" }, [m["state.sessionEndedDetail"]]),
-      ];
-    }
-    case "other-tab": {
-      return [
-        heading(
-          el,
-          doc,
-          "h1",
-          STATUS_HEADING_ID,
-          m["state.otherTab"],
-          "info",
-          m["icon.info"],
-        ),
-        el("p", { class: "se-detail" }, [m["state.otherTabDetail"]]),
-      ];
-    }
-    case "unsupported-browser": {
-      return [
-        heading(
-          el,
-          doc,
-          "h1",
-          STATUS_HEADING_ID,
-          m["state.unsupported"],
-          "info",
-          m["icon.info"],
-        ),
-        el("p", { class: "se-detail" }, [m["state.unsupportedDetail"]]),
-      ];
-    }
     case "verification-failed":
     case "chain-unverified": {
-      return state.check?.cancel === "check-later"
-        ? checkLaterView(el, doc, m, intents)
-        : [];
+      const cancel = state.check?.cancel;
+      if (cancel === "check-later") {
+        return {
+          ...checkLaterView(el, doc, m, options.intents),
+          round: roundLine(),
+        };
+      }
+      return (cancel === "in-flight" || cancel === "settling") &&
+        state.snapshot?.status === "resolving"
+        ? {
+            ...EMPTY_BAR,
+            status: [
+              heading(
+                el,
+                doc,
+                "h1",
+                STATUS_HEADING_ID,
+                m["status.resolving"],
+                "progress",
+                m["icon.progress"],
+              ),
+            ],
+          }
+        : EMPTY_BAR;
+    }
+    case "out-of-sync": {
+      return { ...EMPTY_BAR, round: roundLine() };
     }
     default: {
-      return [];
+      return EMPTY_BAR;
     }
   }
 };
@@ -102,7 +84,6 @@ export type AlertContent = {
   readonly heading: string;
   readonly lines: readonly string[];
   readonly requestId?: string;
-  readonly roundId?: string;
   readonly retry: boolean;
   /** The control's text when it is not "Try again" (a voided start, W-42). */
   readonly retryLabel?: MessageKey;
@@ -120,79 +101,16 @@ const VOIDED_START_CODES: ReadonlySet<string> = new Set([
   "ROUND_VOIDED",
 ]);
 
-/** The texts of the states of one round (W-44). */
-const ROUND_STATE_TEXTS: Readonly<
-  Record<
-    "verification-failed" | "chain-unverified" | "out-of-sync",
-    { readonly heading: MessageKey; readonly detail: MessageKey }
-  >
-> = {
-  "verification-failed": {
-    heading: "state.verificationFailed",
-    detail: "state.verificationFailedDetail",
-  },
-  "chain-unverified": {
-    heading: "state.chainUnverified",
-    detail: "state.chainUnverifiedDetail",
-  },
-  "out-of-sync": {
-    heading: "state.outOfSync",
-    detail: "state.outOfSyncDetail",
-  },
-};
-
-/** The error to show in the alert panel, if any, by priority. */
+/**
+ * The error the bar's alert line shows, if any (W-41 to W-43): a typed error,
+ * the generic error, or the connection problem, by priority. None in a final
+ * state, where nothing more is shown but the cover (W-44).
+ */
 export const alertContent = (
   m: Messages,
   state: WrapperState,
 ): AlertContent | undefined => {
-  const roundId = state.snapshot?.roundId;
-  switch (state.blocking) {
-    case "configuration-error": {
-      return {
-        key: "configuration",
-        heading: m["state.configuration"],
-        lines: [m["state.configurationDetail"]],
-        retry: false,
-      };
-    }
-    case "session-changed": {
-      // W-53: shown as "this round failed verification", in place of the
-      // round or, at `idle`, of the bet selector; final until a reload.
-      return {
-        key: "session-changed",
-        heading: m["state.verificationFailed"],
-        lines: [m["state.sessionChangedDetail"]],
-        retry: false,
-      };
-    }
-    case "snapshot-rejected": {
-      return {
-        key: "rejected",
-        heading: m["state.rejected"],
-        lines: [m["state.rejectedDetail"]],
-        retry: false,
-      };
-    }
-    case "verification-failed":
-    case "chain-unverified":
-    case "out-of-sync": {
-      const texts = ROUND_STATE_TEXTS[state.blocking];
-      return {
-        key: state.blocking,
-        heading: m[texts.heading],
-        lines: [m[texts.detail]],
-        ...(roundId === undefined ? {} : { roundId }),
-        retry: false,
-      };
-    }
-    default: {
-      break;
-    }
-  }
-  if (state.blocking !== undefined && state.blocking !== "loading") {
-    return undefined;
-  }
+  if (isFinal(state)) return undefined;
   const { problem } = state;
   if (problem !== undefined) {
     // `INSUFFICIENT_FUNDS` at `idle` keeps the deposit control (W-49f).
@@ -207,14 +125,6 @@ export const alertContent = (
       ...(VOIDED_START_CODES.has(problem.code)
         ? { retryLabel: "action.backToStart" as const }
         : {}),
-    };
-  }
-  if (state.gameIncompatible === true) {
-    return {
-      key: "game-incompatible",
-      heading: m["error.heading"],
-      lines: [m["error.gameIncompatible"]],
-      retry: false,
     };
   }
   if (state.refused === true) {
@@ -239,14 +149,18 @@ export const alertContent = (
   return undefined;
 };
 
-/** The alert panel's content for an error. */
+/**
+ * The alert line's content for an error. `plain` when a cover state owns the
+ * page's alert region (W-57): the same text and icon, but not the alert's
+ * heading, so the focus never goes to it.
+ */
 export const alertView = (
   el: Builder,
   doc: Document,
   m: Messages,
   error: AlertContent,
   options: ViewOptions,
-  announce: (text: string) => void,
+  plain = false,
 ): Child[] => {
   const { retry } = options.intents;
   return [
@@ -254,7 +168,7 @@ export const alertView = (
       el,
       doc,
       "h2",
-      ALERT_HEADING_ID,
+      plain ? "" : ALERT_HEADING_ID,
       error.heading,
       "error",
       m["icon.error"],
@@ -262,9 +176,6 @@ export const alertView = (
     ...error.lines.map(line => el("p", { class: "se-detail" }, [line])),
     error.requestId !== undefined &&
       field(el, m["label.requestId"], error.requestId),
-    ...(error.roundId === undefined
-      ? []
-      : roundIdAndVerify(el, m, error.roundId, options, announce)),
     error.retry &&
       retry !== undefined &&
       button(el, m[error.retryLabel ?? "action.retry"], "retry", retry),

@@ -121,11 +121,9 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     }
   };
 
-  /**
-   * A read nobody asked for (W-33, RFC-001 Q16), applied only as a Snapshot or
-   * the session's end: after the shell's cancel ended a round, and when the
-   * page returns. A final state is kept (`acceptRead` never replaces one).
-   */
+  // A read nobody asked for (W-33, RFC-001 Q16), applied only as a Snapshot or
+  // the session's end: after the shell's cancel ended a round, and when the
+  // page returns. A final state is kept (`acceptRead` never replaces one).
   const readQuiet = (): Promise<void> =>
     readQuietly(readSnapshot, read => apply(acceptRead(state, read), "poll"));
 
@@ -269,6 +267,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
               start: bet => {
                 startedFrom = state.endedRound?.roundId;
                 focus.started();
+                view.started();
                 start(bet);
               },
             };
