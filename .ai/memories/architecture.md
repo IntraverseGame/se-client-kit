@@ -214,9 +214,12 @@ structure below.
   (`specs/wrapper/the-single-screen.md`, W-57, W-58): the frame shown all
   session over one control bar, `inert` except at `active` with the verdict
   `ready` (an explicit list of conditions; a connection problem or a typed
-  error does not make it inert); the bridge's hold (W-38: an `active` Snapshot
-  with no `ready` verdict, a not-held round included, is never forwarded, at
-  mount, `hello`, and after); `RoundState.pending` beside `unconfirmed` (derived:
+  error does not make it inert); W-38's hold, applied by the session before
+  `sendSnapshot` (in `show` and `mountGame`; the bridge's type is unchanged):
+  an `active` Snapshot with no `ready` verdict, a not-held round included, is
+  never given to the bridge; the verdict is evaluated after `observe`, which
+  awaits the tip check, and the hand-off after the transition to `ready` is
+  the release; `RoundState.pending` beside `unconfirmed` (derived:
   the signer's pending move or cash-out only while its phase is `open` or
   `adopted`; absent once `stale`, out of sync, re-issued, failed, over, or
   ended; kept beside `unconfirmed` after the lost resend), read only for "Waiting for your move to be confirmed." while an

@@ -418,15 +418,17 @@ are in brackets.
   `environment` of the configuration it was opened with, beside the allow-list
   and its own origin; the UI's mount cannot. Otherwise it returns
   `{ ok: true, bridge }`: `sendSnapshot` takes a validated Snapshot (ignored
-  when its `version` is below the latest given; decided with the single screen,
-  RFC-004, to be built, and it replaces the text before it when the Wrapper
-  ships the single screen: an `active` Snapshot is held unless the shell's
-  verdict for its round is `ready`, at mount, at `hello`, and after, by W-38's
-  hold), `state()` is `awaiting-hello`, `ready`, `incompatible`, or `closed`,
-  and `close()` unsubscribes. A message counts only when its `source` is the
-  frame and its `origin` is D; the parser reads only own data properties of a
-  plain object, so no game code runs. The rules of the message set, the
-  allow-list, and the order of the pick checks are in
+  when its `version` is below the latest given; its type does not change with
+  the single screen (RFC-004, decided 2026-10-30, to be built, and it replaces
+  the text before it when the Wrapper ships the single screen): W-38's hold is
+  the session's, which gives `sendSnapshot` an `active` Snapshot only when its
+  round is the session's current round with the verdict `ready` and not out of
+  sync, evaluated after the round observed it, in `session-reads.ts`'s `show`
+  and `session-play.ts`'s `mountGame`), `state()` is `awaiting-hello`, `ready`,
+  `incompatible`, or `closed`, and `close()` unsubscribes. A message counts only
+  when its `source` is the frame and its `origin` is D; the parser reads only
+  own data properties of a plain object, so no game code runs. The rules of the
+  message set, the allow-list, and the order of the pick checks are in
   [W-38](../wrapper/the-game-iframe-and-the-controller-boundary.md). The game's
   copy of a Snapshot is built field by field from the allow-list, never by
   removing fields. It posts only with `targetOrigin = D` (a frame that throws on
