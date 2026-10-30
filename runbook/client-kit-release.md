@@ -574,12 +574,29 @@ enter this repository, an issue, or a log):
      **`PAGES_OPERATOR_ORIGINS`**: whitespace-separated lists of bare `https`
      origins (no path, no trailing slash), feeding both the configuration
      documents and the CSP's `connect-src`, `frame-src`, and `frame-ancestors`.
-     `PAGES_GAME_ORIGINS` holds `https://se-games-stage.pages.dev`, the staging
-     game origin (the infrastructure owner, 2026-10-27). Set (the infrastructure
-     owner, 2026-10-27), today to placeholders: the configuration's
-     disjoint-origins rule (W-49) refuses an origin that is both a game origin
-     and an operator origin, so `PAGES_OPERATOR_ORIGINS` holds a placeholder
-     distinct from the others.
+     Set (the infrastructure owner, 2026-10-27). `PAGES_GAME_ORIGINS` holds
+     `https://se-games-stage.pages.dev`, the staging game origin (the
+     infrastructure owner, 2026-10-27); `PAGES_RPC_ORIGINS` the origin of
+     staging's RPC endpoint (below); `PAGES_OPERATOR_ORIGINS` the staging
+     operators' origins (2026-10-30). Every entry must be `https`: the deploy's
+     headers step refuses any other entry (for `PAGES_RPC_ORIGINS`, through
+     `PAGES_RPC_ENDPOINTS`, which it must match), so even `http://localhost`,
+     which the Wrapper's validator accepts, fails the deploy. The
+     configuration's disjoint-origins rule (W-49) refuses an operator list that
+     holds the Wrapper's or the verifier's origin or a game origin (each site's
+     document is checked against its own origin), or a repeated entry; the
+     deploy adds the Wrapper's origin to the game's `frame-ancestors` itself.
+     `gh secret set` replaces the whole value, and nobody can read a secret
+     back. The exact current list is `operatorOrigins` in the Wrapper site's
+     served `<site>/environment-config.json` (public by design); the live
+     `se-games-stage` page's `frame-ancestors` shows it too, sorted, after the
+     Wrapper's origin. Both show the list as of the last successful deploy, not
+     necessarily the secret: when `gh secret list --env pages-stage` shows the
+     secret updated after the last successful Pages run, the two may differ. To
+     add an operator, set the secret to the current list plus the new origin
+     (`gh secret set PAGES_OPERATOR_ORIGINS --env pages-stage`), then redeploy
+     `main` (**Redeploy**, below): the configuration documents and the Wrapper's
+     and the game's `frame-ancestors` carry it only from that deployment.
    - **`PAGES_WRAPPER_ORIGIN`**, **`PAGES_VERIFIER_ORIGIN`**: the two sites'
      origins (`https://host`). Set.
    - **`PAGES_CHAIN_PINS`**: JSON with exactly `environment`, `runtimeSigner`,
@@ -741,8 +758,8 @@ Check them again after any change to `headers.json`, the proxy, the
 configuration, the reference game, or the projects' settings.
 
 **Redeploy** `main` without a commit: run the Pages workflow by hand on `main`
-(Actions, Pages, Run workflow). Needed after a change to a Pages project
-setting.
+(Actions, Pages, Run workflow). Needed after a change to a Pages project setting
+or to a `pages-stage` secret.
 
 **Rollback:** in the Cloudflare dashboard, the project's Deployments, choose the
 last good production deployment and Rollback; or the Pages API's rollback of a
