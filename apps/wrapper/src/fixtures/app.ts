@@ -131,9 +131,13 @@ export const mount = (
 const text = (element: Element | null): string =>
   (element?.textContent ?? "").replaceAll(/\s+/gu, " ").trim();
 
-/** The status section's heading. */
+/** The heading of the bar's status line (W-57). */
 export const statusHeading = (host: HTMLElement): string =>
   text(host.querySelector(".se-status h1"));
+
+/** The heading of the stage's cover, when one shows (W-57). */
+export const coverHeading = (host: HTMLElement): string =>
+  text(host.querySelector('.se-overlay[data-form="cover"] h1'));
 
 /** The text of the `role="alert"` panel. */
 export const alertText = (host: HTMLElement): string =>
@@ -143,12 +147,24 @@ export const alertText = (host: HTMLElement): string =>
 export const liveText = (host: HTMLElement): string =>
   text(host.querySelector('[aria-live="polite"]'));
 
+/**
+ * A button's label: its text without a display value beside it (the cash-out
+ * control's multiplier, W-57).
+ */
+const labelOf = (button: HTMLButtonElement): string => {
+  const copy = button.cloneNode(true) as HTMLElement;
+  for (const value of copy.querySelectorAll(".se-button__value")) {
+    value.remove();
+  }
+  return text(copy);
+};
+
 /** A button by its visible label. */
 export const buttonNamed = (
   host: HTMLElement,
   name: string,
 ): HTMLButtonElement | undefined =>
-  [...host.querySelectorAll("button")].find(button => text(button) === name);
+  [...host.querySelectorAll("button")].find(button => labelOf(button) === name);
 
 /** A link whose text starts with `name`. */
 export const linkNamed = (

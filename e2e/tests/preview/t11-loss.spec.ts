@@ -24,7 +24,9 @@ test.describe("T-11 (preview): a loss", () => {
     await session.launch(page, "coin-flip");
     await playUntil("lost", () => playCoinFlipRound(page, session));
     // The next bet is offered beside the loss's result (W-31, W-40).
-    await expect(page.getByRole("button", { name: TEXT.start })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: TEXT.playAgain }),
+    ).toBeVisible();
     await expectAccessibleResult(page);
     await secretScan.expectClean();
   });

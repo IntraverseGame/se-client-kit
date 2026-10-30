@@ -10,7 +10,7 @@ import type { FrameLocator, Locator, Page } from "@playwright/test";
 
 import { auditAccessibility } from "../harness/accessibility.ts";
 import { expect } from "../harness/worker-browser.ts";
-import { statusHeading, TEXT } from "../harness/wrapper-page.ts";
+import { playableFrame, statusHeading, TEXT } from "../harness/wrapper-page.ts";
 import type { PreviewSession } from "./preview-session.ts";
 import { payoutsAgree } from "./preview-snapshots.ts";
 import type { RoundOutcome } from "./round-loop.ts";
@@ -28,15 +28,26 @@ const stack = { timeout: STACK_STEP_TIMEOUT_MS } as const;
 export const gameFrame = (page: Page): FrameLocator =>
   page.frameLocator("iframe");
 
-/** Starts a round with the bet the Wrapper offers (it never chooses one). */
+/**
+ * Starts a round with the bet the Wrapper offers (it never chooses one): "Place
+ * bet" at `idle`, or "Play again" beside the last round's result (W-57).
+ */
 export const startRound = async (page: Page): Promise<void> => {
-  await page.getByRole("button", { name: TEXT.start }).click(stack);
+  await page
+    .getByRole("button", {
+      name: new RegExp(`^(${TEXT.placeBet}|${TEXT.playAgain})$`, "u"),
+    })
+    .click(stack);
 };
 
-/** Waits until the Wrapper shows the round `active` (W-26 passed) with its game. */
+/**
+ * Waits until the Wrapper shows the round `active` (W-26 passed) with its game
+ * playable: the frame shows from its mount, so the signal is the frame without
+ * `inert` and the status "Your round is in play" (W-57, W-58).
+ */
 export const awaitActive = async (page: Page): Promise<void> => {
   await expect(statusHeading(page)).toHaveText(TEXT.active, stack);
-  await expect(page.locator("iframe")).toBeVisible(stack);
+  await expect(playableFrame(page)).toBeVisible(stack);
 };
 
 /** Waits until a tile or a call of the game takes a pick, then clicks it. */
@@ -106,7 +117,7 @@ export const expectSettledRound = async (
     }),
   ).toBe(true);
   const paid = (settled.payout?.value ?? 0n) > 0n;
-  const line = page.locator(".se-status");
+  const line = page.locator(".se-round");
   await (paid && settled.payout !== undefined
     ? expect(line).toContainText(`${TEXT.payout} ${settled.payout.formatted}`)
     : expect(line).not.toContainText(TEXT.payout));

@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { allText, buttonNamed, mount, statusHeading } from "./fixtures/app.ts";
 import { SNAPSHOT_VECTORS, snapshotVector } from "./fixtures/vectors.ts";
 import { messagesFor } from "./messages.ts";
-import type { RoundStatus, SnapshotInput } from "./round-input.ts";
+import type { RoundCheck, RoundStatus, SnapshotInput } from "./round-input.ts";
 
 const m = messagesFor("en").messages;
 
@@ -72,9 +72,26 @@ const recording = <T extends object>(
 
 const topLevelOf = (path: string): string => path.split(".")[0] ?? "";
 
+/** The shell's checks of a round it holds and found ready (W-26). */
+const HELD: RoundCheck = Object.freeze({
+  verdict: "ready",
+  outOfSync: false,
+  cashOutOffered: false,
+  cancel: "none",
+});
+
+/**
+ * `snapshot` rendered as a round the shell holds, ready: an `active` round it
+ * does not hold shows the stage's cover instead (W-57).
+ */
 const rendered = (snapshot: SnapshotInput) => {
   const ui = mount();
-  ui.app.accept({ kind: "snapshot", snapshot }, "poll");
+  ui.app.accept(
+    snapshot.status === "idle"
+      ? { kind: "snapshot", snapshot }
+      : { kind: "snapshot", snapshot, check: HELD },
+    "poll",
+  );
   return ui;
 };
 
@@ -178,7 +195,7 @@ describe("status details (W-31 to W-33)", () => {
       'input[type="radio"]',
     );
     radios[1]?.click();
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.placeBet"])?.click();
     expect(started).toEqual(["500 EUR"]);
   });
 });

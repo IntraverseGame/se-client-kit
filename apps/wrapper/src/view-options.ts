@@ -39,5 +39,10 @@ export type ViewOptions = {
   readonly calling?: true;
 };
 
-/** Why the state changed: only a player's own action moves focus (W-46). */
-export type ChangeCause = "poll" | "player";
+/**
+ * Why the state changed: only a player's own action moves focus (W-46). `pick`
+ * is the player's pick in the game frame: like `player`, except that an error
+ * it is answered with keeps the focus in the frame while the frame stays
+ * playable (W-46, W-58).
+ */
+export type ChangeCause = "poll" | "player" | "pick";

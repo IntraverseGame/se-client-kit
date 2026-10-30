@@ -56,7 +56,7 @@ export type WrapperState = {
   readonly refused?: true;
   /** The game's `hello` did not declare what the Wrapper sends (W-38). */
   readonly gameIncompatible?: true;
-  /** The latest `playback` copy failed closed (W-38, W-55; game-visibility.ts). */
+  /** The latest `playback` copy failed closed (W-38, W-55; stage-plan.ts). */
   readonly gameCopyFailed?: true;
   readonly endedRound?: EndedRound;
   /** The typed error of the last call, shown beside the round (W-42). */

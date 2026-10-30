@@ -83,7 +83,7 @@ ADR-006 is accepted.
   | ------------------- | --------- | -------------------------- | --------------------------------------------------------------- |
   | operator to Wrapper | `hello`   | `schema`, `type`           | the handshake: "I am the page that embeds you"                  |
   | Wrapper to operator | `welcome` | `schema`, `type`           | the handshake is accepted; the operator stops repeating `hello` |
-  | Wrapper to operator | `resize`  | `schema`, `type`, `height` | the height the Wrapper's content needs (W-49d)                  |
+  | Wrapper to operator | `resize`  | `schema`, `type`, `height` | the least height the Wrapper's content needs (W-49d)            |
 
   The operator page sends one kind of message, `hello`. Nothing it sends can
   start a round, sign, choose a URL, or change what the Wrapper shows beyond
@@ -192,42 +192,36 @@ ADR-006 is accepted.
 ## `resize`
 
 - **W-49d.** After `welcome`, the Wrapper SHOULD tell the operator page the
-  height its content needs:
+  least height its content needs (RFC-004 Q11, decided 2026-10-29;
+  [ADR-010](../../decisions/ADR-010-resize-height-is-a-minimum.md), accepted):
 
-  | Field    | Value                                                                                                                                                                                                                                                          |
-  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `schema` | `"se.operator/1"`                                                                                                                                                                                                                                              |
-  | `type`   | `"resize"`                                                                                                                                                                                                                                                     |
-  | `height` | the height the content needs: the `<body>`'s box in CSS pixels (never the document's `scrollHeight`, which is not below the viewport), an integer from 1 to 16384; a larger value is sent as 16384 (the bound is provisional, decided 2026-10-18, RFC-001 Q15) |
+  | Field    | Value                                                                                                                                                                                                                                                                                                                                                                                           |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `schema` | `"se.operator/1"`                                                                                                                                                                                                                                                                                                                                                                               |
+  | `type`   | `"resize"`                                                                                                                                                                                                                                                                                                                                                                                      |
+  | `height` | the least height the Wrapper's content needs at its current width and text size, `H_min = ceil(B) + S`: the bar's reserved height, measured and rounded up, plus the stage's minimum (provisionally 270 CSS pixels); never the viewport's height or the `<body>`'s box; an integer from 1 to 16384; a larger value is sent as 16384 (the bound is provisional, decided 2026-10-18, RFC-001 Q15) |
+  - The Wrapper fills its iframe's viewport
+    ([W-57](./the-single-screen.md#the-height)), so the `<body>`'s box would
+    only echo the iframe's height, and could loop with a page that sets the
+    iframe's height from it: `height` is the minimum instead. An operator page
+    uses it as a **minimum** (`min-height`), never as a size.
   - Sent only after `welcome`, only to the fixed operator origin, with no reply;
     the operator page MAY ignore it.
-  - Sent once right after `welcome`, then whenever the height changes (observed
-    with `ResizeObserver`), at most once per animation frame, and never with the
-    same value twice in a row. It may be sent in every state after `welcome`,
-    error states included, and in no state before it.
+  - Sent once right after `welcome`, then whenever that minimum changes (a width
+    or text-size change, observed with `ResizeObserver` on the bar and the
+    stage), at most once per animation frame, and never with the same value
+    twice in a row; never when only the iframe's height changes. It may be sent
+    in every state after `welcome`, error states included, and in no state
+    before it; it does not change with the state.
   - No width: the operator page lays out the width, and the Wrapper's layout
     follows it (W-47's 200 % zoom rule).
   - It is the only message the Wrapper sends on its own. No game message and no
     Snapshot field changes it except through the Wrapper's own layout.
-  - **In the single screen** (RFC-004 Q11, decided 2026-10-29, to be built; it
-    replaces the `height` above when the Wrapper ships the single screen): the
-    Wrapper fills its iframe's viewport
-    ([W-57](./the-single-screen.md#the-height)), so the `<body>`'s box would
-    only echo the iframe's height, and could loop with a page that sets the
-    iframe's height from it. `height` is then **the least height the Wrapper's
-    content needs at its current width and text size**, `H_min = ceil(B) + S`:
-    the bar's reserved height, measured and rounded up, plus the stage's minimum
-    (provisionally 270 CSS pixels), never the viewport's height or the
-    `<body>`'s box; an integer from 1 to 16384 as above. It is sent once right
-    after `welcome`, then when that minimum changes (a width or text-size
-    change), never when only the iframe's height changes, under the other rules
-    above. The message, its fields, and the meaning in W-49b's table are
-    unchanged, so `se.operator/1` and ADR-006 are unchanged
-    ([ADR-010](../../decisions/ADR-010-resize-height-is-a-minimum.md),
-    accepted). An operator page uses `height` as a **minimum**, never as a size.
-    This changes what an operator page that sets the iframe's height from
-    `resize` gets: its iframe would shrink to the minimum, so the guidance below
-    says `min-height`, and the Wrapper's release notes name the change.
+  - The message, its fields, and the meaning in W-49b's table are those of
+    `se.operator/1`, and ADR-006 is unchanged. An operator page that set the
+    iframe's height from `resize` would now shrink it to the minimum, so the
+    guidance below says `min-height`, and the Wrapper's release notes name the
+    change.
 
 ## Lobby and deposit
 
@@ -511,12 +505,12 @@ the Wrapper app):
 7. **Configuration.** An `operatorOrigins` that holds the SE origin or an entry
    of `gameOrigins`, or a `gameOrigins` that holds the SE origin, is refused.
 8. **`resize`.** Only after `welcome`, only to the fixed origin, an integer
-   within the bound, coalesced, never the same value twice in a row. In the
-   single screen (to be built): the value is `H_min`, the same in every state
-   and for every iframe height at one width; a change of the iframe's height
-   alone, or the Wrapper's scroll bar below the minimum, sends nothing; a width
-   or text-size change sends the new minimum; a fake operator page that sets
-   `min-height` from it settles with no further message.
+   within the bound, coalesced, never the same value twice in a row. The value
+   is `H_min`, the same in every state and for every iframe height at one width;
+   a change of the iframe's height alone, or the Wrapper's scroll bar below the
+   minimum, sends nothing; a width or text-size change sends the new minimum; a
+   fake operator page that sets `min-height` from it settles with no further
+   message.
 9. **Lobby and deposit.** Each control only in the states W-49f allows and only
    when its link is present in the latest validated Snapshot; the lobby only on
    a listed origin. No control for a link that fails `new URL`, is not `https:`,

@@ -4,14 +4,14 @@ Part of the [Wrapper spec](../wrapper.md), section
 [Contract](../wrapper.md#contract).
 
 Status: **decided by the human, 2026-10-29 and 2026-10-30**
-([RFC-004](../../rfcs/archived/RFC-004-single-screen-wrapper.md), archived). The
-shell's part is built: W-38's hold, applied by the session
-([The hold](./the-game-iframe-and-the-controller-boundary.md)), and
-`RoundState.pending` ([below](#a-pick-during-an-error-or-offline)). The
-Wrapper's part is **to be built**. Until it is built, the Wrapper behaves as the
-other section files say today. Where a requirement elsewhere changes, that file
-says so with the words "when the Wrapper ships the single screen", and this
-file's text replaces the old one then.
+([RFC-004](../../rfcs/archived/RFC-004-single-screen-wrapper.md), archived).
+Built: the shell's part, W-38's hold applied by the session
+([The hold](./the-game-iframe-and-the-controller-boundary.md)) and
+`RoundState.pending` ([below](#a-pick-during-an-error-or-offline)), and the
+Wrapper's: the stage and the bar (`apps/wrapper/src/render.ts`, `stage-view.ts`,
+`bar-view.ts`), what the stage shows and when the frame takes input
+(`stage-plan.ts`), the focus rules (`focus-rules.ts`), and the height
+(`styles.css`, `height-observer.ts`).
 
 The Wrapper is one screen: the game frame stays in one place at one size for the
 whole session, over one control bar that changes in place. The shell keeps every
@@ -43,7 +43,13 @@ will carry the round id, Q8).
      - the **alert line**: the `role="alert"` region for an error that does not
        stop the round (a typed error, the generic error, a connection problem),
        except when a cover state owns the region ("One `role="alert"` region at
-       a time", below);
+       a time", below). **The alert overlays the status**: the alert line has no
+       slot of its own; it sits in the status line's slot, under the status
+       heading, in the place of the status detail. A state that shows a status
+       detail with an error (the waiting detail below, the slow notice, the
+       state's own detail) keeps it, between the heading and the alert, and the
+       slot scrolls. The status line and the alert line together are the
+       **status slot**;
      - the **primary controls**: the bet selector and the start control, or the
        cash-out control, or "check again", as the state gives them;
      - the **round line**: the payout and the balance on a result, and the round
@@ -152,12 +158,29 @@ common one), so the stage's ratio follows it.
   `body` take `height: 100%`, with no margin; the root element sets
   `scrollbar-gutter: stable`. The bar sits at the bottom at a height `B` that
   depends only on the width and the player's text size or zoom: it reserves the
-  height of its tallest state at that width (the status line with one line of
-  detail, the alert line, one row of controls, and the round line), so no state
-  makes it grow and the stage never moves. The stage takes the rest,
-  `viewport height − B`.
+  height of its tallest state at that width (the status slot, one row of
+  controls, the operator links, and the round line), so no state makes it grow
+  and the stage never moves. The stage takes the rest, `viewport height − B`.
+  The status slot reserves the status heading (one line) and one detail line,
+  the taller of the status detail and the alert line (the alert's heading and
+  its first line): the alert takes the detail line's place when it shows, so an
+  error does not change `B`.
+- **The slots by width** (CSS `rem`, so they follow the text size):
+  - from 64rem: the status slot takes the rest of the width, with the primary
+    controls and the operator links side by side on its right; the round line is
+    a row of its own under them;
+  - from 40rem to 64rem: the status slot spans two rows on the left, the primary
+    controls over the operator links on the right; the round line under them;
+  - under 40rem: the slots stack, in the order status slot, primary controls,
+    round line, operator links.
+
+  The round line reserves one row of its controls from 72rem up and two rows
+  below. The development badge (W-26a) takes a row above the slots only while it
+  shows; it is set for the session, so it never changes `B` between states.
+
 - **Overflow stays in the bar.** Text that does not fit in its slot (a long
-  error's detail) scrolls within that slot: the alert line becomes a scrollable
+  error's detail, or a status detail and an error shown together) scrolls within
+  that slot: the status slot, which holds the alert line, becomes a scrollable
   region, reachable by keyboard (`tabindex="0"` while it overflows), inside the
   bar's reserved height. It never spills onto the stage, so it never covers a
   playable frame; the cover holds only the states the table puts on it. `B`
@@ -216,11 +239,13 @@ common one), so the stage's ratio follows it.
 
   `inert` takes the frame out of the tab order and the accessibility tree and
   blocks the player's input to it; the browser applies it to the frame's
-  document (to be confirmed in the three browser projects, T-14a and T-27). It
-  does not stop the game: its scripts, timers, animation, audio, `postMessage`,
-  and rendering run as before, and the bridge keeps sending it Snapshots
-  (subject to W-38's hold). The scrim is drawn over the inert frame while the
-  round is checked, and the cover in the states the table names.
+  document (`e2e/tests/t14a-inert-frame.spec.ts` checks a click and the Tab key
+  in each browser project; confirmed in Chromium, 2026-10-30; Firefox and WebKit
+  to be confirmed by their CI jobs). It does not stop the game: its scripts,
+  timers, animation, audio, `postMessage`, and rendering run as before, and the
+  bridge keeps sending it Snapshots (subject to W-38's hold). The scrim is drawn
+  over the inert frame while the round is checked, and the cover in the states
+  the table names.
 
   **The rule for games.** A game MUST play its reveal and a book round's
   playback to the end with no player input, and MUST NOT need input outside an
@@ -263,11 +288,12 @@ second action is signed at the sequence.
 - When a connection problem, a typed error, or the generic error is shown while
   a move or cash-out is pending, the status line's detail reads **new** "Waiting
   for your move to be confirmed." (or "Waiting for your cash-out to be
-  confirmed."), beside the alert line, until a Snapshot shows the action
-  applied, the alert clears, or the unconfirmed state replaces it. With no error
-  shown it never appears, so normal play, where a move is pending only between
-  its send and its answer, never flashes it. The status heading stays "Your
-  round is in play", and the multiplier stays that of the last Snapshot.
+  confirmed."), with the alert line in the status slot, until a Snapshot shows
+  the action applied, the alert clears, or the unconfirmed state replaces it.
+  With no error shown it never appears, so normal play, where a move is pending
+  only between its send and its answer, never flashes it. The status heading
+  stays "Your round is in play", and the multiplier stays that of the last
+  Snapshot.
 - The cash-out control is not offered while an action is pending or a call is in
   flight (W-24, `cashOutOffered`).
 - **`RoundState.pending`** (`move` or `cash-out`) is the flag the session gives

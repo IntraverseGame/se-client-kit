@@ -39,6 +39,7 @@ const checkOf = (round: RoundState): RoundCheck => ({
   ...(round.unconfirmed === undefined
     ? {}
     : { unconfirmed: round.unconfirmed }),
+  ...(round.pending === undefined ? {} : { pending: round.pending }),
 });
 
 /** A session's answer, as the UI's read port gives it. */
@@ -134,6 +135,9 @@ const mountGame = (
   const frame = doc.createElement("iframe");
   frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
   frame.setAttribute("referrerpolicy", "no-referrer");
+  // Inert from its mount: no round is playable yet (W-58). The UI's next
+  // update keeps it so until one is.
+  frame.toggleAttribute("inert", true);
   frame.title = messagesFor(app.state().snapshot?.context.language).messages[
     "label.game"
   ];
@@ -215,8 +219,8 @@ export const wireSession = (
     app.block("session-ended");
   });
   session.onChange(read => {
-    // A pick is the player's own action (W-46).
-    show(read, "player");
+    // A pick is the player's own action, made in the frame (W-46).
+    show(read, "pick");
   });
   app.connect({
     readSnapshot: async (): Promise<SnapshotRead> =>

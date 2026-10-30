@@ -8,6 +8,7 @@
 import { expect, test } from "./harness/fixtures.ts";
 import { KEY_DRAW_BYTES } from "./harness/random-stub.ts";
 import {
+  coverHeading,
   launchAndStart,
   scriptStartingRound,
   servedFor,
@@ -37,7 +38,7 @@ test.describe("T-13: no secret", () => {
       .poll(() => servedFor(fakePlayApi, "getSnapshot").length)
       .toBeGreaterThan(1);
     await page.reload();
-    await expect(statusHeading(page)).toHaveText(TEXT.sessionEnded);
+    await expect(coverHeading(page)).toHaveText(TEXT.sessionEnded);
     await secretScan.expectClean();
   });
 });

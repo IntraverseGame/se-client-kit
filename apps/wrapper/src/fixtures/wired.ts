@@ -67,5 +67,16 @@ export const round = (overrides: Partial<RoundState> = {}): RoundState => ({
   ...overrides,
 });
 
+/** The game frame is in place on the stage (hidden only in final states). */
 export const gameShown = (ui: Mounted): boolean =>
   ui.host.querySelector<HTMLElement>(".se-game")?.hidden === false;
+
+/** The game frame takes input: mounted and not `inert` (W-58). */
+export const gamePlayable = (ui: Mounted): boolean => {
+  const frame = ui.host.querySelector("iframe");
+  return frame !== null && !frame.hasAttribute("inert");
+};
+
+/** The stage's overlay form: `none`, `scrim`, or `cover` (W-57). */
+export const overlayForm = (ui: Mounted): string | undefined =>
+  ui.host.querySelector<HTMLElement>(".se-overlay")?.dataset["form"];

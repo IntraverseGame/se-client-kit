@@ -733,9 +733,9 @@ verifier's sites and check 5 on the game's site:
    `X-Content-Type-Options`. A launch of `coin-flip-v1` through the Wrapper
    loads `<game origin>/?parentOrigin=...` in its frame with a 200 and no
    `frame-ancestors` or `frame-src` violation in the browser console (the frame
-   stays hidden until a round is ready, W-31). On staging, a started round
-   passes the tip check and shows the game, under the degraded indicator
-   (W-26a).
+   shows from its mount, inert until a round is ready, W-57, W-58). On staging,
+   a started round passes the tip check and the game takes input, under the
+   degraded indicator (W-26a).
 
 Check them again after any change to `headers.json`, the proxy, the
 configuration, the reference game, or the projects' settings.

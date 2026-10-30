@@ -108,8 +108,8 @@ the specs' headings.
     2026-10-28): a book round's base-mode playback, nothing signed, its checks,
     the RTP
   - [The single screen](./wrapper/the-single-screen.md) — W-57, W-58 (RFC-004,
-    decided 2026-10-30, to be built): the stage over one control bar, every
-    state's place in it, the height, when the frame takes input
+    decided 2026-10-30): the stage over one control bar, every state's place in
+    it, the height, when the frame takes input
   - [Error and degraded states](./wrapper.md#error-and-degraded-states) — W-41
     to W-44
   - [Accessibility](./wrapper.md#accessibility) — W-45 to W-48

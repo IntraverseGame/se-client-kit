@@ -1,9 +1,10 @@
-// The round as its status gives it (W-31 to W-34): the bet selector when
-// `idle` and beside the result of a round that is over, the preparing and
-// resolving notes, the multiplier, the cash-out control when the shell offers
-// it, the result, and `closeReason` beside the status. An `active` round is
-// shown as ready only once the shell's checks passed (W-26); until then it
-// reads as being checked. After the shell's own cancel (W-25, W-33), `ended`
+// The round as its status gives it (W-31 to W-34), in the control bar's slots
+// (W-57): the status line, the primary controls (the bet selector when `idle`
+// and beside the result of a round that is over, the cash-out control when the
+// shell offers it, with the multiplier beside it), and the round line (the
+// multiplier, the payout, the balance, and `closeReason`'s line). An `active`
+// round is shown as ready only once the shell's checks passed (W-26); until
+// then it reads as being prepared, under the stage's scrim. After the shell's own cancel (W-25, W-33), `ended`
 // is a neutral "round ended" with no result claim, and a `canceled` result is
 // the round failed verification and canceled (W-26). A move or cash-out not
 // confirmed (W-16) shows its own state in place of the `active` round. Money
@@ -19,6 +20,7 @@ import { unitsOf } from "./bet-options.ts";
 import { betSelector } from "./bet-selector.ts";
 import { endedView } from "./cancel-views.ts";
 import {
+  type BarParts,
   button,
   type Builder,
   type Child,
@@ -94,10 +96,83 @@ const betWithRtp = (
   ];
 };
 
-const formatMultiplier = (language: string, multiplier: number): string =>
+export const formatMultiplier = (
+  language: string,
+  multiplier: number,
+): string =>
   `×${new Intl.NumberFormat(language, { maximumFractionDigits: 4 }).format(multiplier)}`;
 
-/** The round as its status gives it (W-31 to W-34). */
+/** The status line: the state's heading and at most one line of detail. */
+export const statusLine = (
+  el: Builder,
+  title: HTMLElement,
+  detail: string | undefined,
+): Child[] => [
+  title,
+  detail !== undefined && el("p", { class: "se-detail" }, [detail]),
+];
+
+/**
+ * The cash-out control (W-24): "Cash out" with the Snapshot's multiplier beside
+ * it as a display value, never an amount (W-34, W-57).
+ */
+const cashOutButton = (
+  el: Builder,
+  localized: Localized,
+  snapshot: SnapshotInput,
+  cashOut: () => void,
+): HTMLButtonElement => {
+  const control = button(
+    el,
+    localized.messages["action.cashOut"],
+    "cash-out",
+    cashOut,
+  );
+  if (snapshot.currentMultiplier !== undefined) {
+    control.append(
+      " ",
+      el("span", { class: "se-button__value" }, [
+        formatMultiplier(localized.language, snapshot.currentMultiplier),
+      ]),
+    );
+  }
+  return control;
+};
+
+/** The result's own line (W-33, W-54), when it has one. */
+const resultDetail = (
+  m: Localized["messages"],
+  snapshot: SnapshotInput,
+  check: RoundCheck | undefined,
+): string | undefined => {
+  // After the shell's required cancel (W-26, W-33; decided in human review,
+  // 2026-10-19): `canceled` is the round failed verification and canceled,
+  // or, when the time limit had closed it first (`closeReason: "expired"`,
+  // the cancel never honored), only failed verification, with the time
+  // limit's line in the round line; `won` or `lost` is a round that closed by
+  // play before the cancel arrived, so its result shows with that note.
+  const afterCancel = check?.cancel === "sent";
+  if (snapshot.status === "canceled") {
+    const unverified =
+      snapshot.closeReason === "expired"
+        ? m["detail.unverified"]
+        : m["detail.canceledUnverified"];
+    return afterCancel ? unverified : m["detail.canceled"];
+  }
+  if (afterCancel) return m["detail.closedBeforeCancel"];
+  // A changed book round (W-52) that is over: its result, with the failure
+  // beside it, as the closed-before-cancel line (W-54).
+  return snapshot.presentation === "playback" &&
+    check?.verdict === "verification-failed"
+    ? m["detail.unverified"]
+    : undefined;
+};
+
+/**
+ * The round as its status gives it (W-31 to W-34), in the bar's slots (W-57).
+ * `detail`, when given, replaces the status line's detail: the slow notice
+ * (W-35) or the waiting detail of a pending move (W-16).
+ */
 export const roundView = (
   el: Builder,
   doc: Document,
@@ -106,38 +181,27 @@ export const roundView = (
   intents: Intents,
   check?: RoundCheck,
   cancelEnded: boolean = check?.cancel === "ended",
-): Child[] => {
+  detail?: string,
+): BarParts => {
   const m = localized.messages;
+  const balance = field(el, m["label.balance"], snapshot.bet.balance.formatted);
   if (cancelEnded) {
-    return endedView(el, doc, m, snapshot, intents);
+    const ended = endedView(el, doc, m, snapshot, intents);
+    return {
+      ...ended,
+      status: statusLine(el, ended.heading, detail),
+    };
   }
-  // An `active` round the shell has not passed is not shown as ready (W-26).
-  // A round the shell does not hold (no check) is shown as it is, never with
-  // the game or a control (W-42).
+  // An `active` round the shell has not passed is not shown as ready (W-26):
+  // it reads as being prepared, under the stage's scrim (W-57).
   const verifying =
     snapshot.status === "active" && check?.verdict === "checking";
-  const shownStatus = verifying ? "starting" : snapshot.status;
-  const iconName = STATUS_ICON[shownStatus];
-  const children: Child[] = [
-    heading(
-      el,
-      doc,
-      "h1",
-      STATUS_HEADING_ID,
-      m[`status.${shownStatus}` as const],
-      iconName,
-      iconName === undefined ? "" : m[ICON_LABEL[iconName]],
-    ),
-  ];
-  if (verifying) {
-    children.push(
-      el("p", { class: "se-detail" }, [m["detail.verifying"]]),
-      field(el, m["label.balance"], snapshot.bet.balance.formatted),
-    );
-    return children;
-  }
   // The move or cash-out whose one resend was lost too (W-16).
-  if (snapshot.status === "active" && check?.unconfirmed !== undefined) {
+  if (
+    !verifying &&
+    snapshot.status === "active" &&
+    check?.unconfirmed !== undefined
+  ) {
     return unconfirmedView(
       el,
       doc,
@@ -147,27 +211,39 @@ export const roundView = (
       intents,
     );
   }
-  switch (snapshot.status) {
+  const shownStatus = verifying ? "starting" : snapshot.status;
+  const iconName = STATUS_ICON[shownStatus];
+  const title = heading(
+    el,
+    doc,
+    "h1",
+    STATUS_HEADING_ID,
+    m[`status.${shownStatus}` as const],
+    iconName,
+    iconName === undefined ? "" : m[ICON_LABEL[iconName]],
+  );
+  const controls: Child[] = [];
+  const round: Child[] = [];
+  let own: string | undefined;
+  switch (verifying ? "verifying" : snapshot.status) {
     case "idle": {
-      children.push(
-        field(el, m["label.balance"], snapshot.bet.balance.formatted),
-        ...betWithRtp(el, m, snapshot, intents),
-      );
+      round.push(balance);
+      controls.push(...betWithRtp(el, m, snapshot, intents));
       break;
     }
     case "starting":
     case "resolving": {
-      children.push(
-        el("p", { class: "se-detail" }, [
-          m[`detail.${snapshot.status}` as const],
-        ]),
-        field(el, m["label.balance"], snapshot.bet.balance.formatted),
-      );
+      own = m[`detail.${snapshot.status as "starting" | "resolving"}` as const];
+      round.push(balance);
+      break;
+    }
+    case "verifying": {
+      round.push(balance);
       break;
     }
     case "active": {
       if (snapshot.currentMultiplier !== undefined) {
-        children.push(
+        round.push(
           field(
             el,
             m["label.multiplier"],
@@ -175,53 +251,22 @@ export const roundView = (
           ),
         );
       }
-      children.push(
-        field(el, m["label.balance"], snapshot.bet.balance.formatted),
-      );
+      round.push(balance);
       const { cashOut } = intents;
       if (check?.cashOutOffered === true && cashOut !== undefined) {
-        children.push(button(el, m["action.cashOut"], "cash-out", cashOut));
+        controls.push(cashOutButton(el, localized, snapshot, cashOut));
       }
       break;
     }
     case "won":
     case "lost":
     case "canceled": {
-      // After the shell's required cancel (W-26, W-33; decided in human
-      // review, 2026-10-19): `canceled` is the round failed verification and
-      // canceled, or, when the time limit had closed it first (`closeReason:
-      // "expired"`, the cancel never honored), only failed verification, with
-      // the time limit's line below; `won` or `lost` is a round that closed by
-      // play before the cancel arrived, so its result shows with that note.
-      const afterCancel = check?.cancel === "sent";
-      if (snapshot.status === "canceled") {
-        const unverified =
-          snapshot.closeReason === "expired"
-            ? m["detail.unverified"]
-            : m["detail.canceledUnverified"];
-        const detail = afterCancel ? unverified : m["detail.canceled"];
-        children.push(el("p", { class: "se-detail" }, [detail]));
-      } else if (afterCancel) {
-        children.push(
-          el("p", { class: "se-detail" }, [m["detail.closedBeforeCancel"]]),
-        );
-      } else if (
-        snapshot.presentation === "playback" &&
-        check?.verdict === "verification-failed"
-      ) {
-        // A changed book round (W-52) that is over: its result, with the
-        // failure beside it, as the closed-before-cancel line (W-54).
-        children.push(
-          el("p", { class: "se-detail" }, [m["detail.unverified"]]),
-        );
-      }
+      own = resultDetail(m, snapshot, check);
       const payout = shownPayout(snapshot);
       if (payout !== undefined) {
-        children.push(field(el, m["label.payout"], payout.formatted));
+        round.push(field(el, m["label.payout"], payout.formatted));
       }
-      children.push(
-        field(el, m["label.balance"], snapshot.bet.balance.formatted),
-      );
+      round.push(balance);
       break;
     }
     default: {
@@ -229,7 +274,7 @@ export const roundView = (
     }
   }
   if (snapshot.closeReason === "expired") {
-    children.push(
+    round.push(
       el("p", { class: "se-detail se-detail--close" }, [m["detail.expired"]]),
     );
   }
@@ -237,7 +282,11 @@ export const roundView = (
   // Snapshot's `bet` (W-31, W-40): the read keeps showing the ended round until
   // the next start.
   if (roundEnded(snapshot, check?.cancel)) {
-    children.push(...betWithRtp(el, m, snapshot, intents));
+    controls.push(...betWithRtp(el, m, snapshot, intents));
   }
-  return children;
+  return {
+    status: statusLine(el, title, detail ?? own),
+    controls,
+    round,
+  };
 };
