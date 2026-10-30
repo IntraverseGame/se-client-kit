@@ -27,3 +27,4 @@ structure, a protocol, supply-chain tooling, the agent workflow.
 | [ADR-007](./ADR-007-no-public-suffix-list.md)                      | accepted | W-37's registrable-domain rule by the last two labels, without a public suffix list                                                   |
 | [ADR-008](./ADR-008-pages-deploy-with-wrangler.md)                 | accepted | kit CI deploys the Wrapper and the verifier to Cloudflare Pages from `main`, with a pinned `wrangler` and a same-origin API proxy     |
 | [ADR-009](./ADR-009-production-pages-deploy-trigger-and-source.md) | accepted | releases through `changesets/action` on every push to `main`; production deploys the attested release tar (implemented, #133)         |
+| [ADR-010](./ADR-010-resize-height-is-a-minimum.md)                 | accepted | `resize`'s `height` is the least height the Wrapper needs, used as a minimum, within `se.operator/1` (RFC-004 Q11)                    |

@@ -209,6 +209,25 @@ ADR-006 is accepted.
     follows it (W-47's 200 % zoom rule).
   - It is the only message the Wrapper sends on its own. No game message and no
     Snapshot field changes it except through the Wrapper's own layout.
+  - **In the single screen** (RFC-004 Q11, decided 2026-10-29, to be built; it
+    replaces the `height` above when the Wrapper ships the single screen): the
+    Wrapper fills its iframe's viewport
+    ([W-57](./the-single-screen.md#the-height)), so the `<body>`'s box would
+    only echo the iframe's height, and could loop with a page that sets the
+    iframe's height from it. `height` is then **the least height the Wrapper's
+    content needs at its current width and text size**, `H_min = ceil(B) + S`:
+    the bar's reserved height, measured and rounded up, plus the stage's minimum
+    (provisionally 270 CSS pixels), never the viewport's height or the
+    `<body>`'s box; an integer from 1 to 16384 as above. It is sent once right
+    after `welcome`, then when that minimum changes (a width or text-size
+    change), never when only the iframe's height changes, under the other rules
+    above. The message, its fields, and the meaning in W-49b's table are
+    unchanged, so `se.operator/1` and ADR-006 are unchanged
+    ([ADR-010](../../decisions/ADR-010-resize-height-is-a-minimum.md),
+    accepted). An operator page uses `height` as a **minimum**, never as a size.
+    This changes what an operator page that sets the iframe's height from
+    `resize` gets: its iframe would shrink to the minimum, so the guidance below
+    says `min-height`, and the Wrapper's release notes name the change.
 
 ## Lobby and deposit
 
@@ -408,7 +427,8 @@ window.addEventListener("message", event => {
   if (event.source !== frame.contentWindow || event.origin !== seOrigin) return;
   if (event.data?.type === "welcome") welcomed = true;
   if (event.data?.type === "resize" && Number.isInteger(event.data.height)) {
-    frame.style.height = `${event.data.height}px`;
+    // A minimum, never a size: the box is yours, and the Wrapper fills it.
+    frame.style.minHeight = `${event.data.height}px`;
   }
 });
 frame.addEventListener("load", () => {
@@ -426,8 +446,12 @@ iframe's `contentWindow` and `event.origin` is the SE origin. The Wrapper sends
 `welcome` and `resize` only; a game inside it can post to your page too, from
 another origin, and must be ignored.
 
-**Size the iframe (optional).** `resize` carries `height`, the CSS pixels the
-Wrapper's content needs, an integer from 1 to 16384. The width is yours.
+**Size the iframe.** Give the iframe its box: the width you lay out and the
+height you want (16:9 is recommended; theater and fullscreen work too). `resize`
+carries `height`, the CSS pixels the Wrapper's content needs, an integer from 1
+to 16384: keep your box at least that tall with `min-height`, and never set the
+iframe's `height` from it. Once the Wrapper ships the single screen it fills
+your box, and `height` is the least height it needs (W-49d).
 
 **Lobby and deposit.** Supply both links when you launch the session; the
 Wrapper shows them to the player as its own links, never as messages. The
@@ -487,7 +511,12 @@ the Wrapper app):
 7. **Configuration.** An `operatorOrigins` that holds the SE origin or an entry
    of `gameOrigins`, or a `gameOrigins` that holds the SE origin, is refused.
 8. **`resize`.** Only after `welcome`, only to the fixed origin, an integer
-   within the bound, coalesced, never the same value twice in a row.
+   within the bound, coalesced, never the same value twice in a row. In the
+   single screen (to be built): the value is `H_min`, the same in every state
+   and for every iframe height at one width; a change of the iframe's height
+   alone, or the Wrapper's scroll bar below the minimum, sends nothing; a width
+   or text-size change sends the new minimum; a fake operator page that sets
+   `min-height` from it settles with no further message.
 9. **Lobby and deposit.** Each control only in the states W-49f allows and only
    when its link is present in the latest validated Snapshot; the lobby only on
    a listed origin. No control for a link that fails `new URL`, is not `https:`,

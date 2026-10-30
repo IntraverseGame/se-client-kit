@@ -148,7 +148,14 @@ game plays back. The player makes no move during the round.
   heading takes it when the player's own start led to the result, also when the
   result arrives by the poll after that start's `starting` answer (once, for
   that round only; any other poll moves no focus); the game never takes it from
-  there. Decided by the human, 2026-10-28.
+  there. Decided by the human, 2026-10-28. **In the single screen** (RFC-004,
+  decided 2026-10-30, to be built; it replaces the text above where they differ
+  when the Wrapper ships the single screen), a book round's frame is shown as on
+  any round ([W-57](./the-single-screen.md)), inert outside a playable round,
+  which a book round never is (W-58): the game plays the draw back in `won` and
+  `lost` with no input, beside the Wrapper's result. A changed round (W-52) and
+  a `playback` copy that failed closed show the stage's cover in its place. The
+  focus rule is unchanged.
 
 - **W-56. The RTP.** When a book Snapshot carries `config.rtp`, the Wrapper
   shows the mode's return to player beside the bet selector (W-31's `idle` row

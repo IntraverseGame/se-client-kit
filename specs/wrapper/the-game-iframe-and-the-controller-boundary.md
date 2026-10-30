@@ -72,7 +72,14 @@ Part of the [Wrapper spec](../wrapper.md), section
     accepted D, so a refused D is never loaded, and the frame is kept for the
     session's life and hidden unless the round is shown ready (`active` after
     W-26 passed, or `resolving`, W-31). A book round's frame is also shown at
-    `won` and `lost`, for the playback ([W-55](./book-playback.md)).
+    `won` and `lost`, for the playback ([W-55](./book-playback.md)). **In the
+    single screen** (RFC-004, decided 2026-10-30, to be built; it replaces the
+    text above where they differ when the Wrapper ships the single screen), the
+    frame is kept for the session's life at one place and size, and shown from
+    its mount until the session ends, except in the final states (the session
+    ended, another tab, a changed session), where the stage's cover replaces it;
+    when it takes input is
+    [W-58](./the-single-screen.md#when-the-frame-takes-input)'s.
   - **The game's page path** (`RedeemResponse.gamePath`, optional) lets several
     games share one origin under different paths. `play-client` refuses a redeem
     answer whose `gamePath` breaks the vendored document's rule (its `pattern`,
@@ -108,6 +115,100 @@ Part of the [Wrapper spec](../wrapper.md), section
   | game to Wrapper | `action`   | `id`, `verb` (`pick`), `args` (`step`, `option`) | A pick request. It is not an action: the Wrapper validates it (W-23) and builds the signed action.                                           |
   | Wrapper to game | `snapshot` | `snapshot`                                       | A Snapshot that passed W-28, sent on every accepted change: its `steps` copy, or (#146) its `playback` copy.                                 |
   | Wrapper to game | `reject`   | `id`, `reason`                                   | An `action` request that was not accepted. `reason` is a closed list (`not_legal`, `not_active`, `busy`, `invalid`), never a server message. |
+
+  **The hold** (RFC-004, decided 2026-10-30, to be built; it replaces the text
+  above where they differ when the Wrapper ships the single screen). The game is
+  never sent an `active` Snapshot whose round the shell has not found `ready`
+  (W-26). The `snapshot` message is otherwise sent on every accepted change, as
+  above.
+
+  - **Who applies it: the session, not the bridge.** The bridge's one input is
+    `sendSnapshot(snapshot)` (`controller-bridge.ts`), and it knows no round,
+    verdict, or transcript; that is by design (W-38's boundary). Every Snapshot
+    the bridge gets is handed to it by the session, at two points:
+    `session-reads.ts`'s `show` (every read, action answer, and cancel read,
+    through `see` and `settle`) and `session-play.ts`'s `mountGame` (the latest
+    at mount). The session applies one rule at both points before it calls
+    `sendSnapshot`, and holds the round's flow there (`current()`, its
+    `verdict()` and `phase()`), so the hold needs no new bridge input, and the
+    public `ControllerBridge` type does not change.
+  - **The rule.** At a hand-off, a Snapshot whose `status` is not `active` is
+    given to the bridge as before. An `active` Snapshot is given only when the
+    session's current round is that Snapshot's round, its verdict is `ready`,
+    and its signer is not out of sync (W-19); a re-issue is a `failed` verdict
+    (`reissued`), so it is held too. Otherwise it is held: it is not given to
+    the bridge at all, so the bridge neither keeps nor forwards it. This holds a
+    round being checked, a round whose verdict left `ready` (failed, re-issued,
+    or out of sync), and a round the shell does not hold, which has no verdict
+    (a `ROUND_ACTIVE` resume, W-42, or a round an earlier page left open, W-11).
+  - **The ordering: the verdict is evaluated before the hand-off, never after.**
+    The session hands a Snapshot of its round to the bridge only after the round
+    has observed it: `see` awaits the flow's `observe` before `show`, and
+    `round-tracking.ts`'s `observe` awaits the round's tip check (W-26b) before
+    it returns the verdict; an action's answer is observed before `settle` shows
+    the Snapshot it answers with. So:
+    - the tip check decides **before** the `active` Snapshot arrives (it ran on
+      a bound `starting`): the verdict stays `checking` until an `active`
+      Snapshot is observed and checks 1 to 5 pass; that observation's hand-off
+      gives the bridge that Snapshot;
+    - the `active` Snapshot arrives **before** the tip check decides: its
+      observation awaits the tip check, and its hand-off happens after, with the
+      decided verdict: `ready` gives it, `failed` holds it, and a tip check that
+      gave no decision leaves the verdict `checking` (fail closed), so it stays
+      held;
+    - two reads overlap: each hand-off evaluates the rule then, and hands the
+      round's latest accepted Snapshot when it is newer than the read's own
+      (`see`'s rule); the bridge ignores a lower `version` (W-29).
+  - **The transition to `ready`.** The verdict becomes `ready` only inside an
+    observation of a Snapshot of the round (the tip check runs from `observe`
+    and is awaited there; nothing else changes the verdict). Every observation
+    that can make it `ready`, a read through `see` or the start's answer through
+    `settle`, ends in `show` of the round's latest accepted Snapshot. That
+    hand-off is the release: the round's latest accepted Snapshot is given at
+    that hand-off; the bridge ignores a lower `version` (W-29). When no newer
+    Snapshot arrived (the `active` Snapshot whose observation awaited the tip
+    check is still the latest), that same Snapshot is the one given; it was
+    held, never given before, so the bridge does not drop it. Overlapping reads
+    may give the same latest Snapshot twice, which is harmless. The session
+    sends no separate release. The paths that end with no hand-off of the
+    round's latest cannot carry a change to `ready`:
+    - **the cancel's hold**: `see` returns the round's `latest()` with no `show`
+      while the required cancel is `in-flight`, `settling`, or `check-later`
+      (`holdsRound`). The required cancel runs only after a `failed` verdict
+      (`round-flow.ts`), and a failed verdict never returns to `ready`;
+    - **`settle`'s early returns**: on an ended session, a changed session
+      (W-53), or a new `lastError` (`readOfError`), it shows nothing. Nothing
+      more is forwarded on an ended or changed session, and an error answer
+      carries no Snapshot of the round that could make it `ready`;
+    - **a refused `admit`** (W-53): `see` returns before it observes the
+      Snapshot, so the verdict does not change;
+    - **an action's own stale answer**: `settle` shows that answer, not
+      `latest()`, when the action's answer was a Snapshot of the round with a
+      lower `version` (W-29). A stale Snapshot never reaches the round's
+      tracking (`round-flow.ts` drops it before `observe`), so it cannot change
+      the verdict; such an answer comes from a move or a cash-out, sent only
+      once the verdict is already `ready`, or from the required cancel's reads,
+      after a `failed` verdict.
+  - **The transition out of `ready`** (failed, re-issued, or out of sync) also
+    happens only inside an observation or an action's answer. Nothing is sent
+    for it: the hand-off that follows gives the bridge only a Snapshot that is
+    not `active`, and every later `active` Snapshot of that round is held. Its
+    Snapshots that are not `active` (`resolving` under the required cancel, and
+    its result) are given as usual. The game keeps the last copy it was sent,
+    which may be an `active` one from before the transition; the frame is inert
+    and covered then (W-58).
+  - **`hello` and mount use the same rule.** The bridge answers the game's first
+    valid `hello` with the latest copy it was given (`onHello`, then `forward`);
+    a held Snapshot was never given, so the answer is never a held one. At
+    mount, the session evaluates the rule on the latest Snapshot it holds
+    (`current().latest()`, or the reader's latest with no round) against the
+    flow's verdict at that moment, before it calls `sendSnapshot`; a held one is
+    not given, and the next hand-off decides.
+
+  The `version` rule (W-29) is unchanged: a held Snapshot is skipped, never sent
+  out of order. A book round has no `active` (W-54) and is unaffected. No
+  message, field, or reason changes, so `se.controller/1` is unchanged: a game
+  sees a round go from `starting` to `active` later than before.
 
   The message set is closed: a `type` outside it is ignored. The operator page
   has its own protocol, `se.operator/1`, with `hello`, `welcome`, and `resize`

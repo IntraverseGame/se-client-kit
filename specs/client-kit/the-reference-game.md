@@ -199,6 +199,16 @@ else.
   `lost`, and `canceled` (with `closeReason: expired` said, and the reveal when
   there is one). The calls are shown only while the round is `active`, on its
   current step, and not called yet.
+- **In the single screen** (RFC-004, decided 2026-10-30, to be built, and it
+  replaces the text before it when the Wrapper ships the single screen). The
+  game is visible from `idle` on, in a stage whose ratio is the operator's box
+  less the Wrapper's bar (at least 320 CSS pixels wide and 270 tall), and its
+  frame is inert outside a playable round
+  ([W-58](../wrapper/the-single-screen.md#when-the-frame-takes-input)). The game
+  already meets W-58's rule for games: it plays its reveal and a book round's
+  draw with no input and needs none outside an `active` round. An `active` copy
+  reaches it only once the shell's verdict is `ready` (W-38's hold), so it shows
+  `starting` while the round is checked.
 - **A pick.** A click sends one `action` (`verb: pick`,
   `args: { step, option }`, where `step` is the row's `index`, `id` `pick-<n>`
   from a counter shared by both pages) and holds both calls (or every tile)
