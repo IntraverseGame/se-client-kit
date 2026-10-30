@@ -5,6 +5,7 @@
 // `code` narrows to the fields that status or code carries.
 
 import type {
+  Amount,
   BookConfig,
   ErrorCode,
   FairnessContext,
@@ -34,6 +35,23 @@ type InRound = { roundId: RoundId };
  */
 type NoPayout = { payout?: never };
 
+/**
+ * `cashOutValue` is what a cash-out credits right now: the schema allows it on
+ * an `active` round of the `steps` presentation after its first step only, so
+ * every other status carries none.
+ */
+type NoCashOutValue = { cashOutValue?: never };
+
+/**
+ * An `active` round may carry `cashOutValue`, the server's quote of what
+ * `rounds:cashOut` would credit now (on a free bet, the winnings only). It is
+ * absent at step 0 and, the schema says, never on `playback` (a book round is
+ * never `active`); the narrowing by `status` does not express either. Typed
+ * here as the public `Amount` until the vendored schema carries the field; the
+ * generated type then agrees with it.
+ */
+type MayCashOut = { cashOutValue?: Amount };
+
 /** From `active` on, a round carries its proofs. */
 type WithProofs = { proofs: FairnessContext };
 
@@ -48,34 +66,47 @@ type Revealed = {
 export type IdleSnapshot = Snapshot &
   BeforePlay &
   NotClosed &
-  NoPayout & { status: "idle"; roundId?: never; proofs?: never };
+  NoPayout &
+  NoCashOutValue & { status: "idle"; roundId?: never; proofs?: never };
 
 /** The round is being prepared; proofs fill in by phase, so they are optional. */
 export type StartingSnapshot = Snapshot &
   BeforePlay &
   NotClosed &
   NoPayout &
+  NoCashOutValue &
   InRound & { status: "starting" };
 
+/** The one status that may carry `cashOutValue` (after the first step). */
 export type ActiveSnapshot = Snapshot &
   NotClosed &
   NoPayout &
+  MayCashOut &
   InRound &
   WithProofs & { status: "active" };
 
 export type ResolvingSnapshot = Snapshot &
   NotClosed &
   NoPayout &
+  NoCashOutValue &
   InRound &
   WithProofs & { status: "resolving" };
 
-export type WonSnapshot = Snapshot & InRound & Revealed & { status: "won" };
+/** A finished round shows `payout`, never a cash-out value. */
+export type WonSnapshot = Snapshot &
+  NoCashOutValue &
+  InRound &
+  Revealed & { status: "won" };
 
-export type LostSnapshot = Snapshot & InRound & Revealed & { status: "lost" };
+export type LostSnapshot = Snapshot &
+  NoCashOutValue &
+  InRound &
+  Revealed & { status: "lost" };
 
 /** A canceled round's bet is returned, not paid: it carries no `payout`. */
 export type CanceledSnapshot = Snapshot &
   NoPayout &
+  NoCashOutValue &
   InRound &
   WithProofs & { status: "canceled" };
 
@@ -92,12 +123,16 @@ export type ValidSnapshot =
 /** The `steps` presentation: the config is a `StepConfig`. */
 export type StepsPresentation = { presentation: "steps"; config: StepConfig };
 
-/** The `playback` presentation: a book round with a `BookConfig`, no `step`. */
+/**
+ * The `playback` presentation: a book round with a `BookConfig`, no `step`, and
+ * no `cashOutValue` (a book round has no cash-out).
+ */
 export type PlaybackPresentation = {
   presentation: "playback";
   model: "book";
   config: BookConfig;
   step?: never;
+  cashOutValue?: never;
 };
 
 /** Narrows a validated Snapshot to the `steps` presentation. */

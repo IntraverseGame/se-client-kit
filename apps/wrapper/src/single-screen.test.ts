@@ -103,7 +103,7 @@ describe("the single screen, a round's rows (T-25)", () => {
     });
   });
 
-  it("active, ready, cash-out offered: Cash out with the multiplier beside it, never an amount", () => {
+  it("active, ready, cash-out offered, no cash-out value: Cash out with the multiplier beside it, no amount", () => {
     const screen = screenAfter(
       readOf("cashorcrash-active-row2", { ...HELD, cashOutOffered: true }),
     );

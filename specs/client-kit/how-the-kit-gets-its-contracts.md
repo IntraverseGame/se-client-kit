@@ -186,6 +186,47 @@ Rules:
    The `snapshot` package's per-status types say `payout?: never` on every other
    status, as the schema does.
 
+   **The cash-out value** (the Snapshot schema and the `cashOutValue` vectors,
+   and the Play API document, whose Snapshot component restates the field; **to
+   be synced** from se-backend once its ADR-050 change is merged, in a contracts
+   pull request of the same release as the kit's rendering of the field; no
+   vendored vector changes): an additive change, se-backend's ADR-050 (decided
+   2026-10-30): a new optional top-level `cashOutValue`, an `Amount` the server
+   computes, that says what `rounds:cashOut` would credit if the player cashed
+   out right then (on a free-bet round the winnings only: the value less the
+   stake, never below 0, as for `payout`). It is a quote, not money held: a
+   losing pick takes it away. It is not `bankedAmount`, which stays reserved for
+   partial cash-out and is not served. The schema allows it on an `active` round
+   of the `steps` presentation after its first step only, by two new root rules
+   (none unless `status` is `active` and `presentation` is `steps`; none when
+   `step` is 0), and no existing rule is edited:
+   `valid/cashorcrash-active-cash-out-value` (step 1 of the vendored Cash or
+   Crash round, 145 base units, €1.45, the payout of the survived step on the
+   €1.00 bet), `-row2` (step 2, 217, €2.17), and `-free-bet` (step 1 on a free
+   bet, 45, €0.45, the value less the stake; the Snapshot carries no free-bet
+   marker), and `invalid/cash-out-value-on-idle`, `-starting`, `-resolving`,
+   `-won`, `-lost`, `-canceled`, `-playback`, and `-step-0` (`failsAt` the
+   document, `""`) and `-value-number` (`/cashOutValue/value`). A cash-out at
+   the same step answers `won` with a `payout` equal to the last `active`
+   Snapshot's `cashOutValue`; the value may differ from the bet times
+   `currentMultiplier`, and a client shows it and never checks it against the
+   multiplier. It changes only with a step, so it adds no `version` churn. The
+   rollout is kit first: the backend serves the field only after a kit release
+   that vendors this schema, since a Wrapper built against the older one refuses
+   every `active` Snapshot that carries it (W-28). The kit takes it as the
+   schema gives it: the `snapshot` package's per-status types say
+   `cashOutValue?: never` on every status but `active`, where it is an optional
+   `Amount`, and on the `playback` presentation; the shell does not forward it
+   to the game (W-38); and the Wrapper shows it on the cash-out control, "Cash
+   out" with its `formatted` (W-31 in
+   [Rendering from the Snapshot](../wrapper/rendering-from-the-snapshot.md), and
+   the labels of [The single screen](../wrapper/the-single-screen.md)). The
+   generator's structural copy of `Amount` for it is, like `Amount1`, not
+   exported. Until the sync lands, the vendored schema rejects every Snapshot
+   that carries the field (W-28), so the Wrapper's control shows the multiplier;
+   the `snapshot` package's types already name the field.
+   <!-- TODO(contracts sync): when the sync that vendors se-backend's ADR-050 lands, replace "to be synced" with the source commit, as the other paragraphs name it, and drop the until-then sentence. -->
+
    **The Cash or Crash cash-out, and a book game's RTP** (the Snapshot vectors
    synced from se-backend `6afc690`, and the Snapshot schema with them, last
    touched at `13bcee0`; the Play and verify documents stay at `9ffdcc0`; no

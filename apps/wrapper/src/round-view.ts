@@ -1,10 +1,12 @@
 // The round as its status gives it (W-31 to W-34), in the control bar's slots
 // (W-57): the status line, the primary controls (the bet selector when `idle`
 // and beside the result of a round that is over, the cash-out control when the
-// shell offers it, with the multiplier beside it), and the round line (the
-// multiplier, the payout, the balance, and `closeReason`'s line). An `active`
-// round is shown as ready only once the shell's checks passed (W-26); until
-// then it reads as being prepared, under the stage's scrim. After the shell's own cancel (W-25, W-33), `ended`
+// shell offers it, with the Snapshot's `cashOutValue` as `formatted` beside it
+// when the Snapshot carries one, else the multiplier; round-amounts.ts says
+// which), and the round line (the multiplier, the payout, the balance, and
+// `closeReason`'s line). An `active` round is shown as ready only once the
+// shell's checks passed (W-26); until then it reads as being prepared, under
+// the stage's scrim. After the shell's own cancel (W-25, W-33), `ended`
 // is a neutral "round ended" with no result claim, and a `canceled` result is
 // the round failed verification and canceled (W-26). A move or cash-out not
 // confirmed (W-16) shows its own state in place of the `active` round. Money
@@ -16,7 +18,6 @@
 // selector, from `config.rtp.decimal` by string operations (W-56); never an
 // amount from the draw's `payoutMultiplier`, the bet, or the RTP.
 
-import { unitsOf } from "./bet-options.ts";
 import { betSelector } from "./bet-selector.ts";
 import { endedView } from "./cancel-views.ts";
 import {
@@ -31,9 +32,13 @@ import {
 import type { IconName } from "./icons.ts";
 import type { Localized, MessageKey } from "./messages.ts";
 import {
+  formatMultiplier,
+  shownCashOutValue,
+  shownPayout,
+} from "./round-amounts.ts";
+import {
   type RoundCheck,
   roundEnded,
-  type ShownAmount,
   type SnapshotInput,
 } from "./round-input.ts";
 import { rtpPercent } from "./rtp.ts";
@@ -54,24 +59,6 @@ export const ICON_LABEL: Readonly<Record<IconName, MessageKey>> = {
   error: "icon.error",
   info: "icon.info",
   progress: "icon.progress",
-};
-
-/**
- * The payout a result shows (W-31): a `won` round's, and a `lost` round's only
- * when it credits something (`value` above 0, compared as a `bigint`, W-34).
- * None on any other status, none when the Snapshot carries none, and none when
- * `value` is not a base-units string (the validator rules that out; the guard
- * keeps a bad value from throwing, as `bet-options.ts` does).
- */
-export const shownPayout = (
-  snapshot: SnapshotInput,
-): ShownAmount | undefined => {
-  const { payout, status } = snapshot;
-  if (payout === undefined) return undefined;
-  const units = unitsOf(payout);
-  if (units === undefined) return undefined;
-  if (status === "won") return payout;
-  return status === "lost" && units > 0n ? payout : undefined;
 };
 
 /**
@@ -96,12 +83,6 @@ const betWithRtp = (
   ];
 };
 
-export const formatMultiplier = (
-  language: string,
-  multiplier: number,
-): string =>
-  `×${new Intl.NumberFormat(language, { maximumFractionDigits: 4 }).format(multiplier)}`;
-
 /** The status line: the state's heading and at most one line of detail. */
 export const statusLine = (
   el: Builder,
@@ -113,8 +94,10 @@ export const statusLine = (
 ];
 
 /**
- * The cash-out control (W-24): "Cash out" with the Snapshot's multiplier beside
- * it as a display value, never an amount (W-34, W-57).
+ * The cash-out control (W-24, W-57): "Cash out" with the Snapshot's
+ * `cashOutValue` as `formatted` beside it when the Snapshot carries one (what
+ * cashing out now credits, computed by the server), else with the Snapshot's
+ * multiplier as a display value. Never an amount the Wrapper computed (W-34).
  */
 const cashOutButton = (
   el: Builder,
@@ -128,13 +111,14 @@ const cashOutButton = (
     "cash-out",
     cashOut,
   );
-  if (snapshot.currentMultiplier !== undefined) {
-    control.append(
-      " ",
-      el("span", { class: "se-button__value" }, [
-        formatMultiplier(localized.language, snapshot.currentMultiplier),
-      ]),
-    );
+  const value = shownCashOutValue(snapshot);
+  const shown =
+    value?.formatted ??
+    (snapshot.currentMultiplier === undefined
+      ? undefined
+      : formatMultiplier(localized.language, snapshot.currentMultiplier));
+  if (shown !== undefined) {
+    control.append(" ", el("span", { class: "se-button__value" }, [shown]));
   }
   return control;
 };
