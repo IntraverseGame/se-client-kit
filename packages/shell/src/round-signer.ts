@@ -55,6 +55,23 @@ export type RoundSignerOptions = {
   readonly randomUuid: RandomUuid;
 };
 
+/**
+ * The signer's pending move or cash-out (never a cancel) while its phase is
+ * `open` or `adopted`: set from the signature, recorded before its send (W-16),
+ * until a Snapshot shows it applied. `undefined` otherwise: once a 400 or 409
+ * held signing (`stale`, W-19), once the round is out of sync, re-issued,
+ * failed, or closed, and once the session has ended. A word, never the action.
+ */
+export const pendingOf = (
+  signer: RoundSigner | undefined,
+): "move" | "cash-out" | undefined => {
+  const phase = signer?.phase();
+  if (phase !== "open" && phase !== "adopted") return undefined;
+  const action = signer?.pending();
+  if (action === undefined || action.kind === "cancel") return undefined;
+  return action.kind === "cash-out" ? "cash-out" : "move";
+};
+
 const asShellError = (error: unknown): unknown =>
   error instanceof SigningError && error.code === "equivocation"
     ? new ShellError("equivocation")

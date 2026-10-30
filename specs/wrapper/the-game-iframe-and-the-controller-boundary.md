@@ -104,7 +104,8 @@ Part of the [Wrapper spec](../wrapper.md), section
   against a closed, versioned schema (`se.controller/1`, below) and ignored if
   it does not match. The game never receives the key, the token, a signature, a
   `CreateRoundAuth`, or a header: the Wrapper sends it the allow-listed copy of
-  Snapshots that passed W-28 (below) and nothing else of the session.
+  Snapshots that passed W-28 (below) and that the hold (below) does not keep,
+  and nothing else of the session.
 - **`se.controller/1`, the first-release minimum.** Messages are JSON objects
   with `schema: "se.controller/1"` and a `type`. Controller variations come in
   later increments.
@@ -113,14 +114,13 @@ Part of the [Wrapper spec](../wrapper.md), section
   | --------------- | ---------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
   | game to Wrapper | `hello`    | `presentations`, `statuses`                      | The game's capabilities. The Wrapper sends no variant the game did not declare.                                                              |
   | game to Wrapper | `action`   | `id`, `verb` (`pick`), `args` (`step`, `option`) | A pick request. It is not an action: the Wrapper validates it (W-23) and builds the signed action.                                           |
-  | Wrapper to game | `snapshot` | `snapshot`                                       | A Snapshot that passed W-28, sent on every accepted change: its `steps` copy, or (#146) its `playback` copy.                                 |
+  | Wrapper to game | `snapshot` | `snapshot`                                       | A Snapshot that passed W-28, sent on every accepted change the hold does not keep: its `steps` copy, or (#146) its `playback` copy.          |
   | Wrapper to game | `reject`   | `id`, `reason`                                   | An `action` request that was not accepted. `reason` is a closed list (`not_legal`, `not_active`, `busy`, `invalid`), never a server message. |
 
-  **The hold** (RFC-004, decided 2026-10-30, to be built; it replaces the text
-  above where they differ when the Wrapper ships the single screen). The game is
-  never sent an `active` Snapshot whose round the shell has not found `ready`
-  (W-26). The `snapshot` message is otherwise sent on every accepted change, as
-  above.
+  **The hold** (RFC-004, decided 2026-10-30; built in the shell:
+  `game-hold.ts`'s `givenToGame`). The game is never sent an `active` Snapshot
+  whose round the shell has not found `ready` (W-26). The `snapshot` message is
+  otherwise sent on every accepted change, as above.
 
   - **Who applies it: the session, not the bridge.** The bridge's one input is
     `sendSnapshot(snapshot)` (`controller-bridge.ts`), and it knows no round,
@@ -232,8 +232,8 @@ Part of the [Wrapper spec](../wrapper.md), section
     first `hello` that matches the schema counts, and later ones are ignored. A
     game must declare `steps` and all seven statuses (W-30); otherwise the
     Wrapper shows a generic "game not compatible" error, and sends and accepts
-    nothing more. When the `hello` arrives, the latest Snapshot the Wrapper
-    holds is sent.
+    nothing more. When the `hello` arrives, the latest Snapshot the bridge was
+    given is sent (never one the hold kept, above).
   - The Wrapper sends only the `steps` presentation: a `playback` Snapshot is
     not forwarded in the first release. It does not send a Snapshot whose
     `version` is lower than the latest it was given (W-29).

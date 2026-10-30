@@ -43,7 +43,6 @@ import type {
   GameMount,
   GameMountOptions,
   PlaySession,
-  RoundState,
   SessionRead,
 } from "./session-types.ts";
 import { createSnapshotReader } from "./snapshot-read.ts";
@@ -210,22 +209,6 @@ export const createPlaySession = (
     return outcome;
   };
 
-  const round = (): RoundState | undefined => {
-    const flow = current;
-    if (flow === undefined) return undefined;
-    const verdict = flow.verdict();
-    const unconfirmed = flow.unconfirmed();
-    return Object.freeze({
-      roundId: flow.roundId,
-      verdict: verdict.state,
-      ...(verdict.state === "failed" ? { shown: verdict.shown } : {}),
-      outOfSync: flow.phase() === "out-of-sync",
-      cashOutOffered: flow.cashOutOffered(),
-      cancel: flow.cancel(),
-      ...(unconfirmed === undefined ? {} : { unconfirmed }),
-    });
-  };
-
   const gameOrigin = (): string => parts.gameOrigin;
 
   const mountGame = (mount: GameMountOptions): GameMount => {
@@ -256,7 +239,8 @@ export const createPlaySession = (
       return mounted;
     }
     bridge = result.bridge;
-    const latest = current?.latest() ?? reader.latest();
+    // W-38's hold at the mount: a held Snapshot is not given.
+    const latest = reads.atMount();
     if (latest !== undefined) bridge.sendSnapshot(latest);
     return mounted;
   };
@@ -274,7 +258,7 @@ export const createPlaySession = (
     checkAgain: read,
     start,
     cashOut,
-    round,
+    round: reads.round,
     gameOrigin,
     mountGame,
     onChange: (listener: (outcome: SessionRead) => void): (() => void) => {

@@ -26,6 +26,7 @@ import {
   type DeliveryOptions,
   type RoundDelivery,
 } from "./round-delivery.ts";
+import { pendingOf } from "./round-signer.ts";
 import {
   createRoundTracking,
   type RoundTracking,
@@ -89,6 +90,8 @@ export type RoundFlow = RoundActions & {
    * the round clears it.
    */
   readonly unconfirmed: () => Unconfirmed | undefined;
+  /** The signer's pending move or cash-out while it may sign (`pendingOf`). */
+  readonly pending: () => Unconfirmed | undefined;
   /**
    * The last Snapshot observed, when it was a stale read of the round (a lower
    * `version` than the round's latest, W-29), which the round did not read in;
@@ -278,6 +281,7 @@ export const createRoundFlow = (
     lastError: (): Error | undefined =>
       delivery.lastError() ?? tracking.tipError(),
     unconfirmed,
+    pending: (): Unconfirmed | undefined => pendingOf(tracking.signer()),
     staleRead: (): ValidSnapshot | undefined => stale,
     evidence: (): RoundEvidence =>
       Object.freeze({
