@@ -1,6 +1,6 @@
 {
   "name": "@intraverse/se-client-signing",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "EIP-712 and secp256k1 signing for SuperEngine's signed actions, with canonical 65-byte signatures.",
   "keywords": [

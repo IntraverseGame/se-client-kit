@@ -1,6 +1,6 @@
 {
   "name": "@intraverse/se-client-snapshot",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Validator and render helpers for the SuperEngine Snapshot (se.snapshot/1).",
   "keywords": [
