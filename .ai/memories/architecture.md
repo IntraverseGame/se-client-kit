@@ -210,22 +210,15 @@ structure below.
   review, 2026-10-19): the Wrapper's not-confirmed view
   (`unconfirmed-view.ts`), read on "check again" and every 30 s in the
   background, reads only, until a read settles the round.
-  **Specified, not built (RFC-004, accepted 2026-10-30):** the single screen
-  (`specs/wrapper/the-single-screen.md`, W-57, W-58): the frame shown all
-  session over one control bar, `inert` except at `active` with the verdict
-  `ready` (an explicit list of conditions; a connection problem or a typed
-  error does not make it inert); W-38's hold, applied by the session before
-  `sendSnapshot` (in `show` and `mountGame`; the bridge's type is unchanged):
-  an `active` Snapshot with no `ready` verdict, a not-held round included, is
-  never given to the bridge; the verdict is evaluated after `observe`, which
-  awaits the tip check, and the hand-off after the transition to `ready` is
-  the release; `RoundState.pending` beside `unconfirmed` (derived:
-  the signer's pending move or cash-out only while its phase is `open` or
-  `adopted`; absent once `stale`, out of sync, re-issued, failed, over, or
-  ended; kept beside `unconfirmed` after the lost resend), read only for "Waiting for your move to be confirmed." while an
-  error shows; `resize` sends the minimum height (W-49d, ADR-010 accepted).
-  Today's code still hides the frame (`game-visibility.ts`) and forwards every
-  Snapshot: do not "fix" the specs back to it.
+  **Specified, not built (RFC-004, accepted 2026-10-30):** the single screen,
+  W-38's hold (applied by the session), `RoundState.pending`, and `resize` as a
+  minimum. The code still hides the frame (`game-visibility.ts`) and forwards
+  every Snapshot: do not "fix" the specs back to it. The rules:
+  [the single screen](../../specs/wrapper/the-single-screen.md),
+  [the hold](../../specs/wrapper/the-game-iframe-and-the-controller-boundary.md),
+  [`RoundState.pending`](../../specs/client-kit/the-shell-package.md),
+  [W-49d](../../specs/wrapper/operator-embedding.md), and
+  [ADR-010](../../decisions/ADR-010-resize-height-is-a-minimum.md).
   A cancel 503 `retryable: false` earns no resend but keeps the reads going
   (it may be stored). Any other failed verdict puts the transcript state
   in `failed`. A pick needs both a `ready` verdict and an `open` or `adopted`
