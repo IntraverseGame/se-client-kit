@@ -159,7 +159,7 @@ const stickiness = (sizes: {
   };
   const doc = {
     querySelector: (selector: string) =>
-      selector === ".se-alert" ? alert : bar,
+      selector === ".se-status-slot" ? alert : bar,
     documentElement: {
       get clientHeight() {
         return sizes.viewport;
@@ -199,7 +199,7 @@ describe("followBarLayout (W-57)", () => {
     expect(run.sticky()).toBe(true);
   });
 
-  it("gives the alert line a tab stop while its text overflows, on a size change too", () => {
+  it("gives the status slot, which holds the alert line, a tab stop while its text overflows, on a size change too", () => {
     const sizes = { bar: 250, viewport: 500, alertText: 40 };
     const run = stickiness(sizes);
     expect(run.alertTabStop()).toBeUndefined();

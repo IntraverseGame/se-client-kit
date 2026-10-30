@@ -4,8 +4,9 @@
 
 The Wrapper is one screen (W-57, W-58, RFC-004). The game frame shows from its
 mount, in one place at one size for the whole session, over one control bar
-that changes in place: the status line, the alert line, the primary controls,
-the round line, and the lobby and deposit. The frame takes input only in a
+that changes in place: the status line (an error shows under its heading, in
+the place of its detail), the primary controls, the round line, and the lobby
+and deposit. The frame takes input only in a
 playable round (`active`, held by the shell, verdict `ready`); in every other
 state it is `inert`, under a translucent scrim while the round is checked, or
 an opaque cover in a state that stops the round. The final states (the

@@ -31,14 +31,26 @@
    * The single screen (W-57): the stage's minimum S (270 CSS pixels at the
    * default text size, provisional) and the height each slot of the bar
    * reserves, so no state makes the bar grow and the stage never moves. The
-   * bar's height B depends only on the width and the text size.
+   * bar's height B depends only on the width and the text size. The status
+   * slot holds the status heading (one line, 1.5rem) and one detail line,
+   * which the alert line takes when it shows: the taller of the two, the
+   * alert's heading and its first line (3.5rem).
    */
   --se-stage-min: 16.875rem;
-  --se-status-h: 3.75rem;
-  --se-alert-h: 3.75rem;
+  --se-status-h: 5.25rem;
   --se-controls-h: 3.75rem;
   --se-round-h: 5.75rem;
   --se-links-h: 3.5rem;
+  /*
+   * The bar's slots, from 64rem (1024 CSS pixels) up: the status takes the
+   * rest of the width, the controls and the links sit side by side on the
+   * right. The notices row is left out while it has nothing to show, so its
+   * gap is not reserved either.
+   */
+  --se-bar-columns: minmax(0, 1fr) auto auto;
+  --se-bar-areas: "notices notices notices" "status controls links"
+    "round round round";
+  --se-bar-areas-bare: "status controls links" "round round round";
   --se-scrim: rgb(255 255 255 / 0.72);
 }
 
@@ -172,16 +184,16 @@ body {
  */
 .se-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "notices notices"
-    "status controls"
-    "alert links"
-    "round round";
+  grid-template-columns: var(--se-bar-columns);
+  grid-template-areas: var(--se-bar-areas);
   gap: 0.5rem 1rem;
   padding: 0.75rem 1rem;
   border-top: 0.0625rem solid var(--se-border);
   background: var(--se-bg);
+}
+
+.se-bar:has(> .se-notices:empty) {
+  grid-template-areas: var(--se-bar-areas-bare);
 }
 
 .se-notices {
@@ -192,18 +204,19 @@ body {
   display: none;
 }
 
-.se-status {
+/*
+ * The status slot: the status line, and under it the alert line, which takes
+ * the place of the status detail when it shows (W-57: the alert overlays the
+ * status). When both have text the slot scrolls; it never grows.
+ */
+.se-status-slot {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: safe center;
+  gap: 0.25rem;
   grid-area: status;
+  align-self: center;
   height: var(--se-status-h);
-  overflow-y: auto;
-}
-
-.se-alert {
-  grid-area: alert;
-  height: var(--se-alert-h);
   overflow-y: auto;
 }
 
@@ -213,6 +226,7 @@ body {
   align-items: center;
   gap: 0.5rem 0.75rem;
   grid-area: controls;
+  align-self: center;
   height: var(--se-controls-h);
   overflow-y: auto;
 }
@@ -229,7 +243,7 @@ body {
 
 .se-links {
   align-content: start;
-  align-self: start;
+  align-self: center;
   grid-area: links;
   height: var(--se-links-h);
   padding: 0.3125rem;
@@ -237,22 +251,37 @@ body {
 }
 
 /*
+ * Wide (from 72rem, 1152 CSS pixels): the round line fits one row of its
+ * controls (2.75rem, and room for the focus outline).
+ */
+@media (min-width: 72rem) {
+  :root {
+    --se-round-h: 3.375rem;
+  }
+}
+
+/*
+ * Medium (40rem to 64rem): the status spans two rows on the left, the
+ * controls over the links on the right.
+ */
+@media (width < 64rem) {
+  :root {
+    --se-bar-columns: minmax(0, 1fr) auto;
+    --se-bar-areas: "notices notices" "status controls" "status links"
+      "round round";
+    --se-bar-areas-bare: "status controls" "status links" "round round";
+  }
+}
+
+/*
  * Narrow (under 40rem): the slots stack, and the controls and the round line
  * reserve two rows.
  */
 @media (max-width: 40rem) {
-  .se-bar {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "notices"
-      "status"
-      "alert"
-      "controls"
-      "round"
-      "links";
-  }
-
   :root {
+    --se-bar-columns: minmax(0, 1fr);
+    --se-bar-areas: "notices" "status" "controls" "round" "links";
+    --se-bar-areas-bare: "status" "controls" "round" "links";
     --se-controls-h: 9.25rem;
     --se-round-h: 8.5rem;
   }
@@ -525,7 +554,7 @@ h2.se-heading,
 }
 
 .se-alert:not([data-empty]) {
-  padding: 0.5rem 1rem;
+  padding: 0.25rem 0.75rem;
   border: 0.0625rem solid var(--se-error);
   border-left-width: 0.25rem;
   border-radius: 0.75rem;

@@ -4,8 +4,9 @@
 // to a win, a loss, and a typed error, and the stage's box never moves between
 // states. Below `H_min` its document scrolls inside the iframe, with the bar
 // sticky only while it takes at most half the viewport, and the scroll bar
-// does not change the content's width or send a `resize`. A long alert
-// scrolls inside the bar and never covers the stage. At 200 % zoom (a 640 by
+// does not change the content's width or send a `resize`. A long alert sits
+// in the status slot, under the status line, scrolls inside the bar, never
+// covers the stage, and leaves the bar's height as it was. At 200 % zoom (a 640 by
 // 360 box) every control stays usable. Runs in every browser project.
 
 import type { Frame, Page } from "@playwright/test";
@@ -84,18 +85,25 @@ const expectFills = (layout: Layout): void => {
   expect(layout.scrollsX).toBe(false);
 };
 
-/** The alert sits in its slot: below the stage, inside the bar, scrolling. */
+/**
+ * The alert sits in the status slot (the alert overlays the status, W-57),
+ * under the status line: below the stage, inside the bar, and the slot scrolls
+ * when its text does not fit.
+ */
 const alertInBar = (element: Element): boolean => {
-  const own = element.getBoundingClientRect();
+  const slot = element.parentElement;
   const stage = document.querySelector(".se-stage")?.getBoundingClientRect();
   const bar = document.querySelector(".se-bar")?.getBoundingClientRect();
+  if (slot?.classList.contains("se-status-slot") !== true) return false;
+  const own = slot.getBoundingClientRect();
   return (
     stage !== undefined &&
     bar !== undefined &&
+    element.previousElementSibling?.classList.contains("se-status") === true &&
     own.top >= stage.bottom &&
     own.bottom <= bar.bottom + 0.5 &&
-    (element.scrollHeight <= element.clientHeight ||
-      element.getAttribute("tabindex") === "0")
+    (slot.scrollHeight <= slot.clientHeight ||
+      slot.getAttribute("tabindex") === "0")
   );
 };
 
@@ -201,7 +209,8 @@ for (const box of BOXES) {
     const after = await layoutOf(frame);
     expectFills(after);
     expect(after.stage).toEqual(before.stage);
-    // The alert stays in its slot: below the stage, inside the bar.
+    expect(after.bar).toBe(before.bar);
+    // The alert stays in the status slot: below the stage, inside the bar.
     const inBar = await alert.evaluate(alertInBar);
     expect(inBar).toBe(true);
   });

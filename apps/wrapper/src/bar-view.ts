@@ -1,11 +1,11 @@
 // The control bar (W-57), under the stage, which changes in place: the
-// development badge (W-26a), the status line (its heading and at most one line
-// of detail), the alert line (an error that does not stop the round), the
-// primary controls, the round line, and the operator links (W-49e, W-49f). A
-// slot with nothing to show stays empty; no control shows disabled for a
-// state that does not offer it. When a cover state owns the page's alert
-// region, the bar's error is plain text: its icon and styling stay, its
-// `role` and its announcement go.
+// development badge (W-26a), the status slot (the status line, its heading and
+// at most one line of detail, and under it the alert line, an error that does
+// not stop the round), the primary controls, the round line, and the operator
+// links (W-49e, W-49f). A slot with nothing to show stays empty; no control
+// shows disabled for a state that does not offer it. When a cover state owns
+// the page's alert region, the bar's error is plain text: its icon and styling
+// stay, its `role` and its announcement go.
 
 import {
   ALERT_HEADING_ID,
@@ -99,13 +99,15 @@ export const createBarView = (
   const notices = el("div", { class: "se-notices" });
   const status = el("section", { class: "se-status" });
   const alert = el("div", { class: "se-alert", role: "alert" });
+  // The alert line overlays the status (W-57): it sits in the status slot,
+  // under the status line, and the slot scrolls when the two do not fit.
+  const statusSlot = el("div", { class: "se-status-slot" }, [status, alert]);
   const controls = el("div", { class: "se-controls" });
   const roundLine = el("div", { class: "se-round" });
   const links = el("div", { class: "se-actions se-links" });
   const element = el("div", { class: "se-bar" }, [
     notices,
-    status,
-    alert,
+    statusSlot,
     controls,
     roundLine,
     links,
@@ -196,7 +198,6 @@ export const createBarView = (
           : alertView(el, doc, m, error, options, coverOwnsAlert),
     );
     alert.toggleAttribute("data-empty", error === undefined);
-    markOverflow(alert);
 
     // A state on the cover that stops the round shows only what W-57's table
     // gives the bar.
@@ -237,6 +238,7 @@ export const createBarView = (
       section(controls, key, () => shown.controls);
       section(roundLine, key, () => shown.round);
     }
+    markOverflow(statusSlot);
 
     const offer = linkPlan(state, options.links, options.calling === true);
     section(links, JSON.stringify([language, offer]), () =>
