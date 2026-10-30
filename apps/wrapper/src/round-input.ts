@@ -146,6 +146,14 @@ export type SnapshotInput = {
    * is credited, and optional (W-31, W-34).
    */
   readonly payout?: ShownAmount;
+  /**
+   * What cashing out now credits the player, computed by the server: on an
+   * `active` steps round after its first step only (the schema forbids it on
+   * every other status, at step 0, and on `playback`), and optional. A quote,
+   * not money held: a losing pick takes it away. Shown on the cash-out control
+   * as `formatted`; never derived from `currentMultiplier` (W-31, W-34).
+   */
+  readonly cashOutValue?: ShownAmount;
 };
 
 /** A typed Play API error, validated (`PlayProblem`). */

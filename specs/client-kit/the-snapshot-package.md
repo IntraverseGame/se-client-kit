@@ -54,18 +54,21 @@ Part of the [Client kit spec](../client-kit.md), section
   fields, and `proofs` only once bound (a bound config round's `proofs` carry
   `randomnessProof` and `createRoundAuth`; an unbound one has none, so `proofs`
   stays optional there); `active` and `resolving` have `proofs` and no
-  `closeReason`; `won` and `lost` have `proofs.randomnessProof.roundSecret`;
-  `canceled` has `proofs`. `isStepsPresentation` (a `StepConfig`) and
-  `isPlaybackPresentation` (a book round with a `BookConfig`) narrow by
-  `presentation`. An accepted Play API error is `ValidPlayProblem`,
-  discriminated by `code`: `ROUND_ACTIVE` carries a `ValidSnapshot` and
-  `retryable: false`; of the six retryable codes, five have `retryable: true`
-  and `UNAVAILABLE` either value (retryable by default, but `false` on a call
-  that is never repeated, the launch-code redeem); every other code has
-  `retryable: false` and no `snapshot`. The `createRoundAuth` of a config round
-  is typed optional, as the generated types are: the schema requires it from the
-  bind on for `model: "config"`, which the narrowing by `status` does not
-  express.
+  `closeReason`, and `active` alone may carry `cashOutValue` (an optional
+  `Amount`, what a cash-out credits now; `cashOutValue?: never` on every other
+  status, as the schema allows it on an `active` steps round after its first
+  step only, two rules the narrowing by `status` does not express); `won` and
+  `lost` have `proofs.randomnessProof.roundSecret`; `canceled` has `proofs`.
+  `isStepsPresentation` (a `StepConfig`) and `isPlaybackPresentation` (a book
+  round with a `BookConfig`) narrow by `presentation`. An accepted Play API
+  error is `ValidPlayProblem`, discriminated by `code`: `ROUND_ACTIVE` carries a
+  `ValidSnapshot` and `retryable: false`; of the six retryable codes, five have
+  `retryable: true` and `UNAVAILABLE` either value (retryable by default, but
+  `false` on a call that is never repeated, the launch-code redeem); every other
+  code has `retryable: false` and no `snapshot`. The `createRoundAuth` of a
+  config round is typed optional, as the generated types are: the schema
+  requires it from the bind on for `model: "config"`, which the narrowing by
+  `status` does not express.
 - **A book round's `BookConfig`** (issue #146). The validator enforces it
   through the schema alone, with no rule of its own (above): `kind` `book`, a
   `packageHash`, a `model` of 1 to 64 characters, and nothing else but `rtp` and

@@ -34,6 +34,8 @@ const READABLE: ReadonlySet<string> = new Set([
   "bet",
   "currentMultiplier",
   "payout",
+  // An `active` round's cash-out value, on the cash-out control (W-31).
+  "cashOutValue",
   // A book round's RTP line (W-56): only `config.rtp.decimal` below it.
   "presentation",
   "config",

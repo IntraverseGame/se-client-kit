@@ -15,8 +15,9 @@ state it is `inert`, under a translucent scrim while the round is checked, or
 an opaque cover in a state that stops the round. The final states (the
 session ended, another tab, a changed session) hide it behind the cover. The
 start control reads "Place bet" at `idle` and "Play again" beside a result;
-"Cash out" shows the multiplier beside it, never an amount. "Waiting for your
-move to be confirmed." shows while a move or cash-out is pending and an error
+"Cash out" shows the multiplier beside it, or the amount the Snapshot carries
+once that field is vendored, never an amount the Wrapper computes. "Waiting for
+your move to be confirmed." shows while a move or cash-out is pending and an error
 shows. The focus follows W-46's single-screen rules: it moves into the game
 once when the round the player started is ready, never stays on an inert
 frame, and stays in the frame when an error answers a pick.

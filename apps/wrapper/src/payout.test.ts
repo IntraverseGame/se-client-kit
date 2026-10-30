@@ -10,8 +10,8 @@ import { describe, expect, it } from "vitest";
 import { allText, alertText, mount } from "./fixtures/app.ts";
 import { snapshotVector, withFields } from "./fixtures/vectors.ts";
 import { messagesFor } from "./messages.ts";
+import { shownPayout } from "./round-amounts.ts";
 import type { ShownAmount, SnapshotInput } from "./round-input.ts";
-import { shownPayout } from "./round-view.ts";
 
 const m = messagesFor("en").messages;
 
