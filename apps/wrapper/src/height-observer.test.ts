@@ -5,8 +5,9 @@
 // iframe's height alone reports nothing; a width or text-size change, which
 // changes the bar's reserved height, reports the new minimum; a `min-height`
 // that does not parse is the default S, never 0. The bar is sticky only while
-// it takes at most half the viewport, and the alert line takes a tab stop
-// whenever its text overflows, a size change with no state change included.
+// it takes at most half the viewport, and the status slot and the alert
+// line's one-row box each take a tab stop whenever their text overflows, a
+// size change with no state change included.
 
 import { describe, expect, it } from "vitest";
 
@@ -134,11 +135,32 @@ describe("observeHeight (W-49d)", () => {
   });
 });
 
+/** A scrollable box 60 by 300 pixels whose content is `height` by `width`. */
+const box = (height: () => number, width: () => number) => {
+  const boxAttributes = new Map<string, string>();
+  return {
+    attributes: boxAttributes,
+    get scrollHeight() {
+      return height();
+    },
+    get scrollWidth() {
+      return width();
+    },
+    clientHeight: 60,
+    clientWidth: 300,
+    setAttribute: (name: string, value: string) =>
+      boxAttributes.set(name, value),
+    removeAttribute: (name: string) => boxAttributes.delete(name),
+  };
+};
+
 /** A bar `bar` tall in a viewport `viewport` tall; resizes are the test's. */
 const stickiness = (sizes: {
   bar: number;
   viewport: number;
+  slotText?: number;
   alertText?: number;
+  alertWidth?: number;
 }) => {
   const attributes = new Map<string, boolean>();
   let resize: () => void = ignore;
@@ -147,19 +169,20 @@ const stickiness = (sizes: {
     getBoundingClientRect: () => ({ height: sizes.bar }),
     toggleAttribute: (name: string, on: boolean) => attributes.set(name, on),
   };
-  const alertAttributes = new Map<string, string>();
-  const alert = {
-    get scrollHeight() {
-      return sizes.alertText ?? 0;
-    },
-    clientHeight: 60,
-    setAttribute: (name: string, value: string) =>
-      alertAttributes.set(name, value),
-    removeAttribute: (name: string) => alertAttributes.delete(name),
-  };
+  const slot = box(
+    () => sizes.slotText ?? 0,
+    () => 0,
+  );
+  const alert = box(
+    () => sizes.alertText ?? 0,
+    () => sizes.alertWidth ?? 0,
+  );
+  const boxes = new Map<string, unknown>([
+    [".se-status-slot", slot],
+    [".se-bar .se-alert", alert],
+  ]);
   const doc = {
-    querySelector: (selector: string) =>
-      selector === ".se-status-slot" ? alert : bar,
+    querySelector: (selector: string) => boxes.get(selector) ?? bar,
     documentElement: {
       get clientHeight() {
         return sizes.viewport;
@@ -178,7 +201,8 @@ const stickiness = (sizes: {
   });
   return {
     sticky: () => attributes.get("data-sticky"),
-    alertTabStop: () => alertAttributes.get("tabindex"),
+    slotTabStop: () => slot.attributes.get("tabindex"),
+    alertTabStop: () => alert.attributes.get("tabindex"),
     resize: () => resize(),
     viewportResize: () => viewport(),
   };
@@ -199,16 +223,34 @@ describe("followBarLayout (W-57)", () => {
     expect(run.sticky()).toBe(true);
   });
 
-  it("gives the status slot, which holds the alert line, a tab stop while its text overflows, on a size change too", () => {
-    const sizes = { bar: 250, viewport: 500, alertText: 40 };
+  it("gives the status slot a tab stop while its text overflows, on a size change too", () => {
+    const sizes = { bar: 250, viewport: 500, slotText: 40 };
+    const run = stickiness(sizes);
+    expect(run.slotTabStop()).toBeUndefined();
+    // A narrower width or a larger text size: the status line now overflows.
+    sizes.slotText = 120;
+    run.resize();
+    expect(run.slotTabStop()).toBe("0");
+    sizes.slotText = 40;
+    run.viewportResize();
+    expect(run.slotTabStop()).toBeUndefined();
+  });
+
+  it("gives the alert line's one-row box a tab stop while its text overflows either way", () => {
+    const sizes = { bar: 250, viewport: 500, alertText: 40, alertWidth: 200 };
     const run = stickiness(sizes);
     expect(run.alertTabStop()).toBeUndefined();
-    // A narrower width or a larger text size: the same error now overflows.
+    // The error's further lines do not fit the row.
     sizes.alertText = 120;
     run.resize();
     expect(run.alertTabStop()).toBe("0");
+    expect(run.slotTabStop()).toBeUndefined();
     sizes.alertText = 40;
+    sizes.alertWidth = 400;
     run.viewportResize();
+    expect(run.alertTabStop()).toBe("0");
+    sizes.alertWidth = 200;
+    run.resize();
     expect(run.alertTabStop()).toBeUndefined();
   });
 });

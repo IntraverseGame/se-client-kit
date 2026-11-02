@@ -1,8 +1,9 @@
 // The control bar (W-57), under the stage, which changes in place: the
 // development badge (W-26a), the status slot (the status line, its heading and
-// at most one line of detail, and under it the alert line, an error that does
-// not stop the round), the primary controls, the round line, and the operator
-// links (W-49e, W-49f). A slot with nothing to show stays empty; no control
+// at most one line of detail, and after it on the same row the alert line, an
+// error that does not stop the round), the primary controls, the round line,
+// and the operator links (W-49e, W-49f). Each slot reserves whole rows of
+// controls (styles.css), so no state changes the bar's height. A slot with nothing to show stays empty; no control
 // shows disabled for a state that does not offer it. When a cover state owns
 // the page's alert region, the bar's error is plain text: its icon and styling
 // stay, its `role` and its announcement go.
@@ -55,13 +56,16 @@ export type BarView = {
 
 /**
  * A slot whose text does not fit scrolls inside the bar and is reachable by
- * keyboard while it overflows (W-57): `tabindex="0"` then, none otherwise.
- * Checked on every update and on every size change of the bar
- * (height-observer.ts), since a width, zoom, or text-size change can make it
- * overflow with no state change.
+ * keyboard while it overflows (W-57): `tabindex="0"` then, none otherwise. The
+ * status slot and the alert line's own box are such slots. Checked on every
+ * update and on every size change of the bar (height-observer.ts), since a
+ * width, zoom, or text-size change can make it overflow with no state change.
  */
 export const markOverflow = (slot: Element): void => {
-  if (slot.scrollHeight > slot.clientHeight) {
+  if (
+    slot.scrollHeight > slot.clientHeight ||
+    slot.scrollWidth > slot.clientWidth
+  ) {
     slot.setAttribute("tabindex", "0");
   } else {
     slot.removeAttribute("tabindex");
@@ -100,7 +104,8 @@ export const createBarView = (
   const status = el("section", { class: "se-status" });
   const alert = el("div", { class: "se-alert", role: "alert" });
   // The alert line overlays the status (W-57): it sits in the status slot,
-  // under the status line, and the slot scrolls when the two do not fit.
+  // after the status heading on the same row, one row high; what does not fit
+  // scrolls inside its own box.
   const statusSlot = el("div", { class: "se-status-slot" }, [status, alert]);
   const controls = el("div", { class: "se-controls" });
   const roundLine = el("div", { class: "se-round" });
@@ -239,6 +244,7 @@ export const createBarView = (
       section(roundLine, key, () => shown.round);
     }
     markOverflow(statusSlot);
+    markOverflow(alert);
 
     const offer = linkPlan(state, options.links, options.calling === true);
     section(links, JSON.stringify([language, offer]), () =>

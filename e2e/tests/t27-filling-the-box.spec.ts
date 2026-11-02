@@ -1,13 +1,15 @@
 // T-27 (W-57 "The height", W-49d, ADR-010): the Wrapper fills its operator's
-// box. In boxes of 1280 by 720, 800 by 600, and 400 by 900 CSS pixels its
-// document is exactly the box, with no scroll bar, in every state of a round
-// to a win, a loss, and a typed error, and the stage's box never moves between
-// states. Below `H_min` its document scrolls inside the iframe, with the bar
-// sticky only while it takes at most half the viewport, and the scroll bar
-// does not change the content's width or send a `resize`. A long alert sits
-// in the status slot, under the status line, scrolls inside the bar, never
-// covers the stage, and leaves the bar's height as it was. At 200 % zoom (a 640 by
-// 360 box) every control stays usable. Runs in every browser project.
+// box. In boxes of 1280 by 720, 1142 by 620, 800 by 600, and 400 by 900 CSS
+// pixels its document is exactly the box, with no scroll bar, in every state
+// of a round to a win, a loss, and a typed error, and the stage's box never
+// moves between states. From 52rem the bar is two rows (the status slot, the
+// controls, and the links; the round line); the controls and the round line
+// always fit their rows. Below `H_min` its document scrolls inside the iframe,
+// the bar sticky only while it takes at most half the viewport, and the scroll
+// bar does not change the content's width or send a `resize`. A long alert
+// sits in the status slot, after the status line, scrolls inside the bar,
+// never covers the stage, and leaves the bar's height as it was. At 200 %
+// zoom (a 640 by 360 box) every control stays usable. Every browser project.
 
 import type { Frame, Page } from "@playwright/test";
 
@@ -30,6 +32,7 @@ type Box = { readonly width: number; readonly height: number };
 
 const BOXES: readonly Box[] = [
   { width: 1280, height: 720 },
+  { width: 1142, height: 620 },
   { width: 800, height: 600 },
   { width: 400, height: 900 },
 ];
@@ -44,7 +47,14 @@ type Layout = {
   readonly stage: readonly number[];
   readonly bar: number;
   readonly sticky: boolean;
+  /** The tops of the status slot, the controls, the links, and the round line. */
+  readonly tops: readonly number[];
+  /** The primary controls and the round line fit their reserved rows. */
+  readonly fits: boolean;
 };
+
+/** One reserved row of the bar (3.375rem) at the default text size. */
+const ROW = 54;
 
 /**
  * The Wrapper's document and its stage, measured inside its iframe. Whether it
@@ -64,6 +74,7 @@ const measure = (): Layout => {
     return moved;
   };
   const stage = rect(".se-stage");
+  const slots = [".se-status-slot", ".se-controls", ".se-links", ".se-round"];
   return {
     scrollsX: scrolls(50, 0),
     scrollsY: scrolls(0, 50),
@@ -74,36 +85,51 @@ const measure = (): Layout => {
     sticky:
       document.querySelector<HTMLElement>(".se-bar")?.dataset["sticky"] !==
       undefined,
+    tops: slots.map(selector => rect(selector).top),
+    fits: [".se-controls", ".se-round"].every(selector => {
+      const slot = document.querySelector(selector);
+      return slot !== null && slot.scrollHeight <= slot.clientHeight;
+    }),
   };
 };
 
 const layoutOf = (frame: Frame): Promise<Layout> => frame.evaluate(measure);
 
-/** The document is the box exactly: nothing scrolls either way. */
+/** The document is the box exactly, and the controls fit their rows. */
 const expectFills = (layout: Layout): void => {
   expect(layout.scrollsY).toBe(false);
   expect(layout.scrollsX).toBe(false);
+  expect(layout.fits).toBe(true);
+};
+
+/** From 52rem (832 CSS pixels) the bar is two rows (W-57 "The height"). */
+const expectTwoRows = (box: Box, layout: Layout): void => {
+  if (box.width < 832) return;
+  const [status = 0, controls = 0, links = 0, round = 0] = layout.tops;
+  expect([controls, links, round]).toEqual([status, status, status + ROW]);
+  expect(layout.bar).toBeLessThanOrEqual(2 * ROW + 16);
 };
 
 /**
- * The alert sits in the status slot (the alert overlays the status, W-57),
- * under the status line: below the stage, inside the bar, and the slot scrolls
- * when its text does not fit.
+ * The alert sits in the status slot after the status line (W-57), its box
+ * wholly inside the slot, scrolling (a tab stop) when its text overflows.
  */
 const alertInBar = (element: Element): boolean => {
   const slot = element.parentElement;
   const stage = document.querySelector(".se-stage")?.getBoundingClientRect();
-  const bar = document.querySelector(".se-bar")?.getBoundingClientRect();
   if (slot?.classList.contains("se-status-slot") !== true) return false;
   const own = slot.getBoundingClientRect();
+  const box = element.getBoundingClientRect();
   return (
     stage !== undefined &&
-    bar !== undefined &&
     element.previousElementSibling?.classList.contains("se-status") === true &&
     own.top >= stage.bottom &&
-    own.bottom <= bar.bottom + 0.5 &&
-    (slot.scrollHeight <= slot.clientHeight ||
-      slot.getAttribute("tabindex") === "0")
+    box.top >= own.top - 0.5 &&
+    box.bottom <= own.bottom + 0.5 &&
+    box.left >= own.left - 0.5 &&
+    box.right <= own.right + 0.5 &&
+    (element.scrollHeight <= element.clientHeight ||
+      element.getAttribute("tabindex") === "0")
   );
 };
 
@@ -185,6 +211,7 @@ for (const box of BOXES) {
       expect(active.stage).toEqual(idle.stage);
       expect(result.stage).toEqual(idle.stage);
       expect(result.bar).toBe(idle.bar);
+      expectTwoRows(box, result);
     });
   }
 
@@ -210,6 +237,7 @@ for (const box of BOXES) {
     expectFills(after);
     expect(after.stage).toEqual(before.stage);
     expect(after.bar).toBe(before.bar);
+    expectTwoRows(box, after);
     // The alert stays in the status slot: below the stage, inside the bar.
     const inBar = await alert.evaluate(alertInBar);
     expect(inBar).toBe(true);

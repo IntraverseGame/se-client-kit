@@ -228,9 +228,12 @@ structure below.
   shown "as the alert", the bar's alert line otherwise (its error then plain
   text, no alert heading id). The alert line overlays the status: it has no slot
   of its own and sits in the status slot (`.se-status-slot`: the status line,
-  then the alert line), which reserves the heading and the taller of the detail
-  and the alert. Each bar slot reserves its height in rem, so the
-  bar's height `B` changes only with width or text size; `resize` reports
+  then the alert line, on one row after the heading; the alert is one line in
+  a box of its own that scrolls inside itself, `markOverflow` on both). Each bar slot reserves
+  whole rows of controls (`--se-row-h`, 3.375rem; two rows of bar from 52rem,
+  more below), so the bar's height `B` changes only with width or text size;
+  the round line shows the round id shortened (`roundIdField` in `dom.ts`: the
+  full id is its title and visually hidden text, the copy control copies it); `resize` reports
   `H_min = ceil(B) + S` (`height-observer.ts`, ADR-010), never the body's box,
   and `followBarLayout` sets the bar's `data-sticky` only while it takes at
   most half the viewport. It also re-checks the status slot's tab stop while it overflows (`markOverflow`, on size changes too). Do not hide the frame, write a measured height into

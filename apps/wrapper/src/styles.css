@@ -29,28 +29,30 @@
   --se-mono: ui-monospace, monospace;
   /*
    * The single screen (W-57): the stage's minimum S (270 CSS pixels at the
-   * default text size, provisional) and the height each slot of the bar
-   * reserves, so no state makes the bar grow and the stage never moves. The
-   * bar's height B depends only on the width and the text size. The status
-   * slot holds the status heading (one line, 1.5rem) and one detail line,
-   * which the alert line takes when it shows: the taller of the two, the
-   * alert's heading and its first line (3.5rem).
+   * default text size, provisional) and the one height every slot of the bar
+   * reserves, one row of controls: a 2.75rem target and, on each side, room
+   * for its focus outline (0.1875rem and its 0.125rem offset). No state makes
+   * the bar grow, so the stage never moves; the bar's height B depends only
+   * on the width and the text size.
    */
   --se-stage-min: 16.875rem;
-  --se-status-h: 5.25rem;
-  --se-controls-h: 3.75rem;
-  --se-round-h: 5.75rem;
-  --se-links-h: 3.5rem;
+  --se-slot-pad: 0.3125rem;
+  --se-row-h: 3.375rem;
   /*
-   * The bar's slots, from 64rem (1024 CSS pixels) up: the status takes the
-   * rest of the width, the controls and the links sit side by side on the
-   * right. The notices row is left out while it has nothing to show, so its
-   * gap is not reserved either.
+   * The bar's slots, from 52rem (832 CSS pixels) up, on two rows: the status
+   * slot takes the rest of the width, with the controls and the links on its
+   * right; the round line is the second row. The notices row is left out
+   * while it has nothing to show, so its gap is not reserved either.
    */
   --se-bar-columns: minmax(0, 1fr) auto auto;
   --se-bar-areas: "notices notices notices" "status controls links"
     "round round round";
   --se-bar-areas-bare: "status controls links" "round round round";
+  /* The rows the primary controls and the round line reserve (under 52rem). */
+  --se-controls-rows: 1;
+  --se-round-rows: 1;
+  /* The bar's pills are a little narrower, so a row holds more of them. */
+  --se-bar-choice-pad: 0.875rem;
   --se-scrim: rgb(255 255 255 / 0.72);
 }
 
@@ -179,15 +181,20 @@ body {
 }
 
 /*
- * The control bar: each slot reserves its height; text that does not fit
- * scrolls inside its slot and never spills onto the stage.
+ * The control bar: each slot reserves one row of controls; text or controls
+ * that do not fit scroll inside their slot and never spill onto the stage.
+ * Each slot's own padding is the room for its focus outlines, so the bar's
+ * padding and its row gap stay small.
  */
 .se-bar {
+  --se-pill-pad: 0.875rem;
+  --se-choice-pad: var(--se-bar-choice-pad);
+
   display: grid;
   grid-template-columns: var(--se-bar-columns);
   grid-template-areas: var(--se-bar-areas);
-  gap: 0.5rem 1rem;
-  padding: 0.75rem 1rem;
+  gap: 0 0.75rem;
+  padding: 0.25rem 0.75rem;
   border-top: 0.0625rem solid var(--se-border);
   background: var(--se-bg);
 }
@@ -205,85 +212,111 @@ body {
 }
 
 /*
- * The status slot: the status line, and under it the alert line, which takes
- * the place of the status detail when it shows (W-57: the alert overlays the
- * status). When both have text the slot scrolls; it never grows.
+ * The bar's slots, each one row of controls high. Their items sit on one
+ * line; what does not fit wraps and scrolls inside the slot, which never
+ * grows (`safe` keeps the first line in reach when it overflows).
+ */
+.se-status-slot,
+.se-controls,
+.se-round,
+.se-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: safe center;
+  height: var(--se-row-h);
+  padding: var(--se-slot-pad);
+  overflow-y: auto;
+}
+
+/*
+ * The status slot: the status heading and, on the same row after it, the
+ * detail or the alert line, which takes the detail's place when it shows
+ * (W-57: the alert overlays the status). The two never wrap onto a second
+ * row: the status line takes at most half the slot, the alert the rest. When
+ * the status line's text does not fit, the slot scrolls; it never grows.
  */
 .se-status-slot {
-  display: flex;
-  flex-direction: column;
-  justify-content: safe center;
-  gap: 0.25rem;
+  flex-wrap: nowrap;
+  align-items: safe center;
+  gap: 0.75rem;
   grid-area: status;
-  align-self: center;
-  height: var(--se-status-h);
+}
+
+.se-status {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.75rem;
+  min-width: 0;
+  max-width: 50%;
+}
+
+.se-status:has(+ .se-alert[data-empty]) {
+  max-width: none;
+}
+
+/*
+ * The alert line, one row high: its icon, its heading, and the first line of
+ * its detail on the row; the rest (more lines, the request id, its control)
+ * scrolls inside the alert's own box, which stays within the slot, so its
+ * border is never cut off.
+ */
+.se-alert {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0 0.5rem;
+  min-width: 0;
+  /* One line (1.5rem) with its padding and border: a second line is wholly
+     out of view until scrolled, never cut through. */
+  max-height: 2.125rem;
   overflow-y: auto;
 }
 
 .se-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
+  gap: 0.5rem;
   grid-area: controls;
-  align-self: center;
-  height: var(--se-controls-h);
-  overflow-y: auto;
+  height: calc(var(--se-row-h) * var(--se-controls-rows));
 }
 
 .se-round {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 1.25rem;
+  gap: 0.25rem 0.625rem;
   grid-area: round;
-  height: var(--se-round-h);
-  overflow-y: auto;
+  height: calc(var(--se-row-h) * var(--se-round-rows));
 }
 
 .se-links {
-  align-content: start;
-  align-self: center;
   grid-area: links;
-  height: var(--se-links-h);
-  padding: 0.3125rem;
-  overflow-y: auto;
+  justify-content: end;
 }
 
 /*
- * Wide (from 72rem, 1152 CSS pixels): the round line fits one row of its
- * controls (2.75rem, and room for the focus outline).
+ * Under 52rem: the status slot shares its row with the operator links, the
+ * primary controls take the next row, and the round line reserves two rows
+ * (its amounts and the round id, then its copy control and the verify link).
  */
-@media (min-width: 72rem) {
-  :root {
-    --se-round-h: 3.375rem;
-  }
-}
-
-/*
- * Medium (40rem to 64rem): the status spans two rows on the left, the
- * controls over the links on the right.
- */
-@media (width < 64rem) {
+@media (width < 52rem) {
   :root {
     --se-bar-columns: minmax(0, 1fr) auto;
-    --se-bar-areas: "notices notices" "status controls" "status links"
+    --se-bar-areas: "notices notices" "status links" "controls controls"
       "round round";
-    --se-bar-areas-bare: "status controls" "status links" "round round";
+    --se-bar-areas-bare: "status links" "controls controls" "round round";
+    --se-round-rows: 2;
   }
 }
 
 /*
- * Narrow (under 40rem): the slots stack, and the controls and the round line
- * reserve two rows.
+ * Narrow (under 40rem): the primary controls reserve two rows (the bet
+ * options, then the start control), and the round line three (the amounts,
+ * the round id, then its copy control and the verify link).
  */
-@media (max-width: 40rem) {
+@media (width < 40rem) {
   :root {
-    --se-bar-columns: minmax(0, 1fr);
-    --se-bar-areas: "notices" "status" "controls" "round" "links";
-    --se-bar-areas-bare: "status" "controls" "round" "links";
-    --se-controls-h: 9.25rem;
-    --se-round-h: 8.5rem;
+    --se-controls-rows: 2;
+    --se-round-rows: 3;
   }
 }
 
@@ -314,13 +347,8 @@ body {
   letter-spacing: 0.02em;
 }
 
-h2.se-heading,
-.se-status .se-heading {
+h2.se-heading {
   font-size: 1.25rem;
-}
-
-.se-alert .se-heading {
-  font-size: 1rem;
 }
 
 .se-overlay .se-heading {
@@ -404,7 +432,7 @@ h2.se-heading,
   justify-content: center;
   min-width: 2.75rem;
   min-height: 2.75rem;
-  padding: 0.5rem 1.25rem;
+  padding: 0.5rem var(--se-pill-pad, 1.25rem);
   border-radius: var(--se-pill);
   font: inherit;
 }
@@ -479,7 +507,7 @@ h2.se-heading,
   gap: 0.25rem;
   min-width: 2.75rem;
   min-height: 2.75rem;
-  padding: 0 1.25rem;
+  padding: 0 var(--se-choice-pad, 1.25rem);
   border: 0.0625rem solid var(--se-control-border);
   border-radius: var(--se-pill);
   background: var(--se-bg);
@@ -553,8 +581,9 @@ h2.se-heading,
   opacity: 0.88;
 }
 
+/* The alert takes the rest of the row, beside the status heading. */
 .se-alert:not([data-empty]) {
-  padding: 0.25rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   border: 0.0625rem solid var(--se-error);
   border-left-width: 0.25rem;
   border-radius: 0.75rem;
@@ -611,6 +640,71 @@ h2.se-heading,
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/*
+ * The bar's compact sizes (W-57): a heading and a line of text share one row.
+ * After the base rules, so each override follows the rule it narrows.
+ */
+.se-bar .se-heading {
+  font-size: 1rem;
+}
+
+.se-bar .se-heading .se-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.se-bar .se-detail {
+  font-size: 0.875rem;
+  line-height: 1.25;
+}
+
+/* "Something went wrong: The game is unavailable right now." */
+.se-bar .se-alert .se-heading {
+  flex-wrap: nowrap;
+  font-family: system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.se-bar .se-alert .se-heading > span::after {
+  content: ":";
+}
+
+/*
+ * The alert's first line stays on the row beside its heading, its text
+ * wrapping inside it; its lines are as tall as the row, so a further line is
+ * wholly out of view until scrolled.
+ */
+.se-bar .se-alert > .se-detail {
+  line-height: 1.5rem;
+}
+
+.se-bar .se-alert > .se-heading + .se-detail {
+  flex: 1 1 0;
+  min-width: 4rem;
+}
+
+.se-bar .se-field {
+  gap: 0.25rem 0.5rem;
+}
+
+.se-bar .se-field__value {
+  font-size: 1rem;
+}
+
+.se-round .se-actions {
+  gap: 0.5rem;
+}
+
+/* The narrowest (under 22.5rem): the bet options keep to one row. */
+@media (width < 22.5rem) {
+  :root {
+    --se-bar-choice-pad: 0.625rem;
+  }
 }
 
 /*

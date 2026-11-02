@@ -44,16 +44,30 @@ will carry the round id, Q8).
        stop the round (a typed error, the generic error, a connection problem),
        except when a cover state owns the region ("One `role="alert"` region at
        a time", below). **The alert overlays the status**: the alert line has no
-       slot of its own; it sits in the status line's slot, under the status
-       heading, in the place of the status detail. A state that shows a status
-       detail with an error (the waiting detail below, the slow notice, the
-       state's own detail) keeps it, between the heading and the alert, and the
-       slot scrolls. The status line and the alert line together are the
-       **status slot**;
+       slot of its own; it sits in the status line's slot, on the same row after
+       the status heading, in the place of the status detail. A state that shows
+       a status detail with an error (the waiting detail below, the slow notice,
+       the state's own detail) keeps it, between the heading and the alert. The
+       status line and the alert line together are the **status slot**; in the
+       bar the status heading is set smaller than the cover's (1rem, monospace,
+       upper case), so the heading and a line of text share the row. **The alert
+       line is one line**: its icon, its heading, and the first line of its
+       detail sit on one row inside the alert's box ("Something went wrong: The
+       game is unavailable right now."); the rest (further lines, the request
+       id, its control) scrolls inside that box, which stays wholly within the
+       row, so its border is never cut off. While the alert shows, the status
+       line takes at most half the slot and the alert the rest; where the row is
+       too narrow for the whole first line, it wraps inside the box and its end
+       scrolls with the rest;
      - the **primary controls**: the bet selector and the start control, or the
        cash-out control, or "check again", as the state gives them;
      - the **round line**: the payout and the balance on a result, and the round
-       id with its copy control and the verify link (W-39) when shown;
+       id with its copy control and the verify link (W-39) when shown. The round
+       id is **shown shortened**: "…" and its last eight characters
+       (`…7a8b9c0d`; a UUIDv7's first characters are its timestamp, the same for
+       rounds close in time); its title, and the text an assistive technology
+       reads (visually hidden), are the full id, the copy control copies the
+       full id, and the verify link is unchanged (W-39);
      - the **operator links**: the lobby and deposit controls (W-49e, W-49f).
 
      A slot with nothing to show stays empty. The bar never shows a disabled
@@ -157,35 +171,48 @@ common one), so the stage's ratio follows it.
 - The Wrapper's document is exactly the height of its viewport: `html` and
   `body` take `height: 100%`, with no margin; the root element sets
   `scrollbar-gutter: stable`. The bar sits at the bottom at a height `B` that
-  depends only on the width and the player's text size or zoom: it reserves the
-  height of its tallest state at that width (the status slot, one row of
-  controls, the operator links, and the round line), so no state makes it grow
-  and the stage never moves. The stage takes the rest, `viewport height − B`.
-  The status slot reserves the status heading (one line) and one detail line,
-  the taller of the status detail and the alert line (the alert's heading and
-  its first line): the alert takes the detail line's place when it shows, so an
-  error does not change `B`.
+  depends only on the width and the player's text size or zoom: every slot
+  reserves whole **rows of controls**, one row being a 2.75rem target and room
+  for its focus outline on each side (3.375rem), and the bar adds only a small
+  padding (0.25rem above and below, 0.75rem at the sides; each slot's own
+  0.3125rem padding is the room for the focus outline). The reserved rows are
+  those of the tallest typical state at that width, so no state makes the bar
+  grow and the stage never moves. The stage takes the rest,
+  `viewport height − B`. The status slot reserves one row: the status heading
+  and, after it on the same row, the status detail or the alert line, which
+  takes the detail's place when it shows, so an error does not change `B`.
+  Nothing else reserves room for text: there is no second line for the detail
+  and no row of its own for the alert.
 - **The slots by width** (CSS `rem`, so they follow the text size):
-  - from 64rem: the status slot takes the rest of the width, with the primary
-    controls and the operator links side by side on its right; the round line is
-    a row of its own under them;
-  - from 40rem to 64rem: the status slot spans two rows on the left, the primary
-    controls over the operator links on the right; the round line under them;
-  - under 40rem: the slots stack, in the order status slot, primary controls,
-    round line, operator links.
+  - from 52rem (832 CSS pixels at the default text size): **two rows**. The
+    first holds the status slot, which takes the rest of the width, and on its
+    right the primary controls and then the operator links; the second is the
+    round line (its amounts, the shortened round id, the copy control, and the
+    verify link). `B` is 117 CSS pixels at the default text size (two rows, the
+    bar's padding, and its top border);
+  - from 40rem to 52rem: four rows: the status slot with the operator links on
+    its right; the primary controls; the round line, which reserves two rows
+    (its amounts and the round id, then the copy control and the verify link).
+    `B` is 225 CSS pixels in an 800-pixel box;
+  - under 40rem: six rows: the status slot with the operator links on its right;
+    the primary controls, two rows (the bet options, then the start control);
+    the round line, three rows (its amounts; the round id; the copy control and
+    the verify link). `B` is 333 CSS pixels in a 400-pixel box.
 
-  The round line reserves one row of its controls from 72rem up and two rows
-  below. The development badge (W-26a) takes a row above the slots only while it
-  shows; it is set for the session, so it never changes `B` between states.
+  The development badge (W-26a) takes a row above the slots only while it shows;
+  it is set for the session, so it never changes `B` between states.
 
-- **Overflow stays in the bar.** Text that does not fit in its slot (a long
-  error's detail, or a status detail and an error shown together) scrolls within
-  that slot: the status slot, which holds the alert line, becomes a scrollable
+- **Overflow stays in the bar.** Text or controls that do not fit in their slot
+  (a long error, a status detail and an error shown together, or controls at a
+  width the rows above do not foresee) wrap and scroll within that slot: the
+  status slot, and the alert line's one-row box in it, each become a scrollable
   region, reachable by keyboard (`tabindex="0"` while it overflows), inside the
-  bar's reserved height. It never spills onto the stage, so it never covers a
-  playable frame; the cover holds only the states the table puts on it. `B`
-  scales with the text size, so at 200 % zoom the slots hold the same lines
-  (W-47).
+  bar's reserved height. A slot never grows and never spills onto the stage, so
+  it never covers a playable frame; the cover holds only the states the table
+  puts on it. At the widths above, the primary controls and the round line of
+  the typical states (idle, in play, a result) fit their rows, so the round id
+  and the verify link stay in view (W-40). `B` scales with the text size, so at
+  200 % zoom the slots hold the same rows (W-47).
 - **The minimum the Wrapper supports** (RFC-004 Q14, provisional): 320 CSS
   pixels wide (the reflow width of WCAG 2.2, 1.4.10; narrower is not supported,
   and the bar's slots stack), and `H_min = ceil(B) + S` tall, where `S`, the

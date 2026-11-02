@@ -31,7 +31,8 @@ export const roundIdAndVerify = (
               return null;
             },
             () => {
-              // The clipboard refused: the round id stays visible to copy by hand.
+              // The clipboard refused: the full round id stays in the round
+              // id's title and in the verify link, to copy by hand.
               return null;
             },
           );

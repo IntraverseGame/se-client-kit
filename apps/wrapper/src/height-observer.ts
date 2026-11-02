@@ -19,6 +19,7 @@ import { markOverflow } from "./bar-view.ts";
 const BAR = ".se-bar";
 const STAGE = ".se-stage";
 const STATUS_SLOT = ".se-status-slot";
+const ALERT = ".se-bar .se-alert";
 
 /** The stage's minimum `S` at the default text size, in CSS pixels. */
 export const STAGE_MINIMUM_PX = 270;
@@ -91,7 +92,7 @@ export const observeHeight = (
  * high zoom) is not sticky, and the page scrolls as a whole with nothing
  * hidden. It sets the bar's `data-sticky` attribute (the stylesheet makes it
  * sticky), never a style value; standalone and framed alike. The status slot,
- * which holds the alert line, takes a tab stop while its text overflows
+ * and the alert line's box in it, take a tab stop while their text overflows
  * (`markOverflow`).
  */
 export const followBarLayout = (
@@ -109,8 +110,10 @@ export const followBarLayout = (
       bar.getBoundingClientRect().height <=
         doc.documentElement.clientHeight / 2,
     );
-    const slot = doc.querySelector(STATUS_SLOT);
-    if (slot !== null) markOverflow(slot);
+    for (const selector of [STATUS_SLOT, ALERT]) {
+      const slot = doc.querySelector(selector);
+      if (slot !== null) markOverflow(slot);
+    }
   };
   platform.createObserver(apply).observe(bar);
   platform.onViewportResize(apply);

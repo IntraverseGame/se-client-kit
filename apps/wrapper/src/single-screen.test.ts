@@ -66,7 +66,7 @@ describe("the single screen, a round's rows (T-25)", () => {
     expect(shown.playable).toBe(false);
   });
 
-  it("the alert line overlays the status: it sits in the status slot, under the status line", () => {
+  it("the alert line overlays the status: it sits in the status slot, after the status line", () => {
     const screen = screenAfter(readOf("coinflip-idle"));
     const slot = screen.host.querySelector(".se-bar > .se-status-slot");
     const status = slot?.querySelector(":scope > .se-status");

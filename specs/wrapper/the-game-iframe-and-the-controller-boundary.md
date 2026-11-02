@@ -350,9 +350,12 @@ Part of the [Wrapper spec](../wrapper.md), section
 
 - **W-39.** After a round ends (`won`, `lost`, or `canceled`) the Wrapper MUST
   show the **round id** (the Snapshot's `roundId`, UUIDv7 text) with a control
-  to copy it, and a **link to the verify page** for that round. The verify page
-  is the kit's ([verify-page.md](../verify-page.md); decided by the backend's
-  TPO, 2026-10-18), and the link is `<verifyBaseUrl>/rounds/{roundId}`: the
+  to copy it (the round line shows it shortened, with the full id as its title
+  and its text for assistive technology, and the control copies the full id;
+  [W-57](./the-single-screen.md#the-screen)), and a **link to the verify page**
+  for that round. The verify page is the kit's
+  ([verify-page.md](../verify-page.md); decided by the backend's TPO,
+  2026-10-18), and the link is `<verifyBaseUrl>/rounds/{roundId}`: the
   environment configuration's `verifyBaseUrl` with one trailing `/` removed if
   present, then `/rounds/`, then the round id in its canonical text form (it is
   validated, so it needs no escaping). The link opens in a new browsing context
