@@ -6,7 +6,8 @@
 // result, and in a round the shell does not hold. No row shows a usable start
 // or cash-out, or a playable frame, for the round in progress while its
 // verdict is not `ready`. The states that stop the round, and the frame rule
-// as a pure function, are single-screen-covers.test.ts's.
+// as a pure function, are single-screen-covers.test.ts's. The status slot's tab
+// stop is decided with the operator links in place, since they share its row.
 
 import { describe, expect, it } from "vitest";
 
@@ -222,4 +223,40 @@ describe("the single screen, a round's rows (T-25)", () => {
       expect(shown.alertLine).not.toBe("");
     },
   );
+});
+
+/**
+ * Jsdom has no layout, so the slot's size is stubbed, as the stylesheet makes
+ * it: the links share the slot's row, so a text of 200 fits while they are away
+ * and overflows once they show. This proves the order of the check and the
+ * links' update, not the stylesheet; t27-status-slot-tab-stop.spec.ts is the
+ * real layout.
+ */
+const slotBesideLinks = (host: HTMLElement): HTMLElement => {
+  const slot = host.querySelector<HTMLElement>(".se-status-slot");
+  const links = host.querySelector(".se-links");
+  if (slot === null || links === null) throw new Error("no bar");
+  Object.defineProperty(slot, "scrollWidth", { value: 200 });
+  Object.defineProperty(slot, "clientWidth", {
+    get: () => (links.childElementCount > 0 ? 100 : 300),
+  });
+  return slot;
+};
+
+describe("the status slot's tab stop follows the operator links (W-57)", () => {
+  it("takes its tab stop in the update that adds the links, and drops it in the one that removes them", () => {
+    const screen = screenAfter(readOf("coinflip-idle"));
+    expect(screen.host.querySelector(".se-links")?.childElementCount).toBe(2);
+    const slot = slotBesideLinks(screen.host);
+    // A call in flight takes the links away (W-49f): the text fits.
+    screen.app.callInFlight(true);
+    expect(screen.host.querySelector(".se-links")?.childElementCount).toBe(0);
+    expect(slot.hasAttribute("tabindex")).toBe(false);
+    // Its answer brings them back: the same text now overflows.
+    screen.app.callInFlight(false);
+    expect(screen.host.querySelector(".se-links")?.childElementCount).toBe(2);
+    expect(slot.getAttribute("tabindex")).toBe("0");
+    screen.app.callInFlight(true);
+    expect(slot.hasAttribute("tabindex")).toBe(false);
+  });
 });

@@ -17,6 +17,8 @@ export type FocusInput = {
   readonly state: WrapperState;
   readonly cause: ChangeCause;
   readonly plan: StagePlan;
+  /** A start or cash-out call is in flight (W-49f). */
+  readonly calling: boolean;
   readonly cover: Cover | undefined;
   readonly coverChanged: boolean;
   readonly coverHeading: HTMLElement | undefined;
@@ -97,7 +99,7 @@ export const createIntoGame = (): IntoGame => {
     },
     after: (doc, input, frame): void => {
       if (!awaiting) return;
-      const { state, cause, plan } = input;
+      const { state, cause, plan, calling } = input;
       const { snapshot } = state;
       if (frame !== null && !plan.inert) {
         awaiting = false;
@@ -117,7 +119,13 @@ export const createIntoGame = (): IntoGame => {
           (snapshot?.status !== "starting" && snapshot?.status !== "active"));
       if (
         state.blocking !== undefined ||
-        (snapshot !== undefined && roundEnded(snapshot, state.check?.cancel)) ||
+        // While the start's call is in flight, a round that is over is the one
+        // it was started from, not its answer; `calling` also covers a cash-out,
+        // whose end is decided by the update at the end of the call at the
+        // latest.
+        (!calling &&
+          snapshot !== undefined &&
+          roundEnded(snapshot, state.check?.cancel)) ||
         answeredOtherwise
       ) {
         awaiting = false;

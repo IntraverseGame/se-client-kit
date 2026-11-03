@@ -4,13 +4,26 @@
 // ready, a click on the game's control and the Tab key reach nothing while the
 // frame is inert, and reach the game once it is not. The frame takes the focus
 // once when the round the player started becomes ready, from the status
-// heading the removed start control left it on.
+// heading the removed start control left it on, whether that round was started
+// from `idle` or from a result.
 
 import type { Locator, Page } from "@playwright/test";
 
-import { expect, test, toReady } from "./harness/round-play.ts";
-import { pickCheck } from "./harness/round-vector.ts";
-import { servedFor, statusHeading, TEXT } from "./harness/wrapper-page.ts";
+import {
+  advanceUntil,
+  expect,
+  snapshotAnswer,
+  test,
+  toReady,
+} from "./harness/round-play.ts";
+import { pickCheck, ROUND_VECTOR, startCheck } from "./harness/round-vector.ts";
+import {
+  isPlayable,
+  launch,
+  servedFor,
+  statusHeading,
+  TEXT,
+} from "./harness/wrapper-page.ts";
 
 /** Sets or removes `inert` on the game's iframe element, as W-58 does. */
 const setInert = (page: Page, inert: boolean): Promise<void> =>
@@ -53,6 +66,37 @@ test.describe("T-14a: the inert game frame (W-58)", () => {
     await toReady(page, fakePlayApi);
     await expect(statusHeading(page)).toHaveText(TEXT.active);
     await expect.poll(() => focusedTag(page)).toBe("IFRAME");
+  });
+
+  test("the frame takes the focus once when the round started from a result is ready", async ({
+    page,
+    fakePlayApi,
+  }) => {
+    // The page opens on a result the shell does not hold; the started round is
+    // later than it, so the Wrapper shows it (W-29).
+    fakePlayApi.answer("getSnapshot", snapshotAnswer("coinflip-lost"));
+    fakePlayApi.answer("startRound", {
+      kind: "snapshot-version",
+      vector: "coinflip-starting",
+      version: 5,
+      expect: startCheck,
+    });
+    fakePlayApi.answerEvery("getSnapshot", {
+      kind: "snapshot-version",
+      vector: ROUND_VECTOR,
+      version: 6,
+    });
+    await launch(page, fakePlayApi);
+    await expect(statusHeading(page)).toHaveText(TEXT.lost);
+    await page.getByRole("button", { name: TEXT.playAgain }).click();
+    await advanceUntil(page, () => isPlayable(page));
+    await expect.poll(() => focusedTag(page)).toBe("IFRAME");
+    // Once: a later update leaves a focus moved elsewhere alone. An `active`
+    // round is not polled (W-35), so the update is the connectivity's, which
+    // the event runs before `evaluate` returns.
+    await statusHeading(page).focus();
+    await page.evaluate(() => globalThis.dispatchEvent(new Event("online")));
+    expect(await focusedTag(page)).not.toBe("IFRAME");
   });
 
   test("inert blocks a click and the Tab key into the frame's document; playable lets them in", async ({

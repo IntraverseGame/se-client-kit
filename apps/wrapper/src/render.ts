@@ -92,7 +92,8 @@ export const createView = (
       !before.classList.contains("se-heading")
         ? before
         : undefined;
-    const plan = stagePlan(m, state, options.calling === true);
+    const calling = options.calling === true;
+    const plan = stagePlan(m, state, calling);
     const cover =
       plan.overlay.form === "cover" ? plan.overlay.cover : undefined;
     const coverChanged = stage.show(plan, m, localized.language);
@@ -119,6 +120,7 @@ export const createView = (
       state,
       cause,
       plan,
+      calling,
       cover,
       coverChanged,
       coverHeading,

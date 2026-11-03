@@ -5,16 +5,21 @@
 // normal play, and the unconfirmed state replaces it. Focus: an error that
 // answers a pick in a playable frame keeps the focus in the frame; a bar
 // control that goes away hands the focus to the status heading; the frame
-// takes the focus once when the round the player started becomes ready.
+// takes the focus once when the round the player started becomes ready, from
+// a result as from `idle`, and not after a start that failed or that ended.
 
+import type { SessionRead, ValidSnapshot } from "@intraverse/se-client-shell";
 import { describe, expect, it } from "vitest";
 
+import { buttonNamed } from "./fixtures/app.ts";
+import { validSnapshot } from "./fixtures/fake-session.ts";
 import { HELD, readOf, screenAfter, shownOf } from "./fixtures/screen.ts";
 import {
   problemVector,
   snapshotVector,
   withFields,
 } from "./fixtures/vectors.ts";
+import { wired } from "./fixtures/wired.ts";
 import { messagesFor } from "./messages.ts";
 import type { RoundCheck, SnapshotRead } from "./round-input.ts";
 
@@ -147,4 +152,132 @@ describe("the single screen's focus rules (W-46)", () => {
     const screen = screenAfter(readOf("coinflip-active", HELD));
     expect(document.activeElement).not.toBe(screen.frame);
   });
+});
+
+/** The round the player starts from a result: another id, a later version. */
+const NEXT_ROUND = "01927c5e-8b3a-7f21-9c4d-000000000002";
+
+const nextRound = (name: string, version: number): ValidSnapshot =>
+  ({
+    ...validSnapshot(name),
+    roundId: NEXT_ROUND,
+    version,
+  }) as ValidSnapshot;
+
+/** A read of the next round, as a poll answers it. */
+const nextRoundRead = (
+  name: string,
+  version: number,
+  check: RoundCheck,
+): SnapshotRead => ({
+  kind: "snapshot",
+  snapshot: nextRound(name, version),
+  check,
+});
+
+/**
+ * The UI at `from`, through the session's wiring (a start makes the call in
+ * flight, W-49f, in an update that still shows the round it started from), with
+ * a game frame in place and the start answered `answer`. The player presses
+ * `control`, which holds the focus.
+ */
+const startedFrom = async (
+  from: string,
+  control: string,
+  answer: SessionRead,
+) => {
+  const ui = await wired(fake => {
+    fake.reads.push({ kind: "snapshot", snapshot: validSnapshot(from) });
+    fake.answerStart(answer);
+  });
+  const frame = document.createElement("iframe");
+  ui.app.gameHost().append(frame);
+  const start = buttonNamed(ui.host, control);
+  start?.focus();
+  start?.click();
+  await ui.settle();
+  return { ...ui, frame };
+};
+
+const STARTS_FROM = [
+  ["a result", "coinflip-won", m["action.playAgain"]],
+  ["idle", "coinflip-idle", m["action.placeBet"]],
+] as const;
+
+describe("the focus into the game, through the session's wiring (W-46)", () => {
+  it.each(STARTS_FROM)(
+    "from %s, the frame takes it once the started round is ready",
+    async (_, from, control) => {
+      const screen = await startedFrom(from, control, {
+        kind: "snapshot",
+        snapshot: nextRound("coinflip-starting-bound", 10),
+      });
+      expect(document.activeElement?.id).toBe("se-status-heading");
+      screen.app.accept(
+        nextRoundRead("coinflip-active", 11, { ...HELD, verdict: "checking" }),
+        "poll",
+      );
+      expect(document.activeElement).not.toBe(screen.frame);
+      screen.app.accept(nextRoundRead("coinflip-active", 12, HELD), "poll");
+      expect(document.activeElement).toBe(screen.frame);
+      // Once: a later poll of the round leaves a focus moved elsewhere alone.
+      screen.host.querySelector<HTMLElement>("#se-status-heading")?.focus();
+      screen.app.accept(nextRoundRead("coinflip-active", 13, HELD), "poll");
+      expect(document.activeElement).not.toBe(screen.frame);
+    },
+  );
+
+  it.each(STARTS_FROM)(
+    "from %s, a started round that a poll shows over leaves nothing waiting for a round",
+    async (_, from, control) => {
+      const screen = await startedFrom(from, control, {
+        kind: "snapshot",
+        snapshot: nextRound("coinflip-starting-bound", 10),
+      });
+      // A step round's poll stays a poll, so only the round's end decides here
+      // (a book round's result counts as the player's own, poll-follow.ts).
+      screen.app.accept(nextRoundRead("coinflip-canceled", 11, HELD), "poll");
+      screen.host.querySelector<HTMLElement>("#se-status-heading")?.focus();
+      screen.app.accept(nextRoundRead("coinflip-active", 12, HELD), "poll");
+      expect(screen.frame.hasAttribute("inert")).toBe(false);
+      expect(document.activeElement).not.toBe(screen.frame);
+    },
+  );
+
+  const FAILS_OR_ENDS: readonly (readonly [string, SessionRead])[] = [
+    [
+      "a typed error",
+      {
+        kind: "problem",
+        problem: problemVector("problem-default-code-unavailable") as Extract<
+          SessionRead,
+          { kind: "problem" }
+        >["problem"],
+      },
+    ],
+    ["a refusal", { kind: "refused", reason: "busy" }],
+    ["a connection problem", { kind: "network" }],
+    [
+      "a round already over",
+      { kind: "snapshot", snapshot: nextRound("coinflip-won", 10) },
+    ],
+  ];
+
+  const STARTS_THAT_FAIL = STARTS_FROM.flatMap(start =>
+    FAILS_OR_ENDS.map(
+      answer => [start[0], answer[0], start, answer[1]] as const,
+    ),
+  );
+
+  it.each(STARTS_THAT_FAIL)(
+    "from %s, a start answered with %s leaves nothing waiting for a round",
+    async (_from, _answer, [, from, control], answer) => {
+      const screen = await startedFrom(from, control, answer);
+      // A later round the player did not start this time takes no focus.
+      screen.host.querySelector<HTMLElement>("#se-status-heading")?.focus();
+      screen.app.accept(nextRoundRead("coinflip-active", 11, HELD), "poll");
+      expect(screen.frame.hasAttribute("inert")).toBe(false);
+      expect(document.activeElement).not.toBe(screen.frame);
+    },
+  );
 });

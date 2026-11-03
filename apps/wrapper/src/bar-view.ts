@@ -243,15 +243,16 @@ export const createBarView = (
       section(controls, key, () => shown.controls);
       section(roundLine, key, () => shown.round);
     }
-    markOverflow(statusSlot);
-    markOverflow(alert);
 
     const offer = linkPlan(state, options.links, options.calling === true);
     section(links, JSON.stringify([language, offer]), () =>
       linkView(el, m, offer),
     );
     // The slot keeps its height when it has no link (W-57: no state makes the
-    // bar grow or shrink).
+    // bar grow or shrink), so the links change the status slot's width with no
+    // size change of the bar: the check comes after them.
+    markOverflow(statusSlot);
+    markOverflow(alert);
 
     const statusHeading =
       status.querySelector<HTMLElement>(`#${STATUS_HEADING_ID}`) ?? undefined;
