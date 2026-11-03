@@ -113,6 +113,7 @@ const result = createControllerBridge({
   gameOrigin, // D: the redeem answer's `gameOrigin` (the game's catalog entry)
   gameOrigins: config.gameOrigins,
   ownOrigin: globalThis.location.origin,
+  environment: config.chain.environment, // only `local` exempts loopback hosts
   frame,
   listen: handler => {
     globalThis.addEventListener("message", handler);
@@ -196,20 +197,72 @@ else showGenericError(); // rejected: not rendered
     out; a transport may ignore it, and a late answer is ignored.
   - `createControllerBridge(options)` mounts the boundary to the game iframe
     (`se.controller/1`). It refuses a game origin that is not on the
-    configuration's allow-list, is the Wrapper's own origin, or is not a
-    serialized origin. It accepts a message only from the frame's window and the
-    game origin, parses it against the closed message set (`hello`, `action`
-    with the `pick` verb), and ignores anything else. It sends the game nothing
-    before its `hello`, then the allow-listed copy of each validated Snapshot
-    (no proofs, session id, links, or amounts) and `reject` messages
-    (`not_legal`, `not_active`, `busy`, `invalid`), always with the game origin
-    as `targetOrigin`. A pick that passes its early pre-check goes to the pick
-    use case you pass, which is the gate: it must re-check the pick against the
-    shell's own latest Snapshot and refuse a step it already signed. The bridge
+    configuration's allow-list, is the Wrapper's own origin, may share the
+    Wrapper's registrable domain (`same-site`: its host's last two labels are
+    the Wrapper's; with `environment` `local`, two loopback hosts are exempt),
+    or is not a serialized origin (`ControllerMountRefusal`). It accepts a
+    message only from the frame's window and the game origin, parses it against
+    the closed message set (`hello`, `action` with the `pick` verb), and ignores
+    anything else. It sends the game nothing before its `hello`, then the
+    allow-listed copy of each validated Snapshot (no proofs, session id, links,
+    or amounts) and `reject` messages (`not_legal`, `not_active`, `busy`,
+    `invalid`), always with the game origin as `targetOrigin`. A pick that
+    passes its early pre-check goes to the pick use case you pass, which is the
+    gate: it must re-check the pick against the shell's own latest Snapshot and
+    refuse a step it already signed. A book round's copy is a
+    `GamePlaybackSnapshot`. `onIncompatible` is called once when the game's
+    first valid `hello` does not declare all seven statuses, or when a Snapshot
+    has a presentation the game did not declare; the bridge then sends and
+    accepts nothing more. The optional `onCopy(copied)` is called with each
+    Snapshot given that is not stale: `false` when its `playback` copy failed
+    closed and it is not forwarded, `true` when its copy was built. The bridge
     never holds a key, a token, or a signed action. `CONTROLLER_SCHEMA`,
     `ROUND_STATUSES`, and the message types (`HelloMessage`, `ActionMessage`,
-    `SnapshotMessage`, `RejectMessage`, `GameSnapshot`, `GameStep`, `Pick`,
-    `RejectReason`, and the unions) describe the protocol.
+    `SnapshotMessage`, `RejectMessage`, `GameSnapshot`, `GamePlaybackSnapshot`,
+    `GameBookDraw`, `GameBookEvent`, `GameEventData`, `GameJsonValue`,
+    `GameStep`, `Pick`, `RejectReason`, and the unions) describe the protocol.
+  - `createOperatorChannel({ parent })` gates the session on the `se.operator/1`
+    handshake with the page that embeds the Wrapper. Route the `message` events
+    whose `source` is the parent to `receive`; until `check` it records the
+    first well-formed `hello` and answers nothing.
+    `check({ operatorOrigins, ancestorOrigins, clock, timeoutMs? })`, called
+    once the configuration is validated, resolves with `{ ok: true }` or
+    `{ ok: false, reason }`: `operator-not-allowed`, or `handshake-timeout`
+    after `timeoutMs` (`HANDSHAKE_TIMEOUT_MS`, 10 s), both final. Accepting
+    fixes the operator origin and posts `welcome` to it; `resize(measured)` then
+    tells it the least height the content needs, a minimum for the iframe's box,
+    as an integer from 1 to `MAX_RESIZE_HEIGHT`. Nothing is posted except to
+    that origin, never to `*`, and the channel holds no key, no token, and no
+    launch code. `OPERATOR_SCHEMA`, the message types (`OperatorHello`,
+    `WelcomeMessage`, `ResizeMessage`, `OperatorBoundMessage`), and
+    `OperatorChannel`, `OperatorChannelState`, `OperatorCheck`,
+    `OperatorMessageEvent`, `OperatorWindow`, `HandshakeOutcome`, and
+    `HandshakeRefusal` describe it.
+  - `takeLaunchCode(location, history)` takes the launch code out of the URL and
+    `discardLaunchCode(code)` forgets one. `openPlaySession(options)` resolves
+    with a `SessionOpening`: `open` with a `PlaySession`, or `no-launch-code`,
+    `redeem-failed`, `other-tab`, or `unsupported`. A `PlaySession` is what a UI
+    plays through: `read`, `checkAgain`, `start`, `cashOut`, `round`,
+    `gameOrigin`, `mountGame`, `onChange`, `onEnd`, `ended`, and `end`.
+    - A use case answers a `SessionRead`: a `SnapshotRead`, `session-ended`,
+      `refused` (the shell did not act: nothing was signed or sent), or
+      `session-changed` (a Snapshot changed the session's presentation, model,
+      `config.kind`, or `config.model`: it was not read in, and until the page
+      is reloaded the session reads, signs, starts, and forwards nothing).
+    - `round()` gives the read-only `RoundState`, when there is a round:
+      `roundId`, `verdict`, `outOfSync`, `cashOutOffered`, `cancel`, and, when
+      set, `shown` (what a `failed` verdict tells the player), `unconfirmed` (a
+      lost resend, settled only by a read) and `pending` (the move or cash-out
+      signed and not yet seen applied, with no signature, key, or bytes in it).
+    - `mountGame({ frame, listen, onIncompatible, onCopy? })` mounts the bridge
+      with the session's own game origin, allow-list, environment, and pick use
+      case. It answers `{ ok: true, gameOrigin, gamePath }` or
+      `{ ok: false, refusal }`, a `ControllerMountRefusal` or `session-ended`.
+      Frame `gameOrigin` followed by `gamePath`, with the page's own origin as
+      the query parameter `parentOrigin`, built with the `URL` API.
+    - `isRoundOver` tells whether a Snapshot's round is over.
+      `PlaySessionOptions`, `SessionParts`, `GameMount`, `GameMountOptions`, and
+      `Bet` type the rest.
   - `createSnapshotReader({ transport, authorization })` gives the UI read-only
     Snapshot reads: `read()` calls the Play API's `getSnapshot` and resolves
     with `snapshot` (it passed the Snapshot validator), `problem` (a typed Play
@@ -227,10 +280,12 @@ else showGenericError(); // rejected: not rendered
 - `@intraverse/se-client-shell/controller`: types only, for a game. It
   re-exports the `se.controller/1` types (`HelloMessage`, `ActionMessage`,
   `SnapshotMessage`, `RejectMessage`, `GameMessage`, `WrapperMessage`,
-  `GameSnapshot`, `GameStep`, `Pick`, `Presentation`, `RoundStatus`, and
-  `RejectReason`) and no value: import it with `import type`. Its `exports`
-  entry has a `types` condition only, so a runtime import of it does not
-  resolve, and none of its types describes a key, a token, or a signature.
+  `GameSnapshot`, `GamePlaybackSnapshot`, `GameBookDraw`, `GameBookEvent`,
+  `GameEventData`, `GameJsonValue`, `GameStep`, `Pick`, `Presentation`,
+  `RoundStatus`, and `RejectReason`) and no value: import it with `import type`.
+  Its `exports` entry has a `types` condition only, so a runtime import of it
+  does not resolve, and none of its types describes a key, a token, or a
+  signature.
 
   ```ts
   import type {
@@ -271,6 +326,13 @@ else showGenericError(); // rejected: not rendered
   and what the shell sent, and its signature recovers to the pinned signer;
   `T_0` is recomputed and must equal the Snapshot's `readyHash`. Until every
   check passes, nothing is signed for the round.
+- A book round (the `playback` presentation) starts like any round, with the bet
+  and the action key's address, and nothing is ever signed for it: a pick or a
+  cash-out is refused `not_legal` with no request sent. The checks above do not
+  run on it. Once a Snapshot of the round carries `randomnessProof`, a later one
+  with another `source`, `blockNumber`, or `roundSecretHash`, with another
+  `config.packageHash`, or with no `randomnessProof`, fails the round's
+  verification for good.
 
 ## More
 

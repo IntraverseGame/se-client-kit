@@ -20,14 +20,21 @@ cash-out when the shell does. When the shell cancels a round that failed
 verification, the Wrapper keeps reading the round until the cancel settles,
 shows "still resolving — contact support" with a "check again" control when it
 does not, and a neutral "round ended" when the round ended with no result. A
-round that ended shows its result with the next bet beside it. The game iframe
-is mounted only once the game's origin comes from the session, which the Play
-API does not serve yet. Embedded by an operator page, it opens a session only
+round that ended shows its result with the next bet beside it. A book round
+shows `idle`, `starting` ("preparing the round"), and `won` or `lost`, with the
+payout as served, never computed from the draw, while the game plays the draw
+back with no input; when its Snapshot carries the mode's `rtp`, "Return to
+player: 96.00%" (for example) shows beside the bet selector. The game iframe is
+mounted at the game's origin from the session's redeem answer, and only when the
+shell accepts that origin. Embedded by an operator page, it opens a session only
 when it is embedded directly by a listed operator origin and the operator page
 has completed the `se.operator/1` handshake; until then it redeems nothing and
 signs nothing, and with no handshake within 10 s it shows that the game cannot
-start. It then tells the operator page the height its content needs, and offers
-the operator's lobby and deposit as the player's own links, only between rounds.
+start. It then tells the operator page the least height its content needs (a
+minimum for the iframe's box), and offers the operator's lobby and deposit as
+the player's own links between rounds, and the lobby alone when the session
+ended or the round cannot go on (it failed verification or is out of sync, for
+example).
 
 ## What it guarantees
 
@@ -47,10 +54,9 @@ the operator's lobby and deposit as the player's own links, only between rounds.
   storage unless its specification says so; the key is never persisted.
 - Amounts are shown from strings or `bigint`, never `number`.
 
-Specified, partly implemented: rendering only validated Snapshots, showing
-amounts from `formatted` strings, and keeping the key and the token in the shell
-hold today; the game iframe and the controller protocol are wired and wait for
-the game's origin to be served.
+Rendering only validated Snapshots, showing amounts from `formatted` strings,
+keeping the key and the token in the shell, and the game iframe with the
+controller protocol all hold today.
 
 ## Accessibility
 

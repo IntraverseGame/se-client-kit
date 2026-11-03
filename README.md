@@ -4,12 +4,8 @@ The public TypeScript monorepo for **everything the player's browser runs** in
 **SuperEngine**, a trustless real-money game engine: the Wrapper, and the
 libraries it is built from.
 
-> **Status: bootstrapping.** The repository holds the license, the contribution
-> and agent-workflow documents, and the first specs and decisions (the client
-> kit, the Wrapper, as drafts; and the first three ADRs, accepted). There is no
-> product code yet: the toolchain (pnpm workspace, TypeScript, oxc, Vitest,
-> Playwright, wireit, CI) is in place and the packages are empty skeletons.
-> Nothing here is released.
+> **Status: pre-release.** The packages and apps below are built and tested,
+> with their specs and decisions in this repository. Nothing here is released.
 
 ## Why this repository is public
 
@@ -24,7 +20,7 @@ committed: no secrets, no internal hostnames, no unpublished backend internals.
 See [`AGENTS.md`](./AGENTS.md#public-repository). To report a vulnerability, see
 [`SECURITY.md`](./SECURITY.md).
 
-## Planned packages
+## Packages
 
 The npm names are `@intraverse/se-client-<name>`, in the `intraverse` npm
 organization (scope `@intraverse`). Nothing is published yet.
@@ -42,11 +38,13 @@ organization (scope `@intraverse`). Nothing is published yet.
 | `pages-proxy`    | app     | the Pages sites' same-origin API proxy (a worker; imports nothing)          |
 
 Dependencies point one way: `contracts` (data only) ← `snapshot` and
-`play-client` ← `shell` ← `wrapper`; `signing` ← `shell`; `signing` ← `verify`,
-which never takes `shell`; `signing`'s tests read the vectors from `contracts`'
-test-only entry (read only by tests; the consumers are listed in the
-[client kit spec](./specs/client-kit/the-contracts-package.md)). No cycles. The
-design lives in `specs/` ([client kit](./specs/client-kit.md) and
+`play-client` ← `shell` ← `wrapper`; `signing` ← `shell`; `reference-game` takes
+nothing but the controller protocol's types; `signing` ← `verify`, which may
+also take `snapshot`, `play-client`, and `contracts`' runtime entry, and never
+takes `shell`; `pages-proxy` imports nothing; `signing`'s tests read the vectors
+from `contracts`' test-only entry (read only by tests; the consumers are listed
+in the [client kit spec](./specs/client-kit/the-contracts-package.md)). No
+cycles. The design lives in `specs/` ([client kit](./specs/client-kit.md) and
 [Wrapper](./specs/wrapper.md)) and `decisions/`.
 
 ## Where to go next

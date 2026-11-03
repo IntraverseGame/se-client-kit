@@ -24,9 +24,10 @@ pnpm add @intraverse/se-client-play-client
 You call the Play API from a browser or Node and want typed requests and
 responses.
 
-Do not use it for: interpreting a Snapshot: the client returns every response
-body as `unknown`, and only `@intraverse/se-client-snapshot` can turn it into a
-typed value. Do not use it to keep a credential: the client reads the
+Do not use it for: interpreting a Snapshot: the client returns a Snapshot as
+`unknown`, like every response body but the redeem and refresh answers, which it
+checks and types, and only `@intraverse/se-client-snapshot` can turn a Snapshot
+into a typed value. Do not use it to keep a credential: the client reads the
 `Authorization` value from a function you pass for each request and stores
 nothing.
 
