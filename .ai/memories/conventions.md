@@ -1,6 +1,6 @@
 ---
 description: TypeScript, error, money, secret, logging, and naming conventions. Read before writing code.
-last-verified: 2026-10-28 (#143: the two exact-version supply-chain exceptions; 2026-10-16, toolchain pull request; the TypeScript rules are accepted in ADR-001 and enforced by oxlint, and stylelint for CSS)
+last-verified: 2026-11-03 (#193: `unicorn/require-module-specifiers` is on; 2026-10-28, #143: the two exact-version supply-chain exceptions; 2026-10-16, toolchain pull request; the TypeScript rules are accepted in ADR-001 and enforced by oxlint, and stylelint for CSS)
 ---
 
 # Conventions
@@ -19,9 +19,8 @@ This note records the patterns behind them.
   Type-aware rules are off (they need `oxlint-tsgolint`, not on the allow-list;
   a follow-up pull request). The reason on a disable comment or a
   `@ts-expect-error` is checked by review, not by a rule.
-  `unicorn/require-module-specifiers` is off only for the empty `export {};`
-  skeletons; the first real package pull request re-enables it. Relative imports
-  carry the `.ts` extension; tsdown bundles it on build (no extension is left in `dist/`). Prefer
+  `unicorn/require-module-specifiers` is on: an empty `export {};` fails.
+  Relative imports carry the `.ts` extension; tsdown bundles it on build (no extension is left in `dist/`). Prefer
   `unknown` at trust boundaries and narrow it with a validator.
 - **Tests:** a package gets a `test` script (and its entry in the root `test`
   wireit dependencies) with its first real test. Never add a placeholder test

@@ -16,9 +16,10 @@ until the answer validates against that document.
 
 ## What it recomputes
 
-For every round it can read, the page runs these checks on what the round
-carries (a round that has not ended, or that was voided or refused, lacks some
-evidence, and the page then shows those checks as not checked):
+For every round it can read, a book round aside (below), the page runs these
+checks on what the round carries (a round that has not ended, or that was voided
+or refused, lacks some evidence, and the page then shows those checks as not
+checked):
 
 - **Round id.** The round's `bytes32` id is the one you asked for.
 - **Entropy target.** The round was bound, before the block existed, to block N
@@ -50,8 +51,28 @@ And, for a round of one step with two options, under kernelVersion 1:
   recomputed and shown, with no status to compare; a `canceled` round that
   carries neither reveal shows these two checks as "not checked".
 
-A round of another shape is reported as not recomputable: the page shows the
-first list of checks and runs neither derivation.
+A round of another shape, a book round aside, is reported as not recomputable:
+the page shows the first list of checks and runs neither derivation.
+
+A book round, whose outcome is a row drawn from a mode's table, has the same
+numbering with different checks. The page compares the round id with the one you
+asked for, recomputes the round secret's commitment, reads block N (by the same
+quorum read), and recomputes the seed (the SHA-256 of block N's hash followed by
+the round secret). A round that has not ended, or that was voided or refused,
+lacks some evidence, and the page then shows those checks as not checked, as it
+does for a `canceled` round that carries neither reveal. The entropy target, the
+backend's signature, and the ready evidence do not apply: such a round has no
+signed creation authorization and no ready evidence, and the page says so.
+
+**The draw** (check 8, book rounds only) does not apply to a `canceled` round,
+which drew no row. For any other book round it is not checked: the verify API
+does not carry the mode's table (its rows and their weights), so this page
+cannot redraw the row. When the answer carries both the verify API's recorded
+and redrawn rows, the page compares only those with each other: agreement leaves
+the check not checked, and disagreement is a mismatch. A `won` or `lost` book
+round of a kernel version this page implements, with no failed check, therefore
+reads "This round's draw was not recomputed", and its result, drawn row,
+multiplier, and payout are shown as the verify API reports them.
 
 SHA-256 comes from the browser's Web Crypto, and Keccak-256 from
 `@intraverse/se-client-signing`. Every derivation is keyed on the round's kernel

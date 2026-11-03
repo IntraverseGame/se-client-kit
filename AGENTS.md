@@ -97,9 +97,10 @@ equivalent; Node and pnpm are pinned in `.node-version` and `packageManager`.
   `pnpm check`)
 - `pnpm lint` (oxlint and stylelint; also `pnpm lint:ts` and `pnpm lint:css`) ·
   `pnpm format` (writes) · `pnpm format:check` · `pnpm typecheck` · `pnpm build`
-  (tsdown for packages, Vite for the Wrapper and the reference game) ·
-  `pnpm check:build-output` (inspect every `dist/`) · `pnpm check:size-budget`
-  (the Wrapper's release output within its size budget)
+  (tsdown for packages, Vite for the Wrapper, the reference game, and the verify
+  page, `tsc` for `pages-proxy`) · `pnpm check:build-output` (inspect every
+  `dist/`) · `pnpm check:size-budget` (the Wrapper's release output within its
+  size budget)
 - `pnpm check:deps` (every `package.json` dependency is on the ADR-001
   allow-list) · `pnpm check:readmes` (every package and app README follows the
   public-README rules) · `pnpm check:contracts` (only tests import the

@@ -29,7 +29,7 @@ less than seven days ago (`pnpm-workspace.yaml`).
 
 ```sh
 pnpm install --frozen-lockfile   # install exactly what the lockfile says
-pnpm check                       # format check, lint, typecheck, unit tests, allow-list, contracts check, build, build-output and package files checks
+pnpm check                       # format check, lint, typecheck, unit tests, allow-list, contracts check, build, build-output, package files, size budget, and README checks
 pnpm test                        # unit and component tests
 pnpm test:e2e                    # Playwright, against the in-repo fake Play API
 pnpm test:e2e:preview            # the preview project, against a real stack (runbook/preview-e2e.md); never part of pnpm check
@@ -37,7 +37,7 @@ pnpm lint                        # oxlint (with the dependency-direction rules) 
 pnpm format                      # writes: oxfmt formats everything it supports
 pnpm format:check                # the same, read-only
 pnpm typecheck
-pnpm build                       # packages: tsdown (bundled ESM with .js.map, and .d.ts); the apps: Vite
+pnpm build                       # packages: tsdown (bundled ESM with .js.map, and .d.ts); the apps: Vite, and tsc for pages-proxy
 pnpm changeset                   # add release notes for a change to a published package
 pnpm release:dry-run             # the release dry run: versions, tarballs, Wrapper digest; publishes nothing
 ```
@@ -95,9 +95,9 @@ root script it does not reach Playwright: `pnpm test:e2e --repeat-each=3` and
 ## Repository at a glance
 
 ```text
-packages/    contracts (data only), signing, snapshot, play-client, shell (empty skeletons)
-apps/        wrapper (the UI) and the Coin Flip reference game            (first slices)
-e2e/         Playwright suite and the fake Play API                       (harness; T-rows pending)
+packages/    contracts (data only), signing, snapshot, play-client, shell
+apps/        wrapper (the UI), reference-game (Coin Flip), verify (the verify page), pages-proxy (the Pages API proxy)
+e2e/         Playwright suite, its T-row specs, and the fake Play API
 tools/       repository checks and their tests (allow-list, contracts entry, lint rules)
 specs/       current behavior and contracts (source of truth)
 decisions/   accepted decisions (ADRs)
@@ -110,7 +110,10 @@ runbook/     how to develop, release, and operate
 Dependency direction between packages is one way: `contracts` (data only) is a
 leaf; `snapshot` and `play-client` depend on it; `signing` has no kit dependency
 at run time; `shell` depends on `signing`, `snapshot`, and `play-client`; the
-`wrapper` app depends on `shell`. See
+`wrapper` app depends on `shell`; `reference-game` depends on nothing but the
+controller protocol's types; the `verify` app depends on `signing` (and may take
+`snapshot`, `play-client`, and `contracts`' runtime entry), never on `shell`;
+the `pages-proxy` app imports nothing. See
 [`.ai/memories/architecture.md`](./.ai/memories/architecture.md).
 
 ## Development flow
