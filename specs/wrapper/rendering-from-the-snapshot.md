@@ -117,14 +117,14 @@ Part of the [Wrapper spec](../wrapper.md), section
   `currentMultiplier` or anything else (W-34). `bankedAmount` is reserved for
   partial cash-out, is not served, and is not used.
 
-  **The cash-out value.** se-backend's ADR-050 (decided 2026-10-30) adds
-  `cashOutValue` to `se.snapshot/1`: an `Amount` the server computes that says
-  what `rounds:cashOut` would credit if the player cashed out now (on a free
-  bet, the winnings only). The schema allows it on an `active` round of the
-  `steps` presentation after its first step only, and forbids it at step 0, on
-  every other status, and on `playback`; it is optional. **Not vendored yet**:
-  the kit renders the field once the contracts sync that vendors the new schema
-  and its vectors lands
+  **The cash-out value.** The Snapshot schema's `cashOutValue` field, in
+  `se.snapshot/1`, is an `Amount` the server computes that says what
+  `rounds:cashOut` would credit if the player cashed out now (on a free bet, the
+  winnings only). The schema allows it on an `active` round of the `steps`
+  presentation after its first step only, and forbids it at step 0, on every
+  other status, and on `playback`; it is optional. **Not vendored yet**: the kit
+  renders the field once the contracts sync that vendors the new schema and its
+  vectors lands
   ([How the kit gets its contracts](../client-kit/how-the-kit-gets-its-contracts.md),
   rule 4; the same release as this behavior). Until then every Snapshot carrying
   the field fails validation (W-28) and the control shows the multiplier. Once
@@ -142,7 +142,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   Wrapper never computes it and never checks it against `currentMultiplier`
   (W-34); the shell does not forward it to the game (W-38: the game's copy is
   built from an allow-list).
-  <!-- TODO(contracts sync): once the sync that vendors se-backend's ADR-050 lands, drop "Not vendored yet" and the until-then sentence above, and name the vectors as rule 4 does. -->
+  <!-- TODO(contracts sync): once the sync that vendors the Snapshot schema's `cashOutValue` lands, drop "Not vendored yet" and the until-then sentence above, and name the vectors as rule 4 does. -->
 
   How the Wrapper reads the shell's checks for this table (the round the shell
   holds, W-26), with every row placed by [W-57](./the-single-screen.md)'s table

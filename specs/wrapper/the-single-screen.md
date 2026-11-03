@@ -92,10 +92,9 @@ the round id, Q8).
   preset to `defaultBet` as today (RFC-004 Q4). The cash-out control reads "Cash
   out" with the Snapshot's `cashOutValue.formatted` beside it when the Snapshot
   carries one: the server's quote of what cashing out now credits, which
-  `se.snapshot/1` serves on an `active` steps round after its first step
-  (se-backend's ADR-050, decided 2026-10-30; a value of 0 is shown as served).
-  The field is not vendored yet: the kit renders it once the contracts sync that
-  vendors the new schema and its vectors lands
+  `se.snapshot/1` serves on an `active` steps round after its first step (a
+  value of 0 is shown as served). The field is not vendored yet: the kit renders
+  it once the contracts sync that vendors the new schema and its vectors lands
   ([How the kit gets its contracts](../client-kit/how-the-kit-gets-its-contracts.md),
   rule 4; the same release); until then every Snapshot carrying it fails
   validation (W-28) and the control shows the multiplier. Without a value the
@@ -104,7 +103,7 @@ the round id, Q8).
   multiplier (Q3), and the Wrapper never checks the value against the multiplier
   ([W-31](./rendering-from-the-snapshot.md) says when an `active` round carries
   none).
-  <!-- TODO(contracts sync): once the sync that vendors se-backend's ADR-050 lands, drop the not-vendored-yet sentence above. -->
+  <!-- TODO(contracts sync): once the sync that vendors the Snapshot schema's `cashOutValue` lands, drop the not-vendored-yet sentence above. -->
 
 ### State by state
 

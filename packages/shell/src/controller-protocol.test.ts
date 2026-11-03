@@ -9,11 +9,11 @@ import { snapshot } from "./fixtures/vectors.ts";
 
 /**
  * An `active` Snapshot carrying `cashOutValue` (what a cash-out credits now,
- * se-backend's ADR-050): the vendored active vector given one of its own
- * amounts as the value (the test is about the copy dropping the field, not the
- * amount). No vendored vector carries the field before the contracts sync; the
- * synced `valid/cashorcrash-active-cash-out-value` can replace this once it
- * lands.
+ * the Snapshot schema's field, not vendored yet): the vendored active vector
+ * given one of its own amounts as the value (the test is about the copy
+ * dropping the field, not the amount). No vendored vector carries the field
+ * before the contracts sync; the synced
+ * `valid/cashorcrash-active-cash-out-value` can replace this once it lands.
  */
 const activeWithCashOutValue = (): ValidSnapshot => {
   const active = snapshot("active");
