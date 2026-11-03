@@ -97,10 +97,10 @@ the round id, Q8).
   it once the contracts sync that vendors the new schema and its vectors lands
   ([How the kit gets its contracts](../client-kit/how-the-kit-gets-its-contracts.md),
   rule 4; the same release); until then every Snapshot carrying it fails
-  validation (W-28) and the control shows the multiplier. Without a value the
-  control reads "Cash out" with the Snapshot's `currentMultiplier` beside it as
-  a display value (`×1.94`) and no amount: W-34 forbids computing one from a
-  multiplier (Q3), and the Wrapper never checks the value against the multiplier
+  validation (W-28). Without a value the control reads "Cash out" with the
+  Snapshot's `currentMultiplier` beside it as a display value (`×1.94`) and no
+  amount: W-34 forbids computing one from a multiplier (Q3), and the Wrapper
+  never checks the value against the multiplier
   ([W-31](./rendering-from-the-snapshot.md) says when an `active` round carries
   none).
   <!-- TODO(contracts sync): once the sync that vendors the Snapshot schema's `cashOutValue` lands, drop the not-vendored-yet sentence above. -->

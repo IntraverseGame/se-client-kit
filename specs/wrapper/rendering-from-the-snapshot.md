@@ -127,15 +127,14 @@ Part of the [Wrapper spec](../wrapper.md), section
   vectors lands
   ([How the kit gets its contracts](../client-kit/how-the-kit-gets-its-contracts.md),
   rule 4; the same release as this behavior). Until then every Snapshot carrying
-  the field fails validation (W-28) and the control shows the multiplier. Once
+  the field fails validation (W-28); without it, the multiplier shows. Once
   synced, the Wrapper shows it on the bar's cash-out control, as "Cash out"
   followed by its `formatted`, when the control is offered (W-24) and the
   Snapshot carries it; a value of 0 (a free bet whose winnings are 0 so far) is
   shown as served, "Cash out" with the `formatted` of 0, with no inference
   (W-34). Without the field the control reads "Cash out" with the multiplier as
   a display value, as before; that is so at step 0, and also when an `active`
-  Snapshot at step 1 or more carries none: while the round's close is still
-  pending, or when the backend does not serve the value yet. The Wrapper reads
+  Snapshot at step 1 or more carries none (it is optional). The Wrapper reads
   nothing into the absence (W-29). The round line's multiplier is the same
   either way. The value is a quote, not money held: a losing pick takes it away,
   and on `won` the round's `payout` is what the cash-out then credited. The
