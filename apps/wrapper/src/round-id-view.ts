@@ -12,6 +12,12 @@ import type { Messages } from "./messages.ts";
 import { verifyUrlFor } from "./verify-link.ts";
 import type { ViewOptions } from "./view-options.ts";
 
+/** A secondary control, as light as the verify link beside it. */
+const quiet = (control: HTMLButtonElement): HTMLButtonElement => {
+  control.classList.add("se-button--quiet");
+  return control;
+};
+
 export const roundIdAndVerify = (
   el: Builder,
   m: Messages,
@@ -24,19 +30,21 @@ export const roundIdAndVerify = (
     roundIdField(el, m["label.roundId"], roundId),
     el("div", { class: "se-actions" }, [
       copy !== undefined &&
-        button(el, m["action.copyRoundId"], "copy-round-id", () => {
-          copy(roundId).then(
-            () => {
-              announce(m["notice.copied"]);
-              return null;
-            },
-            () => {
-              // The clipboard refused: the full round id stays in the round
-              // id's title and in the verify link, to copy by hand.
-              return null;
-            },
-          );
-        }),
+        quiet(
+          button(el, m["action.copyRoundId"], "copy-round-id", () => {
+            copy(roundId).then(
+              () => {
+                announce(m["notice.copied"]);
+                return null;
+              },
+              () => {
+                // The clipboard refused: the full round id stays in the round
+                // id's title and in the verify link, to copy by hand.
+                return null;
+              },
+            );
+          }),
+        ),
       options.verifyBaseUrl !== undefined &&
         externalLink(
           el,

@@ -449,6 +449,22 @@ h2.se-heading {
   transition: opacity 0.2s ease-out;
 }
 
+/* A secondary control (copy the round id): outlined, like a link. */
+.se-button--quiet {
+  border-color: var(--se-border);
+  background: var(--se-bg);
+  color: var(--se-strong);
+  font-family: system-ui, sans-serif;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.se-button--quiet:hover:not(:disabled) {
+  border-color: var(--se-accent);
+  opacity: 1;
+}
+
 .se-button:disabled {
   border-color: var(--se-border);
   background: transparent;
