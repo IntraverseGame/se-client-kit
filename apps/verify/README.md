@@ -26,7 +26,10 @@ checked):
   of the entropy chain the page's configuration pins.
 - **The backend's signature.** The round's creation was signed by the configured
   signer under the configured registry domain, over the same secret commitment
-  the round reveals.
+  the round reveals. The page's configuration may also list earlier pairs of
+  registry domain and signer, for rounds closed before a change of either; such
+  a round must match one pair exactly, and the check says it is an earlier one
+  and names it. Nothing in the verification service's answer can add a pair.
 - **Ready evidence.** The ready hash binds the round to its seed commitment.
 - **Block N.** The page reads block N's hash from the configured chain endpoints
   itself, and at least the configured quorum (`minRpcQuorum`) of them must

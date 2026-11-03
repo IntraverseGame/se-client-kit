@@ -3,7 +3,8 @@
 // for every keccak256 hash and the signature recovery, and the environment
 // configuration as the only trust anchor (OQ-7): the evidence's domain, signer,
 // and entropy chain id are compared with it, and every digest is built with the
-// configured values, never one taken from the evidence.
+// configured values, never one taken from the evidence. The evidence only
+// selects among the configured pairs (V-3b); it never adds one.
 
 import {
   type Bytes32,
@@ -25,6 +26,8 @@ import {
   settled,
 } from "./check-result.ts";
 import type { VerifyConfig } from "./environment-config.ts";
+import { MESSAGES as M } from "./messages.ts";
+import { earlierDetails, earlierPairOf, type PinPair } from "./pin-pairs.ts";
 import type {
   CreateRoundAuthEvidence,
   RoundEvidence,
@@ -122,11 +125,11 @@ type Created = {
 };
 
 /**
- * `created`, and the signer the signature recovers to, under the configured
- * domain.
+ * `created`, and the signer the signature recovers to, under the domain of the
+ * configured pair `pins`.
  */
 const recoverSigner = (
-  config: VerifyConfig,
+  pins: PinPair,
   auth: CreateRoundAuthEvidence,
 ): Created => {
   const { newRound } = auth;
@@ -149,8 +152,8 @@ const recoverSigner = (
       domainSeparator({
         name: DOMAIN_NAME,
         version: DOMAIN_VERSION,
-        chainId: config.registryDomain.chainId,
-        verifyingContract: config.registryDomain.verifyingContract,
+        chainId: pins.registryDomain.chainId,
+        verifyingContract: pins.registryDomain.verifyingContract,
       }),
       hashCreateRoundAuth({
         created,
@@ -178,7 +181,9 @@ const recoverSigner = (
 /**
  * Check 3: the pinned domain and signer, the signature recovering to the
  * configured signer over `created`, and the signed commitment equal to the
- * randomness proof's. Returns `created` too, for check 4.
+ * randomness proof's. Returns `created` too, for check 4. "Pinned" is the
+ * current pair, or the one earlier pair the round's domain and signer together
+ * name (V-3b); with neither, the comparisons are against the current pair.
  *
  * A-4 (specs/verify-page.md, decided 2026-10-20): `newRound.actionKey` is
  * compared with nothing, and is shown as not checked (V-13). The page has no
@@ -199,44 +204,57 @@ export const checkSignature = (
       created: undefined,
     };
   }
-  const { created, recovered, refusal } = recoverSigner(config, auth);
-  const details: Detail[] =
-    created === undefined ? [] : [{ label: "created", value: created }];
+  const earlier = earlierPairOf(auth, config);
+  const pins = earlier ?? config;
+  const { created, recovered, refusal } = recoverSigner(pins, auth);
+  const details: Detail[] = [
+    ...(created === undefined ? [] : [{ label: "created", value: created }]),
+    ...(earlier === undefined ? [] : earlierDetails(earlier)),
+  ];
+  const comparisons = [
+    compare(
+      "domain.chainId",
+      pins.registryDomain.chainId.toString(),
+      String(auth.domain.chainId),
+    ),
+    compare(
+      "domain.verifyingContract",
+      pins.registryDomain.verifyingContract,
+      lower(auth.domain.verifyingContract),
+    ),
+    compare("signer", pins.runtimeSigner, lower(auth.signer)),
+    compare(
+      "signature recovers to the configured signer",
+      recovered,
+      pins.runtimeSigner,
+    ),
+    compare(
+      "newRound.roundSecretHash",
+      auth.newRound.roundSecretHash,
+      evidence.randomnessProof?.roundSecretHash,
+    ),
+  ];
+  // "Signed under" only when the check passes: a round that merely names an
+  // earlier pair was checked under it, and nothing more is established.
+  const earlierNote =
+    earlier === undefined
+      ? undefined
+      : comparisons.every(c => c.matches)
+        ? M["check.earlierSigned"]
+        : M["check.earlierChecked"];
+  const refusalNote =
+    refusal === undefined
+      ? undefined
+      : `The signature or a signed field was refused (${refusal}).`;
   return {
     created,
-    result: settled(
-      3,
-      [
-        compare(
-          "domain.chainId",
-          config.registryDomain.chainId.toString(),
-          String(auth.domain.chainId),
-        ),
-        compare(
-          "domain.verifyingContract",
-          config.registryDomain.verifyingContract,
-          lower(auth.domain.verifyingContract),
-        ),
-        compare("signer", config.runtimeSigner, lower(auth.signer)),
-        compare(
-          "signature recovers to the configured signer",
-          recovered,
-          config.runtimeSigner,
-        ),
-        compare(
-          "newRound.roundSecretHash",
-          auth.newRound.roundSecretHash,
-          evidence.randomnessProof?.roundSecretHash,
-        ),
-      ],
-      {
-        details,
-        note:
-          refusal === undefined
-            ? undefined
-            : `The signature or a signed field was refused (${refusal}).`,
-      },
-    ),
+    result: settled(3, comparisons, {
+      details,
+      note:
+        refusalNote === undefined || earlierNote === undefined
+          ? (refusalNote ?? earlierNote)
+          : `${refusalNote} ${earlierNote}`,
+    }),
   };
 };
 

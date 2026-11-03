@@ -371,14 +371,26 @@ artifact's bytes and digest are unchanged. The config job builds both from the
 `pages-stage` secrets (`PAGES_WRAPPER_ORIGIN`, `PAGES_VERIFIER_ORIGIN`,
 `PAGES_CHAIN_PINS`, `PAGES_RPC_ENDPOINTS`, `PAGES_RPC_ORIGINS`,
 `PAGES_GAME_ORIGINS`, `PAGES_OPERATOR_ORIGINS`) with
-`apps/wrapper/pages-config.ts`, and validates each with the Wrapper's own
-validator for its site's origin; any issue fails the job, naming an input or a
+`apps/wrapper/pages-config.ts` (with `pages-earlier-pins.ts`), and validates
+each with the Wrapper's own validator for its site's origin (the verifier's
+without `earlierPins`, below); any issue fails the job, naming an input or a
 field, never a value.
 
 - `PAGES_CHAIN_PINS` holds the chain pins only (`environment`, `runtimeSigner`,
-  `registryDomain`, `entropyChainId`, `minRpcQuorum`, `tipLagMargin`);
-  `PAGES_RPC_ORIGINS` must list exactly the origins of `PAGES_RPC_ENDPOINTS`'
-  URLs.
+  `registryDomain`, `entropyChainId`, `minRpcQuorum`, `tipLagMargin`, and the
+  optional `earlierPins`); `PAGES_RPC_ORIGINS` must list exactly the origins of
+  `PAGES_RPC_ENDPOINTS`' URLs.
+- `earlierPins`, a list of `{ registryDomain, runtimeSigner }` pairs
+  ([verify page](./verify-page.md), V-3b), goes into the verifier's document
+  only, as its last field, since the Wrapper's validator refuses it. An absent
+  or empty list writes no field, so the document is what it is without one. Each
+  entry is exactly a pair, its values under the Wrapper's validator in the
+  current pair's place; an entry that is the current pair, or that repeats
+  another (addresses compared without case), fails the job. The current pair is
+  refused because it is the mark of a half-done edit: the outgoing pair appended
+  while the current pins were left unchanged. An issue names the entry by its
+  index and, for a malformed signer or domain, that schema field; never a value,
+  or a field name the entry supplies.
 - `playApiBaseUrl` is the Wrapper's origin plus `/play/v1` in both documents;
   `verifyApiBaseUrl` is each site's own origin plus `/verify/v1` (its own
   proxy); `verifyBaseUrl` is the verifier's origin plus `/verify` in both, so

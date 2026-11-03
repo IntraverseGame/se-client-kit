@@ -16,6 +16,7 @@ import {
   at,
   configFor,
   evidenceOf,
+  highS,
   ROUND_ID,
   SOURCE,
   signatureVector,
@@ -24,9 +25,6 @@ import {
 
 const ACCEPT = "create-round-auth-accept";
 const OTHER_HASH = `0x${"ab".repeat(32)}`;
-// secp256k1's group order, to flip a signature's `s` into the high half.
-const ORDER =
-  0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
 
 /** The names of the comparisons that do not match. */
 const failing = (result: CheckResult): string[] =>
@@ -126,13 +124,6 @@ const signatureCheck = async (name: string): Promise<CheckResult> => {
     await evidenceOf(vector.input),
     configFor(vector.pinned),
   ).result;
-};
-
-/** The same signature with `s` in the high half and `v` flipped (malleated). */
-const highS = (signature: string): string => {
-  const s = BigInt(`0x${signature.slice(66, 130)}`);
-  const v = signature.slice(130) === "1b" ? "1c" : "1b";
-  return `${signature.slice(0, 66)}${(ORDER - s).toString(16).padStart(64, "0")}${v}`;
 };
 
 describe("check 3: the backend's signature (the signature/ vectors)", () => {

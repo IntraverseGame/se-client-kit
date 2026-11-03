@@ -82,6 +82,7 @@ export const configFor = (
     chainId: BigInt(pinned.chainId),
     verifyingContract: pinned.verifyingContract,
   },
+  earlierPins: [],
   minRpcQuorum: 2,
   sources: {
     [SOURCE]: {
@@ -93,6 +94,32 @@ export const configFor = (
   verifyApiBaseUrl: "https://wrapper.example/verify/v1",
   ...overrides,
 });
+
+// secp256k1's group order, to flip a signature's `s` into the high half.
+const ORDER =
+  0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+
+/** The same signature with `s` in the high half and `v` flipped (malleated). */
+export const highS = (signature: string): string => {
+  const s = BigInt(`0x${signature.slice(66, 130)}`);
+  const v = signature.slice(130) === "1b" ? "1c" : "1b";
+  return `${signature.slice(0, 66)}${(ORDER - s).toString(16).padStart(64, "0")}${v}`;
+};
+
+/** A configuration of the current pair `current` and the pairs `earlier` (V-3b). */
+export const configWithEarlier = (
+  current: Pinned,
+  earlier: readonly Pinned[],
+): VerifyConfig =>
+  configFor(current, {
+    earlierPins: earlier.map(pinned => ({
+      runtimeSigner: pinned.signer,
+      registryDomain: {
+        chainId: BigInt(pinned.chainId),
+        verifyingContract: pinned.verifyingContract,
+      },
+    })),
+  });
 
 /** A clock whose timers never fire: every fake answers at once. */
 const idleClock = {

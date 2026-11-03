@@ -512,10 +512,14 @@ review:
 | `gameOrigins`      | a non-empty list of distinct origins, each written as `URL.origin` serializes it, `https:` or loopback `http:`                                                                                                                                                                                                                                                                                                                                                     |
 | `operatorOrigins`  | a list of distinct origins under the same rule; it may be empty (no page may embed the Wrapper)                                                                                                                                                                                                                                                                                                                                                                    |
 
-Any other top-level field is refused. On any issue the Wrapper shows the
-configuration-error state and opens nothing; this includes the boot rules:
-`environment: production` with `minRpcQuorum` below 2 (W-26a), a source with
-fewer configured endpoints than `minRpcQuorum` (W-26b), and the
+Any other top-level field is refused. That includes `earlierPins`, which only
+the verifier site's document carries and only the verify page reads
+([verify page](./verify-page.md), V-3b): the Wrapper's document never has it,
+and the Wrapper binds and checks a round only under the current pins (W-26). A
+document with it is refused as `unknown-field`, as any other. On any issue the
+Wrapper shows the configuration-error state and opens nothing; this includes the
+boot rules: `environment: production` with `minRpcQuorum` below 2 (W-26a), a
+source with fewer configured endpoints than `minRpcQuorum` (W-26b), and the
 **disjoint-origins rule** (decided in human review, 2026-10-18, RFC-001):
 `operatorOrigins` and `gameOrigins` share no entry, and neither holds the
 Wrapper's own origin (the SE origin, the page's own origin, never a value of the
