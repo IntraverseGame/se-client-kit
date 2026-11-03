@@ -1,7 +1,7 @@
 // The open session's use cases: it reads with the play token, starts a round
 // with the key's address and shows it ready once checked, shows a
 // `ROUND_ACTIVE` round it does not hold (also as the answer to the start's one
-// resend, W-22), sends no resend once the session ended (W-22), mounts the game
+// resend, W-22; the game is not given it, W-38), sends no resend once the session ended (W-22), mounts the game
 // with its pick use case, ends on a session-ending answer, and prints no secret;
 // and the one round-over check (W-35, W-39). Scripted Play API, manual clock,
 // fake locks.
@@ -102,10 +102,15 @@ describe("the open session", () => {
     expect(resend?.body).toEqual(start?.body);
     expect(opened.play.sent("startRound")).toHaveLength(2);
     expect(session.round()).toBeUndefined();
-    expect(game.posted.at(-1)?.message).toMatchObject({
-      type: "snapshot",
-      snapshot: { roundId: body.snapshot.roundId },
-    });
+    // A round the shell does not hold has no verdict: its `active` Snapshot is
+    // held from the game (W-38).
+    expect(
+      game.posted.filter(
+        ({ message }) =>
+          (message as { readonly snapshot?: { readonly roundId?: string } })
+            .snapshot?.roundId === body.snapshot.roundId,
+      ),
+    ).toEqual([]);
   });
 
   it("a session that ended before the start's one resend sends nothing more, and the start answers ended (W-22)", async () => {

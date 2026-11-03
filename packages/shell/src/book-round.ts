@@ -193,6 +193,7 @@ export const createBookRound = (
     cancel: (): CancelState => "none",
     lastError: (): Error | undefined => undefined,
     unconfirmed: (): undefined => undefined,
+    pending: (): undefined => undefined,
     staleRead: (): ValidSnapshot | undefined => stale,
     observe,
     // The session reads a book round through its own reads; a round with no

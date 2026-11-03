@@ -160,18 +160,17 @@ are in brackets.
     gate and legality, with nothing signed), the required cancel's state
     (`cancel`: `none` until it is reached; W-25, W-33, W-35), and, only while it
     holds, `unconfirmed` (`move` or `cash-out`): the flow's `unconfirmed()`, the
-    move or cash-out not confirmed (W-16, below); and, decided with the single
-    screen (RFC-004, 2026-10-30; to be built, and it replaces the text before it
-    when the Wrapper ships the single screen), `pending` (`move` or `cash-out`),
-    derived and read only: the round signer's pending move or cash-out
-    (`RoundSigner.pending()`, never a cancel) while the signer's phase
-    (`phase()`) is `open` or `adopted`, and absent otherwise: set from the
-    signature (recorded before its send) until a Snapshot shows the action
-    applied; absent once a final answer has held signing (`stale` after a 400 or
-    409, W-19, where the action stays pending inside the signer until a read
-    shows it applied or out of sync), once the round is out of sync, re-issued,
-    failed, or over, and once the session has ended; kept beside `unconfirmed`
-    after the lost resend; with no signature, key, or bytes
+    move or cash-out not confirmed (W-16, below); and `pending` (`move` or
+    `cash-out`; RFC-004, 2026-10-30), the flow's `pending()`, derived and read
+    only: the round signer's pending move or cash-out (`RoundSigner.pending()`,
+    never a cancel) while the signer's phase (`phase()`) is `open` or `adopted`,
+    and absent otherwise: set from the signature (recorded before its send)
+    until a Snapshot shows the action applied; absent once a final answer has
+    held signing (`stale` after a 400 or 409, W-19, where the action stays
+    pending inside the signer until a read shows it applied or out of sync),
+    once the round is out of sync, re-issued, failed, or over, and once the
+    session has ended; kept beside `unconfirmed` after the lost resend; with no
+    signature, key, or bytes
     ([A pick during an error or offline](../wrapper/the-single-screen.md#a-pick-during-an-error-or-offline));
   - `gameOrigin()` and `mountGame(options)`: the controller bridge for D with
     the session's pick use case, which answers the game and reports the answer's
@@ -418,13 +417,13 @@ are in brackets.
   `environment` of the configuration it was opened with, beside the allow-list
   and its own origin; the UI's mount cannot. Otherwise it returns
   `{ ok: true, bridge }`: `sendSnapshot` takes a validated Snapshot (ignored
-  when its `version` is below the latest given; its type does not change with
-  the single screen (RFC-004, decided 2026-10-30, to be built, and it replaces
-  the text before it when the Wrapper ships the single screen): W-38's hold is
-  the session's, which gives `sendSnapshot` an `active` Snapshot only when its
-  round is the session's current round with the verdict `ready` and not out of
-  sync, evaluated after the round observed it, in `session-reads.ts`'s `show`
-  and `session-play.ts`'s `mountGame`), `state()` is `awaiting-hello`, `ready`,
+  when its `version` is below the latest given; its type is unchanged by W-38's
+  hold (RFC-004, decided 2026-10-30), which is the session's: one rule,
+  `game-hold.ts`'s `givenToGame`, gives `sendSnapshot` an `active` Snapshot only
+  when its round is the session's current round with the verdict `ready` and not
+  out of sync, evaluated after the round observed it, in `session-reads.ts`'s
+  `show` and `session-play.ts`'s `mountGame` (its `atMount`); every other
+  Snapshot is given as before), `state()` is `awaiting-hello`, `ready`,
   `incompatible`, or `closed`, and `close()` unsubscribes. A message counts only
   when its `source` is the frame and its `origin` is D; the parser reads only
   own data properties of a plain object, so no game code runs. The rules of the
@@ -668,7 +667,10 @@ are in brackets.
     first lost send. A read only clears it (the action applied, refused by W-19,
     out of sync, the round not `active`, or the session ended); it never leads
     to another send or signature, so the session's `checkAgain` (then `read`) is
-    a read only.
+    a read only. The flow's `pending()` (RFC-004, 2026-10-30) is the signer's
+    pending move or cash-out, never a cancel, while the signer's phase is `open`
+    or `adopted`, and `undefined` otherwise; it is the session's
+    `RoundState.pending`, and stays set beside `unconfirmed()`.
   - **Resynchronization (W-19).** A 409 `STALE_ACTION` or a 400
     `INVALID_ARGUMENT` calls `stale` and reads the Snapshot; when the read
     fails, the round stays held until a later read decides.
@@ -1040,6 +1042,32 @@ are in brackets.
   not end it waits for the deadline; the open session reads with the token,
   starts a round with the key's address (issued for the session's own key, so
   W-26 passes) and reports it `ready`, shows a `ROUND_ACTIVE` round it does not
-  hold, mounts the game and signs a pick through it, ends on each session-ending
-  code and then sends nothing, prints `[redacted]`; and the public options type
-  carries no `encodeTypedData`.
+  hold (and gives the game none of it, W-38's hold), mounts the game and signs a
+  pick through it, ends on each session-ending code and then sends nothing,
+  prints `[redacted]`; and the public options type carries no `encodeTypedData`.
+  W-38's hold (T-26, `play-session-hold.test.ts` and
+  `play-session-hold-rounds.test.ts`) runs on the same scripted session with an
+  RPC transport the test releases: a ready round's `active` Snapshot is given
+  and every Snapshot that is not `active` is given as before; an `active`
+  Snapshot read before the tip check decides is held until it decides `ready`
+  and then given once, and stays held when it decides `failed` (the cancel not
+  taken, so the latest stays `active`), while the failed round's `resolving` is
+  given; a tip check decided on a bound `starting` gives the first `active`
+  Snapshot whose checks pass; overlapping reads give only the round's latest; a
+  re-issue and an out-of-sync read send nothing and no later `active` Snapshot
+  of the round, while its result still is; a `ROUND_ACTIVE` resume, a round an
+  earlier page left open, and another round's `active` Snapshot are never given;
+  at mount the latest is given only with the verdict `ready` then; the `hello`
+  is answered with the last copy given; a book round's Snapshots reach the game
+  as before; `ControllerBridge["sendSnapshot"]` keeps its type; and over a
+  stand-in round (`game-hold.test.ts`), `givenToGame` holds an `active` Snapshot
+  for `checking` (a tip check that gave no decision), `failed`, out of sync, no
+  round, and another round, and gives one for `ready` in `open`, `adopted`, or
+  `unopened`, and gives every other status whatever the verdict.
+  `RoundState.pending` (T-28's shell half, `play-session-pending.test.ts`) is
+  absent before any action; `move` while the move's send is unanswered and
+  absent once its answer shows it applied; `cash-out` while the cash-out is in
+  flight; kept while a lost move waits for a read and beside `unconfirmed` after
+  the lost resend; absent after a 400 or a 409 (and after the read that adopts
+  the move or puts the round out of sync), after a re-issue, a result, and the
+  session's end; never for the required cancel in flight; and carries no hex.

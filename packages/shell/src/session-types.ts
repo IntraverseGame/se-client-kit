@@ -80,6 +80,17 @@ export type RoundState = {
    * Absent otherwise.
    */
   readonly unconfirmed?: "move" | "cash-out";
+  /**
+   * The round signer's pending move or cash-out (never a cancel) while the
+   * signer's phase is `open` or `adopted`: set from the signature, recorded
+   * before its send (W-16), until a Snapshot shows the action applied; kept
+   * beside `unconfirmed` after the lost resend. Absent otherwise: once a 400 or
+   * 409 held signing (W-19), once the round is out of sync, re-issued, failed,
+   * or over, and once the session has ended. The Wrapper's "Waiting for your
+   * move to be confirmed." reads it (W-16). It carries no signature, key, or
+   * bytes.
+   */
+  readonly pending?: "move" | "cash-out";
 };
 
 /**

@@ -124,7 +124,17 @@ const result = createControllerBridge({
 if (!result.ok) {
   showError("the game cannot be mounted"); // result.refusal says why
 } else {
-  result.bridge.sendSnapshot(validatedSnapshot);
+  // A game mounted by `PlaySession.mountGame` gets this hold from the session.
+  // A direct caller applies it before each `sendSnapshot`, after its own round
+  // saw the Snapshot, and sends the round's latest once the round is `ready`.
+  // `ownRound` is the caller's: the round it holds and what its checks found.
+  const given =
+    validatedSnapshot.status !== "active" ||
+    (ownRound !== undefined &&
+      validatedSnapshot.roundId === ownRound.roundId &&
+      ownRound.verdict === "ready" &&
+      !ownRound.outOfSync);
+  if (given) result.bridge.sendSnapshot(validatedSnapshot);
 }
 ```
 
