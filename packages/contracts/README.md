@@ -5,12 +5,10 @@ OpenAPI document (`/play/v1`), the Snapshot JSON Schema (`se.snapshot/1`), and
 the types generated from them. It holds documents and generated types and no
 functions.
 
-**Status:** pre-release. Not published to npm yet. When it is released it will
-carry the contracts it was built against.
+**Status:** pre-release. A released version carries the contracts it was built
+against.
 
 ## Install
-
-Once it is published:
 
 ```sh
 pnpm add @intraverse/se-client-contracts

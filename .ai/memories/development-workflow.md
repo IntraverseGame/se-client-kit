@@ -113,11 +113,15 @@ Several agents and people work in one clone at once. Rules:
   `gh release upload`; `production` calls `pages-prod.yml` with the tag
   (`contents: read`, `attestations: read`, `actions: read`, no secrets passed).
   Every `run:` step is `shell: bash` (so `-eo pipefail`). The five libraries
-  are still `private: true` on purpose (#154). Still open (#154): the trusted
-  publishers, the `attest`, `pages-prod`, and `pages-prod-config`
-  environments, "Allow GitHub Actions to create and approve pull requests",
-  the tag ruleset on `@intraverse/*@*`, `RELEASE_PUBLISH_ENABLED`, and the
-  first-publish rehearsal. **Actions allow-list**: the table in
+  are not `private` any more, so `RELEASE_PUBLISH_ENABLED` is the off switch
+  that remains; `tools/release-readiness.ts` still refuses a `private` library.
+  The `attest`, `pages-prod`, and `pages-prod-config` environments exist,
+  "Allow GitHub Actions to create and approve pull requests" is on, and the tag
+  ruleset on `@intraverse/*@*` exists (update and deletion rules). Still open
+  (#154): the trusted publishers, the secrets of `pages-prod` and
+  `pages-prod-config` (none set yet), confirming that a `github-actions[bot]`
+  approval cannot satisfy the code-owner review, `RELEASE_PUBLISH_ENABLED`, and
+  the first-publish rehearsal. **Actions allow-list**: the table in
   `specs/client-kit/supply-chain.md`, held to every `uses:` under `.github/`
   (pinned SHA and version comment) by `tools/actions-allow-list.test.ts`; local
   Actions and the repository's own reusable workflows are exempt; a new Action

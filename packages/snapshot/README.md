@@ -4,11 +4,9 @@ The validator for the SuperEngine Snapshot (`se.snapshot/1`), the typed Play API
 error, and the request-side amount, with types that narrow a validated Snapshot
 by `presentation` and `status`.
 
-**Status:** pre-release. Not published to npm yet.
+**Status:** pre-release.
 
 ## Install
-
-Once it is published:
 
 ```sh
 pnpm add @intraverse/se-client-snapshot

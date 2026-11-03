@@ -136,9 +136,10 @@ org owners apply the settings; ask them for each.
    <!-- TODO(org owners, #154): create the `attest` environment and confirm the precondition. -->
 8. **Turn the publish path on**, only after steps 5 to 7 and the trusted
    publishers exist:
-   - a reviewed pull request removes `"private": true` from the five libraries'
-     `package.json` and the "not published to npm yet" line from their READMEs
-     (the publish command refuses a private package);
+   - the five libraries' `package.json` have no `"private": true` and their
+     READMEs no "not published to npm yet" line (done in a reviewed pull
+     request). The publish command still refuses a private package, but the
+     variable below, not `private`, is the switch;
    - an org owner sets the repository **variable** (not a secret)
      `RELEASE_PUBLISH_ENABLED` to `true`. Until it is `true`, the workflow's
      `publish` job and every job after it are skipped, and neither the `release`
@@ -151,7 +152,7 @@ org owners apply the settings; ask them for each.
      the first release deploys production in the same run;
    - after the first real publish, the one-time rehearsal in
      [Roll back or deprecate](#roll-back-or-deprecate).
-   <!-- TODO(org owners, #154): the reviewed pull request that removes `private`, then RELEASE_PUBLISH_ENABLED, once steps 5 to 7 are done and the trusted publishers exist. -->
+   <!-- TODO(org owners, #154): RELEASE_PUBLISH_ENABLED, once steps 5 to 7 are done and the trusted publishers exist. -->
 
 ### Sync a contract into the kit
 
