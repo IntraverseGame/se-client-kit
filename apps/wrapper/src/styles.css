@@ -585,7 +585,7 @@ h2.se-heading {
   color: inherit;
 }
 
-/* The cash-out control's multiplier, a display value beside its label. */
+/* The cash-out control's amount or multiplier, beside its label. */
 .se-button__value {
   margin-inline-start: 0.5rem;
   font-weight: 400;
