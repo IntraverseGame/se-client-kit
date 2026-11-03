@@ -64,13 +64,15 @@ does for a `canceled` round that carries neither reveal. The entropy target, the
 backend's signature, and the ready evidence do not apply: such a round has no
 signed creation authorization and no ready evidence, and the page says so.
 
-**The draw** (check 8, book rounds only) is not checked: the verify API does not
-carry the mode's table (its rows and their weights), so this page cannot redraw
-the row. The page compares only the verify API's recorded and redrawn rows with
-each other: agreement leaves the check not checked, and disagreement is a
-mismatch. A `won` or `lost` book round with no failed check therefore reads
-"This round's draw was not recomputed", and its result, drawn row, multiplier,
-and payout are shown as the verify API reports them.
+**The draw** (check 8, book rounds only) does not apply to a `canceled` round,
+which drew no row. For any other book round it is not checked: the verify API
+does not carry the mode's table (its rows and their weights), so this page
+cannot redraw the row. When the answer carries both the verify API's recorded
+and redrawn rows, the page compares only those with each other: agreement leaves
+the check not checked, and disagreement is a mismatch. A `won` or `lost` book
+round of a kernel version this page implements, with no failed check, therefore
+reads "This round's draw was not recomputed", and its result, drawn row,
+multiplier, and payout are shown as the verify API reports them.
 
 SHA-256 comes from the browser's Web Crypto, and Keccak-256 from
 `@intraverse/se-client-signing`. Every derivation is keyed on the round's kernel

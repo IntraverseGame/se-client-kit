@@ -1,6 +1,6 @@
 ---
 description: What se-client-kit is, why it is public, the package map, and its boundary to the backend. Read first on any task.
-last-verified: 2026-10-27 (#3: CODEOWNERS names the org owners, the npm org `intraverse` is claimed, trusted publishing; open-marker deferrals: hosting is #133; verify page states pull request: `verify` takes `contracts`' runtime entry and holds its checks, states, and view; verify kernel pull request: the `verify` app; the signed-action specification is used by name, not copied; fairness kernel vectors pull request: the public kernel vector bundle joins the shared contracts; play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
+last-verified: 2026-11-03 (#193: the package map, with `pages-proxy`, and the current state: the packages and apps are built; 2026-10-27, #3: CODEOWNERS names the org owners, the npm org `intraverse` is claimed, trusted publishing; open-marker deferrals: hosting is #133; verify page states pull request: `verify` takes `contracts`' runtime entry and holds its checks, states, and view; verify kernel pull request: the `verify` app; the signed-action specification is used by name, not copied; fairness kernel vectors pull request: the public kernel vector bundle joins the shared contracts; play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
 ---
 
 # Overview
@@ -20,7 +20,7 @@ it, and compare it with what is served. The cost: everything committed here is
 world-readable and cannot be taken back, so what may be committed is limited
 (see [AGENTS.md](../../AGENTS.md#public-repository)).
 
-## Package map (empty skeletons; no product code yet)
+## Package map
 
 | Project          | Kind           | Role                                                                    |
 | ---------------- | -------------- | ----------------------------------------------------------------------- |
@@ -32,9 +32,10 @@ world-readable and cannot be taken back, so what may be committed is limited
 | `wrapper`        | app            | the UI, built into a release bundle                                     |
 | `reference-game` | app            | a minimal sandboxed game for tests and as a sample                      |
 | `verify`         | app            | the verify page: its checks, states, and view; with its HTML and build    |
+| `pages-proxy`    | app            | the Pages sites' same-origin API proxy (one worker module)              |
 
 Dependency direction: `contracts` ← `snapshot` and `play-client` ← `shell` ←
-`wrapper`; `signing` ← `shell`; `signing` and `contracts`' runtime entry ← `verify` (never `shell`); tests
+`wrapper`; `signing` ← `shell`; `reference-game` takes nothing but the controller protocol's types; `signing` ← `verify`, which may also take `snapshot`, `play-client`, and `contracts`' runtime entry, and never takes `shell`; `pages-proxy` imports nothing; tests
 read vectors from `contracts`' test-only entry. The npm names are `@intraverse/se-client-<name>` (the `intraverse` npm
 organization is claimed; nothing is published yet).
 
@@ -56,19 +57,21 @@ link to private repositories.
 
 Pre-release, nothing published yet. The repository holds the license, the
 agent-agnostic knowledge layer (this directory), the specs (`specs/`), the
-decisions (`ADR-001` to `ADR-004`), and the toolchain (pnpm workspace,
+decisions (`decisions/`), and the toolchain (pnpm workspace,
 TypeScript, Vite, Vitest, Playwright, oxlint, oxfmt, changesets, wireit, CI).
-Built so far: `contracts` (the vendored Play API document, the Snapshot schema
-and vectors, the signing vectors, generated types), `signing`, `snapshot`,
-`play-client` (the request layer and the Play API operations), and `shell` (key custody, the transcript,
-the tip check, the W-26 `CreateRoundAuth` and `T_0` checks and the round's
-verdict). Not built yet: the start, move, and cash-out flows, the Wrapper UI,
-and the reference game.
+Built: `contracts` (the vendored Play API and verify API documents, the Snapshot
+schema and vectors, the signing vectors, the fairness kernel's public vectors,
+generated types), `signing`, `snapshot`, `play-client` (the request layer, the
+Play API operations, and the verify API read), `shell` (key custody, the
+transcript, the tip check, the W-26 `CreateRoundAuth` and `T_0` checks and the
+round's verdict, the game bridge and the operator channel, the start, move,
+cash-out, and cancel flows, and the session), the Wrapper UI, the reference game,
+the verify page, and `pages-proxy`.
 
 ## Where things are
 
 - Contracts and behavior: `specs/`; decisions: `decisions/`; proposals: `rfcs/`;
   procedures: `runbook/`; agent layer: `.ai/`.
-- `packages/` (including `packages/contracts`, later the copies plus the lock
-  file), `apps/`, `e2e/`, `tools/` (repository checks), `.changeset/`,
+- `packages/` (including `packages/contracts`, the copies plus the lock file),
+  `apps/`, `e2e/`, `tools/` (repository checks), `.changeset/`,
   `.github/` (workflows, the setup action, dependabot).

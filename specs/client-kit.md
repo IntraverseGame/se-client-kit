@@ -1,10 +1,10 @@
 # Client kit (`se-client-kit`)
 
 Status: **Draft, for human review.** The repository exists (public, default
-branch `main`) and holds this knowledge layer and the toolchain; the packages
-and apps are empty skeletons so far ([Bootstrap](#bootstrap)). The decisions
-behind it are [ADR-001](../decisions/ADR-001-toolchain-and-signing.md). The
-Wrapper's behavior is [wrapper.md](./wrapper.md).
+branch `main`) and holds this knowledge layer, the toolchain, and the packages
+and apps, which are built and tested; nothing is released. The decisions behind
+it are [ADR-001](../decisions/ADR-001-toolchain-and-signing.md). The Wrapper's
+behavior is [wrapper.md](./wrapper.md).
 
 ## Purpose
 
@@ -76,7 +76,7 @@ se-client-kit/
   apps/
     wrapper/        the Wrapper UI (Vite)
     reference-game/ a minimal sandboxed game for tests and as a sample
-    verify/         the verify page (today its fairness-kernel derivations only)
+    verify/         the verify page (Vite)
     pages-proxy/    the Pages sites' same-origin API proxy (one worker module)
   e2e/              Playwright suite and the fake Play API
   tools/            repository checks and their tests (allow-list, test-only entry)
@@ -88,27 +88,29 @@ se-client-kit/
 
 Every workspace is a pnpm package with wireit scripts (see
 [Task orchestration](./client-kit/testing-and-ci.md#task-orchestration-and-caching));
-the root `package.json` fans them out. Exactly: the five `packages/*` and
+the root `package.json` fans them out. Exactly: the five `packages/*` have
+`build` (tsdown) and `typecheck`, and all but `contracts` have `test` (Vitest);
 `apps/wrapper` and `apps/reference-game` have `build` (Vite), `typecheck`, and
 `test` (Vitest with jsdom); `e2e` (`@intraverse/se-client-e2e`, private) has
-`typecheck` and `test` (Playwright: the e2e harness's own tests and a smoke run
-on the Wrapper's bundle,
-[The e2e harness](./client-kit/testing-and-ci.md#the-e2e-harness)) and no
-`build`; `apps/verify` (`@intraverse/se-client-verify`, private) has `typecheck`
-and `test` (Vitest) and no `build` until its page is built
-([Verify page](./verify-page.md#build-and-release-v-15-to-v-17));
-`apps/pages-proxy` (`@intraverse/se-client-pages-proxy`, private) has `build`
-(`tsc`, its one worker module), `typecheck`, and `test` (Vitest)
-([The Pages API proxy](#the-pages-api-proxy)). **A package gets a `test` script
-with its first real test**, not before: a `test` script that passes with no
-tests would be a green check that checks nothing, so the empty skeletons have
-none, and the root `test` runs the Wrapper's tests and the `tools/` tests
-(`test:tools`). The pull request that adds a package's first test adds its
-`test` script and its entry in the root `test` dependencies.
+`typecheck`, `test` (Playwright, on the release builds of the Wrapper and the
+reference game,
+[The e2e harness](./client-kit/testing-and-ci.md#the-e2e-harness)), and
+`test:preview` (the [preview run](../runbook/preview-e2e.md)), and no `build`;
+`apps/verify` (`@intraverse/se-client-verify`, private) has `build` (Vite,
+[Verify page](./verify-page.md#build-and-release-v-15-to-v-17)), `typecheck`,
+and `test` (Vitest); `apps/pages-proxy` (`@intraverse/se-client-pages-proxy`,
+private) has `build` (`tsc`, its one worker module), `typecheck`, and `test`
+(Vitest) ([The Pages API proxy](#the-pages-api-proxy)). **A package gets a
+`test` script with its first real test**, not before: a `test` script that
+passes with no tests would be a green check that checks nothing, so `contracts`,
+which has no test of its own, has none. The root `test` runs every workspace's
+`test` but `e2e`'s (the root `test:e2e` runs that one), the `tools/` tests
+(`test:tools`), and `check:readmes`. The pull request that adds a package's
+first test adds its `test` script and its entry in the root `test` dependencies.
 
 Directories are `packages/<name>` and `apps/<name>`. The npm names are
 `@intraverse/se-client-<name>` (scope `@intraverse`, decided in
-[ADR-001](../decisions/ADR-001-toolchain-and-signing.md)); the two apps keep the
+[ADR-001](../decisions/ADR-001-toolchain-and-signing.md)); the apps keep the
 prefix and are never published. The `intraverse` npm organization is claimed and
 owned by the org owners; nothing is published yet, and the packages publish
 through npm trusted publishing ([Supply chain](./client-kit/supply-chain.md)).
