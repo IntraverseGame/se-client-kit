@@ -419,6 +419,15 @@ Rules:
    appended); the generated `verify.ts` differs only in that doc comment.
    kernelVersion stays 1.
 
+   **A book round's `game.terms`** (the verify API document synced from
+   se-backend `98af0475`; every other group stays at the commits above): `terms`
+   leaves `Game`'s `required`, and `Game` gains a description: `terms` is set
+   for a config-model round and absent exactly when the answer carries `book`.
+   `PayoutTerms` is unchanged, `maxMultiplierMilli`'s `minimum: 1` included. In
+   the generated `verify.ts`, `Game.terms` is optional and `Game` has that doc
+   comment. No vector changed. The verify page reads it under V-18
+   ([Verify page](../verify-page.md)).
+
 5. **Review before publish.** Every file copied into this public repository is
    reviewed as
    [Never in the public repository](../client-kit.md#never-in-the-public-repository)

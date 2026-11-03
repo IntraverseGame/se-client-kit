@@ -1,8 +1,9 @@
 // VT-11, the body (V-18, V-21): a body with `book` is a book round, and one
 // with `book` and a signed creation authorization, ready evidence, or signed
-// actions is an API error; each book field's validation, a present and
-// malformed one failing the whole body, an absent one not, an `int64` above
-// 2^53 - 1 failing, and every index, count, and weight a `bigint`.
+// actions is an API error (`game.terms` has its own file, `book-terms.test.ts`);
+// each book field's validation, a present and malformed one failing the whole
+// body, an absent one not, an `int64` above 2^53 - 1 failing, and every index,
+// count, and weight a `bigint`.
 
 import { describe, expect, it } from "vitest";
 
@@ -96,9 +97,18 @@ describe("a book round (V-18)", () => {
   ])("with %s, is an API error (V-10)", async (_name, change) => {
     const body = change(await bookBody());
     expect(parseEvidence(body)).toBeUndefined();
-    // The same change without `book` is a body the page reads.
+    // The same change without `book`, so with the terms a config round has, is
+    // a body the page reads.
     const { book: _book, ...plain } = body;
-    expect(parseEvidence(plain)).toBeDefined();
+    expect(
+      parseEvidence({
+        ...plain,
+        game: {
+          ...asRecord(plain["game"]),
+          terms: asRecord(wonBody()["game"])["terms"],
+        },
+      }),
+    ).toBeDefined();
   });
 
   it("with a `seedHash`, keeps it, since the seed's commitment then applies", async () => {

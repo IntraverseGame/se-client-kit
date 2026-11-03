@@ -129,11 +129,6 @@ export const bookRound = (
       gameId: 2,
       gameVersion: 1,
       packageHash: read.packageHash,
-      terms: {
-        nodes: [],
-        houseEdgeWad: "40000000000000000",
-        maxMultiplierMilli: 100_000,
-      },
     },
     shape: [],
     bet: { amount: "100", currency: "EUR", decimals: 2 },

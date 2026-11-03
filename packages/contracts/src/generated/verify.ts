@@ -114,6 +114,12 @@ export type components = {
        */
       vectorSets: string[];
     };
+    /**
+     * @description The round's game version. `terms`, the version's payout terms, is set
+     * for a config-model round and absent exactly when the answer carries
+     * `book`: a book round has no payout terms, and `book` carries its
+     * table's commitments.
+     */
     Game: {
       /** @example coin-flip */
       gameCode: string;
@@ -125,7 +131,7 @@ export type components = {
        * under in the public object store.
        */
       packageHash: components["schemas"]["Hex32"];
-      terms: components["schemas"]["PayoutTerms"];
+      terms?: components["schemas"]["PayoutTerms"];
     };
     PayoutTerms: {
       nodes: components["schemas"]["TermsNode"][];

@@ -92,17 +92,29 @@ export const bookOf = (
 
 /**
  * V-18: the document says a book round has no signed creation authorization, no
- * ready evidence, and no signed actions. A body with `book` and any of them is
- * contradictory, a malformed body (V-10): the page never picks a kind of round
- * for the API, so `book` cannot drop checks 2 to 4 of a config round.
+ * ready evidence, no signed actions, and no `game.terms`. A body with `book`
+ * and any of them is contradictory, a malformed body (V-10): the page never
+ * picks a kind of round for the API, so `book` cannot drop checks 2 to 4 of a
+ * config round.
  */
 export const contradictsBook = (top: {
   readonly book?: unknown;
+  readonly game: { readonly payoutTerms?: unknown };
   readonly commitment?: { readonly createRoundAuth?: unknown } | undefined;
   readonly readyHash?: string | undefined;
   readonly actions: readonly unknown[];
 }): boolean =>
   top.book !== undefined &&
-  (top.commitment?.createRoundAuth !== undefined ||
+  (top.game.payoutTerms !== undefined ||
+    top.commitment?.createRoundAuth !== undefined ||
     top.readyHash !== undefined ||
     top.actions.length > 0);
+
+/**
+ * V-18: the document leaves `game.terms` out exactly when the body has `book`.
+ * A body with neither is no kind of round, a malformed body (V-10).
+ */
+export const hasNoRoundKind = (top: {
+  readonly book?: unknown;
+  readonly game: { readonly payoutTerms?: unknown };
+}): boolean => top.book === undefined && top.game.payoutTerms === undefined;
