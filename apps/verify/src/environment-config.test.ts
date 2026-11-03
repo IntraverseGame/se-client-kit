@@ -49,6 +49,7 @@ describe("a valid document", () => {
         chainId: 31337n,
         verifyingContract: "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
       },
+      earlierPins: [],
       minRpcQuorum: 2,
       sources: { [SOURCE]: { chainId: 8453, endpoints: endpoints(2) } },
       verifyBaseUrl: "https://se.example/verify",
@@ -58,9 +59,9 @@ describe("a valid document", () => {
     expect(Object.isFrozen(config.sources)).toBe(true);
   });
 
-  it("knows the Wrapper's fields, and only them", () => {
+  it("knows the Wrapper's fields and earlierPins, and only them", () => {
     expect(new Set(CONFIG_FIELDS)).toEqual(
-      new Set(Object.keys(environmentDocument())),
+      new Set([...Object.keys(environmentDocument()), "earlierPins"]),
     );
   });
 

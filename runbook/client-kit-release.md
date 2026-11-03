@@ -602,22 +602,60 @@ enter this repository, an issue, or a log):
      origins (`https://host`). Set.
    - **`PAGES_CHAIN_PINS`**: JSON with exactly `environment`, `runtimeSigner`,
      `registryDomain`, `entropyChainId`, `minRpcQuorum`, and `tipLagMargin`
-     ([wrapper.md](../specs/wrapper.md#configuration)). Set. Staging is
-     `environment: "preview"` with `minRpcQuorum` 1 while it reads one RPC
-     provider (ADR-008, decision 8). Its one entropy source keeps the key
-     `anvil` with `entropyChainId` 50312, Somnia's public testnet, and
-     `tipLagMargin` 100 blocks (the backend's value, 2026-10-28;
+     ([wrapper.md](../specs/wrapper.md#configuration)), and optionally
+     `earlierPins` (below). Set. Staging is `environment: "preview"` with
+     `minRpcQuorum` 1 while it reads one RPC provider (ADR-008, decision 8). Its
+     one entropy source keeps the key `anvil` with `entropyChainId` 50312,
+     Somnia's public testnet, and `tipLagMargin` 100 blocks (the backend's
+     value, 2026-10-28;
      [W-26b](../specs/wrapper/signing-start-move-cash-out-and-cancel.md));
      `registryDomain` is at chain id 127823, Etherlink Shadownet (the backend,
      2026-11-03): the registry is not on the entropy chain, so do not change it
-     to 50312. The verify page checks a round's signature under the configured
-     `registryDomain`, so after a change of domain, rounds signed under the
-     earlier domain fail check 3 of the verify page ("The backend's signature"),
-     and their links read as not matching their evidence. On staging,
-     2026-11-03: a Coin Flip round closed before the switch failed only check 3,
-     and a round played after it passed all seven. Production must be
-     `"production"` with `minRpcQuorum` of at least 2; its `tipLagMargin` comes
-     from the backend's measurement of the RPC lag (#133).
+     to 50312. Production must be `"production"` with `minRpcQuorum` of at least
+     2; its `tipLagMargin` comes from the backend's measurement of the RPC lag
+     (#133).
+
+     The verify page checks a round's signature under the configured
+     `registryDomain` and `runtimeSigner`, or under a pair listed in
+     `earlierPins` ([V-3b](../specs/verify-page.md#configuration-v-3)):
+     `[{"registryDomain":{"chainId":<number>,"verifyingContract":"<address>"},"runtimeSigner":"<address>"}]`,
+     with no end time. So a change of domain or signer fails earlier rounds'
+     check 3 ("The backend's signature"), and their links read as not matching
+     their evidence, only when the outgoing pair is not listed. On staging,
+     2026-11-03, with no list yet: a Coin Flip round closed before the switch
+     failed only check 3, and a round played after it passed all seven.
+     - **Append the outgoing pair in the same edit** of the secret that changes
+       the current one. The config job refuses an entry that is the current
+       pair, so appending it without changing the current pins fails the job;
+       going back to a listed pair means removing it from the list and appending
+       the pair being left in the same edit, unless that pair's rounds should
+       fail (a leaked or revoked key).
+     - **Never list a leaked or revoked key's pair.** Its rounds then fail check
+       3 on purpose; the page has no other handling for them. A pair already
+       listed whose key leaks or is revoked comes off the list as soon as that
+       is known, followed by a redeploy; until then the page still accepts what
+       that key signs.
+     - **The field goes into the secret only after the kit that supports it is
+       on `main`.** Before that, the config job refuses it
+       (`field earlierPins is not a chain pin`).
+     - **In production, the config job runs at the deployed tag's commit**
+       (`config-prod` in `pages-prod.yml`), so the document and the page always
+       come from one release. A release without support for the field fails that
+       job with the same issue and deploys nothing, and the sites stay as they
+       are. Set the field in `pages-prod-config` no earlier than when the
+       release that first carries it is about to deploy. After that, a dispatch
+       to an earlier tag fails the same way until the field is removed from the
+       secret, and that release then fails earlier rounds' check 3 again. A
+       rollback in Pages runs no config job and restores that deployment's own
+       document.
+     - Only the verifier's `environment-config.json` carries the list, and only
+       when it has an entry; the Wrapper's never does, and the Wrapper still
+       binds and checks only under the current pins. A verify page opened on the
+       Wrapper's own site reads the Wrapper's document, so it does not accept an
+       earlier pair; the Wrapper's verify link opens the verifier's site.
+     - The list covers check 3 only: a change of an entropy chain still fails
+       earlier rounds' checks 2 and 6.
+
    - **`PAGES_RPC_ENDPOINTS`**: JSON of `rpcEndpoints`,
      `{"<source>":[{"provider":"…","url":"…"}]}`, keyed by the same entropy
      source as the pins' `entropyChainId` and `tipLagMargin`;
@@ -674,15 +712,18 @@ so the secrets change right after the backend's switch, not before:
 4. Verify the deployed `<site>/environment-config.json` on the Wrapper's and the
    verifier's sites: `entropyChainId`, `tipLagMargin`, `minRpcQuorum`,
    `environment`, and `registryDomain` are the values sent, and `rpcEndpoints`
-   names the one endpoint under the expected source key. Then open a new Wrapper
-   session from a fresh launch (a new launch code: codes are single-use), never
-   a tab opened before the redeploy, and start a round: it passes the start,
-   with the degraded indicator shown.
+   names the one endpoint under the expected source key; `earlierPins` is on the
+   verifier's alone, with the outgoing pair last, if the domain or the signer
+   changed. Then open a new Wrapper session from a fresh launch (a new launch
+   code: codes are single-use), never a tab opened before the redeploy, and
+   start a round: it passes the start, with the degraded indicator shown.
 
 Expected after a switch, not an alarm: a staging round played on the old chain
 (anvil, before the switch) cannot be verified on staging's verify page
 afterwards, because check 6 then reads the new chain (Somnia's public testnet).
-A change of `registryDomain` does the same through the verify page's check 3
+A change of `registryDomain` or `runtimeSigner` does the same through the verify
+page's check 3 only when the outgoing pair is not in `earlierPins`, which is on
+purpose for a leaked or revoked key's pair and a missed step otherwise
 (`PAGES_CHAIN_PINS`, above).
 
 **Production** (`.github/workflows/pages-prod.yml`;

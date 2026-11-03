@@ -157,9 +157,10 @@ Out of scope:
 
 - **V-3.** The page reads the same environment configuration document as the
   Wrapper, from the same origin, and validates it with the same schema before it
-  reads anything else. An invalid document shows the configuration-error state
-  and the page makes no request. It uses `runtimeSigner`, `registryDomain`, and
-  `entropyChainId` as the trust anchor (as W-26 does); `rpcEndpoints`,
+  reads anything else (the one field apart is `earlierPins`, V-3b). An invalid
+  document shows the configuration-error state and the page makes no request. It
+  uses `runtimeSigner`, `registryDomain`, `earlierPins`, and `entropyChainId` as
+  the trust anchor (as W-26 does, `earlierPins` apart); `rpcEndpoints`,
   `minRpcQuorum`, and `environment` for the chain read (V-12, check 6); and the
   verify API's base from a field of its own, **`verifyApiBaseUrl`** (D-4): an
   absolute URL under `playApiBaseUrl`'s rule (`https:`, or `http:` on a loopback
@@ -188,6 +189,38 @@ Out of scope:
   each site's own origin). The verify page's header policy
   (`verifyContentSecurityPolicyFor`) is built from a validated document only, so
   the origin it names for the verify API is always the page's own.
+- **V-3b. Earlier pairs of the registry domain and the signer (the backend's
+  decision, 2026-11-03).** A change of `registryDomain` or `runtimeSigner` must
+  not make the rounds closed before it unverifiable, so the verifier site's
+  document may carry **`earlierPins`**: a list of
+  `{ registryDomain: { chainId, verifyingContract }, runtimeSigner }`, with no
+  end time. A document without the field means an empty list, and the page boots
+  as before.
+  - Each entry holds exactly those fields, each under the rule of the current
+    `registryDomain` and `runtimeSigner`. An entry that is the current pair, or
+    that repeats another entry (addresses compared without case), is refused.
+    The page's issue is `invalid-earlier-pins`, at `earlierPins` for a value
+    that is not a list and at `earlierPins.<index>` for an entry, naming the
+    index and never a value.
+  - The pins stay the trust anchor. An earlier pair comes only from this
+    document, never from the round's answer, whose domain and signer only select
+    among the pairs the document holds (V-12, check 3).
+  - Only the verifier's document carries the field, and only the page reads it.
+    It is the one exception to the one schema: the Wrapper's validator refuses
+    it as any field outside its schema, `unknown-field`
+    ([wrapper.md](./wrapper.md#configuration)), and the Wrapper binds and checks
+    a round only under the current pair (W-26). The Pages sites' configuration
+    tool writes it to the verifier's document only
+    ([client-kit.md](./client-kit.md#the-pages-sites-configuration)). A verify
+    page opened on the Wrapper's own site reads the Wrapper's document, so it
+    fails check 3 for a round the verifier's site accepts under an earlier pair;
+    the Wrapper's verify link opens the verifier's site.
+  - A leaked or revoked key's pair is simply not listed. A listed pair stays
+    accepted until it is removed, so one whose key later leaks is removed. The
+    page has no special handling for it, and the rounds it signed fail check 3
+    on purpose.
+  - The list covers check 3 only. A change of an entropy chain still fails the
+    earlier rounds' checks 2 and 6, which read the pinned chain.
 
 ### The page's states (V-4 to V-11)
 
@@ -353,7 +386,17 @@ payout is recomputed by check 7 (OQ-B9).
      recovers to the configured `runtimeSigner` (`signing`'s
      `hashCreateRoundAuth` and `recoverAddress`), as W-26 checks 2 and 4. The
      signed `newRound.roundSecretHash` equals `randomnessProof.roundSecretHash`:
-     the commitment was fixed before the block.
+     the commitment was fixed before the block. The configured pair is the one
+     the round's `domain` and `signer` together equal: the current pair first,
+     then each pair of `earlierPins` (V-3b); the digest and the recovery are
+     under that pair, and the recovered signer must be that pair's. A round that
+     mixes two pairs, the domain of one and the signer of another, equals
+     neither, and with no pair equal the comparisons and the failure are against
+     the current pair. A round that passes under an earlier pair gets the same
+     verdict as one under the current pair, and the check's detail says it was
+     signed under an earlier registry and signer and names them (chain id,
+     address, signer), from the configuration. If it fails under one, the detail
+     says it was checked under them, and claims no signature.
   4. **Ready evidence.** `fairnessProof.readyHash` equals
      `keccak256(abi.encode(created, seedHash))` (`signing`'s `hashReady`), as
      W-26 check 5.
@@ -531,7 +574,7 @@ validated and unused, and the result is the page's own (Security). The map:
 | `kernelVersion`                                         | `kernel.version` (V-12a)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `newRound`                                              | `commitment.createRoundAuth.newRound`: `abi.encode(NewRound)`, 352 bytes, decoded by the page (below)                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `createRoundAuth.prepareWindow`, `expiry`, `signature`  | `commitment.createRoundAuth.prepareWindow`, `expiryUnix` (read as a decimal string), `signature`                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `createRoundAuth.domain`, `signer`                      | `commitment.registryChainId`, `registryAddress` (the `verifyingContract`), `commitment.adminSigner`; compared with the configuration (check 3); the digest uses the configured domain, never these                                                                                                                                                                                                                                                                                                                                        |
+| `createRoundAuth.domain`, `signer`                      | `commitment.registryChainId`, `registryAddress` (the `verifyingContract`), `commitment.adminSigner`; compared with the configuration (check 3); they select among the configured pairs (V-3b), and the digest uses the selected pair's domain, never these                                                                                                                                                                                                                                                                                |
 | `createRoundAuth.entropyChainId`                        | `entropy.chainId`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `randomnessProof.source`, `blockNumber`, `blockValue`   | `entropy.source`, `entropy.block` (read as `bigint`), `entropy.value` (optional)                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `randomnessProof.roundSecretHash`, `roundSecret`        | `commitment.roundSecretHash`, `reveal.roundSecret`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -842,14 +885,19 @@ The page around them is built too:
   Amounts (`betAmount`, `payout.value`) and `blockNumber` are read as `bigint`;
   a body that fails validation is an API error and none of it is used (V-10).
 - **Checks 1 to 4** (`auth-checks.ts`) use `signing` and the configured trust
-  anchors only. **Check 6** (`block-check.ts`) calls the quorum read for every
-  round.
+  anchors only; only check 3 reads `registryDomain`, `runtimeSigner`, and
+  `earlierPins` (V-3b). Check 4 takes `created`, which no domain enters; a book
+  round has no `createRoundAuth` and its check 3 does not apply; and the page
+  shows a pin nowhere else. **Check 6** (`block-check.ts`) calls the quorum read
+  for every round.
 - **The configuration** (`environment-config.ts`, `config-fields.ts`,
-  `load-config.ts`) is validated by the Wrapper's rules, spelled again here
-  since the page cannot import the Wrapper; `tools/config-parity.test.ts` runs
-  one shared set of documents through both validators and requires the same
-  verdict (V-3, one schema); the document's path is the Wrapper's, provisional
-  like it.
+  `pin-pairs.ts`, `load-config.ts`) is validated by the Wrapper's rules, spelled
+  again here since the page cannot import the Wrapper;
+  `tools/config-parity.test.ts` runs one shared set of documents through both
+  validators and requires the same verdict (V-3, one schema), and holds the page
+  and the Pages configuration tool to one rule for `earlierPins`, the field the
+  Wrapper refuses (V-3b); the document's path is the Wrapper's, provisional like
+  it.
 - **The states** (`page-state.ts`): a controller with `fetch`, the timers, the
   address bar, and the offline flag injected, which shows exactly one state; a
   submit or a retry is followed by focus on the new heading, a direct load or
@@ -948,6 +996,8 @@ The page around them is built too:
 | body that fails validation                                                          | API error (V-10); nothing of it is shown as fact                  |
 | a source the configuration does not list                                            | check 2 fails: mismatch (V-7)                                     |
 | signature that recovers to another signer, or has a high `s` or an out-of-range `r` | check 3 fails: mismatch (V-7)                                     |
+| a round's domain and signer that are no configured pair, or mix two (V-3b)          | check 3 fails: mismatch (V-7), against the current pair           |
+| a listed earlier pair whose signature recovers to another signer (V-3b)             | check 3 fails: mismatch (V-7), under that pair                    |
 | signature of the wrong length or with a bad `v`                                     | body fails validation: API error (V-10)                           |
 | configuration document not fetched or not read                                      | configuration error with "try again" (V-3)                        |
 | invalid configuration document                                                      | configuration error, no control; no request (V-3)                 |
@@ -967,7 +1017,8 @@ The page around them is built too:
 - **The page recomputes; it does not trust the API's verdict.** If the API
   returns a verdict field, the page does not show it as the result; the result
   is the page's own checks. The trust anchors are the environment
-  configuration's pinned values, as for the Wrapper (OQ-7).
+  configuration's pinned values, as for the Wrapper (OQ-7), and the earlier
+  pairs the same document lists (V-3b); nothing in an answer adds to them.
 - **No credential.** The page holds no key, no play token, and no launch code,
   and it touches none: it never imports `shell` and never reads the Wrapper's
   session. The round id is public.
@@ -1022,6 +1073,7 @@ never reported anywhere.
 | VT-8  | e2e + build check   | the policy and SRI: the page loads with the `headers.json` policy and no violation, every script and stylesheet carries `integrity`, and no request leaves the configured origins. Built: `verify-page-policy.spec.ts` against the built bundle's own `headers.json` (see the e2e section)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | VT-9  | release dry run     | the page is inside the artifact under `verify/`, two builds give one digest, and its two size measurements are reported and held to their own limits (D-3), apart from the Wrapper's                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | VT-11 | unit                | book rounds (V-18 to V-21, #156; built: `book-body.test.ts`, `book-terms.test.ts`, `book-checks.test.ts`, `book-verdict.test.ts`, and the book patterns in `tools/verify-api-patterns.test.ts`): a body with `book` is a book round and one with `book` and `createRoundAuth`, `readyHash`, signed actions, or `game.terms` (the empty terms with zeros included) is an API error, as is one with neither `book` nor `game.terms`, or a config round whose `maxMultiplierMilli` is 0; each book field's validation (V-21), a present and malformed one failing the body, an absent one not, `int64` values above 2^53 − 1 failing, and `index`, `entryCount`, and `totalWeight` a `bigint`, and `multiplierMilli` kept as base-10 text, read as `bigint` only where compared (check 8) or formatted (V-20); `multiplierMilli` and `totalWeight` capped at 78 digits; checks 2 to 4 "do not apply" and never counted as passed; check 5 (`roundSecretHash`, against `kernel/public/v1/round-secret-hash`, and `seedHash` only when present) and check 7's seed against `kernel/public/v1/seed`; check 6 with an unlisted source and with another `entropy.chainId`; check 8 "not checked" with its reason, its agreement with `recomputed.draw` leaving it so, and a disagreement failing it; the verdicts of V-20 (not ended, voided, refused, unknown kernel, `won` and `lost` with V-8's book reason, `canceled` at V-6); the result and payout labeled as the API's |
+| VT-12 | unit + e2e          | `earlierPins` (V-3b): check 3 under the current pair and each earlier pair, the same verdict, the detail naming the pair; a validly signed mix of two pairs in both directions, a pair not listed, an empty or absent list, and a listed pair whose signature recovers to another signer all fail, with no trust from the answer's own domain and signer; address case (`auth-checks-earlier-pins.test.ts`, `render-earlier-pins.test.ts`), each with the round's verdict (`verify-round-earlier-pins.test.ts`: the same verdict under an earlier pair, and a mismatch naming check 3 for a mix and for a listed pair recovering to another signer); in a browser, from the configuration document to the rendered check (`verify-page-earlier-pins.spec.ts`: "a round under a listed earlier pair matches, and check 3 names the pair", "a round whose pair is not listed does not match"); the page's validator (`environment-config-earlier-pins.test.ts`); the Pages tool writing the list to the verifier's document only and refusing a malformed entry, the current pair, and a repeat (`pages-config-earlier-pins.test.ts`); the page and the tool judging alike, and the Wrapper refusing the field (`tools/config-parity.test.ts`). No backend vectors: the vector's own pair plays the earlier one                                                                                                                                                          |
 | VT-10 | unit (source check) | `apps/verify`'s sources never reference `navigator.locks`, `BroadcastChannel`, `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `document.cookie`, `Worker`, `SharedWorker`, or `serviceWorker` (the shared-origin rule), and its `<meta>` policy carries `worker-src 'none'`. Built: `tools/shared-origin.test.ts` scans every non-test source and HTML file of `apps/verify` as text, comments and strings included, for each name as a whole word (`locks`, `cookie`, and `cookieStore` included), with a case per name; the `<meta>` part is checked in `apps/wrapper/src/release-verify.test.ts`, which feeds the page's `index.html` through the release step, and the source HTML itself is checked for no inline script or style and no policy of its own                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 **The e2e fake of the verify API** joins the fake Play API in the e2e harness: a
@@ -1100,6 +1152,9 @@ In `e2e/tests/harness/` (the suite's harness, never shipped):
   `verify-page-book.spec.ts` is VT-5's book rows and an axe scan of the book
   reason. No book round is recorded: none had closed on staging when this was
   written.
+- `verify-page-earlier-pins.spec.ts` is VT-12's browser rows: the served
+  document's current pins are another pair, and `earlierPins` lists the canned
+  round's own pins or does not.
 
 - `recorded-rounds.ts` and `recorded-rounds/*.json`: two real Coin Flip rounds,
   one `won` (payout 194) and one `lost`, that the backend recorded on its local

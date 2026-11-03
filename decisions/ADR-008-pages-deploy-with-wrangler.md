@@ -9,7 +9,8 @@
   `se-games-stage`, serves the reference game; follow-up references updated
   2026-10-28: staging's RPC and lag margin stated, production's moved to #133;
   updated again 2026-10-28: staging's entropy chain moves to Somnia's public
-  testnet, read through its public RPC, with a lag margin of 100 blocks)
+  testnet, read through its public RPC, with a lag margin of 100 blocks; amended
+  2026-11-03: the optional `earlierPins`, in the verifier's document only)
 - Deciders: the TPO (Pages hosting, the push model, the kit-owned proxy, the
   verify page on its own site), the human maintainer (the deploy tool, the
   secrets, the proxy hardening, acceptance), the infrastructure owner (the
@@ -266,6 +267,13 @@ From the `pages-stage` secrets:
 - `PAGES_RPC_ENDPOINTS`: JSON of `rpcEndpoints`; `PAGES_RPC_ORIGINS` must list
   exactly its URLs' origins (a cross-check);
 - `PAGES_GAME_ORIGINS`, `PAGES_OPERATOR_ORIGINS`: the origin lists.
+
+Amendment note (2026-11-03, the backend's decision): `PAGES_CHAIN_PINS` may also
+hold the optional `earlierPins`, pairs of `registryDomain` and `runtimeSigner`,
+which the tool writes to the verifier's document only
+([V-3b](../specs/verify-page.md#configuration-v-3)). The two documents then also
+differ by that field, and the Wrapper's validator refuses it. The rest of this
+decision stands.
 
 Derived, never configured: `playApiBaseUrl` is the Wrapper's origin plus
 `/play/v1` (both documents); `verifyApiBaseUrl` is each site's own origin plus

@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-10-30 (staging's `PAGES_OPERATOR_ORIGINS` holds the staging operators' origins, no longer a placeholder; 2026-10-28, #133: ADR-009 built, the changesets/action release flow and pages-prod.yml; staging's entropy chain moves to Somnia's public testnet, 50312, tipLagMargin 100, the switch procedure; #135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
+last-verified: 2026-11-03 (`earlierPins` in `PAGES_CHAIN_PINS`: the config tool writes it to the verifier's document only, each entry validated by the Wrapper's validator in the current pair's place; 2026-10-30, staging's `PAGES_OPERATOR_ORIGINS` holds the staging operators' origins, no longer a placeholder; 2026-10-28, #133: ADR-009 built, the changesets/action release flow and pages-prod.yml; staging's entropy chain moves to Somnia's public testnet, 50312, tipLagMargin 100, the switch procedure; #135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
 ---
 
 # Development workflow
@@ -157,7 +157,10 @@ Several agents and people work in one clone at once. Rules:
     production gets a separate config environment): builds the shell, runs
     `apps/wrapper/pages-config-cli.ts` (pure builder `apps/wrapper/pages-config.ts`,
     validated with the Wrapper's own `validateEnvironmentConfig` per site
-    origin; issues name inputs or fields, never values), uploads
+    origin; issues name inputs or fields, never values; the optional
+    `earlierPins` of `PAGES_CHAIN_PINS` goes into the verifier's document only,
+    never when empty, and is left out of what the Wrapper's validator sees, V-3b
+    in specs/verify-page.md), uploads
     `wrapper-environment-config.json` and `verifier-environment-config.json`;
   - `deploy-stage` (`environment: pages-stage`, project names in its `env`):
     fails first on a missing token or account id, checkout, setup composite

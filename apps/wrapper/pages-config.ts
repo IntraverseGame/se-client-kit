@@ -13,6 +13,10 @@
 //   site's API proxy;
 // - `verifyBaseUrl`: the verifier's origin plus `/verify` in both, so the
 //   Wrapper's verify link opens the verifier's site.
+// - `earlierPins`: the verifier's only, and only when the list has an entry
+//   (V-3b in specs/verify-page.md). The Wrapper's validator refuses the field,
+//   so each document is validated without it, and each entry is validated under
+//   the same rule as the current pair.
 // The chain pins, the RPC endpoints, and the game and operator origins are the
 // same in both, and the deploy job derives each site's CSP lists from these
 // documents, so the policy and the configuration cannot disagree.
@@ -20,6 +24,7 @@
 // An issue names an input or a field and a code, never a value: the values are
 // hostnames kept out of the logs.
 
+import { earlierPinIssues } from "./pages-earlier-pins.ts";
 import {
   ENVIRONMENT_CONFIG_FIELDS,
   validateEnvironmentConfig,
@@ -51,6 +56,7 @@ export const CHAIN_PIN_FIELDS: readonly string[] = Object.freeze([
   "environment",
   "runtimeSigner",
   "registryDomain",
+  "earlierPins",
   "entropyChainId",
   "minRpcQuorum",
   "tipLagMargin",
@@ -119,13 +125,13 @@ const sameEntries = (
 ): boolean =>
   left.size === new Set(right).size && right.every(entry => left.has(entry));
 
-/** The document with its fields in the schema's order. */
+/** The document with its fields in the schema's order, `earlierPins` last. */
 const ordered = (document: Document): string =>
   `${JSON.stringify(
     Object.fromEntries(
-      ENVIRONMENT_CONFIG_FIELDS.filter(field => field in document).map(
-        field => [field, document[field]],
-      ),
+      [...ENVIRONMENT_CONFIG_FIELDS, "earlierPins"]
+        .filter(field => field in document)
+        .map(field => [field, document[field]]),
     ),
     undefined,
     2,
@@ -178,19 +184,31 @@ export const buildPagesConfigs = (
   ) {
     return { ok: false, issues };
   }
+  const { earlierPins, ...currentPins } = pins;
   const shared: Document = {
-    ...pins,
+    ...currentPins,
     rpcEndpoints,
     gameOrigins: readList(inputs.PAGES_GAME_ORIGINS),
     operatorOrigins: readList(inputs.PAGES_OPERATOR_ORIGINS),
     playApiBaseUrl: `${wrapperOrigin}/play/v1`,
     verifyBaseUrl: `${verifierOrigin}/verify`,
   };
+  issues.push(
+    ...earlierPinIssues(
+      earlierPins,
+      { ...shared, verifyApiBaseUrl: `${wrapperOrigin}/verify/v1` },
+      wrapperOrigin,
+    ),
+  );
+  // An empty list is not written: the verifier's document stays what it was
+  // before the field, and absent means empty to the page.
+  const verifierOnly: Document =
+    Array.isArray(earlierPins) && earlierPins.length > 0 ? { earlierPins } : {};
   const sites = [
-    ["wrapper", wrapperOrigin],
-    ["verifier", verifierOrigin],
+    ["wrapper", wrapperOrigin, {}],
+    ["verifier", verifierOrigin, verifierOnly],
   ] as const;
-  const documents = sites.map(([site, origin]) => {
+  const documents = sites.map(([site, origin, only]) => {
     const document: Document = {
       ...shared,
       verifyApiBaseUrl: `${origin}/verify/v1`,
@@ -203,7 +221,7 @@ export const buildPagesConfigs = (
         ),
       );
     }
-    return ordered(document);
+    return ordered({ ...document, ...only });
   });
   const [wrapper, verifier] = documents;
   return issues.length > 0 || wrapper === undefined || verifier === undefined

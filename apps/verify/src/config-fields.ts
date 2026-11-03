@@ -32,6 +32,14 @@ export const readAddress = (value: unknown): `0x${string}` | undefined =>
     ? (value.toLowerCase() as `0x${string}`)
     : undefined;
 
+/** Whether `record` holds exactly `fields`, and no other. */
+export const hasExactly = (
+  record: Fields,
+  fields: readonly string[],
+): boolean =>
+  Object.keys(record).length === fields.length &&
+  fields.every(field => Object.hasOwn(record, field));
+
 export const isCount = (value: unknown, minimum: number): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= minimum;
 

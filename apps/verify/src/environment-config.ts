@@ -3,7 +3,9 @@
 // anything else is read. The page cannot take the Wrapper's validator (it never
 // imports `shell` or an app), so the rules are spelled here; a field the page
 // does not use is still validated, so a document one refuses the other refuses
-// too. An issue names a field, never a value.
+// too. The one exception is `earlierPins` (V-3b), which only the verifier site's
+// document carries: the page reads it and the Wrapper refuses it as an unknown
+// field. An issue names a field, never a value.
 
 import type { RpcEndpoint } from "./chain-read.ts";
 import {
@@ -21,6 +23,7 @@ import {
   readUrl,
   shareProvider,
 } from "./config-fields.ts";
+import { type PinPair, readDomain, readEarlierPins } from "./pin-pairs.ts";
 
 export type Environment = "production" | "preview" | "local";
 
@@ -31,14 +34,13 @@ export type SourceConfig = {
 };
 
 /** A document that passed `validateEnvironmentConfig`. */
-export type VerifyConfig = {
+export type VerifyConfig = PinPair & {
   readonly environment: Environment;
-  /** The address that signs `CreateRoundAuth` (lowercase). */
-  readonly runtimeSigner: `0x${string}`;
-  readonly registryDomain: {
-    readonly chainId: bigint;
-    readonly verifyingContract: `0x${string}`;
-  };
+  /**
+   * The earlier pairs check 3 also accepts (V-3b), from this document only;
+   * empty when the document has no such field.
+   */
+  readonly earlierPins: readonly PinPair[];
   readonly minRpcQuorum: number;
   /** Per entropy source, by its `source` identifier. */
   readonly sources: Readonly<Record<string, SourceConfig>>;
@@ -53,6 +55,7 @@ export type ConfigIssueCode =
   | "invalid-environment"
   | "invalid-signer"
   | "invalid-domain"
+  | "invalid-earlier-pins"
   | "invalid-quorum"
   | "production-quorum"
   | "invalid-endpoints"
@@ -85,6 +88,7 @@ export const CONFIG_FIELDS: readonly string[] = Object.freeze([
   "verifyApiBaseUrl",
   "runtimeSigner",
   "registryDomain",
+  "earlierPins",
   "rpcEndpoints",
   "entropyChainId",
   "minRpcQuorum",
@@ -127,17 +131,6 @@ const readEndpoints = (
     sources.set(source, valid);
   }
   return sources;
-};
-
-const readDomain = (
-  value: unknown,
-): VerifyConfig["registryDomain"] | undefined => {
-  if (!isRecord(value)) return undefined;
-  const chainId = own(value, "chainId");
-  const verifyingContract = readAddress(own(value, "verifyingContract"));
-  return isCount(chainId, 1) && verifyingContract !== undefined
-    ? Object.freeze({ chainId: BigInt(chainId), verifyingContract })
-    : undefined;
 };
 
 const readQuorum = (
@@ -199,6 +192,18 @@ export const validateEnvironmentConfig = (
   if (registryDomain === undefined) {
     issues.push({ code: "invalid-domain", field: "registryDomain" });
   }
+  const earlierPins = readEarlierPins(
+    own(fields, "earlierPins"),
+    runtimeSigner === undefined || registryDomain === undefined
+      ? undefined
+      : { runtimeSigner, registryDomain },
+  );
+  issues.push(
+    ...earlierPins.refused.map(field => ({
+      code: "invalid-earlier-pins" as const,
+      field,
+    })),
+  );
   const quorum = readQuorum(own(fields, "minRpcQuorum"), environment, issues);
   const endpoints = readEndpoints(own(fields, "rpcEndpoints"), issues);
   const names = [...(endpoints?.keys() ?? [])];
@@ -275,6 +280,7 @@ export const validateEnvironmentConfig = (
       environment: environment as Environment,
       runtimeSigner,
       registryDomain,
+      earlierPins: earlierPins.pairs,
       minRpcQuorum: quorum,
       sources: Object.freeze(sources),
       verifyBaseUrl,

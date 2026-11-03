@@ -105,6 +105,13 @@ export const MESSAGES = {
   "check.notChecked": "not checked",
   "check.notApplicable": "does not apply",
   "check.degraded": "Chain check not independent (development).",
+  "check.earlierSigned":
+    "Signed under an earlier registry and signer, which this page's configuration lists.",
+  "check.earlierChecked":
+    "Checked under an earlier registry and signer, which this page's configuration lists, because the round names them.",
+  "check.earlierChainId": "Earlier registry's chain id",
+  "check.earlierContract": "Earlier registry's address",
+  "check.earlierSigner": "Earlier signer",
 
   "notChecked.heading": "Not checked by this page",
   "notChecked.text":

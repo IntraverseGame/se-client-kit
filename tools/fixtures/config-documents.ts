@@ -45,6 +45,84 @@ export const configDocument = (
   return document;
 };
 
+/** An earlier pair of `configDocument()`'s, by its values and no other. */
+const EARLIER_PAIR = {
+  registryDomain: {
+    chainId: 127,
+    verifyingContract: "0xd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5",
+  },
+  runtimeSigner: "0x4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f",
+};
+
+const CURRENT_PAIR = {
+  registryDomain: configDocument()["registryDomain"],
+  runtimeSigner: configDocument()["runtimeSigner"],
+};
+
+export const VALID_EARLIER_PINS: readonly unknown[] = [EARLIER_PAIR];
+
+/**
+ * `earlierPins` values for the verify page's validator and the Pages tool,
+ * which spell the rule apart; a name starting "valid" is accepted by both.
+ */
+export const EARLIER_PINS_CASES: readonly {
+  readonly name: string;
+  readonly earlierPins: unknown;
+}[] = [
+  { name: "valid, empty", earlierPins: [] },
+  { name: "valid, one pair", earlierPins: VALID_EARLIER_PINS },
+  {
+    name: "valid, a mixed-case address",
+    earlierPins: [
+      {
+        ...EARLIER_PAIR,
+        runtimeSigner: "0x4F4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4F",
+      },
+    ],
+  },
+  {
+    name: "valid, the current domain with an earlier signer",
+    earlierPins: [
+      { ...CURRENT_PAIR, runtimeSigner: EARLIER_PAIR.runtimeSigner },
+    ],
+  },
+  { name: "not a list", earlierPins: {} },
+  { name: "null", earlierPins: null },
+  { name: "an entry that is text", earlierPins: ["text"] },
+  {
+    name: "an entry with an end time",
+    earlierPins: [{ ...EARLIER_PAIR, end: 1 }],
+  },
+  {
+    name: "an entry without a signer",
+    earlierPins: [{ registryDomain: EARLIER_PAIR.registryDomain }],
+  },
+  {
+    name: "the zero signer",
+    earlierPins: [{ ...EARLIER_PAIR, runtimeSigner: `0x${"0".repeat(40)}` }],
+  },
+  {
+    name: "a chain id as text",
+    earlierPins: [
+      {
+        ...EARLIER_PAIR,
+        registryDomain: { ...EARLIER_PAIR.registryDomain, chainId: "127" },
+      },
+    ],
+  },
+  {
+    name: "a domain with another field",
+    earlierPins: [
+      {
+        ...EARLIER_PAIR,
+        registryDomain: { ...EARLIER_PAIR.registryDomain, name: "x" },
+      },
+    ],
+  },
+  { name: "the current pair", earlierPins: [CURRENT_PAIR] },
+  { name: "a repeated pair", earlierPins: [EARLIER_PAIR, EARLIER_PAIR] },
+];
+
 /** One shared case: a named document, for a page at `ownOrigin`. */
 export type ConfigCase = {
   readonly name: string;
