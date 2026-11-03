@@ -210,19 +210,16 @@ Rules:
    Snapshot's `cashOutValue`; the value may differ from the bet times
    `currentMultiplier`, and a client shows it and never checks it against the
    multiplier. It changes only with a step, so it adds no `version` churn. The
-   rollout is kit first: the backend serves the field only after a kit release
-   that vendors this schema, since a Wrapper built against the older one refuses
-   every `active` Snapshot that carries it (W-28). The kit takes it as the
-   schema gives it: the `snapshot` package's per-status types say
-   `cashOutValue?: never` on every status but `active`, where it is an optional
-   `Amount`, and on the `playback` presentation; the shell does not forward it
-   to the game (W-38); and the Wrapper shows it on the cash-out control, "Cash
-   out" with its `formatted` (W-31 in
+   kit takes it as the schema gives it: the `snapshot` package's per-status
+   types say `cashOutValue?: never` on every status but `active`, where it is an
+   optional `Amount`, and on the `playback` presentation; the shell does not
+   forward it to the game (W-38); and the Wrapper shows it on the cash-out
+   control, "Cash out" with its `formatted` (W-31 in
    [Rendering from the Snapshot](../wrapper/rendering-from-the-snapshot.md), and
    the labels of [The single screen](../wrapper/the-single-screen.md)). The
    generator's structural copy of `Amount` for it is, like `Amount1`, not
    exported. Until the sync lands, the vendored schema rejects every Snapshot
-   that carries the field (W-28), so the Wrapper's control shows the multiplier;
+   that carries the field (W-28); without it, the control shows the multiplier;
    the `snapshot` package's types already name the field.
    <!-- TODO(contracts sync): when the sync that vendors the Snapshot schema's `cashOutValue` lands, replace "to be synced" with the source commit, as the other paragraphs name it, and drop the until-then sentence. -->
 
