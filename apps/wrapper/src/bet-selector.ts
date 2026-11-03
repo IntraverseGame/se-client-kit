@@ -49,7 +49,15 @@ export const betSelector = (
   });
   const start = intents.start;
   return el("form", { class: "se-bet" }, [
-    el("fieldset", {}, [el("legend", {}, [m["label.bet"]]), ...radios]),
+    // The legend names the group for assistive technology; the row shows its
+    // own label, since a legend does not join a flex row in every engine.
+    el("fieldset", {}, [
+      el("legend", { class: "se-visually-hidden" }, [m["label.bet"]]),
+      el("span", { class: "se-bet__label", "aria-hidden": "true" }, [
+        m["label.bet"],
+      ]),
+      ...radios,
+    ]),
     start !== undefined &&
       button(
         el,

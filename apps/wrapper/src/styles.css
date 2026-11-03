@@ -396,7 +396,7 @@ h2.se-heading {
 }
 
 .se-field__label,
-.se-bet legend {
+.se-bet__label {
   color: var(--se-muted);
   font-family: var(--se-mono);
   font-size: 0.75rem;
@@ -502,11 +502,9 @@ h2.se-heading {
   border: 0;
 }
 
-/* A floated legend joins the row, beside the options it names. */
-.se-bet legend {
-  float: inline-start;
+/* The visible label, beside the options it names. */
+.se-bet__label {
   margin-inline-end: 0.25rem;
-  padding: 0;
 }
 
 /*
