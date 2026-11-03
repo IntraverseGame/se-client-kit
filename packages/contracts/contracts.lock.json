@@ -19,8 +19,8 @@
       "path": "src/schemas/verify.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "verify/v1 OpenAPI document",
-      "sourceCommit": "bc4f4adf356a7e5b5146e5f80bfb4f62c1e87556",
-      "sha256": "5bf3b6dc1d8c3c0a896e7b949078cc7346ef922d3daef9c6fc19c4cd7abddabb"
+      "sourceCommit": "98af04753c9a754e5751067453cf402b37ed67bf",
+      "sha256": "cf5bee92433bb4e8bea31edd8664167cde2551eeb47f764dfa2e785a4684b227"
     },
     {
       "path": "src/vectors/kernel/v1/book-draw.json",

@@ -49,6 +49,8 @@ test.describe("the canned book rounds (#156)", () => {
       });
       expect(round).not.toHaveProperty("readyHash");
       expect(round).not.toHaveProperty("seedHash");
+      // A book round has no payout terms (V-18).
+      expect(round["game"]).not.toHaveProperty("terms");
       expect(reveal["seed"]).toBe(
         sha256(BOOK_BLOCK_VALUE, String(reveal["roundSecret"])),
       );

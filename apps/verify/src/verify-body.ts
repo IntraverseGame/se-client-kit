@@ -13,7 +13,13 @@ import type {
   TermsNodeEvidence,
 } from "./round-evidence.ts";
 import { amount, bet, payout } from "./verify-amount.ts";
-import { book, bookOf, contradictsBook, drawnRow } from "./verify-book.ts";
+import {
+  book,
+  bookOf,
+  contradictsBook,
+  drawnRow,
+  hasNoRoundKind,
+} from "./verify-book.ts";
 import { game } from "./verify-game.ts";
 import { newRound } from "./verify-new-round.ts";
 import {
@@ -195,7 +201,7 @@ export const parseEvidence = (body: unknown): RoundEvidence | undefined => {
     checks: list(check),
   });
   if (top === Bad) return undefined;
-  if (contradictsBook(top)) return undefined;
+  if (contradictsBook(top) || hasNoRoundKind(top)) return undefined;
   const steps = playedSteps(top.game.terms, top.recomputed?.steps ?? []);
   if (steps === Bad) return undefined;
 
@@ -250,7 +256,9 @@ export const parseEvidence = (body: unknown): RoundEvidence | undefined => {
     ...(top.payout === undefined ? {} : { payout: top.payout }),
     shape: top.shape,
     terms: top.game.terms,
-    payoutTerms: top.game.payoutTerms,
+    ...(top.game.payoutTerms === undefined
+      ? {}
+      : { payoutTerms: top.game.payoutTerms }),
     bet: top.bet,
     steps,
     ...(randomnessProof === undefined ? {} : { randomnessProof }),

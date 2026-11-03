@@ -203,7 +203,12 @@ components:
     Game:
       type: object
       additionalProperties: false
-      required: [gameCode, gameId, gameVersion, packageHash, terms]
+      description: |
+        The round's game version. `terms`, the version's payout terms, is set
+        for a config-model round and absent exactly when the answer carries
+        `book`: a book round has no payout terms, and `book` carries its
+        table's commitments.
+      required: [gameCode, gameId, gameVersion, packageHash]
       properties:
         gameCode: { type: string, example: coin-flip }
         gameId: { type: integer, minimum: 0 }

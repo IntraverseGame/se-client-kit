@@ -175,9 +175,12 @@ export type RoundEvidence = {
   readonly payout?: PayoutEvidence | undefined;
   /** `shape`: the config shape chosen at the start; empty when the terms fix it. */
   readonly shape: readonly number[];
-  /** `game.terms.nodes`. */
+  /** `game.terms.nodes`; empty for a book round, which has no terms (V-18). */
   readonly terms: readonly TermsNodeEvidence[];
-  /** `game.terms`' house edge and multiplier cap (check 7's payout). */
+  /**
+   * `game.terms`' house edge and multiplier cap (check 7's payout); a config
+   * round always has them, a book round never (V-18).
+   */
   readonly payoutTerms?: PayoutTermsEvidence | undefined;
   /** `bet` (check 7's payout). */
   readonly bet?: BetEvidence | undefined;
