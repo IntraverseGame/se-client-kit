@@ -608,8 +608,14 @@ enter this repository, an issue, or a log):
      `anvil` with `entropyChainId` 50312, Somnia's public testnet, and
      `tipLagMargin` 100 blocks (the backend's value, 2026-10-28;
      [W-26b](../specs/wrapper/signing-start-move-cash-out-and-cancel.md));
-     `registryDomain` stays at chain id 31337 by design (the registry is not on
-     the entropy chain), so do not change it to 50312. Production must be
+     `registryDomain` is at chain id 127823, Etherlink Shadownet (the backend,
+     2026-11-03): the registry is not on the entropy chain, so do not change it
+     to 50312. The verify page checks a round's signature under the configured
+     `registryDomain`, so after a change of domain, rounds signed under the
+     earlier domain fail check 3 of the verify page ("The backend's signature"),
+     and their links read as not matching their evidence. On staging,
+     2026-11-03: a Coin Flip round closed before the switch failed only check 3,
+     and a round played after it passed all seven. Production must be
      `"production"` with `minRpcQuorum` of at least 2; its `tipLagMargin` comes
      from the backend's measurement of the RPC lag (#133).
    - **`PAGES_RPC_ENDPOINTS`**: JSON of `rpcEndpoints`,
@@ -676,6 +682,8 @@ so the secrets change right after the backend's switch, not before:
 Expected after a switch, not an alarm: a staging round played on the old chain
 (anvil, before the switch) cannot be verified on staging's verify page
 afterwards, because check 6 then reads the new chain (Somnia's public testnet).
+A change of `registryDomain` does the same through the verify page's check 3
+(`PAGES_CHAIN_PINS`, above).
 
 **Production** (`.github/workflows/pages-prod.yml`;
 [ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),

@@ -485,8 +485,8 @@ or preview exception applies: the tip check passes with one answering endpoint,
 under the non-dismissable "chain check not independent (development)" indicator
 and with `tipCheck: "degraded"`. Its entropy source keeps the key `anvil`, with
 `entropyChainId` 50312 and a `tipLagMargin` of 100 blocks (W-26b);
-`registryDomain` stays at chain id 31337 by design, since the registry is not on
-the entropy chain (the backend, 2026-10-28). The record chain needs no RPC in
+`registryDomain` is at chain id 127823, Etherlink Shadownet: the registry is not
+on the entropy chain (the backend, 2026-11-03). The record chain needs no RPC in
 the browser before INC1 anchoring. Production MUST set
 `environment: "production"` with `minRpcQuorum` of at least 2 (W-26a's boot rule
 refuses less). The staging documents are written by the Pages deploy
