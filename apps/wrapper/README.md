@@ -36,8 +36,12 @@ the operator's lobby and deposit as the player's own links, only between rounds.
 - The game runs in a sandboxed iframe and talks to the Wrapper only through the
   controller protocol `se.controller/1`.
 - The page that embeds the Wrapper can only unlock it, through the operator
-  protocol `se.operator/1`: it receives `welcome` and content heights, never a
-  secret, an id, or an amount.
+  protocol `se.operator/1`: it receives `welcome` and the least height the
+  Wrapper needs (a minimum for the iframe's box), never a secret, an id, or an
+  amount.
+- The game shows in one place for the whole session and takes input only in a
+  round the shell has checked and found ready; it is never sent a round in play
+  before that.
 - The Wrapper renders only a Snapshot that has been validated.
 - The Wrapper writes nothing to `localStorage`, cookies, or any persistent
   storage unless its specification says so; the key is never persisted.
@@ -92,8 +96,11 @@ Vectors below a small minimum size are outside it.
 ## For game developers and integrators
 
 A game receives its state from the Wrapper and sends its choices back through
-the controller protocol. See the Wrapper specification for the protocol, and its
-operator guidance for how an operator page embeds the Wrapper.
+the controller protocol. It shows from the session's start, at `idle` too, and
+takes input only while a round is playable, so it must play a reveal with no
+input and render every state it is sent. See the Wrapper specification for the
+protocol, and its operator guidance for how an operator page embeds the Wrapper:
+the Wrapper fills the box it is given, and `resize` is a minimum height.
 
 ## More
 

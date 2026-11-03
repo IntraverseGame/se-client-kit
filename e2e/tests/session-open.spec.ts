@@ -8,6 +8,7 @@
 import { expect, test } from "./harness/fixtures.ts";
 import { PAGES_ORIGIN } from "./harness/origins.ts";
 import {
+  coverHeading,
   launch,
   servedFor,
   statusHeading,
@@ -40,7 +41,7 @@ test.describe("the session's open", () => {
     fakePlayApi,
   }) => {
     await page.goto(`${WRAPPER_PAGE}?launchCode=${fakePlayApi.launchCode}`);
-    await expect(statusHeading(page)).toHaveText(TEXT.sessionEnded);
+    await expect(coverHeading(page)).toHaveText(TEXT.sessionEnded);
     expect(fakePlayApi.served).toEqual([]);
   });
 
@@ -55,7 +56,7 @@ test.describe("the session's open", () => {
     await launch(page, fakePlayApi);
     await expect(statusHeading(page)).toHaveText(TEXT.idle);
     await page.reload();
-    await expect(statusHeading(page)).toHaveText(TEXT.sessionEnded);
+    await expect(coverHeading(page)).toHaveText(TEXT.sessionEnded);
     expect(servedFor(fakePlayApi, "redeemLaunchCode")).toHaveLength(1);
   });
 
@@ -72,7 +73,7 @@ test.describe("the session's open", () => {
     await expect(statusHeading(page)).toHaveText(TEXT.idle);
     const again = await context.newPage();
     await launch(again, fakePlayApi);
-    await expect(statusHeading(again)).toHaveText(TEXT.sessionEnded);
+    await expect(coverHeading(again)).toHaveText(TEXT.sessionEnded);
     expect(servedFor(fakePlayApi, "redeemLaunchCode")).toHaveLength(2);
   });
 
@@ -85,7 +86,7 @@ test.describe("the session's open", () => {
       vector: "problem-redeem-unavailable",
     });
     await launch(page, fakePlayApi);
-    await expect(statusHeading(page)).toHaveText(TEXT.sessionEnded);
+    await expect(coverHeading(page)).toHaveText(TEXT.sessionEnded);
     expect(servedFor(fakePlayApi, "redeemLaunchCode")).toHaveLength(1);
   });
 

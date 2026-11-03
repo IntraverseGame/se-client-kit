@@ -1,10 +1,10 @@
 // The open session's use cases: it reads with the play token, starts a round
 // with the key's address and shows it ready once checked, shows a
 // `ROUND_ACTIVE` round it does not hold (also as the answer to the start's one
-// resend, W-22; the game is not given it, W-38), sends no resend once the session ended (W-22), mounts the game
-// with its pick use case, ends on a session-ending answer, and prints no secret;
-// and the one round-over check (W-35, W-39). Scripted Play API, manual clock,
-// fake locks.
+// resend, W-22; the game is not given it, W-38), sends no resend once the
+// session ended (W-22), mounts the game with its pick use case, ends on a
+// session-ending answer, and prints no secret; and the one round-over check
+// (W-35, W-39). Scripted Play API, manual clock, fake locks.
 
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 import { describe, expect, it } from "vitest";

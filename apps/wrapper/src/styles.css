@@ -27,6 +27,33 @@
   --se-radius: 1.25rem;
   --se-pill: 62.5rem;
   --se-mono: ui-monospace, monospace;
+  /*
+   * The single screen (W-57): the stage's minimum S (270 CSS pixels at the
+   * default text size, provisional) and the one height every slot of the bar
+   * reserves, one row of controls: a 2.75rem target and, on each side, room
+   * for its focus outline (0.1875rem and its 0.125rem offset). No state makes
+   * the bar grow, so the stage never moves; the bar's height B depends only
+   * on the width and the text size.
+   */
+  --se-stage-min: 16.875rem;
+  --se-slot-pad: 0.3125rem;
+  --se-row-h: 3.375rem;
+  /*
+   * The bar's slots, from 52rem (832 CSS pixels) up, on two rows: the status
+   * slot takes the rest of the width, with the controls and the links on its
+   * right; the round line is the second row. The notices row is left out
+   * while it has nothing to show, so its gap is not reserved either.
+   */
+  --se-bar-columns: minmax(0, 1fr) auto auto;
+  --se-bar-areas: "notices notices notices" "status controls links"
+    "round round round";
+  --se-bar-areas-bare: "status controls links" "round round round";
+  /* The rows the primary controls and the round line reserve (under 52rem). */
+  --se-controls-rows: 1;
+  --se-round-rows: 1;
+  /* The bar's pills are a little narrower, so a row holds more of them. */
+  --se-bar-choice-pad: 0.875rem;
+  --se-scrim: rgb(255 255 255 / 0.72);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -46,6 +73,7 @@
     --se-error-bg: #2b1513;
     --se-notice: #fda677;
     --se-focus: #f4f4f6;
+    --se-scrim: rgb(17 17 19 / 0.72);
   }
 }
 
@@ -53,7 +81,21 @@
   box-sizing: border-box;
 }
 
+/*
+ * The Wrapper fills its iframe's viewport (W-57 "The height"): the document is
+ * exactly the viewport's height (`height: 100%`, never `vh`, so the
+ * standalone page on a phone does not jump with the browser's toolbar), the
+ * scroll bar's gutter is kept so it never changes the width, and so B, and
+ * nothing scrolls sideways from 20rem (320 CSS pixels) up.
+ */
+html {
+  height: 100%;
+  scrollbar-gutter: stable;
+}
+
 body {
+  height: 100%;
+  min-width: 20rem;
   margin: 0;
   background: var(--se-bg);
   color: var(--se-fg);
@@ -62,31 +104,232 @@ body {
   line-height: 1.5;
 }
 
+/*
+ * The stage takes the height the bar leaves, from the layout alone: never a
+ * measured value written back into a style. Below the minimum (S + B) the
+ * stage keeps S and the document scrolls inside the iframe. `#app` is the
+ * page's host element (index.html).
+ */
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
 .se-wrapper {
-  max-width: 64rem;
-  margin: 0 auto;
-  padding: 1rem;
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
 }
 
 .se-main {
+  display: grid;
+  flex: 1 0 auto;
+  grid-template-rows: minmax(var(--se-stage-min), 1fr) auto;
+}
+
+.se-stage {
+  position: relative;
+  min-height: var(--se-stage-min);
+  overflow: hidden;
+  background: var(--se-panel);
+}
+
+.se-game,
+.se-game iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.se-game iframe {
+  display: block;
+  border: 0;
+}
+
+/* The overlay: a translucent scrim, or an opaque cover (W-57). */
+.se-overlay {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+  text-align: center;
+}
+
+.se-overlay[data-form="scrim"] {
+  background: var(--se-scrim);
+}
+
+.se-overlay[data-form="cover"] {
+  background: var(--se-bg);
+}
+
+/* The scrim's line sits on an opaque panel, so it keeps its contrast. */
+.se-overlay__text {
+  margin: 0;
+  padding: 0.75rem 1.25rem;
+  border: 0.0625rem solid var(--se-border);
+  border-radius: var(--se-radius);
+  background: var(--se-panel);
+  color: var(--se-strong);
+}
+
+/*
+ * The control bar: each slot reserves one row of controls; text or controls
+ * that do not fit scroll inside their slot and never spill onto the stage.
+ * Each slot's own padding is the room for its focus outlines, so the bar's
+ * padding and its row gap stay small.
+ */
+.se-bar {
+  --se-pill-pad: 0.875rem;
+  --se-choice-pad: var(--se-bar-choice-pad);
+
+  display: grid;
+  grid-template-columns: var(--se-bar-columns);
+  grid-template-areas: var(--se-bar-areas);
+  gap: 0 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-top: 0.0625rem solid var(--se-border);
+  background: var(--se-bg);
+}
+
+.se-bar:has(> .se-notices:empty) {
+  grid-template-areas: var(--se-bar-areas-bare);
+}
+
+.se-notices {
+  grid-area: notices;
+}
+
+.se-notices:empty {
+  display: none;
+}
+
+/*
+ * The bar's slots, each one row of controls high. Their items sit on one
+ * line; what does not fit wraps and scrolls inside the slot, which never
+ * grows (`safe` keeps the first line in reach when it overflows).
+ */
+.se-status-slot,
+.se-controls,
+.se-round,
+.se-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: safe center;
+  height: var(--se-row-h);
+  padding: var(--se-slot-pad);
+  overflow-y: auto;
+}
+
+/*
+ * The status slot: the status heading and, on the same row after it, the
+ * detail or the alert line, which takes the detail's place when it shows
+ * (W-57: the alert overlays the status). The two never wrap onto a second
+ * row: the status line takes at most half the slot, the alert the rest. When
+ * the status line's text does not fit, the slot scrolls; it never grows.
+ */
+.se-status-slot {
+  flex-wrap: nowrap;
+  align-items: safe center;
+  gap: 0.75rem;
+  grid-area: status;
 }
 
 .se-status {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 1.25rem;
-  border: 0.0625rem solid var(--se-border);
-  border-radius: var(--se-radius);
-  background: var(--se-panel);
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.75rem;
+  min-width: 0;
+  max-width: 50%;
 }
 
-.se-status:empty,
-.se-ended:empty {
-  display: none;
+.se-status:has(+ .se-alert[data-empty]) {
+  max-width: none;
+}
+
+/*
+ * The alert line, one row high: its icon, its heading, and the first line of
+ * its detail on the row; the rest (more lines, the request id, its control)
+ * scrolls inside the alert's own box, which stays within the slot, so its
+ * border is never cut off.
+ */
+.se-alert {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0 0.5rem;
+  min-width: 0;
+  /* One line (1.5rem) with its padding and border: a second line is wholly
+     out of view until scrolled, never cut through. */
+  max-height: 2.125rem;
+  overflow-y: auto;
+}
+
+.se-controls {
+  gap: 0.5rem;
+  grid-area: controls;
+  height: calc(var(--se-row-h) * var(--se-controls-rows));
+}
+
+.se-round {
+  gap: 0.25rem 0.625rem;
+  grid-area: round;
+  height: calc(var(--se-row-h) * var(--se-round-rows));
+}
+
+.se-links {
+  grid-area: links;
+  justify-content: end;
+}
+
+/*
+ * Under 52rem: the status slot shares its row with the operator links, the
+ * primary controls take the next row, and the round line reserves two rows
+ * (its amounts and the round id, then its copy control and the verify link).
+ */
+@media (width < 52rem) {
+  :root {
+    --se-bar-columns: minmax(0, 1fr) auto;
+    --se-bar-areas: "notices notices" "status links" "controls controls"
+      "round round";
+    --se-bar-areas-bare: "status links" "controls controls" "round round";
+    --se-round-rows: 2;
+  }
+}
+
+/*
+ * Narrow (under 40rem): the primary controls reserve two rows (the bet
+ * options, then the start control), and the round line three (the amounts,
+ * the round id, then its copy control and the verify link).
+ */
+@media (width < 40rem) {
+  :root {
+    --se-controls-rows: 2;
+    --se-round-rows: 3;
+  }
+}
+
+/*
+ * Below the minimum height the bar stays at the bottom of the viewport while
+ * the stage scrolls under it, so the status line and the money controls stay
+ * in view; only while it takes at most half the viewport (`data-sticky`,
+ * height-observer.ts). A taller bar (a high zoom) is not sticky, and the page
+ * scrolls as a whole with nothing hidden.
+ */
+.se-bar[data-sticky] {
+  position: sticky;
+  bottom: 0;
 }
 
 .se-heading {
@@ -106,6 +349,10 @@ body {
 
 h2.se-heading {
   font-size: 1.25rem;
+}
+
+.se-overlay .se-heading {
+  justify-content: center;
 }
 
 .se-icon {
@@ -149,7 +396,7 @@ h2.se-heading {
 }
 
 .se-field__label,
-.se-bet legend {
+.se-bet__label {
   color: var(--se-muted);
   font-family: var(--se-mono);
   font-size: 0.75rem;
@@ -185,7 +432,7 @@ h2.se-heading {
   justify-content: center;
   min-width: 2.75rem;
   min-height: 2.75rem;
-  padding: 0.5rem 1.25rem;
+  padding: 0.5rem var(--se-pill-pad, 1.25rem);
   border-radius: var(--se-pill);
   font: inherit;
 }
@@ -200,6 +447,22 @@ h2.se-heading {
   letter-spacing: 0.025em;
   cursor: pointer;
   transition: opacity 0.2s ease-out;
+}
+
+/* A secondary control (copy the round id): outlined, like a link. */
+.se-button--quiet {
+  border-color: var(--se-border);
+  background: var(--se-bg);
+  color: var(--se-strong);
+  font-family: system-ui, sans-serif;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.se-button--quiet:hover:not(:disabled) {
+  border-color: var(--se-accent);
+  opacity: 1;
 }
 
 .se-button:disabled {
@@ -221,24 +484,27 @@ h2.se-heading {
   border-color: var(--se-accent);
 }
 
+/* The bet selector and the start control, on one row of the bar. */
 .se-bet {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
 }
 
 .se-bet fieldset {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
-.se-bet legend {
-  margin-bottom: 0.5rem;
-  padding: 0;
+/* The visible label, beside the options it names. */
+.se-bet__label {
+  margin-inline-end: 0.25rem;
 }
 
 /*
@@ -255,7 +521,7 @@ h2.se-heading {
   gap: 0.25rem;
   min-width: 2.75rem;
   min-height: 2.75rem;
-  padding: 0 1.25rem;
+  padding: 0 var(--se-choice-pad, 1.25rem);
   border: 0.0625rem solid var(--se-control-border);
   border-radius: var(--se-pill);
   background: var(--se-bg);
@@ -319,50 +585,23 @@ h2.se-heading {
   color: inherit;
 }
 
-.se-status > .se-button,
-.se-bet > .se-button {
-  align-self: flex-start;
-  min-width: 12rem;
+/* The cash-out control's multiplier, a display value beside its label. */
+.se-button__value {
+  margin-inline-start: 0.5rem;
+  font-weight: 400;
 }
 
 .se-button:hover:not(:disabled) {
   opacity: 0.88;
 }
 
-.se-game iframe {
-  display: block;
-  width: 100%;
-  min-height: 20rem;
-  max-height: 45rem;
-  aspect-ratio: 16 / 10;
-  border: 0.0625rem solid var(--se-border);
-  border-radius: var(--se-radius);
-  background: var(--se-panel);
-}
-
-@media (max-width: 40rem) {
-  .se-game iframe {
-    aspect-ratio: 3 / 4;
-  }
-}
-
-.se-alert {
-  padding: 1.25rem;
+/* The alert takes the rest of the row, beside the status heading. */
+.se-alert:not([data-empty]) {
+  padding: 0.25rem 0.5rem;
   border: 0.0625rem solid var(--se-error);
   border-left-width: 0.25rem;
-  border-radius: var(--se-radius);
+  border-radius: 0.75rem;
   background: var(--se-error-bg);
-}
-
-.se-alert[data-empty] {
-  padding: 0;
-  border: 0;
-}
-
-.se-notices {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 
 .se-notice {
@@ -370,8 +609,8 @@ h2.se-heading {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  margin: 0 0 1rem;
-  padding: 0.5rem 1rem;
+  margin: 0;
+  padding: 0.25rem 1rem;
   border: 0.0625rem solid var(--se-border);
   border-left: 0.25rem solid var(--se-notice);
   border-radius: 0.75rem;
@@ -386,7 +625,9 @@ h2.se-heading {
 
 /* A flex box ignores `hidden` unless told: a hidden notice or row is gone. */
 .se-notice[hidden],
-.se-actions[hidden] {
+.se-actions[hidden],
+.se-overlay[hidden],
+.se-game[hidden] {
   display: none;
 }
 
@@ -413,6 +654,71 @@ h2.se-heading {
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/*
+ * The bar's compact sizes (W-57): a heading and a line of text share one row.
+ * After the base rules, so each override follows the rule it narrows.
+ */
+.se-bar .se-heading {
+  font-size: 1rem;
+}
+
+.se-bar .se-heading .se-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.se-bar .se-detail {
+  font-size: 0.875rem;
+  line-height: 1.25;
+}
+
+/* "Something went wrong: The game is unavailable right now." */
+.se-bar .se-alert .se-heading {
+  flex-wrap: nowrap;
+  font-family: system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.se-bar .se-alert .se-heading > span::after {
+  content: ":";
+}
+
+/*
+ * The alert's first line stays on the row beside its heading, its text
+ * wrapping inside it; its lines are as tall as the row, so a further line is
+ * wholly out of view until scrolled.
+ */
+.se-bar .se-alert > .se-detail {
+  line-height: 1.5rem;
+}
+
+.se-bar .se-alert > .se-heading + .se-detail {
+  flex: 1 1 0;
+  min-width: 4rem;
+}
+
+.se-bar .se-field {
+  gap: 0.25rem 0.5rem;
+}
+
+.se-bar .se-field__value {
+  font-size: 1rem;
+}
+
+.se-round .se-actions {
+  gap: 0.5rem;
+}
+
+/* The narrowest (under 22.5rem): the bet options keep to one row. */
+@media (width < 22.5rem) {
+  :root {
+    --se-bar-choice-pad: 0.625rem;
+  }
 }
 
 /*

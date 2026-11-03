@@ -11,6 +11,25 @@ export type Child = Node | string | undefined | false;
 
 export const STATUS_HEADING_ID = "se-status-heading";
 export const ALERT_HEADING_ID = "se-alert-heading";
+/** The stage's cover heading (W-57), the alert's when the cover owns it. */
+export const COVER_HEADING_ID = "se-cover-heading";
+
+/**
+ * What the control bar's slots hold (W-57): the status line (its heading and at
+ * most one line of detail), the primary controls, and the round line. The alert
+ * line and the operator links are render.ts's own.
+ */
+export type BarParts = {
+  readonly status: readonly Child[];
+  readonly controls: readonly Child[];
+  readonly round: readonly Child[];
+};
+
+export const EMPTY_BAR: BarParts = Object.freeze({
+  status: Object.freeze([]),
+  controls: Object.freeze([]),
+  round: Object.freeze([]),
+});
 
 /** An element factory bound to a document. */
 export const elementBuilder = (doc: Document) => {
@@ -68,10 +87,18 @@ export const heading = (
   iconName: IconName | undefined,
   iconLabel: string,
 ): HTMLElement =>
-  el(level, { id, class: "se-heading", tabindex: "-1" }, [
-    iconName === undefined ? undefined : icon(doc, iconName, iconLabel),
-    el("span", {}, [text]),
-  ]);
+  el(
+    level,
+    {
+      ...(id === "" ? {} : { id }),
+      class: "se-heading",
+      tabindex: "-1",
+    },
+    [
+      iconName === undefined ? undefined : icon(doc, iconName, iconLabel),
+      el("span", {}, [text]),
+    ],
+  );
 
 export const field = (el: Builder, label: string, value: string): HTMLElement =>
   el("p", { class: "se-field" }, [
@@ -80,17 +107,43 @@ export const field = (el: Builder, label: string, value: string): HTMLElement =>
     el("span", { class: "se-field__value" }, [value]),
   ]);
 
-/** A round id, labelled, as text (W-39, W-41). */
+/** How many characters of a round id the round line shows (W-57). */
+const ROUND_ID_SHOWN = 8;
+
+/**
+ * A round id as the round line shows it (W-57): "…" and its last eight
+ * characters (a UUIDv7's first ones are its timestamp, the same for rounds
+ * close in time); an id that short or shorter is shown whole.
+ */
+const shortRoundId = (roundId: string): string =>
+  roundId.length <= ROUND_ID_SHOWN
+    ? roundId
+    : `…${roundId.slice(-ROUND_ID_SHOWN)}`;
+
+/**
+ * A round id, labelled, as text (W-39, W-41, W-57). The round line shows it
+ * shortened (`shortRoundId`); the full id is its title and the text an
+ * assistive technology reads (visually hidden), and the copy control copies the
+ * full id (round-id-view.ts).
+ */
 export const roundIdField = (
   el: Builder,
   label: string,
   roundId: string,
-): HTMLElement =>
-  el("p", { class: "se-field" }, [
+): HTMLElement => {
+  const shown = shortRoundId(roundId);
+  return el("p", { class: "se-field" }, [
     el("span", { class: "se-field__label" }, [label]),
     " ",
-    el("code", { class: "se-round-id" }, [roundId]),
+    el("code", { class: "se-round-id", title: roundId }, [
+      shown === roundId
+        ? roundId
+        : el("span", { "aria-hidden": "true" }, [shown]),
+      shown !== roundId &&
+        el("span", { class: "se-visually-hidden" }, [roundId]),
+    ]),
   ]);
+};
 
 export const button = (
   el: Builder,
@@ -131,4 +184,22 @@ export const replace = (
     );
     again?.focus({ preventScroll: true });
   }
+};
+
+/** Re-renders a section only when what it shows changed. */
+export type Sections = (
+  target: HTMLElement,
+  signature: string,
+  children: () => readonly Child[],
+) => boolean;
+
+/** The sections of one view, each re-rendered only when its signature moves. */
+export const createSections = (doc: Document): Sections => {
+  const signatures = new Map<HTMLElement, string>();
+  return (target, signature, children) => {
+    if (signatures.get(target) === signature) return false;
+    signatures.set(target, signature);
+    replace(doc, target, children());
+    return true;
+  };
 };

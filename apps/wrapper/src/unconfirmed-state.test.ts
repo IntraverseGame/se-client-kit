@@ -25,6 +25,7 @@ import { snapshotRead, validSnapshot } from "./fixtures/fake-session.ts";
 import {
   ACTIVE,
   activeId,
+  gamePlayable,
   gameShown,
   round,
   type Wired,
@@ -63,9 +64,11 @@ describe("a move or cash-out not confirmed (W-16)", () => {
     expect(allText(ui.host)).toContain(activeId);
     expect(buttonNamed(ui.host, m["action.checkAgain"])).toBeDefined();
     expect(buttonNamed(ui.host, m["action.cashOut"])).toBeUndefined();
-    expect(buttonNamed(ui.host, m["action.start"])).toBeUndefined();
+    expect(buttonNamed(ui.host, m["action.placeBet"])).toBeUndefined();
     expect(allText(ui.host)).not.toContain(m["status.active"]);
+    // The game stays in place, waiting, and takes no input (W-58).
     expect(gameShown(ui)).toBe(true);
+    expect(gamePlayable(ui)).toBe(false);
   });
 
   it("shows the cash-out not confirmed", async () => {

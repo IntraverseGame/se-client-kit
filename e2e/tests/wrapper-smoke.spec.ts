@@ -64,7 +64,9 @@ test.describe("the Wrapper's release bundle (smoke)", () => {
     const problems = await openWrapper(page);
     await expect(page).toHaveTitle("SuperEngine Wrapper");
     expect(problems).toEqual([]);
-    await expect(page.getByText("The game cannot start")).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "The game cannot start" }),
+    ).toHaveCount(0);
   });
 
   test("control: shows a refused configuration, which the check would see", async ({
@@ -79,7 +81,9 @@ test.describe("the Wrapper's release bundle (smoke)", () => {
       }),
     );
     const problems = await openWrapper(page);
-    await expect(page.getByText("The game cannot start")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "The game cannot start" }),
+    ).toBeVisible();
     expect(problems.length).toBeGreaterThan(0);
   });
 

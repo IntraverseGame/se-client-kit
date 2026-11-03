@@ -9,12 +9,19 @@ import type { Messages } from "./messages.ts";
 import type { SnapshotInput } from "./round-input.ts";
 import type { Intents } from "./view-options.ts";
 
-/** The bet selector and the start control, from `snapshot.bet`. */
+/**
+ * The bet selector and the start control, from `snapshot.bet`, preset to
+ * `defaultBet` (W-31). The control reads "Place bet" at `idle` and "Play again"
+ * beside a result (W-57).
+ */
 export const betSelector = (
   el: Builder,
   m: Messages,
   snapshot: SnapshotInput,
   intents: Intents,
+  label: "action.placeBet" | "action.playAgain" = snapshot.status === "idle"
+    ? "action.placeBet"
+    : "action.playAgain",
 ): HTMLElement => {
   const choice = betChoice(snapshot.bet);
   let selected = choice.selected;
@@ -42,11 +49,19 @@ export const betSelector = (
   });
   const start = intents.start;
   return el("form", { class: "se-bet" }, [
-    el("fieldset", {}, [el("legend", {}, [m["label.bet"]]), ...radios]),
+    // The legend names the group for assistive technology; the row shows its
+    // own label, since a legend does not join a flex row in every engine.
+    el("fieldset", {}, [
+      el("legend", { class: "se-visually-hidden" }, [m["label.bet"]]),
+      el("span", { class: "se-bet__label", "aria-hidden": "true" }, [
+        m["label.bet"],
+      ]),
+      ...radios,
+    ]),
     start !== undefined &&
       button(
         el,
-        m["action.start"],
+        m[label],
         "start",
         () => {
           const option =

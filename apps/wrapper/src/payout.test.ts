@@ -24,9 +24,12 @@ const rendered = (snapshot: SnapshotInput) => {
 /** Every number written in `text` (digits, with any separators). */
 const numbersOf = (text: string): string[] => text.match(/\d[\d.,]*/gu) ?? [];
 
-/** Every number shown in `element`, the status section. */
-const numbersIn = (element: Element | null): string[] =>
-  numbersOf(element?.textContent ?? "");
+/** Every number shown in `element`, the control bar, but the round id's. */
+const numbersIn = (element: Element | null): string[] => {
+  const copy = element?.cloneNode(true) as HTMLElement | undefined;
+  for (const id of copy?.querySelectorAll(".se-round-id") ?? []) id.remove();
+  return numbersOf(copy?.textContent ?? "");
+};
 
 /** The `formatted` of every amount the Snapshot itself carries. */
 const ownFormatted = (snapshot: SnapshotInput): string[] => [
@@ -95,7 +98,7 @@ describe("the payout of a finished round (W-31)", () => {
     name => {
       const snapshot = snapshotVector(name);
       const ui = rendered(snapshot);
-      const shown = numbersIn(ui.host.querySelector(".se-status"));
+      const shown = numbersIn(ui.host.querySelector(".se-bar"));
       expect(shown.length).toBeGreaterThan(0);
       const own = new Set(
         ownFormatted(snapshot).flatMap(text => numbersOf(text)),

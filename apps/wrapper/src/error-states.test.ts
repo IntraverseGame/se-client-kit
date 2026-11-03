@@ -10,6 +10,7 @@ import {
   alertText,
   allText,
   buttonNamed,
+  coverHeading,
   linkNamed,
   mount,
   statusHeading,
@@ -69,7 +70,7 @@ describe("typed errors (W-42, T-16)", () => {
     "%s shows the session-ended state with the lobby as the way to relaunch",
     code => {
       const ui = idleWith(problem(code, false));
-      expect(statusHeading(ui.host)).toBe(m["state.sessionEnded"]);
+      expect(coverHeading(ui.host)).toBe(m["state.sessionEnded"]);
       expect(
         linkNamed(ui.host, m["action.relaunch"])?.getAttribute("href"),
       ).toBe("https://luckybet.example.com/lobby");
@@ -78,7 +79,7 @@ describe("typed errors (W-42, T-16)", () => {
         { kind: "snapshot", snapshot: snapshotVector("coinflip-won") },
         "poll",
       );
-      expect(statusHeading(ui.host)).toBe(m["state.sessionEnded"]);
+      expect(coverHeading(ui.host)).toBe(m["state.sessionEnded"]);
     },
   );
 
@@ -238,7 +239,7 @@ describe("degraded states, each distinct (W-44)", () => {
     ui.app.block("other-tab");
     ui.connect();
     await ui.step(10_000);
-    expect(statusHeading(ui.host)).toBe(m["state.otherTab"]);
+    expect(coverHeading(ui.host)).toBe(m["state.otherTab"]);
   });
 
   it("keeps verification failed over a later active Snapshot of the round", () => {

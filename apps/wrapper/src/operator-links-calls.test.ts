@@ -37,7 +37,7 @@ describe("no lobby or deposit while a call is in flight (W-49f)", () => {
       fake.answerStart(snapshotRead("coinflip-idle"));
     });
     expect(controls(ui.host)).toEqual([true, true]);
-    buttonNamed(ui.host, m["action.start"])?.click();
+    buttonNamed(ui.host, m["action.placeBet"])?.click();
     // The click's call is in flight: nothing to leave by.
     expect(controls(ui.host)).toEqual([false, false]);
     await ui.settle();

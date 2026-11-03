@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import {
   allText,
   buttonNamed,
+  coverHeading,
   linkNamed,
   mount,
   statusHeading,
@@ -75,13 +76,12 @@ const shownUnheld = (snapshot: SnapshotInput) => {
   return ui;
 };
 
+// The game is visible, in place with no cover (W-57); inert (W-58).
 const frameShown = (ui: ReturnType<typeof mount>): boolean =>
-  !ui.app.gameHost().hidden;
-
-const noticeShown = (ui: ReturnType<typeof mount>): boolean => {
-  const notice = ui.host.querySelector<HTMLElement>(".se-notice--game");
-  return notice !== null && !notice.hidden && notice.textContent !== "";
-};
+  !ui.app.gameHost().hidden && coverHeading(ui.host) === "";
+// The cover "The game can't show this round." is over the frame (W-55).
+const noticeShown = (ui: ReturnType<typeof mount>): boolean =>
+  coverHeading(ui.host) === m["notice.gameCantShow"];
 
 describe("the RTP (W-56)", () => {
   it("is shown beside the bet selector at idle, as the label catalog gives it", () => {
@@ -116,10 +116,10 @@ describe("the RTP (W-56)", () => {
 });
 
 describe("what a book round shows (W-54)", () => {
-  it("starting: preparing the round, and no game", () => {
+  it("starting: preparing the round, the game in place and inert", () => {
     const ui = shown(book("starting", 2));
     expect(statusHeading(ui.host)).toBe(m["status.starting"]);
-    expect(frameShown(ui)).toBe(false);
+    expect(frameShown(ui)).toBe(true);
   });
 
   it("won: the result and the payout as formatted, never computed from the multiplier", () => {
@@ -186,9 +186,12 @@ describe("what a book round shows (W-54)", () => {
 });
 
 describe("the game frame on a book round (W-55)", () => {
-  it.each(["idle", "starting"] as const)("is hidden at %s", status => {
-    expect(frameShown(shown(book(status, 2)))).toBe(false);
-  });
+  it.each(["idle", "starting"] as const)(
+    "is shown at %s, as on any round (single screen)",
+    status => {
+      expect(frameShown(shown(book(status, 2)))).toBe(true);
+    },
+  );
 
   it.each(["won", "lost"] as const)(
     "is shown at %s beside the result",
@@ -203,7 +206,7 @@ describe("the game frame on a book round (W-55)", () => {
     expect(frameShown(shownUnheld(book("won", 3)))).toBe(true);
   });
 
-  it("stays with the result until the player starts the next round", () => {
+  it("stays in place from the result through the next round's start", () => {
     const ui = shown(book("won", 3));
     // A start that is refused keeps the result, and the game with it (W-40).
     ui.app.accept({ kind: "refused" }, "player");
@@ -216,10 +219,10 @@ describe("the game frame on a book round (W-55)", () => {
       },
       "player",
     );
-    expect(frameShown(ui)).toBe(false);
+    expect(frameShown(ui)).toBe(true);
   });
 
-  it("is hidden on a changed round (W-52), which shows failed verification while it is not over", () => {
+  it("is covered on a changed round (W-52), which shows failed verification while it is not over", () => {
     const failed: RoundCheck = { ...READY, verdict: "verification-failed" };
     const won = shown(book("won", 3), failed);
     expect(frameShown(won)).toBe(false);
@@ -234,7 +237,7 @@ describe("the game frame on a book round (W-55)", () => {
     expect(frameShown(ui)).toBe(false);
   });
 
-  it("a playback copy that failed closed hides the frame and shows the notice until one succeeds", () => {
+  it("a playback copy that failed closed covers the frame with the notice until one succeeds", () => {
     const ui = shown(book("won", 3));
     ui.app.gameCopied(false);
     expect(frameShown(ui)).toBe(false);
@@ -271,7 +274,7 @@ describe("a changed session (W-53)", () => {
     await ui.settle();
     ui.app.accept({ kind: "session-changed" }, "poll");
     expect(allText(ui.host)).toContain(m["state.verificationFailed"]);
-    expect(buttonNamed(ui.host, m["action.start"])).toBeUndefined();
+    expect(buttonNamed(ui.host, m["action.placeBet"])).toBeUndefined();
     expect(frameShown(ui)).toBe(false);
     // Final: a later Snapshot does not replace it, and nothing is polled.
     ui.app.accept(

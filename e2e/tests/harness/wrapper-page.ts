@@ -17,7 +17,10 @@ export const TEXT = {
   starting: "Preparing the round",
   active: "Your round is in play",
   resolving: "Resolving",
-  start: "Start round",
+  /** The start control at `idle` (W-57). */
+  placeBet: "Place bet",
+  /** The start control beside a result: the next bet (W-57). */
+  playAgain: "Play again",
   cashOut: "Cash out",
   sessionEnded: "Your session has ended",
   otherTab: "This session is open in another tab",
@@ -47,6 +50,8 @@ export const TEXT = {
   rejected: "The game state could not be read",
   verify: "Verify this round",
   lobby: "Back to the lobby",
+  notHeld: "This round can't be played here",
+  waitingMove: "Waiting for your move to be confirmed.",
 } as const;
 
 /**
@@ -64,9 +69,26 @@ export const launch = async (
   await page.goto(url);
 };
 
-/** The status section's heading. */
+/** The heading of the bar's status line (W-57). */
 export const statusHeading = (page: Page): ReturnType<Page["locator"]> =>
   page.locator(".se-status h1");
+
+/** The heading of the stage's cover, when one shows (W-57). */
+export const coverHeading = (page: Page): ReturnType<Page["locator"]> =>
+  page.locator('.se-overlay[data-form="cover"] h1');
+
+/**
+ * The game's frame while it takes input (W-58): mounted, shown, and not
+ * `inert`. The single screen's readiness signal, with the status "Your round is
+ * in play": the frame shows from its mount, so being visible says nothing.
+ */
+export const playableFrame = (page: Page): ReturnType<Page["locator"]> =>
+  page.locator("iframe:not([inert])");
+
+/** Whether the round is shown playable: the status and the frame (W-57). */
+export const isPlayable = async (page: Page): Promise<boolean> =>
+  (await playableFrame(page).isVisible()) &&
+  (await statusHeading(page).textContent())?.trim() === TEXT.active;
 
 /** The `role="alert"` panel. */
 export const alertPanel = (page: Page): ReturnType<Page["locator"]> =>
@@ -107,5 +129,5 @@ export const launchAndStart = async (
   scan?: { readonly allowLaunchNavigation: (url: string) => void },
 ): Promise<void> => {
   await launch(page, fake, scan);
-  await page.getByRole("button", { name: TEXT.start }).click();
+  await page.getByRole("button", { name: TEXT.placeBet }).click();
 };

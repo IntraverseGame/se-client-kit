@@ -37,7 +37,7 @@ import {
 } from "./harness/round-play.ts";
 import { pickCheck, ROUND_VECTOR, startCheck } from "./harness/round-vector.ts";
 import {
-  alertPanel,
+  coverHeading,
   launch,
   scriptStartingRound,
   servedFor,
@@ -96,7 +96,7 @@ test.describe("T-14: keyboard-only play", () => {
     await page.evaluate(() => {
       (document.activeElement as HTMLElement | null)?.blur();
     });
-    const start = page.getByRole("button", { name: TEXT.start });
+    const start = page.getByRole("button", { name: TEXT.placeBet });
     await expect(start).toBeVisible();
     await tabTo(page, start);
     expect(await showsFocus(start)).toBe(true);
@@ -120,7 +120,7 @@ test.describe("T-14: keyboard-only play", () => {
     await focusStaysOnResult(page);
     // No keyboard trap: Tab reaches the Wrapper's own controls.
     // The next bet's start control, beside the result (W-31).
-    const next = page.getByRole("button", { name: TEXT.start });
+    const next = page.getByRole("button", { name: TEXT.playAgain });
     await tabTo(page, next);
     expect(await showsFocus(next)).toBe(true);
   });
@@ -156,7 +156,7 @@ test.describe("T-14: the audit of a round's states", () => {
   test("starting", async ({ page, fakePlayApi }) => {
     scriptStartingRound(fakePlayApi);
     await launch(page, fakePlayApi);
-    await page.getByRole("button", { name: TEXT.start }).click();
+    await page.getByRole("button", { name: TEXT.placeBet }).click();
     await expect(statusHeading(page)).toHaveText(TEXT.starting);
     expect(await auditAccessibility(page)).toEqual([]);
   });
@@ -189,7 +189,8 @@ test.describe("T-14: the audit of a round's states", () => {
     // A document the Wrapper refuses, served over the round's (W-44).
     await serveEnvironmentConfig(context, { environment: "nowhere" });
     await launch(page, fakePlayApi);
-    await expect(alertPanel(page)).toContainText(TEXT.configuration);
+    // The stage's cover, announced politely (W-57).
+    await expect(coverHeading(page)).toHaveText(TEXT.configuration);
     // Refused before any session: nothing reached the Play API.
     expect(fakePlayApi.served).toHaveLength(0);
     expect(await auditAccessibility(page)).toEqual([]);
@@ -201,7 +202,7 @@ test.describe("T-14: the audit of a round's states", () => {
       Reflect.deleteProperty(Navigator.prototype, "locks");
     });
     await launch(page, fakePlayApi);
-    await expect(statusHeading(page)).toHaveText(TEXT.unsupported);
+    await expect(coverHeading(page)).toHaveText(TEXT.unsupported);
     // No lock, no session: nothing is read, started, or signed (W-14).
     expect(servedFor(fakePlayApi, "getSnapshot")).toHaveLength(0);
     expect(await auditAccessibility(page)).toEqual([]);

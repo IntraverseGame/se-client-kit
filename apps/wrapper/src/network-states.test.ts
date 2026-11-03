@@ -7,7 +7,13 @@
 
 import { describe, expect, it } from "vitest";
 
-import { alertText, allText, mount, statusHeading } from "./fixtures/app.ts";
+import {
+  alertText,
+  allText,
+  coverHeading,
+  mount,
+  statusHeading,
+} from "./fixtures/app.ts";
 import { snapshotVector } from "./fixtures/vectors.ts";
 import { messagesFor } from "./messages.ts";
 
@@ -53,7 +59,8 @@ describe("network failure (W-43, T-15)", () => {
     });
     ui.setOnline(true);
     await ui.step(100);
-    expect(statusHeading(ui.host)).toBe(m["status.active"]);
+    // The read is shown: an `active` round no shell holds here (W-57).
+    expect(coverHeading(ui.host)).toBe(m["state.notHeld"]);
     expect(alertText(ui.host)).toBe("");
   });
 

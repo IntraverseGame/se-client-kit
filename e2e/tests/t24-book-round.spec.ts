@@ -29,6 +29,7 @@ import {
 import { ROUND, startCheck } from "./harness/round-vector.ts";
 import { validVector } from "./harness/vectors.ts";
 import {
+  coverHeading,
   launch,
   servedFor,
   statusHeading,
@@ -202,11 +203,12 @@ test.describe("T-24: a book round", () => {
       await launch(page, fakePlayApi);
       await expect(statusHeading(page)).toHaveText(TEXT.idle);
       await expect(page.getByText(rtpLine(BOOK.rtpDecimal))).toBeVisible();
-      // The game frame is hidden at idle (W-55).
-      await expect(page.locator("iframe")).toBeHidden();
+      // The game frame shows at idle, inert (W-55, W-57, W-58).
+      await expect(page.locator("iframe")).toBeVisible();
+      await expect(page.locator("iframe")).toHaveAttribute("inert", "");
 
       await recordHeadings(page);
-      await page.getByRole("button", { name: TEXT.start }).click();
+      await page.getByRole("button", { name: TEXT.placeBet }).click();
       // The `starting` polls (W-35) run on the page's clock.
       await advanceUntil(page, shows(statusHeading(page), ending.heading));
 
@@ -218,11 +220,11 @@ test.describe("T-24: a book round", () => {
       // The result: the payout as its `formatted` only when it is above 0, the
       // round id, the verify link, and the next bet with the RTP line (W-54,
       // W-39, W-56).
-      await expectPayoutLine(page.locator(".se-status"), ending);
+      await expectPayoutLine(page.locator(".se-round"), ending);
       await expect(page.getByText(ending.roundId)).toBeVisible();
       await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
       await expect(
-        page.getByRole("button", { name: TEXT.start }),
+        page.getByRole("button", { name: TEXT.playAgain }),
       ).toBeVisible();
       await expect(page.getByText(rtpLine(BOOK.rtpDecimal))).toBeVisible();
 
@@ -258,8 +260,8 @@ test.describe("T-24: a book round", () => {
     });
     await launch(page, fakePlayApi);
     await expect(statusHeading(page)).toHaveText(TEXT.idle);
-    await page.getByRole("button", { name: TEXT.start }).click();
-    await expect(statusHeading(page)).toHaveText(TEXT.sessionEnded);
+    await page.getByRole("button", { name: TEXT.placeBet }).click();
+    await expect(coverHeading(page)).toHaveText(TEXT.sessionEnded);
     // The start was the session's last call: no refresh, read, or resend.
     await page.clock.runFor(60_000);
     expect(fakePlayApi.served.at(-1)?.operationId).toBe("startRound");

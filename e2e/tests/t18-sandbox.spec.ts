@@ -106,6 +106,11 @@ test.describe("T-18: the sandbox", () => {
     });
     await launch(page, fakePlayApi, secretScan);
     await expect(statusHeading(page)).toHaveText(TEXT.idle);
+    // The single screen: the malicious game is visible and inert at idle;
+    // `inert` stops none of its scripts, so its reads and forged messages are
+    // tried as before (W-57, W-58).
+    await expect(page.locator("iframe")).toBeVisible();
+    await expect(page.locator("iframe")).toHaveAttribute("inert", "");
 
     const frame = await gameFrame(page);
     // The probe was posted last and is answered at once: once its answer is

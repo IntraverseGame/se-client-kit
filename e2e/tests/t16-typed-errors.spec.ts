@@ -16,6 +16,7 @@ import { expect, test } from "./harness/fixtures.ts";
 import { validVector } from "./harness/vectors.ts";
 import {
   alertPanel,
+  coverHeading,
   launch,
   launchAndStart,
   statusHeading,
@@ -106,11 +107,13 @@ test.describe("T-16: typed errors (W-42)", () => {
       vector: "problem-round-active",
     });
     await launchAndStart(page, fakePlayApi);
-    await expect(statusHeading(page)).toHaveText(TEXT.active);
-    // The game is mounted at D (the redeem answer's), but kept hidden: this
-    // page holds no round it can move in (W-31, W-37).
+    // The cover "This round can't be played here" over the game, mounted at D
+    // (the redeem answer's) and inert: this page holds no round it can move in
+    // (W-31, W-37, W-57, W-58).
+    await expect(coverHeading(page)).toHaveText(TEXT.notHeld);
     await expect(page.locator("iframe")).toHaveCount(1);
-    await expect(page.locator("iframe")).toBeHidden();
+    await expect(page.locator("iframe")).toHaveAttribute("inert", "");
+    await expect(page.locator('.se-overlay[data-form="cover"]')).toBeVisible();
     expect(await auditAccessibility(page)).toEqual([]);
   });
 });
@@ -122,7 +125,7 @@ test.describe("T-16: degraded states (W-44)", () => {
       vector: "problem-redeem-unavailable",
     });
     await launch(page, fakePlayApi);
-    await expect(statusHeading(page)).toHaveText(TEXT.sessionEnded);
+    await expect(coverHeading(page)).toHaveText(TEXT.sessionEnded);
     expect(await auditAccessibility(page)).toEqual([]);
   });
 

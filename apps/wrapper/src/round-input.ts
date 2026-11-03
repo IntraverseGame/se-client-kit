@@ -193,6 +193,13 @@ export type RoundCheck = {
    * otherwise.
    */
   readonly unconfirmed?: "move" | "cash-out";
+  /**
+   * The round's move or cash-out signed and not yet seen applied, while the
+   * round may sign (the shell's `RoundState.pending`): the bar's waiting detail
+   * reads it beside an error (W-16, W-57). It is never a signature, a key, or
+   * bytes. Absent otherwise.
+   */
+  readonly pending?: "move" | "cash-out";
 };
 
 /** The outcome of one Snapshot read, as the session hands it to the UI. */

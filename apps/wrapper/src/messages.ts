@@ -32,7 +32,8 @@ export type MessageKey =
   | "label.game"
   | "label.roundId"
   | "label.requestId"
-  | "action.start"
+  | "action.placeBet"
+  | "action.playAgain"
   | "action.cashOut"
   | "action.copyRoundId"
   | "action.retry"
@@ -68,6 +69,10 @@ export type MessageKey =
   | "state.moveUnconfirmed"
   | "state.cashOutUnconfirmed"
   | "state.unconfirmedDetail"
+  | "state.notHeld"
+  | "state.notHeldDetail"
+  | "detail.waitingMove"
+  | "detail.waitingCashOut"
   | "state.rejected"
   | "state.rejectedDetail"
   | "state.sessionChangedDetail"
@@ -119,7 +124,8 @@ const EN: Messages = {
   "label.game": "Game",
   "label.roundId": "Round ID",
   "label.requestId": "Reference",
-  "action.start": "Start round",
+  "action.placeBet": "Place bet",
+  "action.playAgain": "Play again",
   "action.cashOut": "Cash out",
   "action.copyRoundId": "Copy round ID",
   "action.retry": "Try again",
@@ -163,6 +169,10 @@ const EN: Messages = {
   "state.cashOutUnconfirmed": "Your cash-out hasn't been confirmed",
   "state.unconfirmedDetail":
     "If it never arrives, the round ends by its time limit.",
+  "state.notHeld": "This round can't be played here",
+  "state.notHeldDetail": "Nothing is signed for it. It ends by its time limit.",
+  "detail.waitingMove": "Waiting for your move to be confirmed.",
+  "detail.waitingCashOut": "Waiting for your cash-out to be confirmed.",
   "state.rejected": "The game state could not be read",
   "state.rejectedDetail": "Something went wrong. Nothing was signed.",
   "state.sessionChangedDetail":

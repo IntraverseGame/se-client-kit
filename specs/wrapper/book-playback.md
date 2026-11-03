@@ -133,14 +133,13 @@ game plays back. The player makes no move during the round.
   verification." beside it. W-35 polls a book round while it is `starting`, as
   any round.
 
-- **W-55. The game frame on a book round.** W-37 shows the frame only when the
-  round is ready (`active` after W-26, or `resolving`), which a book round never
-  is. On a book round the frame is shown in `won` and `lost` beside the
-  Wrapper's result, so the game can play the draw back; it stays shown with the
-  result until the player starts the next round (W-40), and is hidden in every
-  other status and in every blocking state (W-44). A changed round (W-52) hides
-  it, and so does a `playback` copy that fails closed: the frame is hidden and
-  the notice "The game can't show this round." shows in its place until a
+- **W-55. The game frame on a book round.** A book round's frame is shown as on
+  any round ([W-57](./the-single-screen.md); RFC-004, decided 2026-10-30), inert
+  outside a playable round, which a book round never is (W-58): the game plays
+  the draw back in `won` and `lost` with no input, beside the Wrapper's result,
+  and stays in place through the next round's start (W-40). A changed round
+  (W-52) and a `playback` copy that fails closed show the stage's cover in its
+  place: for a copy that failed, "The game can't show this round." until a
   Snapshot whose copy succeeds
   ([the controller boundary](./the-game-iframe-and-the-controller-boundary.md)).
   The notice is a label like any other: it follows W-48's language rule. Focus
@@ -148,14 +147,7 @@ game plays back. The player makes no move during the round.
   heading takes it when the player's own start led to the result, also when the
   result arrives by the poll after that start's `starting` answer (once, for
   that round only; any other poll moves no focus); the game never takes it from
-  there. Decided by the human, 2026-10-28. **In the single screen** (RFC-004,
-  decided 2026-10-30, to be built; it replaces the text above where they differ
-  when the Wrapper ships the single screen), a book round's frame is shown as on
-  any round ([W-57](./the-single-screen.md)), inert outside a playable round,
-  which a book round never is (W-58): the game plays the draw back in `won` and
-  `lost` with no input, beside the Wrapper's result. A changed round (W-52) and
-  a `playback` copy that failed closed show the stage's cover in its place. The
-  focus rule is unchanged.
+  there. Decided by the human, 2026-10-28.
 
 - **W-56. The RTP.** When a book Snapshot carries `config.rtp`, the Wrapper
   shows the mode's return to player beside the bet selector (W-31's `idle` row

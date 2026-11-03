@@ -10,7 +10,7 @@
 import { KEY_DRAW_BYTES } from "./harness/random-stub.ts";
 import { callTails, expect, test, toReady } from "./harness/round-play.ts";
 import { isScriptedKey, pickCheck } from "./harness/round-vector.ts";
-import { statusHeading, TEXT } from "./harness/wrapper-page.ts";
+import { coverHeading, statusHeading, TEXT } from "./harness/wrapper-page.ts";
 
 test.describe("T-13: no secret, over a played round", () => {
   test("after a signed move, the result, and a reload", async ({
@@ -35,7 +35,7 @@ test.describe("T-13: no secret, over a played round", () => {
     // them, so the scan looks for the session's key (a boolean, never the key).
     expect(randomDraws.draws().some(draw => isScriptedKey(draw))).toBe(true);
     await page.reload();
-    await expect(statusHeading(page)).toHaveText(TEXT.sessionEnded);
+    await expect(coverHeading(page)).toHaveText(TEXT.sessionEnded);
     await secretScan.expectClean();
   });
 });

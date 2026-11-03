@@ -69,16 +69,12 @@ Part of the [Wrapper spec](../wrapper.md), section
     at `/coin-flip/`. It is not a secret. The game checks it against
     `location.ancestorOrigins[0]` where that exists and talks to nobody when
     they disagree. The Wrapper sets the frame's `src` only after the bridge
-    accepted D, so a refused D is never loaded, and the frame is kept for the
-    session's life and hidden unless the round is shown ready (`active` after
-    W-26 passed, or `resolving`, W-31). A book round's frame is also shown at
-    `won` and `lost`, for the playback ([W-55](./book-playback.md)). **In the
-    single screen** (RFC-004, decided 2026-10-30, to be built; it replaces the
-    text above where they differ when the Wrapper ships the single screen), the
-    frame is kept for the session's life at one place and size, and shown from
-    its mount until the session ends, except in the final states (the session
-    ended, another tab, a changed session), where the stage's cover replaces it;
-    when it takes input is
+    accepted D, so a refused D is never loaded. The frame is kept for the
+    session's life at one place and size, and shown from its mount until the
+    session ends (RFC-004, decided 2026-10-30), except in the final states (the
+    session ended, another tab, a changed session), where the stage's cover
+    replaces it ([W-57](./the-single-screen.md)); it is `inert` from its mount,
+    and when it takes input is
     [W-58](./the-single-screen.md#when-the-frame-takes-input)'s.
   - **The game's page path** (`RedeemResponse.gamePath`, optional) lets several
     games share one origin under different paths. `play-client` refuses a redeem
@@ -354,9 +350,12 @@ Part of the [Wrapper spec](../wrapper.md), section
 
 - **W-39.** After a round ends (`won`, `lost`, or `canceled`) the Wrapper MUST
   show the **round id** (the Snapshot's `roundId`, UUIDv7 text) with a control
-  to copy it, and a **link to the verify page** for that round. The verify page
-  is the kit's ([verify-page.md](../verify-page.md); decided by the backend's
-  TPO, 2026-10-18), and the link is `<verifyBaseUrl>/rounds/{roundId}`: the
+  to copy it (the round line shows it shortened, with the full id as its title
+  and its text for assistive technology, and the control copies the full id;
+  [W-57](./the-single-screen.md#the-screen)), and a **link to the verify page**
+  for that round. The verify page is the kit's
+  ([verify-page.md](../verify-page.md); decided by the backend's TPO,
+  2026-10-18), and the link is `<verifyBaseUrl>/rounds/{roundId}`: the
   environment configuration's `verifyBaseUrl` with one trailing `/` removed if
   present, then `/rounds/`, then the round id in its canonical text form (it is
   validated, so it needs no escaping). The link opens in a new browsing context

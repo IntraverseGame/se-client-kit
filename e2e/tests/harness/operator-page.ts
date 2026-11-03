@@ -4,7 +4,8 @@
 // posts `hello` to the iframe's window, with `targetOrigin` the SE origin, on
 // the iframe's `load` and then every 250 ms until `welcome` arrives; it reads
 // only messages whose source is that window and whose origin is the SE
-// origin; and it sizes the iframe from `resize`. Everything it received is kept
+// origin; and it uses `resize` as the iframe's minimum height (`min-height`,
+// ADR-010), never as its height. Everything it received is kept
 // for the test. Also: serving the release bundle's page with a
 // `frame-ancestors` header, and scanning texts for the session's secrets.
 
@@ -32,6 +33,8 @@ export type EmbedOptions = {
   readonly referrerPolicy?: string;
   /** Embeds through a same-origin page in between (not supported, W-49a). */
   readonly nested?: boolean;
+  /** The iframe's box, in CSS pixels (T-27); the page's default otherwise. */
+  readonly box?: { readonly width: number; readonly height: number };
 };
 
 /** The fake operator's lobby and deposit pages, for the Snapshot's links. */
@@ -52,7 +55,7 @@ export const startEmbedding = async (
 ): Promise<void> => {
   await page.goto(`${options.origin ?? OPERATOR_ORIGIN}/index.html`);
   await page.evaluate(
-    async ({ url, seOrigin, hello, referrerPolicy, nested }) => {
+    async ({ url, seOrigin, hello, referrerPolicy, nested, box }) => {
       const state = { received: [] as unknown[], loads: 0 };
       Object.assign(globalThis, { operatorState: state });
       let host = document;
@@ -73,6 +76,12 @@ export const startEmbedding = async (
       if (referrerPolicy !== undefined) {
         frame.setAttribute("referrerpolicy", referrerPolicy);
       }
+      if (box !== undefined) {
+        frame.style.display = "block";
+        frame.style.border = "0";
+        frame.style.width = `${String(box.width)}px`;
+        frame.style.height = `${String(box.height)}px`;
+      }
       let welcomed = false;
       let timer: ReturnType<typeof setInterval> | undefined;
       globalThis.addEventListener("message", event => {
@@ -83,7 +92,7 @@ export const startEmbedding = async (
         const message = data as { type?: unknown; height?: unknown };
         if (message.type === "welcome") welcomed = true;
         if (message.type === "resize" && typeof message.height === "number") {
-          frame.style.height = `${String(message.height)}px`;
+          frame.style.minHeight = `${String(message.height)}px`;
         }
       });
       const sayHello = (): void => {
@@ -116,6 +125,7 @@ export const startEmbedding = async (
       hello: options.hello ?? true,
       referrerPolicy: options.referrerPolicy,
       nested: options.nested === true,
+      box: options.box,
     },
   );
 };

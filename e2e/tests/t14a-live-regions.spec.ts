@@ -99,7 +99,7 @@ test.describe("T-14a: live regions and visual rules", () => {
       vector: "coinflip-idle",
     });
     await launch(page, fakePlayApi);
-    const start = page.getByRole("button", { name: TEXT.start });
+    const start = page.getByRole("button", { name: TEXT.placeBet });
     await start.scrollIntoViewIfNeeded();
     await expect(start).toBeInViewport();
     expect(
