@@ -8,15 +8,16 @@ renders it on the package page, and its reader has never seen this repository.
 It is written for a consumer: what the package is and the problem it solves,
 when to use it and when not to, the install line
 (`pnpm add @intraverse/se-client-<name>`, with a plain statement that it is not
-published yet while that is true), a minimal example once a public API exists
-(until then, "pre-release: no public API yet"), the entry points, the guarantees
-and limits that matter to a user, where amounts are touched (strings or
-`bigint`), and links. It states only what is true and tested today. It must not
-hold contributor or agent material (the build and CI tooling, lint rules, the
-dependency-direction matrix, the review process, internal issue numbers); that
-lives in CONTRIBUTING.md, the specification, and the `add-a-package` skill, and
-a one-line pointer to CONTRIBUTING.md is enough. The only links allowed are
-absolute links into this repository
+published yet while the package is `private`; the README ships in the tarball,
+so it drops that statement before the first publish), a minimal example once a
+public API exists (until then, "pre-release: no public API yet"), the entry
+points, the guarantees and limits that matter to a user, where amounts are
+touched (strings or `bigint`), and links. It states only what is true and tested
+today. It must not hold contributor or agent material (the build and CI tooling,
+lint rules, the dependency-direction matrix, the review process, internal issue
+numbers); that lives in CONTRIBUTING.md, the specification, and the
+`add-a-package` skill, and a one-line pointer to CONTRIBUTING.md is enough. The
+only links allowed are absolute links into this repository
 (`https://github.com/IntraverseGame/se-client-kit/blob/main/...` or
 `/tree/main/...`, so they work on npm) whose paths, and heading anchors for
 Markdown files, exist, plus anchors within the README itself. Any other host,

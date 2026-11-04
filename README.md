@@ -23,7 +23,8 @@ See [`AGENTS.md`](./AGENTS.md#public-repository). To report a vulnerability, see
 ## Packages
 
 The npm names are `@intraverse/se-client-<name>`, in the `intraverse` npm
-organization (scope `@intraverse`). Nothing is published yet.
+organization (scope `@intraverse`). Only placeholders that reserve the package
+names are on npm so far; do not install them.
 
 | Project          | Kind    | Role                                                                        |
 | ---------------- | ------- | --------------------------------------------------------------------------- |

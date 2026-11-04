@@ -75,16 +75,14 @@ org owners apply the settings; ask them for each.
    author approve their own pull request, and there is one code owner, so a pull
    request the code owner authors merges only through the repository-admin
    bypass. Also a **tag ruleset** on the release tag pattern
-   **`@intraverse/*@*`** (ADR-009; decided by the human, 2026-10-28; until #154
-   it covers `@intraverse/se-client-wrapper@*`): it blocks updating and deleting
-   those tags for everyone but the org owners, so a released tag never moves and
-   a tag reliably marks "released", and it allows creating them, so the release
-   workflow's `publish` job (through `changesets/action`) tags each released
-   package with the job's own token (Release, step 3). `changesets-mode` and
-   `publish` read the tags before releasing, so a run never tries to overwrite
-   one. The `version` and `publish` jobs run repository tooling and hold
-   `contents: write` (accepted by ADR-009).
-   <!-- TODO(org owners, #154): create the tag ruleset above, on `@intraverse/*@*` (ADR-009); needed before the first real publish. -->
+   **`@intraverse/*@*`** (ADR-009; decided by the human, 2026-10-28): it blocks
+   updating and deleting those tags for everyone but the org owners, so a
+   released tag never moves and a tag reliably marks "released", and it allows
+   creating them, so the release workflow's `publish` job (through
+   `changesets/action`) tags each released package with the job's own token
+   (Release, step 3). `changesets-mode` and `publish` read the tags before
+   releasing, so a run never tries to overwrite one. The `version` and `publish`
+   jobs run repository tooling and hold `contents: write` (accepted by ADR-009).
 3. **Secret scanning and push protection** on (they are). Dependabot alerts and
    security updates on. **Private vulnerability reporting** on, so a reporter
    can open a private advisory from the Security tab
@@ -98,7 +96,7 @@ org owners apply the settings; ask them for each.
    approve a pull request, but a `github-actions[bot]` approval is not a code
    owner's approval, so the `main` ruleset still holds; an org owner confirms
    it.
-   <!-- TODO(org owners, #154): turn on "Allow GitHub Actions to create and approve pull requests" (ADR-009) when the workflow implementation lands, and confirm that a `github-actions[bot]` approval cannot satisfy the `main` ruleset's code-owner review. -->
+   <!-- TODO(org owners, #154): confirm that a `github-actions[bot]` approval cannot satisfy the `main` ruleset's code-owner review. -->
 5. **The publishing environment `release`** (decided by the org owners,
    2026-10-27): there are two required reviewers, self-review is allowed (a
    reviewer may approve a deployment they started), and deployments are
@@ -123,22 +121,23 @@ org owners apply the settings; ask them for each.
    <!-- TODO(org owners, #154): configure the npm trusted publisher of each of the five packages (repository, `release.yml`, environment `release`). -->
 7. **The attestation environment `attest` and the OIDC precondition**
    ([ADR-005](../decisions/ADR-005-release-attestation-and-artifact-upload.md),
-   decision 2). An org owner creates the environment `attest`: no secret, no
-   required reviewer, deployments restricted to `main`. The workflow's `attest`
-   job runs in it, so its OIDC token names `attest`, never `release`. Before
-   step 8, the org owner confirms that every npm trusted publisher of the kit
-   (step 6), and any other consumer that trusts this repository's OIDC tokens,
-   requires the environment `release`; otherwise the `attest` job's token could
-   publish. The check is repeated whenever a trusted publisher or another OIDC
-   consumer is added. Like `release`, `attest` must exist before step 8: GitHub
-   creates an environment that a running job names, and that does not exist yet,
-   without any protection.
-   <!-- TODO(org owners, #154): create the `attest` environment and confirm the precondition. -->
+   decision 2). The environment `attest` exists: there is no secret and no
+   required reviewer, and deployments are restricted to `main`. The workflow's
+   `attest` job runs in it, so its OIDC token names `attest`, never `release`.
+   Before step 8, an org owner confirms that every npm trusted publisher of the
+   kit (step 6), and any other consumer that trusts this repository's OIDC
+   tokens, requires the environment `release`; otherwise the `attest` job's
+   token could publish. The check is repeated whenever a trusted publisher or
+   another OIDC consumer is added. Like `release`, `attest` must exist before
+   step 8: GitHub creates an environment that a running job names, and that does
+   not exist yet, without any protection.
+   <!-- TODO(org owners, #154): confirm the precondition. -->
 8. **Turn the publish path on**, only after steps 5 to 7 and the trusted
    publishers exist:
-   - a reviewed pull request removes `"private": true` from the five libraries'
-     `package.json` and the "not published to npm yet" line from their READMEs
-     (the publish command refuses a private package);
+   - the five libraries' `package.json` have no `"private": true` and their
+     READMEs no "not published to npm yet" line (done in a reviewed pull
+     request). The publish command still refuses a private package, but the
+     variable below, not `private`, is the switch;
    - an org owner sets the repository **variable** (not a secret)
      `RELEASE_PUBLISH_ENABLED` to `true`. Until it is `true`, the workflow's
      `publish` job and every job after it are skipped, and neither the `release`
@@ -146,12 +145,15 @@ org owners apply the settings; ask them for each.
      a run. Setting it back to anything else turns publishing off again. Do not
      merge a bump pull request while it is off (Release);
    - before it is set, the production environments `pages-prod` and
-     `pages-prod-config` exist, protected
-     ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages), Production):
-     the first release deploys production in the same run;
+     `pages-prod-config` exist, protected, and hold their secrets, set under
+     #133 ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages),
+     Production): the first release deploys production in the same run, and a
+     missing secret fails the production jobs after npm has already published
+     (an unset `PAGES_OPERATOR_ORIGINS` instead deploys with no page allowed to
+     embed the Wrapper);
    - after the first real publish, the one-time rehearsal in
      [Roll back or deprecate](#roll-back-or-deprecate).
-   <!-- TODO(org owners, #154): the reviewed pull request that removes `private`, then RELEASE_PUBLISH_ENABLED, once steps 5 to 7 are done and the trusted publishers exist. -->
+   <!-- TODO(org owners, #154): RELEASE_PUBLISH_ENABLED, once steps 5 to 7 are done, the trusted publishers exist, and the production environments hold their secrets (#133). -->
 
 ### Sync a contract into the kit
 
@@ -769,7 +771,7 @@ dispatch's, use "re-run failed jobs" on that release run within 30 days, or
 redeploy its tag after that. A **Pages rollback** of each production project
 ([Roll back or deprecate](#roll-back-or-deprecate)) is never blocked by a
 release run.
-<!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). The production projects and hostnames, the `pages-prod` and configuration environments and their secrets, the operator and game origins, the RPC providers, and `tipLagMargin`; shared out of band, never written in this repository. -->
+<!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). The production projects and hostnames, the secrets of the `pages-prod` and configuration environments, the operator and game origins, the RPC providers, and `tipLagMargin`; shared out of band, never written in this repository. -->
 
 **After the first deploy** (the real test: zone-wide settings can still answer
 with a 403 or a challenge page), checks 1 to 4 on the Wrapper's and the

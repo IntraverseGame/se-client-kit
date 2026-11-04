@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-11-03 (`earlierPins` in `PAGES_CHAIN_PINS`: the config tool writes it to the verifier's document only, each entry validated by the Wrapper's validator in the current pair's place; 2026-10-30, staging's `PAGES_OPERATOR_ORIGINS` holds the staging operators' origins, no longer a placeholder; 2026-10-28, #133: ADR-009 built, the changesets/action release flow and pages-prod.yml; staging's entropy chain moves to Somnia's public testnet, 50312, tipLagMargin 100, the switch procedure; #135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
+last-verified: 2026-11-04 (#154's release settings checked: the `attest`, `pages-prod`, and `pages-prod-config` environments, the tag ruleset, and the Actions setting exist, the production environments hold no secret yet, and #133 sets those secrets as a precondition of `RELEASE_PUBLISH_ENABLED`; 2026-11-03, `earlierPins` in `PAGES_CHAIN_PINS`: the config tool writes it to the verifier's document only, each entry validated by the Wrapper's validator in the current pair's place; 2026-10-30, staging's `PAGES_OPERATOR_ORIGINS` holds the staging operators' origins, no longer a placeholder; 2026-10-28, #133: ADR-009 built, the changesets/action release flow and pages-prod.yml; staging's entropy chain moves to Somnia's public testnet, 50312, tipLagMargin 100, the switch procedure; #135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
 ---
 
 # Development workflow
@@ -113,11 +113,17 @@ Several agents and people work in one clone at once. Rules:
   `gh release upload`; `production` calls `pages-prod.yml` with the tag
   (`contents: read`, `attestations: read`, `actions: read`, no secrets passed).
   Every `run:` step is `shell: bash` (so `-eo pipefail`). The five libraries
-  are still `private: true` on purpose (#154). Still open (#154): the trusted
-  publishers, the `attest`, `pages-prod`, and `pages-prod-config`
-  environments, "Allow GitHub Actions to create and approve pull requests",
-  the tag ruleset on `@intraverse/*@*`, `RELEASE_PUBLISH_ENABLED`, and the
-  first-publish rehearsal. **Actions allow-list**: the table in
+  are not `private` any more, so `RELEASE_PUBLISH_ENABLED` is the off switch
+  that remains; `tools/release-readiness.ts` still refuses a `private` library.
+  The `attest`, `pages-prod`, and `pages-prod-config` environments exist,
+  "Allow GitHub Actions to create and approve pull requests" is on, and the tag
+  ruleset on `@intraverse/*@*` exists (update and deletion rules). Still open
+  (#154): the trusted publishers, confirming that a `github-actions[bot]`
+  approval cannot satisfy the code-owner review, confirming the OIDC
+  precondition (Bootstrap step 7), `RELEASE_PUBLISH_ENABLED`, and the
+  first-publish rehearsal. The secrets of `pages-prod` and `pages-prod-config`
+  (none set yet) are set under #133 and are a precondition of
+  `RELEASE_PUBLISH_ENABLED`. **Actions allow-list**: the table in
   `specs/client-kit/supply-chain.md`, held to every `uses:` under `.github/`
   (pinned SHA and version comment) by `tools/actions-allow-list.test.ts`; local
   Actions and the repository's own reusable workflows are exempt; a new Action
@@ -207,7 +213,7 @@ Several agents and people work in one clone at once. Rules:
   verifier's sites (no game), runs staging's headers script verbatim (its game
   part runs only when a game site exists), and deploys with the project names
   from `pages-prod` secrets.
-  Tag ruleset widens to `@intraverse/*@*` (#154).
+  The tag ruleset on `@intraverse/*@*` exists (update and deletion rules).
   `wrangler` is a root devDependency at an exact version; `workerd`'s install
   script is denied. Tests: `tools/pages-workflow.test.ts`,
   `tools/pages-headers.test.ts` (reads `apps/wrapper/dist/headers.json`, so

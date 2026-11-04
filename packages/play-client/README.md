@@ -3,17 +3,15 @@
 A typed `fetch` client for the SuperEngine Play API (`/play/v1`) and the verify
 API read (`/verify/v1`).
 
-**Status:** pre-release. Not published to npm yet. The package holds one typed
-function per Play API operation (redeem, refresh, start, continue, cash-out,
-cancel, the Snapshot read), typed from the Play API document in
-`@intraverse/se-client-contracts`, and the request layer under them: the request
-options, the timeout, the typed errors, problem mapping, bounded retries,
-idempotency keys, and the play token's refresh schedule. The verify API read,
-`getRoundVerification`, is on the same request layer.
+**Status:** pre-release. The package holds one typed function per Play API
+operation (redeem, refresh, start, continue, cash-out, cancel, the Snapshot
+read), typed from the Play API document in `@intraverse/se-client-contracts`,
+and the request layer under them: the request options, the timeout, the typed
+errors, problem mapping, bounded retries, idempotency keys, and the play token's
+refresh schedule. The verify API read, `getRoundVerification`, is on the same
+request layer.
 
 ## Install
-
-Once it is published:
 
 ```sh
 pnpm add @intraverse/se-client-play-client

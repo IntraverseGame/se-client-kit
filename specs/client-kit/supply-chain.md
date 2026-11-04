@@ -187,10 +187,9 @@ the attack surface a player cannot see. The rules:
   attest; `publish` has no `pull-requests`; and `release` covers `publish`
   alone. Both run repository tooling with a write token (accepted by ADR-009,
   superseding ADR-005's rule that no job holding a write or OIDC token runs
-  repository tooling). A tag ruleset on `@intraverse/*@*` (#154; until then
-  `@intraverse/se-client-wrapper@*`) blocks updating and deleting release tags
-  for everyone but the org owners and allows creating them, so a tag reliably
-  marks "released".
+  repository tooling). A tag ruleset on `@intraverse/*@*` blocks updating and
+  deleting release tags for everyone but the org owners and allows creating
+  them, so a tag reliably marks "released".
 
   **Precondition** (ADR-005, decision 2): every npm trusted publisher of the
   kit's packages, and any other consumer that trusts this repository's OIDC
@@ -212,7 +211,7 @@ the attack surface a player cannot see. The rules:
   reviewers, self-review allowed, deployments from `main` only. The `attest`
   environment holds no secret, and its deployments are restricted to `main`
   (ADR-005, decision 2).
-  <!-- TODO(org owners, #154): configure the trusted publisher of each of the five packages on npmjs.com (runbook, Bootstrap step 6), and create the `attest` environment (Bootstrap step 7). -->
+  <!-- TODO(org owners, #154): configure the trusted publisher of each of the five packages on npmjs.com (runbook, Bootstrap step 6). -->
 - **The Pages deploy**
   ([ADR-008](../../decisions/ADR-008-pages-deploy-with-wrangler.md),
   `.github/workflows/pages.yml`). The Cloudflare API token and the account id

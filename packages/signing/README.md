@@ -3,11 +3,9 @@
 Hand-written EIP-712 and secp256k1 signing and recovery for the fixed set of
 messages SuperEngine's signed actions use, with canonical 65-byte signatures.
 
-**Status:** pre-release. Not published to npm yet.
+**Status:** pre-release.
 
 ## Install
-
-Once it is published:
 
 ```sh
 pnpm add @intraverse/se-client-signing
