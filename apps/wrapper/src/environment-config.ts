@@ -97,10 +97,8 @@ const LOOPBACK_HOSTS: ReadonlySet<string> = new Set([
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const own = (
-  record: Readonly<Record<string, unknown>>,
-  key: string,
-): unknown => (Object.hasOwn(record, key) ? record[key] : undefined);
+const own = (record: Readonly<Record<string, unknown>>, key: string): unknown =>
+  Object.hasOwn(record, key) ? record[key] : undefined;
 
 /**
  * An absolute `https:` URL, or `http:` on a loopback host (the shell's rule for
