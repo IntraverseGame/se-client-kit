@@ -24,7 +24,10 @@ Part of the [Client kit spec](../client-kit.md), section
   the fields of 40 bits or fewer (a sequence, a window, a path step). The draw
   registry's `CreateDrawRoundAuth` and `RecordDrawAuth` are in the vendored
   vectors and are encoded and replayed by the tests through an internal module,
-  but are not public API (the first release has no book round).
+  but are not public API: the Snapshot schema carries neither, and on a book
+  round the shell checks no authorization at all (W-52 replaces W-26's checks
+  with the round's consistency rule;
+  [Book playback](../wrapper/book-playback.md)).
 - **The round's `abi.encode` hashes (W-26).** Three tuples of static fields are
   hashed as `keccak256(abi.encode(...))`, their 32-byte words concatenated with
   no type hash: `hashNewRound` (`created`, over the 11 words of `newRound` in
