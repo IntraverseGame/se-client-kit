@@ -355,7 +355,7 @@
     "vite": "8.3.5",
     "vitest": "5.0.4",
     "wireit": "0.15.0",
-    "wrangler": "4.151.2"
+    "wrangler": "4.156.0"
   },
   "engines": {
     "node": ">=24.20.0"
