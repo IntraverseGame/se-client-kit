@@ -10,7 +10,8 @@
   2026-10-28: staging's RPC and lag margin stated, production's moved to #133;
   updated again 2026-10-28: staging's entropy chain moves to Somnia's public
   testnet, read through its public RPC, with a lag margin of 100 blocks; amended
-  2026-11-03: the optional `earlierPins`, in the verifier's document only)
+  2026-11-03: the optional `earlierPins`, in the verifier's document only;
+  amended 2026-11-06: a `book-slot-v1` launch plays book rounds since #146)
 - Deciders: the TPO (Pages hosting, the push model, the kit-owned proxy, the
   verify page on its own site), the human maintainer (the deploy tool, the
   secrets, the proxy hardening, acceptance), the infrastructure owner (the
@@ -187,6 +188,13 @@ Wrapper's bridge (W-37, W-38) are what keep such a frame from playing. A
 `book-slot-v1` launch is not playable: the Wrapper refuses book rounds in the
 first release (W-26) and the reference game plays `steps` only; a separate issue
 covers it.
+
+Amendment note (2026-11-06, book rounds): **a `book-slot-v1` launch plays book
+rounds since issue #146.** The Wrapper and the reference game play a book round
+in the game's base mode; the shell signs nothing for it and checks it under
+W-52, which replaced W-26's `missing` refusal
+([Book playback](../specs/wrapper/book-playback.md)). The site, its layout, and
+its headers are unchanged.
 
 - **`se-wrapper-stage`**: the Wrapper artifact, unpacked unchanged: the Wrapper
   at `/`, and the artifact's copy of the verify page at `/verify/`.

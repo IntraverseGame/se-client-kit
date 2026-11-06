@@ -55,7 +55,7 @@ Part of the [Wrapper spec](../wrapper.md), section
 - **W-30.** The Wrapper MUST declare its capabilities when the session starts:
   presentations `["steps"]` and every `RoundStatus` it handles (all seven: the
   six of R3 and `canceled`, which the cancel path needs). Decided (issue #146,
-  2026-10-28; [Book playback](./book-playback.md)): `["steps", "playback"]` once
+  2026-10-28; [Book playback](./book-playback.md)): `["steps", "playback"]`, as
   the Wrapper renders a book round; the declaration is still not sent (below).
   - **The carrier** (decided 2026-10-18, RFC-001 Q9, agreed by the backend's
     TPO; specified in the backend's documentation at commit b6e1e48). The
