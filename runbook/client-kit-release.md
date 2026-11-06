@@ -503,9 +503,11 @@ branch `main`), each on its own hostname. Staging only; production is to come.
   `https://se-games-stage.pages.dev` (no custom domain; this origin is public),
   where the Wrapper frames it (`<game origin>/?parentOrigin=...`). The backend's
   catalog names this origin for `coin-flip-v1`, `cash-or-crash-v1`, and
-  `book-slot-v1`. Coin Flip and Cash or Crash play; **a `book-slot-v1` launch is
-  not playable yet** (the Wrapper refuses book rounds in the first release,
-  W-26, and the reference game plays `steps` only; a separate issue covers it).
+  `book-slot-v1`. Coin Flip and Cash or Crash are `steps` rounds; a
+  `book-slot-v1` launch is a book round, which the Wrapper and the reference
+  game play in the game's base mode (W-50 to W-56, issue #146): the shell checks
+  it under W-52, which replaced W-26's `missing` refusal, and signs nothing for
+  it.
 
 The Wrapper's and the verifier's sites carry the same-origin API proxy
 (`apps/pages-proxy`) as their `_worker.js`, their own `environment-config.json`,

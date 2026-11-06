@@ -497,11 +497,10 @@ staging; production should give each game its own origin.
   `_headers`, or `environment-config.json`.
 - **Which games.** The one page plays every `steps` round: the catalog's
   `coin-flip-v1` and `cash-or-crash-v1` both name this origin. `book-slot-v1`
-  names it too, but a book round is not playable in the first release: the
-  Wrapper refuses it before any signature (W-26, the `missing` refusal), and the
-  reference game plays `steps` only. A book game is issue #146 (decided
-  2026-10-28): the same page plays `book-slot-v1`'s base mode at this origin,
-  with no change to the layout or the headers
+  names it too, and the same page plays its book rounds in the game's base mode
+  (issue #146, decided 2026-10-28; W-50 to W-56), with no change to the layout
+  or the headers: the shell checks a book round under W-52, which replaced
+  W-26's `missing` refusal, and signs nothing for it
   ([Book playback](./wrapper/book-playback.md),
   [the reference game](./client-kit/the-reference-game.md)).
 - **Headers** (`_headers`, on `/*`), written by the deploy: the page's own
