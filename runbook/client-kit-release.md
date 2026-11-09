@@ -592,13 +592,25 @@ enter this repository, an issue, or a log):
      is checked against its own origin), or a repeated entry; the deploy adds
      the Wrapper's origin to the game's `frame-ancestors` itself.
      `gh secret set` replaces the whole value, and nobody can read a secret
-     back. The exact current list is `operatorOrigins` in the Wrapper site's
-     served `<site>/environment-config.json` (public by design); the live
+     back. The current list is `operatorOrigins` in the Wrapper site's served
+     `<site>/environment-config.json` (public by design); the live
      `se-games-stage` page's `frame-ancestors` shows it too, sorted, after the
-     Wrapper's origin. Both show the list as of the last successful deploy, not
-     necessarily the secret: when `gh secret list --env pages-stage` shows the
-     secret updated after the last successful Pages run, the two may differ. To
-     add an operator, set the secret to the current list plus the new origin
+     Wrapper's origin. Both show the list of the deployment now live, which
+     during a rollback is older than the last successful run, and not
+     necessarily the secret. To see a rollback, open the Wrapper and game
+     projects' Deployments, or ask the infrastructure owner: each live
+     production deployment should be the newest successful one. If either is
+     rolled back, do not build the value from it: it can lack newer origins or
+     hold one removed on purpose. Agree the value with whoever set the secret,
+     and redeploy `main` first only when it is safe to end the rollback. Until a
+     value is agreed, leave the secret as it is. If neither is rolled back,
+     compare the secret's update time in `gh secret list --env pages-stage` with
+     the start time of the `config-stage` job in the last successful Pages run.
+     If the secret was updated at or after that time, or the timing is unclear,
+     the two may differ, so redeploy `main` first to serve the secret's value,
+     or ask whoever set it. Nobody else should change the secret between this
+     check and setting the new value. To add an operator, set the secret to the
+     current list plus the new origin
      (`gh secret set PAGES_OPERATOR_ORIGINS --env pages-stage`), then redeploy
      `main` (**Redeploy**, below): the configuration documents and the Wrapper's
      and the game's `frame-ancestors` carry it only from that deployment.
