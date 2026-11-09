@@ -6,11 +6,13 @@
 // `active` at step 0 with `T_0` settled; it passes the `CreateRoundAuth` checks
 // and the tip check against the fake RPC endpoints and is shown ready with the
 // game. The player picks row 1 tile 3 (`pick row 0 tile 2`), signed with
-// `typed-data/cashorcrash-pick`'s bytes, and the pick survives; the Wrapper's
-// cash-out control then signs `typed-data/cashorcrash-cash-out`'s bytes with
-// `signed-action/cashorcrash-cash-out`'s exact signature. The round ends `won`
-// with the Snapshot's payout as `formatted` (W-31), its round id, and the
-// verify link, and no tile or cash-out is offered after the close.
+// `typed-data/cashorcrash-pick`'s bytes, and the pick survives; the answer
+// carries `cashOutValue`, so the control reads "Cash out €1.45" (W-31, W-57).
+// The Wrapper's cash-out control then signs `typed-data/cashorcrash-cash-out`'s
+// bytes with `signed-action/cashorcrash-cash-out`'s exact signature. The round
+// ends `won` with the Snapshot's payout as `formatted` (W-31), which agrees with
+// the value the control showed, its round id, and the verify link, and no tile
+// or cash-out is offered after the close.
 //
 // The last surviving move, on the vendored round played through its last row
 // (round-vector.ts, LAST_ROW): three picks, each signed with the bytes of
@@ -39,7 +41,7 @@ import {
   lastRowPickCheck,
   startCheck,
 } from "./harness/round-vector.ts";
-import { validVector } from "./harness/vectors.ts";
+import { amountOf } from "./harness/vectors.ts";
 import {
   launchAndStart,
   servedFor,
@@ -47,24 +49,9 @@ import {
   TEXT,
 } from "./harness/wrapper-page.ts";
 
-type Payout = { readonly value: string; readonly formatted: string };
-
-/** The `won` answer's own `payout`, read at run time. */
-const payoutOf = (vector: string): Payout => {
-  const { payout } = validVector(vector, "Snapshot").input as {
-    readonly payout?: {
-      readonly value?: unknown;
-      readonly formatted?: unknown;
-    };
-  };
-  if (
-    typeof payout?.value !== "string" ||
-    typeof payout.formatted !== "string"
-  ) {
-    throw new TypeError(`${vector} carries no payout`);
-  }
-  return { value: payout.value, formatted: payout.formatted };
-};
+/** The round's step-1 quote and its close, read at run time. */
+const QUOTE = amountOf(CASH_OR_CRASH.step1, "cashOutValue");
+const CASH_OUT_PAYOUT = amountOf(CASH_OR_CRASH.won, "payout");
 
 /** No tile takes a pick and no cash-out is offered after the close. */
 const expectClosed = async (page: Page): Promise<void> => {
@@ -102,9 +89,13 @@ test.describe("T-12: a cash-out and a last-row win", () => {
     await expect(tile).toHaveAttribute("aria-disabled", "false");
     await tile.click();
 
-    // The cash-out ends the round `won`.
+    // The control shows the Snapshot's quote, never one computed.
     const cashOut = page.getByRole("button", { name: TEXT.cashOut });
     await expect(cashOut).toBeEnabled();
+    expect(QUOTE).toEqual({ value: "145", formatted: "€1.45" });
+    await expect(cashOut).toHaveText(`${TEXT.cashOut} ${QUOTE.formatted}`);
+
+    // The cash-out ends the round `won`, for the value the control showed.
     fakePlayApi.answer(
       "cashOutRound",
       snapshotAnswer(CASH_OR_CRASH.won, cashOutCheck),
@@ -113,8 +104,9 @@ test.describe("T-12: a cash-out and a last-row win", () => {
     await cashOut.click();
 
     await expect(statusHeading(page)).toHaveText(TEXT.won);
+    expect(CASH_OUT_PAYOUT).toEqual(QUOTE);
     await expect(page.locator(".se-round")).toContainText(
-      `${TEXT.payout} ${payoutOf(CASH_OR_CRASH.won).formatted}`,
+      `${TEXT.payout} ${CASH_OUT_PAYOUT.formatted}`,
     );
     await expect(page.getByText(CASH_OR_CRASH_ROUND_ID)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toHaveAttribute(
@@ -170,7 +162,7 @@ test.describe("T-12: a cash-out and a last-row win", () => {
 
     await expect(statusHeading(page)).toHaveText(TEXT.won);
     // The payout is the Snapshot's own, never one computed from a multiplier.
-    const payout = payoutOf(LAST_ROW.won);
+    const payout = amountOf(LAST_ROW.won, "payout");
     expect(payout).toEqual({ value: "289", formatted: "€2.89" });
     await expect(page.locator(".se-round")).toContainText(
       `${TEXT.payout} ${payout.formatted}`,

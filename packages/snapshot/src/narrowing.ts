@@ -47,8 +47,7 @@ type NoCashOutValue = { cashOutValue?: never };
  * `rounds:cashOut` would credit now (on a free bet, the winnings only). It is
  * absent at step 0 and, the schema says, never on `playback` (a book round is
  * never `active`); the narrowing by `status` does not express either. Typed
- * here as the public `Amount` until the vendored schema carries the field; the
- * generated type then agrees with it.
+ * here as the public `Amount`, which the generated type agrees with.
  */
 type MayCashOut = { cashOutValue?: Amount };
 

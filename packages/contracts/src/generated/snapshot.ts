@@ -32,6 +32,7 @@ step?: number
 currentMultiplier?: Multiplier
 bankedAmount?: Amount
 payout?: Amount1
+cashOutValue?: Amount2
 config: GameConfig
 proofs?: FairnessContext
 }
@@ -117,6 +118,7 @@ step?: number
 currentMultiplier?: Multiplier
 bankedAmount?: Amount
 payout?: Amount1
+cashOutValue?: Amount2
 config: GameConfig
 proofs?: FairnessContext
 }
@@ -180,6 +182,19 @@ formatted: string
  * What the finished round credits the player, in base units: on won and lost only; 0 when nothing is credited. Computed by the server; never derived from a multiplier.
  */
 export type Amount1 = {
+value: BaseUnits
+decimals: number
+unit: Unit
+/**
+ * Display-only number. Never used for money math.
+ */
+normalized: number
+formatted: string
+}
+/**
+ * What cashing out now credits the player, in base units: on an active steps round after its first step only. It is a quote, not money held: a losing pick takes it away. Computed by the server; never derived from a multiplier. Optional in /1 (added 2026-10-30).
+ */
+export type Amount2 = {
 value: BaseUnits
 decimals: number
 unit: Unit

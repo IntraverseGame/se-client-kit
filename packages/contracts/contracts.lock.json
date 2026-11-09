@@ -5,15 +5,15 @@
       "path": "src/schemas/play.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "play/v1 OpenAPI document",
-      "sourceCommit": "f2da5356d69c99ae185618637bb5a1ebfc5f7143",
-      "sha256": "2e30238695849fccfb056a25a5474eadb3fc75c1e4067af03101124a5a9906ed"
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "3b78949a40d5e34bf8b8c3ef76696e9b8e565d81b92dc931a4d9ff50bed67988"
     },
     {
       "path": "src/schemas/se.snapshot.v1.schema.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 schema",
-      "sourceCommit": "80ac5b85a02503069ce1649c1ad7c2f9e704afab",
-      "sha256": "a1a77842543dedbc8f91d7d0345d01c8967607cdca27d4a03bd5f8a261cc01ed"
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "8683aebb1c387c6a6a50d068d1ce7e9d047fd7e219c9b19717ec5fd7758f58af"
     },
     {
       "path": "src/schemas/verify.v1.openapi.yaml",
@@ -322,6 +322,69 @@
       "sourceName": "se.snapshot/1 vectors/invalid/book-status-resolving.json",
       "sourceCommit": "dee600092ec32ff1eb6e8afe962e9eb102902cce",
       "sha256": "7c09cf87c6ee052c985b905f9c41abfcf0040850aa302e48face6869eba4c241"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/cash-out-value-on-canceled.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/cash-out-value-on-canceled.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "cc0d632234e6d9e2d576a37210c1ab7667043b46c319b603a605b4e72f593e8a"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/cash-out-value-on-idle.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/cash-out-value-on-idle.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "7b8a558ed3e748e1d36c458d13517d077ba10aeb5401105e534d2859ebf17b20"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/cash-out-value-on-lost.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/cash-out-value-on-lost.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "425514cc64e7af2f3af0ca2d058a5b096340c7f81fafdf0a1b5f6ca9149eeccc"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/cash-out-value-on-playback.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/cash-out-value-on-playback.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "d8c0bae439ce448ab698f1f06caee70d008b59a6b064b2d2d55ef214becd7ee0"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/cash-out-value-on-resolving.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/cash-out-value-on-resolving.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "f7330939fd3801a4d69130f25dc7764758cef2b2c35aa065e9511c87d90daa2e"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/cash-out-value-on-starting.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/cash-out-value-on-starting.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "41a2c89f365b3b91a8828c95ed4b4a64f455f4b7dc0abb677c0ef27a344b84ed"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/cash-out-value-on-step-0.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/cash-out-value-on-step-0.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "cdbed539e20bd4f1860d1e8a262d192531eff7f7fab4f394cf08a34dc2d0c4fb"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/cash-out-value-on-won.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/cash-out-value-on-won.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "b956d5ade345f55783225f6d930949c19d4ccc0399a2c3c3f7238454d3429afd"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/cash-out-value-value-number.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/cash-out-value-value-number.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "d7da2d7096e2d3ad11a51441c6373703ae745728c207c351abe2b1499271fddd"
     },
     {
       "path": "src/vectors/snapshot/invalid/close-reason-on-active.json",
@@ -840,6 +903,27 @@
       "sourceName": "se.snapshot/1 vectors/valid/book-playback-won-rtp.json",
       "sourceCommit": "13bcee0c65afb99c97dcfc02f1443818e8ac25e0",
       "sha256": "c6de239751c48449829ac1b59bdd2bd7bf9adba210a76fa8b0ae93030741a8b3"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-active-cash-out-value-free-bet.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-active-cash-out-value-free-bet.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "7721b5f6aa4936f2a51eea6fb6e24eb91f183fd94732901aeeeeece8e08a0929"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-active-cash-out-value-row2.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-active-cash-out-value-row2.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "94264ab4c013cf4ebca0956c216e92e10918f07d31a11a3408f99503d8983cad"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/cashorcrash-active-cash-out-value.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/cashorcrash-active-cash-out-value.json",
+      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
+      "sha256": "d8ac874c3ef06bf0c7ca1e800f35a9233bb9fe39e9c1446a1a57917d5f81a333"
     },
     {
       "path": "src/vectors/snapshot/valid/cashorcrash-active-row2.json",

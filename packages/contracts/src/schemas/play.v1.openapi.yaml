@@ -549,6 +549,8 @@ components:
           $ref: "#/components/schemas/Amount"
         payout:
           $ref: "#/components/schemas/Amount"
+        cashOutValue:
+          $ref: "#/components/schemas/Amount"
         config:
           $ref: "#/components/schemas/GameConfig"
         proofs:

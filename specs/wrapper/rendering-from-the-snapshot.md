@@ -84,7 +84,7 @@ Part of the [Wrapper spec](../wrapper.md), section
   | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
   | `idle`                                     | the bet selector (`bet.suggestedBets`, defaulting to `bet.defaultBet`, within `minBet` and `maxBet`) and the start button, the balance. A typed error from the call that led here (a void) shows beside it                                                                                                                  | start enabled                                                               |
   | `starting`                                 | "preparing the round"; the game is not shown as ready; the shell is verifying (W-26)                                                                                                                                                                                                                                        | none; cancel is not offered                                                 |
-  | `active`                                   | the game, ready, only after W-26 passed; the multiplier; cash-out when allowed, its control showing the Snapshot's `cashOutValue` as `formatted` when it carries one (once the contracts sync vendors the field, below), else the multiplier                                                                                | game picks, cash-out, cancel (if the game offers it, W-25)                  |
+  | `active`                                   | the game, ready, only after W-26 passed; the multiplier; cash-out when allowed, its control showing the Snapshot's `cashOutValue` as `formatted` when it carries one (below), else the multiplier                                                                                                                           | game picks, cash-out, cancel (if the game offers it, W-25)                  |
   | `active`, a move or cash-out not confirmed | "your move hasn't been confirmed" (or "your cash-out hasn't been confirmed"), "if it never arrives, the round ends by its time limit", the round id, and "check again" in place of the round; the game stays shown, waiting (W-16)                                                                                          | "check again" (a read only); no pick, no cash-out                           |
   | `resolving`                                | the game with inputs disabled, "resolving"                                                                                                                                                                                                                                                                                  | none                                                                        |
   | `won`                                      | the result, the payout as `formatted`, the round id and verify link (W-39)                                                                                                                                                                                                                                                  | the next bet: the bet selector and start, from this Snapshot's `bet` (W-40) |
@@ -122,13 +122,11 @@ Part of the [Wrapper spec](../wrapper.md), section
   `rounds:cashOut` would credit if the player cashed out now (on a free bet, the
   winnings only). The schema allows it on an `active` round of the `steps`
   presentation after its first step only, and forbids it at step 0, on every
-  other status, and on `playback`; it is optional. **Not vendored yet**: the kit
-  renders the field once the contracts sync that vendors the new schema and its
-  vectors lands
+  other status, and on `playback`; it is optional. Its vectors are
+  `valid/cashorcrash-active-cash-out-value`, `-row2`, and `-free-bet`, and
+  `invalid/cash-out-value-*`
   ([How the kit gets its contracts](../client-kit/how-the-kit-gets-its-contracts.md),
-  rule 4; the same release as this behavior). Until then every Snapshot carrying
-  the field fails validation (W-28); without it, the multiplier shows. Once
-  synced, the Wrapper shows it on the bar's cash-out control, as "Cash out"
+  rule 4). The Wrapper shows it on the bar's cash-out control, as "Cash out"
   followed by its `formatted`, when the control is offered (W-24) and the
   Snapshot carries it; a value of 0 (a free bet whose winnings are 0 so far) is
   shown as served, "Cash out" with the `formatted` of 0, with no inference
@@ -141,7 +139,6 @@ Part of the [Wrapper spec](../wrapper.md), section
   Wrapper never computes it and never checks it against `currentMultiplier`
   (W-34); the shell does not forward it to the game (W-38: the game's copy is
   built from an allow-list).
-  <!-- TODO(contracts sync): once the sync that vendors the Snapshot schema's `cashOutValue` lands, drop "Not vendored yet" and the until-then sentence above, and name the vectors as rule 4 does. -->
 
   How the Wrapper reads the shell's checks for this table (the round the shell
   holds, W-26), with every row placed by [W-57](./the-single-screen.md)'s table

@@ -23,10 +23,10 @@ Out of scope: the operator page's own controls (fullscreen, theater mode, a real
 or fun toggle, a recent-bets list), which an operator page may build around the
 Wrapper's iframe; a player-initiated cancel (W-25: `se.controller/1` has no verb
 for it); a cash-out amount the Wrapper would compute itself (W-34: the control
-shows the Snapshot's `cashOutValue` once it is vendored, below); and lifecycle
-events to the operator page, a follow-up that needs `se.operator/2` and a new
-ADR superseding ADR-006 (RFC-004 Q7, decided 2026-10-30; `roundEnded` will carry
-the round id, Q8).
+shows the Snapshot's `cashOutValue`, below); and lifecycle events to the
+operator page, a follow-up that needs `se.operator/2` and a new ADR superseding
+ADR-006 (RFC-004 Q7, decided 2026-10-30; `roundEnded` will carry the round id,
+Q8).
 
 ## The screen
 
@@ -93,17 +93,12 @@ the round id, Q8).
   out" with the Snapshot's `cashOutValue.formatted` beside it when the Snapshot
   carries one: the server's quote of what cashing out now credits, which
   `se.snapshot/1` serves on an `active` steps round after its first step (a
-  value of 0 is shown as served). The field is not vendored yet: the kit renders
-  it once the contracts sync that vendors the new schema and its vectors lands
-  ([How the kit gets its contracts](../client-kit/how-the-kit-gets-its-contracts.md),
-  rule 4; the same release); until then every Snapshot carrying it fails
-  validation (W-28). Without a value the control reads "Cash out" with the
-  Snapshot's `currentMultiplier` beside it as a display value (`×1.94`) and no
-  amount: W-34 forbids computing one from a multiplier (Q3), and the Wrapper
-  never checks the value against the multiplier
+  value of 0 is shown as served). Without a value the control reads "Cash out"
+  with the Snapshot's `currentMultiplier` beside it as a display value (`×1.94`)
+  and no amount: W-34 forbids computing one from a multiplier (Q3), and the
+  Wrapper never checks the value against the multiplier
   ([W-31](./rendering-from-the-snapshot.md) says when an `active` round carries
   none).
-  <!-- TODO(contracts sync): once the sync that vendors the Snapshot schema's `cashOutValue` lands, drop the not-vendored-yet sentence above. -->
 
 ### State by state
 

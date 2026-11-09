@@ -17,9 +17,9 @@ type GeneratedModule = {
 
 const MODULES: readonly GeneratedModule[] = [
   // `Snapshot1` is the generator's structural copy of `Snapshot`, and
-  // `Amount1` its copy of `Amount` for `payout` (a `$ref` with its own
-  // description).
-  { file: "snapshot.ts", notPublic: ["Amount1", "Snapshot1"] },
+  // `Amount1` and `Amount2` its copies of `Amount` for `payout` and
+  // `cashOutValue` (each a `$ref` with its own description).
+  { file: "snapshot.ts", notPublic: ["Amount1", "Amount2", "Snapshot1"] },
   // The Play API document has no webhooks, no `$defs`, and no external
   // documents: all three are empty.
   { file: "play.ts", notPublic: ["$defs", "external", "webhooks"] },

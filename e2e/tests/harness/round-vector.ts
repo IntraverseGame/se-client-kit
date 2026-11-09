@@ -163,13 +163,13 @@ export const cancelCheck: BodyCheck = actionCheck(
 /**
  * The vendored Cash or Crash `[3,3,4]` round played to a cash-out (T-12): one
  * round on one signed chain, `active` at step 0 with `T_0` settled, `active`
- * after the first pick survived (`T_1`), and `won` by the cash-out (`T_2`) with
- * its payout. The `resolving` Snapshot of the same round is not answered: the
- * Play API answers `resolving` only to a cancel.
+ * after the first pick survived (`T_1`) with its `cashOutValue`, and `won` by
+ * the cash-out (`T_2`) with its payout. The `resolving` Snapshot of the same
+ * round is not answered: the Play API answers `resolving` only to a cancel.
  */
 export const CASH_OR_CRASH = {
   step0: "cashorcrash-cash-out-active-step0",
-  step1: "cashorcrash-cash-out-active-step1",
+  step1: "cashorcrash-active-cash-out-value",
   won: "cashorcrash-cash-out-won",
   /** The signed-action vector of the cash-out. */
   cashOut: "cashorcrash-cash-out",
