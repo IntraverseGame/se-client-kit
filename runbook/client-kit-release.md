@@ -632,6 +632,32 @@ enter this repository, an issue, or a log):
        going back to a listed pair means removing it from the list and appending
        the pair being left in the same edit, unless that pair's rounds should
        fail (a leaked or revoked key).
+     - **The list may hold more than one pair.** Each change of domain or signer
+       appends the pair it leaves and keeps the entries already there. Order
+       does not affect matching: a round's domain and signer select the pair.
+       `gh secret set` replaces the whole value and nobody can read a secret
+       back, so build the new value from the verifier's served
+       `environment-config.json`, the one document that holds the list (that of
+       the deployment now live, which during a rollback is older than the last
+       successful run). Take only the fields of `PAGES_CHAIN_PINS`
+       (`environment`, `runtimeSigner`, `registryDomain`, `entropyChainId`,
+       `minRpcQuorum`, `tipLagMargin`, `earlierPins`): the document's other
+       fields fail the config job. No `earlierPins` field means an empty list.
+       To see a rollback, open the verifier project's Deployments, or ask the
+       infrastructure owner: the live production deployment should be the newest
+       successful one. If the verifier is rolled back, do not build the value
+       from it: it can lack newer entries or hold a pair removed because its key
+       leaked or was revoked. Agree the value with whoever set the secret, and
+       redeploy `main` first only when it is safe to end the rollback. Until a
+       value is agreed, leave the secret as it is. If the verifier is not rolled
+       back, compare the secret's update time in
+       `gh secret list --env pages-stage` with the start time of the
+       `config-stage` job in the last successful Pages run. If the secret was
+       updated at or after that time, or the timing is unclear, the two may
+       differ, so redeploy `main` first to serve the secret's value, or ask
+       whoever set it. Nobody else should change the secret between this check
+       and setting the new value, because `gh secret set` replaces the whole
+       value.
      - **Never list a leaked or revoked key's pair.** Its rounds then fail check
        3 on purpose; the page has no other handling for them. A pair already
        listed whose key leaks or is revoked comes off the list as soon as that
@@ -705,12 +731,13 @@ so the secrets change right after the backend's switch, not before:
    secrets: `PAGES_RPC_ENDPOINTS`, `PAGES_RPC_ORIGINS`, and `PAGES_CHAIN_PINS`.
 3. Dispatch the Pages workflow on `main` (**Redeploy**, below). Until that
    redeploy the deployed configuration still pins the old chain, so every
-   staging round is refused at check 3 (`cross-field`: the round's
-   `entropyChainId` is not the pinned one) and shows "this round failed
-   verification"; `T_0` is not settled, so nothing is signed (W-26). In the same
-   window the verify page's check 6 reads the old pins for new rounds. The
-   Wrapper reads its configuration once, at boot, so a session opened before the
-   redeploy keeps the old pins and keeps refusing until it is relaunched.
+   staging config round (a book round runs no W-26 check, W-52) is refused at
+   check 3 (`cross-field`: the round's `entropyChainId` is not the pinned one)
+   and shows "this round failed verification"; `T_0` is not settled, so nothing
+   is signed (W-26). In the same window the verify page's check 6 reads the old
+   pins for new rounds. The Wrapper reads its configuration once, at boot, so a
+   session opened before the redeploy keeps the old pins and keeps refusing
+   until it is relaunched.
 4. Verify the deployed `<site>/environment-config.json` on the Wrapper's and the
    verifier's sites: `entropyChainId`, `tipLagMargin`, `minRpcQuorum`,
    `environment`, and `registryDomain` are the values sent, and `rpcEndpoints`
@@ -718,7 +745,8 @@ so the secrets change right after the backend's switch, not before:
    verifier's alone, with the outgoing pair last, if the domain or the signer
    changed. Then open a new Wrapper session from a fresh launch (a new launch
    code: codes are single-use), never a tab opened before the redeploy, and
-   start a round: it passes the start, with the degraded indicator shown.
+   start a Coin Flip or Cash or Crash round: it passes the start, with the
+   degraded indicator shown.
 
 Expected after a switch, not an alarm: a staging round played on the old chain
 (anvil, before the switch) cannot be verified on staging's verify page
