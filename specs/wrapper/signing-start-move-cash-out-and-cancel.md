@@ -385,10 +385,13 @@ Part of the [Wrapper spec](../wrapper.md), section
   2026-10-28; [Book playback](./book-playback.md)): that increment is W-52,
   which replaced this refusal. Checks 1 to 5, the tip check, and the re-issue
   rule do not apply to a book round, nothing is signed for one (W-51), and the
-  shell checks instead that the round's `randomnessProof` and `packageHash` do
-  not change between reads (W-52's changed round). A change of the session's
-  presentation, model, `config.kind`, or `config.model` is W-53's changed
-  session, final until a reload.
+  shell checks instead, once a Snapshot of the round carries
+  `proofs.randomnessProof`, that every later Snapshot of the round carries the
+  same `source`, `blockNumber`, and `roundSecretHash` and the same
+  `config.packageHash`; a later Snapshot with no `randomnessProof` is a change
+  too (W-52's changed round). A change of the session's presentation, model,
+  `config.kind`, or `config.model` is W-53's changed session, final until a
+  reload.
 
   The shell builds checks 1 to 5 and the re-issue rule
   ([the `shell` package](../client-kit/the-shell-package.md)); the backend's
