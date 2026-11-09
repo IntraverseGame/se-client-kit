@@ -650,9 +650,14 @@ enter this repository, an issue, or a log):
        leaked or was revoked. Agree the value with whoever set the secret, and
        redeploy `main` first only when it is safe to end the rollback. Until a
        value is agreed, leave the secret as it is. If the verifier is not rolled
-       back and `gh secret list --env pages-stage` shows the secret updated
-       after the last successful Pages run, the two may differ, so redeploy
-       `main` first to serve the secret's value, or ask whoever set it.
+       back, compare the secret's update time in
+       `gh secret list --env pages-stage` with the start time of the
+       `config-stage` job in the last successful Pages run. If the secret was
+       updated at or after that time, or the timing is unclear, the two may
+       differ, so redeploy `main` first to serve the secret's value, or ask
+       whoever set it. Nobody else should change the secret between this check
+       and setting the new value, because `gh secret set` replaces the whole
+       value.
      - **Never list a leaked or revoked key's pair.** Its rounds then fail check
        3 on purpose; the page has no other handling for them. A pair already
        listed whose key leaks or is revoked comes off the list as soon as that
