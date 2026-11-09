@@ -333,11 +333,10 @@ are in brackets.
   or `refused` with the first failing check's reason:
   1. `missing`: a Snapshot that carries `proofs` without
      `proofs.createRoundAuth`, or one past `starting` without either (an `idle`
-     Snapshot too). A book Snapshot never carries the object, so a book round is
-     refused here: the first release ships config games only, and book rounds
-     are refused until a later increment defines their evidence (decided by
-     human review, 2026-10-17; W-26). Decided (issue #146, 2026-10-28): the
-     checks are not run on a book round at all; W-52 in
+     Snapshot too). A book Snapshot never carries the object; until issue #146 a
+     book round was refused here, while the first release was to ship config
+     games only (decided by human review, 2026-10-17; W-26). Decided (issue
+     #146, 2026-10-28): the checks are not run on a book round at all; W-52 in
      [Book playback](../wrapper/book-playback.md) replaces them with the round's
      consistency rule, nothing is signed for a book round (W-51), and the bridge
      forwards its `playback` copy (W-38, RFC-003). A Snapshot that changes the

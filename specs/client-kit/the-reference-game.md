@@ -134,9 +134,9 @@ else.
   that the game runs inside the Wrapper, and sends nothing. A framer that names
   another origin gains nothing: what the game posts to that origin is dropped by
   the browser, and the framer's own messages carry its real origin.
-- **Messages.** On load the game sends one `hello`: `presentations: ["steps"]`
-  (`["steps", "playback"]` once the book-slot page ships, #146, below) and all
-  seven statuses. It parses every message against `se.controller/1`
+- **Messages.** On load the game sends one `hello`:
+  `presentations: ["steps", "playback"]` (the book-slot page, #146, below) and
+  all seven statuses. It parses every message against `se.controller/1`
   (`protocol.ts`, `game-snapshot.ts`): a plain object with exactly its fields,
   read through its own data properties only; a `snapshot` whose copy has exactly
   the W-38 allow-listed fields, each well formed; a `reject` with an `id` of 1
