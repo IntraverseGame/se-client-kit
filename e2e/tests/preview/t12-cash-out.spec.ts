@@ -1,12 +1,13 @@
 // T-12 against the preview stack (AC1, W-24; RFC-002, Q9): launch Cash or Crash
 // `[3,3,4]`, pick the first tile of row 0, and start another round if it ends
-// lost (at most 40 rounds); once a pick survives, cash out with the Wrapper's
-// cash-out control. The round ends `won`, the payout line shows the settled
-// Snapshot's `formatted`, the verify API agrees (200, status, payout), and no
-// pick or cash-out is offered after the close. The last-surviving-move half of
-// the fake row is not played against the stack. T-12 depends on the stack
-// certifying Cash or Crash `[3,3,4]` (OQ-3): until it does, the row fails at the
-// launch, which is the signal.
+// lost (at most 40 rounds); once a pick survives, the Wrapper's cash-out
+// control shows the stack's `cashOutValue` beside "Cash out" and cashing out
+// with it ends the round `won`. The payout line shows the settled Snapshot's
+// `formatted`, which is the value the control showed, the verify API agrees
+// (200, status, payout), and no pick or cash-out is offered after the close.
+// The last-surviving-move half of the fake row is not played against the
+// stack. T-12 depends on the stack certifying Cash or Crash `[3,3,4]` (OQ-3):
+// until it does, the row fails at the launch, which is the signal.
 
 import { expect } from "../harness/worker-browser.ts";
 import { statusHeading, TEXT } from "../harness/wrapper-page.ts";
@@ -32,11 +33,17 @@ test.describe("T-12 (preview): a cash-out", () => {
     await playUntil("won", () => playCashOrCrashFirstPick(page, session));
     // The surviving round has not ended; the cash-out is the one that ends it.
     const endedBefore = session.settledCount();
-    await page.getByRole("button", { name: TEXT.cashOut }).click();
+    const cashOut = page.getByRole("button", { name: TEXT.cashOut });
+    // The stack's quote, as the control shows it (W-31); the close credits it.
+    const quoted = await cashOut.locator(".se-button__value").innerText();
+    await cashOut.click();
     await expect(statusHeading(page)).toHaveText(TEXT.won, {
       timeout: STACK_STEP_TIMEOUT_MS,
     });
     await expectSettledRound(page, session, "won", endedBefore);
+    await expect(page.locator(".se-round")).toContainText(
+      `${TEXT.payout} ${quoted}`,
+    );
     await expectNothingOffered(page);
     const callsAtClose = session.roundCalls();
     await expectAccessibleResult(page);

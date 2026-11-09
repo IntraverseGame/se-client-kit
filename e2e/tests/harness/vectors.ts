@@ -60,6 +60,25 @@ export const validVector = (
   return { name, definition: actual, input };
 };
 
+/** An amount a vector carries: the strings a test compares, never a number. */
+export type VectorAmount = {
+  readonly value: string;
+  readonly formatted: string;
+};
+
+/** The amount at the top-level `field` of the `valid/` Snapshot `name`. */
+export const amountOf = (name: string, field: string): VectorAmount => {
+  const amount = validVector(name, "Snapshot").input[field];
+  if (
+    !isRecord(amount) ||
+    typeof amount["value"] !== "string" ||
+    typeof amount["formatted"] !== "string"
+  ) {
+    throw new TypeError(`${name} carries no ${field}`);
+  }
+  return { value: amount["value"], formatted: amount["formatted"] };
+};
+
 /** The names of the `valid/` vectors of one definition. */
 export const validVectorNames = (
   definition: VectorDefinition,

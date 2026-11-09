@@ -8,7 +8,7 @@
 // no error. Over the vendored Cash or Crash round played to a cash-out: its
 // `active` Snapshot after the first pick, given the amount its cash-out then
 // credited (the `payout` of the same round's `won` Snapshot, which is what the
-// backend's `cashOutValue` vectors carry for that step), and every `active`
+// vendored `cashOutValue` vector carries for that step), and every `active`
 // vector as it is.
 
 import { describe, expect, it } from "vitest";
@@ -106,9 +106,8 @@ const ACTIVE_STEP_1 = "cashorcrash-cash-out-active-step1";
 const WON = "cashorcrash-cash-out-won";
 
 /**
- * The backend's vector of the same round's step 1 with `cashOutValue`: absent
- * until the contracts sync lands, then its value equals `payoutOf(WON)`
- * ("agrees with the close").
+ * The vendored vector of the same round's step 1 with `cashOutValue`: its value
+ * equals `payoutOf(WON)` ("agrees with the close").
  */
 const VENDORED_QUOTE = "cashorcrash-active-cash-out-value";
 
@@ -135,21 +134,11 @@ const multiplierOf = (snapshot: SnapshotInput): string | undefined =>
     : formatMultiplier("en", snapshot.currentMultiplier);
 
 /**
- * Every `active` vector: the synced `cashorcrash-active-cash-out-value*` carry
- * a value, the others none.
+ * Every `active` vector: the `cashorcrash-active-cash-out-value*` carry a
+ * value, the others none.
  */
 const ACTIVE_VECTORS = SNAPSHOT_VECTORS.filter(
   name => snapshotVector(name).status === "active",
-);
-
-/**
- * The vendored quote vector, once synced: an empty list before the contracts
- * sync, so the test over it is vacuous until then; once
- * `valid/cashorcrash-active-cash-out-value` is vendored, the list is that
- * vector and the test holds it to the close's payout.
- */
-const VENDORED_QUOTES = SNAPSHOT_VECTORS.filter(
-  name => name === VENDORED_QUOTE,
 );
 
 /**
@@ -179,13 +168,23 @@ describe("the cash-out value on the control (W-31, W-57)", () => {
     expect(snapshotVector(ACTIVE_STEP_1).cashOutValue).toBeUndefined();
   });
 
-  it("the vendored quote vector, once synced, carries the close's payout", () => {
-    // Vacuous before the contracts sync (`VENDORED_QUOTES` is empty then).
-    for (const name of VENDORED_QUOTES) {
-      const vendored = snapshotVector(name);
-      expect(vendored.roundId).toBe(snapshotVector(WON).roundId);
-      expect(vendored.cashOutValue).toEqual(cashOutValue);
-    }
+  it("the vendored quote vector carries the close's payout", () => {
+    const vendored = snapshotVector(VENDORED_QUOTE);
+    expect(vendored.roundId).toBe(snapshotVector(WON).roundId);
+    expect(vendored.cashOutValue).toEqual(cashOutValue);
+  });
+
+  it.each([
+    VENDORED_QUOTE,
+    `${VENDORED_QUOTE}-row2`,
+    `${VENDORED_QUOTE}-free-bet`,
+  ])("%s shows its own value in place of the multiplier", name => {
+    const snapshot = snapshotVector(name);
+    expect(snapshot.cashOutValue).toBeDefined();
+    const screen = rendered(snapshot);
+    expect(valueShown(screen.host)).toBe(snapshot.cashOutValue?.formatted);
+    expect(valueShown(screen.host)).not.toBe(multiplierOf(snapshot));
+    expect(alertText(screen.host)).toBe("");
   });
 
   it("shows the value's formatted beside Cash out, and sends the cash-out on request", () => {

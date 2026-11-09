@@ -187,9 +187,8 @@ Rules:
    status, as the schema does.
 
    **The cash-out value** (the Snapshot schema and the `cashOutValue` vectors,
-   and the Play API document, whose Snapshot component restates the field; **to
-   be synced** from se-backend, in a contracts pull request of the same release
-   as the kit's rendering of the field; no vendored vector changes): an additive
+   and the Play API document, whose Snapshot component restates the field,
+   synced from se-backend `c4a4801`; no vendored vector changed): an additive
    change to the Snapshot schema, a new optional top-level `cashOutValue`, an
    `Amount` the server computes, that says what `rounds:cashOut` would credit if
    the player cashed out right then (on a free-bet round the winnings only: the
@@ -218,10 +217,7 @@ Rules:
    [Rendering from the Snapshot](../wrapper/rendering-from-the-snapshot.md), and
    the labels of [The single screen](../wrapper/the-single-screen.md)). The
    generator's structural copy of `Amount` for it is, like `Amount1`, not
-   exported. Until the sync lands, the vendored schema rejects every Snapshot
-   that carries the field (W-28); without it, the control shows the multiplier;
-   the `snapshot` package's types already name the field.
-   <!-- TODO(contracts sync): when the sync that vendors the Snapshot schema's `cashOutValue` lands, replace "to be synced" with the source commit, as the other paragraphs name it, and drop the until-then sentence. -->
+   exported. Without the field, the control shows the multiplier.
 
    **The Cash or Crash cash-out, and a book game's RTP** (the Snapshot vectors
    synced from se-backend `6afc690`, and the Snapshot schema with them, last

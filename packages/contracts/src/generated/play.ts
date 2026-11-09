@@ -273,6 +273,7 @@ export type components = {
       currentMultiplier?: components["schemas"]["Multiplier"];
       bankedAmount?: components["schemas"]["Amount"];
       payout?: components["schemas"]["Amount"];
+      cashOutValue?: components["schemas"]["Amount"];
       config: components["schemas"]["GameConfig"];
       proofs?: components["schemas"]["FairnessContext"];
     };
