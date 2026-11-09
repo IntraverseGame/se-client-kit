@@ -637,14 +637,22 @@ enter this repository, an issue, or a log):
        does not affect matching: a round's domain and signer select the pair.
        `gh secret set` replaces the whole value and nobody can read a secret
        back, so build the new value from the verifier's served
-       `environment-config.json`, the one document that holds the list (as of
-       the last successful deploy). Take only the fields of `PAGES_CHAIN_PINS`
+       `environment-config.json`, the one document that holds the list (that of
+       the deployment now live, which during a rollback is older than the last
+       successful run). Take only the fields of `PAGES_CHAIN_PINS`
        (`environment`, `runtimeSigner`, `registryDomain`, `entropyChainId`,
        `minRpcQuorum`, `tipLagMargin`, `earlierPins`): the document's other
        fields fail the config job. No `earlierPins` field means an empty list.
-       If `gh secret list --env pages-stage` shows the secret updated after the
-       last successful Pages run, the two may differ, so redeploy `main` first
-       to serve the secret's value, or ask whoever set it.
+       To see a rollback, open the verifier project's Deployments, or ask the
+       infrastructure owner: the live production deployment should be the newest
+       successful one. If the verifier is rolled back, do not build the value
+       from it: it can lack newer entries or hold a pair removed because its key
+       leaked or was revoked. Agree the value with whoever set the secret, and
+       redeploy `main` first only when it is safe to end the rollback. Until a
+       value is agreed, leave the secret as it is. If the verifier is not rolled
+       back and `gh secret list --env pages-stage` shows the secret updated
+       after the last successful Pages run, the two may differ, so redeploy
+       `main` first to serve the secret's value, or ask whoever set it.
      - **Never list a leaked or revoked key's pair.** Its rounds then fail check
        3 on purpose; the page has no other handling for them. A pair already
        listed whose key leaks or is revoked comes off the list as soon as that
