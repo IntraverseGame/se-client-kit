@@ -396,7 +396,13 @@ handshake (W-49c).
   entry as `targetOrigin`, so the browser drops them if the parent has since
   navigated elsewhere; masking, an empty list, several entries, an unlisted
   entry, and nesting stay refused, and the handshake stays required where the
-  list is missing.
+  list is missing. The one assumption it drops: the framer no longer has to run
+  script on the listed origin. Any document there that can hold an `<iframe>`
+  (HTML injection under a CSP that blocks script, user content that allows
+  iframes) is enough; `frame-ancestors` already admits it, and a valid
+  single-use launch code is still needed. So `operatorOrigins` MUST list only
+  origins whose every page the operator fully controls (the operator guidance
+  below).
 - **A listed operator page** is trusted to embed, not with secrets. It can send
   `hello` (required only where its origin is not proven, W-49a) and nothing else
   the Wrapper reads; it receives `welcome` and heights; it can reload or
@@ -433,9 +439,12 @@ that URL's origin), the iframe it creates, and the messages it receives.
 Wrapper refuses to start when another page sits between yours and it (W-49a),
 and when your page's origin is not on the environment's `operatorOrigins` list
 (ask SuperEngine to list every origin that embeds the Wrapper, and the origin of
-your lobby). On that iframe set no `sandbox` attribute, no `referrerpolicy` of
-`no-referrer` or `same-origin` (some browsers then hide your origin from the
-Wrapper, which refuses), and no `allow` feature the Wrapper's
+your lobby). List only origins whose every page you fully control: on a listed
+origin, any page that can hold an `<iframe>` can embed the Wrapper, with no
+script of its own, so an origin that serves user content or could take injected
+HTML must not be listed. On that iframe set no `sandbox` attribute, no
+`referrerpolicy` of `no-referrer` or `same-origin` (some browsers then hide your
+origin from the Wrapper, which refuses), and no `allow` feature the Wrapper's
 `Permissions-Policy` turns off.
 
 **Say hello (recommended; required where the browser cannot tell the Wrapper

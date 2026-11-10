@@ -76,7 +76,17 @@ Wrapper, never from whether that origin runs a script.
 - On the proven path, the parent's origin is known to the Wrapper from the
   browser, before and without any message. The handshake's check of that parent
   (`event.origin` equal to `ancestorOrigins[0]` and on `operatorOrigins`) is the
-  same check of the same fact; dropping the message weakens nothing.
+  same check of the same fact: the list proves the parent's origin as well as
+  the handshake did.
+- **The one assumption this drops.** The handshake also required the framer to
+  run script on a listed origin; the proven path does not. Any document served
+  from a listed origin that can hold an `<iframe>` is now enough to open a
+  session there: HTML injection on a page whose CSP blocks script, or user
+  content that allows iframes. `frame-ancestors` already admits that case at the
+  header level, and the framer still needs a valid single-use launch code, which
+  only the launching operator receives, so the decision stands. It does mean
+  `operatorOrigins` MUST list only origins whose every page the operator fully
+  controls.
 - The Wrapper still never posts to an origin it has not verified: `welcome` and
   `resize` go only to the entry the browser listed, as `targetOrigin`, so the
   browser drops them if the parent has navigated to another origin.
@@ -122,6 +132,10 @@ Wrapper, never from whether that origin runs a script.
   iframe is still refused where the engine masks the entry, `hello` or not.
 - An aggregator that nests the Wrapper inside its own page is still refused
   (`nested`). Whether to support it is an open question for a later decision.
+- Listing an origin on `operatorOrigins` now trusts every page on it, scripted
+  or not: an origin that serves user content or has an HTML injection that can
+  place an `<iframe>` must not be listed (the operator guidance says so). This
+  is the residual risk the proven path adds.
 
 ## References
 
