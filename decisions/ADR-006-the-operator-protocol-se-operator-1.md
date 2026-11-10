@@ -1,6 +1,9 @@
 # ADR-006 — The operator protocol `se.operator/1`: a separate protocol, operator first with record-then-check, and lobby and deposit as navigations
 
-- Status: accepted
+- Status: accepted; decision 2's handshake on every framed browser superseded in
+  part by [ADR-011](./ADR-011-no-hello-where-the-parent-is-proven.md)
+  (accepted): no `hello` where `location.ancestorOrigins` proves a single listed
+  parent
 - Date: 2026-10-20 (proposed 2026-10-18; accepted by the human)
 - Relates to: [RFC-001](../rfcs/active/RFC-001-operator-launch-contract.md) (the
   operator launch contract; its decisions of 2026-10-18),
@@ -55,7 +58,10 @@ from the backend's Snapshot negotiation, never from the operator handshake
    with no valid `hello` within 10 s of validation it shows the
    configuration-error state, finally. The handshake is required on every framed
    browser, not only where `location.ancestorOrigins` is missing, and only
-   direct embedding (`window.parent === window.top`) is supported.
+   direct embedding (`window.parent === window.top`) is supported. (Superseded
+   in part by [ADR-011](./ADR-011-no-hello-where-the-parent-is-proven.md): where
+   `location.ancestorOrigins` holds exactly one entry on `operatorOrigins` and
+   the page is not nested, the session opens without `hello`.)
 3. **Lobby and deposit are navigations, not messages.** They are the player's
    clicks on the Wrapper's own anchors, which follow the Snapshot's
    `context.links`: the lobby navigates the top-level window (`target="_top"`)

@@ -11,9 +11,10 @@
 // - Framed, where `location.ancestorOrigins` exists: refused unless it holds
 //   exactly one entry and that entry is on `operatorOrigins` (exact match); a
 //   masked entry (`"null"`) refuses, and so does an empty list. A listed entry
-//   still needs the `se.operator/1` handshake (W-49c, the shell's operator
-//   channel).
-// - Framed, where `location.ancestorOrigins` is missing: the handshake.
+//   proves the parent's origin: the session opens without waiting for the
+//   `se.operator/1` `hello` (ADR-011), with the operator origin fixed to it.
+// - Framed, where `location.ancestorOrigins` is missing: the handshake is
+//   required (W-49c, the shell's operator channel).
 //
 // A refusal is logged as `embedding.refused` with its reason code only, never
 // an origin.
@@ -40,23 +41,34 @@ export type EmbeddingRefusal =
   | "nested";
 
 export type EmbeddingVerdict =
-  /** `handshake`: framed, so the session waits for the handshake (W-49c). */
-  | { readonly ok: true; readonly handshake: boolean }
+  /** Not framed: no handshake and no operator channel. */
+  | { readonly ok: true; readonly framing: "standalone" }
+  /**
+   * Framed directly by `operatorOrigin`, the one listed entry of
+   * `location.ancestorOrigins`: the session opens without `hello` (ADR-011).
+   */
+  | {
+      readonly ok: true;
+      readonly framing: "proven";
+      readonly operatorOrigin: string;
+    }
+  /** Framed, with no `location.ancestorOrigins`: `hello` is required. */
+  | { readonly ok: true; readonly framing: "handshake" }
   | { readonly ok: false; readonly reason: EmbeddingRefusal };
 
 const STANDALONE: EmbeddingVerdict = Object.freeze({
   ok: true,
-  handshake: false,
+  framing: "standalone",
 });
 const HANDSHAKE: EmbeddingVerdict = Object.freeze({
   ok: true,
-  handshake: true,
+  framing: "handshake",
 });
 
 const refused = (reason: EmbeddingRefusal): EmbeddingVerdict =>
   Object.freeze({ ok: false, reason });
 
-/** Whether the session may open for this framing, and after a handshake. */
+/** Whether the session may open for this framing, and whether after `hello`. */
 export const checkEmbedding = (
   context: EmbeddingContext,
   operatorOrigins: readonly string[],
@@ -71,7 +83,7 @@ export const checkEmbedding = (
   if (nearest === undefined) return refused("ancestors-unknown");
   if (nearest === "null") return refused("ancestor-masked");
   return operatorOrigins.includes(nearest)
-    ? HANDSHAKE
+    ? Object.freeze({ ok: true, framing: "proven", operatorOrigin: nearest })
     : refused("ancestor-not-allowed");
 };
 

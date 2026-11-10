@@ -18,14 +18,19 @@ launch are the backend's launch URL contract and are only named here (W-1).
 fail-closed minimum of 2026-10-17 (#58, summarized at the end of this file) and
 tightened it in two ways: a framed page whose `location.ancestorOrigins` lists
 more than one origin is refused under W-49a (direct embedding only), and a
-framed page on a browser with `location.ancestorOrigins` waits for the handshake
-of W-49c before it opens a session. Where the code is: the shell's operator
-channel (`operator-channel.ts`, `operator-protocol.ts`) holds the handshake and
+framed page on a browser with `location.ancestorOrigins` waited for the
+handshake of W-49c before it opened a session. That second tightening was
+narrowed on 2026-11-10 (decided by the human;
+[ADR-011](../../decisions/ADR-011-no-hello-where-the-parent-is-proven.md),
+accepted): where `location.ancestorOrigins` proves a single listed parent, the
+session opens without `hello`; where the list is missing, the handshake is still
+required. Where the code is: the shell's operator channel
+(`operator-channel.ts`, `operator-protocol.ts`) holds the handshake and
 `resize`; the Wrapper app holds the framing decision (`embedding.ts`), the one
-`message` listener (`message-dispatch.ts`), the gate that awaits the handshake
-before the session opens (`operator-gate.ts`), the height observer
-(`height-observer.ts`), and the lobby and deposit anchors (`operator-links.ts`).
-ADR-006 is accepted.
+`message` listener (`message-dispatch.ts`), the gate that opens to a proven
+parent origin or awaits the handshake before the session opens
+(`operator-gate.ts`), the height observer (`height-observer.ts`), and the lobby
+and deposit anchors (`operator-links.ts`). ADR-006 is accepted.
 
 ## The rule
 
@@ -55,11 +60,19 @@ ADR-006 is accepted.
   - **Framed, and `location.ancestorOrigins` exists:** unless it holds exactly
     one entry and that entry is on `operatorOrigins` (exact match), the
     configuration-error state; nothing is redeemed or signed. A masked entry
-    (`"null"`) refuses, and so does an empty list. A listed entry still needs
-    the handshake (W-49c).
+    (`"null"`) refuses, and so does an empty list.
+  - **Framed, not nested, and `location.ancestorOrigins` holds exactly one entry
+    on `operatorOrigins`** (the **proven** path, decided 2026-11-10, ADR-011):
+    the parent's origin is proven by the browser, so the session opens **without
+    waiting for `hello`**. The operator origin is fixed to that entry for the
+    life of the document, and the Wrapper posts `welcome` to it once,
+    unsolicited, then `resize` (W-49c, W-49d). A `hello` recorded before the
+    configuration was validated is still checked at once (W-49c, step 2): from
+    that entry it is accepted, from any other origin it is
+    `operator-not-allowed`, final.
   - **Framed, and `location.ancestorOrigins` is missing** (no browser the suite
     runs; Firefox has it too, as its first run there showed, 2026-10-18): the
-    handshake (W-49c).
+    handshake is required (W-49c).
 
   **`ancestorOrigins` masking.** The HTML standard masks an ancestor's origin
   when the embedding iframe's referrer policy is `no-referrer`, or `same-origin`
@@ -69,9 +82,9 @@ ADR-006 is accepted.
   (2026-10-19, Playwright 1.64.0): its Firefox build masks the entry and
   refuses; its WebKit build, and an installed Google Chrome 155 run as the
   Chromium project through the opt-in `SE_E2E_BROWSER_CHANNEL=chrome`, keep the
-  operator's origin, so the handshake decides there. Playwright's own Chromium
-  build was not observed locally; CI's Chromium job records it. An operator page
-  must not rely on either.
+  operator's origin, so the session opens there (the proven path, `hello` or
+  not). Playwright's own Chromium build was not observed locally; CI's Chromium
+  job records it. An operator page must not rely on either.
 
 ## The `se.operator/1` protocol
 
@@ -79,11 +92,11 @@ ADR-006 is accepted.
   separate from the game's `se.controller/1` (ADR-006). Every message is a JSON
   object with `schema: "se.operator/1"` and a `type`:
 
-  | Direction           | `type`    | Fields                     | Meaning                                                         |
-  | ------------------- | --------- | -------------------------- | --------------------------------------------------------------- |
-  | operator to Wrapper | `hello`   | `schema`, `type`           | the handshake: "I am the page that embeds you"                  |
-  | Wrapper to operator | `welcome` | `schema`, `type`           | the handshake is accepted; the operator stops repeating `hello` |
-  | Wrapper to operator | `resize`  | `schema`, `type`, `height` | the least height the Wrapper's content needs (W-49d)            |
+  | Direction           | `type`    | Fields                     | Meaning                                                |
+  | ------------------- | --------- | -------------------------- | ------------------------------------------------------ |
+  | operator to Wrapper | `hello`   | `schema`, `type`           | the handshake: "I am the page that embeds you"         |
+  | Wrapper to operator | `welcome` | `schema`, `type`           | the gate is open; the operator stops repeating `hello` |
+  | Wrapper to operator | `resize`  | `schema`, `type`, `height` | the least height the Wrapper's content needs (W-49d)   |
 
   The operator page sends one kind of message, `hello`. Nothing it sends can
   start a round, sign, choose a URL, or change what the Wrapper shows beyond
@@ -120,10 +133,18 @@ ADR-006 is accepted.
 
 ## The handshake
 
-- **W-49c.** A framed Wrapper (W-49a) MUST complete this handshake before the
-  gate opens. The operator page sends first: the Wrapper never posts to a window
-  whose origin it has not verified, and where `location.ancestorOrigins` is
-  missing it cannot learn the parent's origin until the parent writes to it.
+- **W-49c.** A framed Wrapper (W-49a) whose parent's origin is not proven, that
+  is, where `location.ancestorOrigins` is missing, MUST complete this handshake
+  before the gate opens. On the proven path of W-49a (not nested, exactly one
+  entry, on `operatorOrigins`) the handshake is optional: the gate opens once
+  the framing is decided, with the operator origin fixed to that entry, and the
+  Wrapper posts `welcome` to it once, unsolicited (decided 2026-11-10, ADR-011),
+  so an operator that runs the handshake sees the same messages in the same
+  order on either path. Steps 1, 2, and 4 still apply there: a recorded `hello`
+  is checked, and a later one is answered. The operator page sends first where
+  the handshake is required: the Wrapper never posts to a window whose origin it
+  has not verified, and where `location.ancestorOrigins` is missing it cannot
+  learn the parent's origin until the parent writes to it.
   1. **Record, then check.** The Wrapper installs its `message` listener at
      boot, before it reads the environment configuration document. Until the
      document is validated it cannot check an origin, so it records the first
@@ -141,7 +162,8 @@ ADR-006 is accepted.
      equal to `location.ancestorOrigins[0]` where that exists) is the
      configuration-error state with the reason `operator-not-allowed` (decided
      2026-10-19; the parent's origin cannot change, so waiting would not help).
-     Otherwise the handshake timer starts.
+     Otherwise, on the proven path the gate opens at once (no timer), and where
+     `location.ancestorOrigins` is missing the handshake timer starts.
   3. **Accept the first valid `hello`** (the recorded one, or the first after
      validation) with `event.source === window.parent`, an `event.origin` on
      `operatorOrigins` (exact match, and equal to `location.ancestorOrigins[0]`
@@ -156,34 +178,37 @@ ADR-006 is accepted.
      first one stops repeating. A `hello` from any other origin or source is
      ignored and not answered.
 
-  **The gate.** Until the handshake is accepted, the Wrapper redeems nothing,
-  starts no round, signs nothing, mounts no game iframe, and offers no control
-  (the lobby and deposit included); it shows the loading state. The start call
-  carries no signature (W-22) but commits the bet, so it waits too. The launch
-  code is still read and stripped from the URL first (W-1) and waits in the
-  shell's closure, not in the URL.
+  **The gate.** Until the framing is decided and, where the handshake is
+  required, the handshake is accepted, the Wrapper redeems nothing, starts no
+  round, signs nothing, mounts no game iframe, and offers no control (the lobby
+  and deposit included); it shows the loading state. The start call carries no
+  signature (W-22) but commits the bet, so it waits too. The launch code is
+  still read and stripped from the URL first (W-1) and waits in the shell's
+  closure, not in the URL.
 
   **The timeout.** The timer starts only once the configuration document is
-  validated and no `hello` was recorded. If no valid `hello` is accepted within
-  **10 s** of its start (SHOULD: 10 s, Wrapper configuration, provisional), the
-  Wrapper shows the configuration-error state. That is final for the page: a
-  late `hello` is ignored, nothing is redeemed, and the operator reloads the
-  iframe to retry. The launch code is never sent and expires on the backend's
-  schedule.
+  validated, no `hello` was recorded, and the parent's origin is not proven
+  (`location.ancestorOrigins` is missing). If no valid `hello` is accepted
+  within **10 s** of its start (SHOULD: 10 s, Wrapper configuration,
+  provisional), the Wrapper shows the configuration-error state. That is final
+  for the page: a late `hello` is ignored, nothing is redeemed, and the operator
+  reloads the iframe to retry. The launch code is never sent and expires on the
+  backend's schedule.
 
   **The launch code's lifetime.** The backend's TPO stated on 2026-10-18 that a
   launch code lives 60 s from the operator's Launch call (not from the page's
   load). The kit's worst case before the redeem, with a reachable configuration
   document, is about 25 s (the 15 s configuration timeout, W-43, plus the 10 s
-  handshake timer), which leaves a margin of about 35 s. No contract change.
-  Both are the Wrapper's default, configurable timeouts (the 10 s is
-  provisional), and the 60 s holds only while they stay at or below those
-  defaults: if they are raised, the launch code's lifetime must be raised too
-  (b6e1e48). So the backend MUST be told first whenever either is raised,
-  whether by a change of the Wrapper's default or by an environment's
-  configuration (the backend's TPO, 2026-10-18). A configuration document that
-  stays unreachable can still outlast the code; the redeem is then refused and
-  the Wrapper shows the session-ended state with the relaunch instruction (W-2).
+  handshake timer, which runs only where the handshake is required), which
+  leaves a margin of about 35 s. No contract change. Both are the Wrapper's
+  default, configurable timeouts (the 10 s is provisional), and the 60 s holds
+  only while they stay at or below those defaults: if they are raised, the
+  launch code's lifetime must be raised too (b6e1e48). So the backend MUST be
+  told first whenever either is raised, whether by a change of the Wrapper's
+  default or by an environment's configuration (the backend's TPO, 2026-10-18).
+  A configuration document that stays unreachable can still outlast the code;
+  the redeem is then refused and the Wrapper shows the session-ended state with
+  the relaunch instruction (W-2).
 
   **A missing or invalid handshake.** Every message that fails a check (source,
   origin, schema) is ignored and the timer keeps running; nothing is ever posted
@@ -191,9 +216,11 @@ ADR-006 is accepted.
 
 ## `resize`
 
-- **W-49d.** After `welcome`, the Wrapper SHOULD tell the operator page the
-  least height its content needs (RFC-004 Q11, decided 2026-10-29;
-  [ADR-010](../../decisions/ADR-010-resize-height-is-a-minimum.md), accepted):
+- **W-49d.** After `welcome` (the answer to an accepted `hello`, or the
+  unsolicited one of the proven path, W-49c), the Wrapper SHOULD tell the
+  operator page the least height its content needs (RFC-004 Q11, decided
+  2026-10-29; [ADR-010](../../decisions/ADR-010-resize-height-is-a-minimum.md),
+  accepted):
 
   | Field    | Value                                                                                                                                                                                                                                                                                                                                                                                           |
   | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -326,14 +353,14 @@ Through the shell's redacting logger, at `warn`, once per page: one event,
 `embedding.refused`, with a reason code only, never an origin or a message's
 content. The reasons:
 
-| Reason                 | When                                                                                                                                                                         |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ancestor-not-allowed` | `location.ancestorOrigins` names an origin that is not on `operatorOrigins`                                                                                                  |
-| `ancestor-masked`      | an entry of `location.ancestorOrigins` is `"null"`                                                                                                                           |
-| `ancestors-unknown`    | framed, with an empty `location.ancestorOrigins`; or the framing is unknown (none was read from the platform, or a page held framed has no operator channel)                 |
-| `nested`               | framed, with `window.parent !== window.top` or more than one `location.ancestorOrigins` entry                                                                                |
-| `operator-not-allowed` | a recorded `hello` (W-49c, step 1) came from an origin that is not on `operatorOrigins`, or is not `location.ancestorOrigins[0]` where that list exists (decided 2026-10-19) |
-| `handshake-timeout`    | no valid `hello` within the handshake timeout                                                                                                                                |
+| Reason                 | When                                                                                                                                                                             |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ancestor-not-allowed` | `location.ancestorOrigins` names an origin that is not on `operatorOrigins`                                                                                                      |
+| `ancestor-masked`      | an entry of `location.ancestorOrigins` is `"null"`                                                                                                                               |
+| `ancestors-unknown`    | framed, with an empty `location.ancestorOrigins`; or the framing is unknown (none was read from the platform, or a page held framed has no operator channel or no parent window) |
+| `nested`               | framed, with `window.parent !== window.top` or more than one `location.ancestorOrigins` entry                                                                                    |
+| `operator-not-allowed` | a recorded `hello` (W-49c, step 1) came from an origin that is not on `operatorOrigins`, or is not `location.ancestorOrigins[0]` where that list exists (decided 2026-10-19)     |
+| `handshake-timeout`    | no valid `hello` within the handshake timeout, where `location.ancestorOrigins` is missing (never on the proven path, W-49a)                                                     |
 
 Nothing is logged for an ignored message, so a hostile page cannot flood the
 console. This follows the [Observability](../wrapper.md#observability) section:
@@ -351,20 +378,32 @@ handshake (W-49c).
   no origin is both an embedder and a game.
 - **Clickjacking.** `frame-ancestors` covers every ancestor, before the
   Wrapper's code runs, but only as a header (ignored in a `<meta>` policy) and
-  with one list per environment. The `location.ancestorOrigins` check covers
-  every ancestor in Chromium and WebKit, at boot. The handshake covers the
-  parent in every browser, hence the direct-embedding rule. The Wrapper adds no
-  `X-Frame-Options` (it cannot express a list). The JavaScript checks do not
-  stop an overlay from being drawn; they stop it from leading to a start or a
-  signature, because nothing interactive is shown and nothing is redeemed before
-  they pass.
+  with one list per environment; it stays the primary control. The
+  `location.ancestorOrigins` check covers every ancestor, at boot, in every
+  browser that has the list (every one the suite runs). The handshake covers the
+  parent where the list is missing, hence the direct-embedding rule. The Wrapper
+  adds no `X-Frame-Options` (it cannot express a list). The JavaScript checks do
+  not stop an overlay from being drawn; they stop it from leading to a start or
+  a signature, because nothing interactive is shown and nothing is redeemed
+  before they pass.
+- **Why the proven path needs no `hello`** (ADR-011). Where the page is not
+  nested and `location.ancestorOrigins` holds one entry, the browser sets that
+  entry, the parent cannot write it, and it names the parent's origin. The
+  handshake's check there was that the `hello`'s `event.origin` equals that
+  entry and is listed: the same fact, so the message adds nothing but proof that
+  the parent runs a script, which is not a security property. The defence is
+  which origin frames the Wrapper. `welcome` and `resize` go only to the listed
+  entry as `targetOrigin`, so the browser drops them if the parent has since
+  navigated elsewhere; masking, an empty list, several entries, an unlisted
+  entry, and nesting stay refused, and the handshake stays required where the
+  list is missing.
 - **A listed operator page** is trusted to embed, not with secrets. It can send
-  `hello` and nothing else the Wrapper reads; it receives `welcome` and heights;
-  it can reload or re-point the iframe, which ends the session (OQ-1); and, as
-  an ancestor, it can navigate or post to the game frame, which reaches no
-  secret and no signature: the Wrapper accepts game messages only from the game
-  frame and D (W-38) and re-checks every pick against its own validated Snapshot
-  (W-23).
+  `hello` (required only where its origin is not proven, W-49a) and nothing else
+  the Wrapper reads; it receives `welcome` and heights; it can reload or
+  re-point the iframe, which ends the session (OQ-1); and, as an ancestor, it
+  can navigate or post to the game frame, which reaches no secret and no
+  signature: the Wrapper accepts game messages only from the game frame and D
+  (W-38) and re-checks every pick against its own validated Snapshot (W-23).
 - **Residual risk: a listed operator that disguises the Wrapper** (overlays or
   restyles it). `frame-ancestors` cannot help, and no cross-browser API detects
   it today; the first release has no technical control, only the operator's
@@ -399,13 +438,22 @@ your lobby). On that iframe set no `sandbox` attribute, no `referrerpolicy` of
 Wrapper, which refuses), and no `allow` feature the Wrapper's
 `Permissions-Policy` turns off.
 
-**Say hello.** On the iframe's `load` event, post
+**Say hello (recommended; required where the browser cannot tell the Wrapper
+your origin).** When your page embeds the Wrapper directly, from a listed
+origin, and the browser reports your origin to the Wrapper
+(`location.ancestorOrigins`, which every current major browser has), the Wrapper
+starts without any message from you: it sends you `welcome` and then `resize`,
+which you may ignore. A browser without `location.ancestorOrigins` cannot tell
+the Wrapper who embeds it, and there the Wrapper waits for your `hello`. So send
+it everywhere: on the iframe's `load` event, post
 `{ "schema": "se.operator/1", "type": "hello" }` to the iframe's `contentWindow`
 with `targetOrigin` set to the SE origin, never `"*"`, and repeat it every 250
-ms until `welcome` arrives (SHOULD). Keep no timer of your own: the Wrapper
-waits up to 10 s after it has read its configuration, then shows "The game
-cannot start", and only reloading the iframe (with a new launch) retries. Until
-`welcome`, the Wrapper redeems nothing and shows only its loading state.
+ms until `welcome` arrives (SHOULD). Keep no timer of your own: where it waits,
+the Wrapper waits up to 10 s after it has read its configuration, then shows
+"The game cannot start", and only reloading the iframe (with a new launch)
+retries. Until it starts, the Wrapper redeems nothing and shows only its loading
+state. A `hello` it no longer needs is answered with `welcome` and changes
+nothing.
 
 ```js
 const frame = document.querySelector("#se-wrapper"); // your iframe
@@ -463,9 +511,9 @@ projects ([testing-and-ci.md](../client-kit/testing-and-ci.md)):
 `t9a-embedding.spec.ts`, `t9a-navigations.spec.ts`, and
 `t9a-operator-round.spec.ts`. The unit cases are the shell's
 `operator-channel.test.ts`, `operator-protocol.test.ts` (1 to 3, 5, 8, 10), and
-the Wrapper's `operator-gate.test.ts`, `operator-gate-guards.test.ts`,
-`operator-gate-closed.test.ts`, `embedding.test.ts`,
-`environment-config.test.ts`, `operator-links.test.ts`,
+the Wrapper's `operator-gate.test.ts`, `operator-gate-proven.test.ts`,
+`operator-gate-guards.test.ts`, `operator-gate-closed.test.ts`,
+`embedding.test.ts`, `environment-config.test.ts`, `operator-links.test.ts`,
 `operator-links-calls.test.ts`, `operator-no-secret.test.ts`, and
 `message-dispatch.test.ts` (4 to 12).
 
@@ -485,23 +533,29 @@ the Wrapper app):
    `welcome` goes to that origin, never `"*"` or `"/"`. A later valid `hello`
    from the fixed origin and the parent is answered with `welcome` again and
    changes nothing else; one from any other origin or source is ignored.
-4. **The gate.** Before `welcome`: no redeem, no start, no signature, no game
-   iframe, and no control, on the `ancestorOrigins` path and the path without it
-   (a component test: every project's browser has the list). After 10 s on the
-   injected clock with no valid `hello`, the configuration-error state, and a
-   later valid `hello` changes nothing.
+4. **The gate.** Before the framing is decided: no redeem, no start, no
+   signature, no game iframe, and no control, on either path. On the proven path
+   (one listed entry, not nested), the session opens with no `hello`, `welcome`
+   is posted once to that entry and no timer starts; a later valid `hello` from
+   it and the parent is answered with `welcome` again, and one from another
+   origin or source is ignored. Where the list is missing (a component test:
+   every project's browser has the list), nothing opens before an accepted
+   `hello`, and after 10 s on the injected clock with no valid `hello`, the
+   configuration-error state, and a later valid `hello` changes nothing.
 5. **Record, then check.** A well-formed `hello` from the parent before the
    configuration is validated is recorded and not answered; once validated, a
    listed recorded origin completes the handshake without another `hello`, and
-   an unlisted one is the configuration-error state. Only the first is recorded,
-   and nothing from another source. With a configuration read longer than the
-   operator's whole repeat window, the handshake still completes and the round
-   plays; with no `hello` at all, the timeout counts from the validation, not
-   from boot.
-6. **Framing.** With `ancestorOrigins`: an unlisted entry, a `"null"` entry, an
-   empty list, or more than one entry refuses before any handshake. Nested
-   framing (`parent !== top`) is refused on every path. A standalone launch
-   needs no handshake and never posts to `window.parent`.
+   an unlisted one, or one other than the proven entry, is the
+   configuration-error state. Only the first is recorded, and nothing from
+   another source. With a configuration read longer than the operator's whole
+   repeat window, the handshake still completes and the round plays; with no
+   `hello` at all, the timeout counts from the validation, not from boot.
+6. **Framing.** With `ancestorOrigins`: one listed entry is the proven path; an
+   unlisted entry, a `"null"` entry, an empty list, or more than one entry
+   refuses before any handshake, a perfect `hello` included. Nested framing
+   (`parent !== top`) is refused on every path. A standalone launch needs no
+   handshake and never posts to `window.parent`. A proven framing with no parent
+   window from the platform is refused (`ancestors-unknown`), never opened.
 7. **Configuration.** An `operatorOrigins` that holds the SE origin or an entry
    of `gameOrigins`, or a `gameOrigins` that holds the SE origin, is refused.
 8. **`resize`.** Only after `welcome`, only to the fixed origin, an integer
@@ -539,8 +593,12 @@ the Wrapper app):
     iframe has `referrerpolicy="no-referrer"` is refused where the engine masks
     the entry; the test records what each engine does.
 15. **A listed operator** that sends `hello`: `welcome` arrives, a round plays,
-    and `resize` arrives with exactly its fields. One that sends nothing reaches
-    the timeout state. A page that nests the Wrapper is refused.
+    and `resize` arrives with exactly its fields. One that sends nothing (every
+    project's browser proves its origin) still gets the session, `welcome` once,
+    then `resize`, and a `hello` it sends later is answered with `welcome`
+    again. The timeout of a silent operator where the list is missing is a
+    component test (4). A page that nests the Wrapper is refused, `hello` or
+    not.
 16. **The navigations**, on each engine the suite runs: the lobby control
     navigates the top-level window to the fake operator's lobby URL; the deposit
     control opens a new page with no `window.opener` and no `Referer`, and the

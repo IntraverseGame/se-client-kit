@@ -1,8 +1,8 @@
 // T-9a, 6: the framing decision (W-49a). A page that is not framed is a
 // standalone launch with no handshake; a nested one is refused on every path;
-// where `location.ancestorOrigins` exists, a framed page goes on to the
-// handshake only with exactly one entry, on `operatorOrigins`; where it is
-// missing, the handshake decides.
+// where `location.ancestorOrigins` exists, a framed page is accepted only with
+// exactly one entry, on `operatorOrigins`, which proves the parent's origin (no
+// `hello` needed, ADR-011); where it is missing, the handshake decides.
 
 import { describe, expect, it } from "vitest";
 
@@ -14,6 +14,7 @@ import {
 
 const OPERATOR = "https://operator.example";
 const OTHER = "https://evil.example";
+const OTHER_LISTED = "https://lobby.operator.example";
 
 const framed = (
   ancestorOrigins?: readonly string[],
@@ -28,21 +29,20 @@ describe("checkEmbedding (W-49a)", () => {
           { framed: false, nested: false, ancestorOrigins: [] },
           operatorOrigins,
         ),
-      ).toEqual({ ok: true, handshake: false });
+      ).toEqual({ ok: true, framing: "standalone" });
     }
   });
 
-  it("a frame with one listed ancestor goes on to the handshake", () => {
-    expect(checkEmbedding(framed([OPERATOR]), [OPERATOR])).toEqual({
-      ok: true,
-      handshake: true,
-    });
+  it("a frame with one listed ancestor is proven: no handshake, that origin fixed", () => {
+    expect(
+      checkEmbedding(framed([OPERATOR]), [OTHER_LISTED, OPERATOR]),
+    ).toEqual({ ok: true, framing: "proven", operatorOrigin: OPERATOR });
   });
 
   it("a frame without location.ancestorOrigins goes on to the handshake", () => {
     expect(checkEmbedding(framed(), [OPERATOR])).toEqual({
       ok: true,
-      handshake: true,
+      framing: "handshake",
     });
   });
 

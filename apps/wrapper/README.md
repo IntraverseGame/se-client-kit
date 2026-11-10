@@ -27,14 +27,15 @@ back with no input; when its Snapshot carries the mode's `rtp`, "Return to
 player: 96.00%" (for example) shows beside the bet selector. The game iframe is
 mounted at the game's origin from the session's redeem answer, and only when the
 shell accepts that origin. Embedded by an operator page, it opens a session only
-when it is embedded directly by a listed operator origin and the operator page
-has completed the `se.operator/1` handshake; until then it redeems nothing and
-signs nothing, and with no handshake within 10 s it shows that the game cannot
-start. It then tells the operator page the least height its content needs (a
-minimum for the iframe's box), and offers the operator's lobby and deposit as
-the player's own links between rounds, and the lobby alone when the session
-ended or the round cannot go on (it failed verification or is out of sync, for
-example).
+when it is embedded directly by a listed operator origin. Where the browser
+reports that origin (`location.ancestorOrigins`), it opens with no message from
+the operator page; where it does not, it waits for the page's `se.operator/1`
+`hello`, and until then it redeems nothing and signs nothing, and with no
+`hello` within 10 s it shows that the game cannot start. It then tells the
+operator page the least height its content needs (a minimum for the iframe's
+box), and offers the operator's lobby and deposit as the player's own links
+between rounds, and the lobby alone when the session ended or the round cannot
+go on (it failed verification or is out of sync, for example).
 
 ## What it guarantees
 

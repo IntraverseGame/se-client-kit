@@ -2,14 +2,21 @@
 // configuration is read once, however often the browser comes back online
 // while the gate waits for `hello` or while the session opens, so the launch
 // code is redeemed once; a framing that is unknown refuses, opens nothing, and
-// discards the launch code; and a framed page whose platform gave no parent
-// window can only time out.
+// discards the launch code; a framed page whose platform gave no parent
+// window can only time out where the handshake is required, and is refused at
+// once where `location.ancestorOrigins` would prove its parent (nothing could be
+// posted to it).
 
 import { describe, expect, it } from "vitest";
 
 import { snapshotRead } from "./fixtures/fake-session.ts";
 import { flush, stepTimers } from "./fixtures/flush.ts";
-import { bootFramed, HELLO, WELCOME_POST } from "./fixtures/framed-boot.ts";
+import {
+  bootFramed,
+  DIRECT,
+  HELLO,
+  WELCOME_POST,
+} from "./fixtures/framed-boot.ts";
 import { messagesFor } from "./messages.ts";
 
 const m = messagesFor("en").messages;
@@ -62,6 +69,18 @@ describe("an unknown framing and an unreachable parent (W-49a, W-49c)", () => {
     expect(framed.posted).toEqual([]);
     expect(framed.records).toEqual([
       { level: "warn", event: "embedding.refused", code: "handshake-timeout" },
+    ]);
+  });
+
+  it("a proven framing with no parent window is refused, never opened", async () => {
+    const framed = bootFramed({ embedding: DIRECT, noParent: true });
+    await framed.releaseConfig();
+    expect((await framed.result).kind).toBe("refused");
+    expect(framed.opened()).toBe(0);
+    expect(framed.discarded()).toBe(1);
+    expect(framed.posted).toEqual([]);
+    expect(framed.records).toEqual([
+      { level: "warn", event: "embedding.refused", code: "ancestors-unknown" },
     ]);
   });
 });

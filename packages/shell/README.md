@@ -226,16 +226,18 @@ else showGenericError(); // rejected: not rendered
     `check({ operatorOrigins, ancestorOrigins, clock, timeoutMs? })`, called
     once the configuration is validated, resolves with `{ ok: true }` or
     `{ ok: false, reason }`: `operator-not-allowed`, or `handshake-timeout`
-    after `timeoutMs` (`HANDSHAKE_TIMEOUT_MS`, 10 s), both final. Accepting
-    fixes the operator origin and posts `welcome` to it; `resize(measured)` then
-    tells it the least height the content needs, a minimum for the iframe's box,
-    as an integer from 1 to `MAX_RESIZE_HEIGHT`. Nothing is posted except to
-    that origin, never to `*`, and the channel holds no key, no token, and no
-    launch code. `OPERATOR_SCHEMA`, the message types (`OperatorHello`,
-    `WelcomeMessage`, `ResizeMessage`, `OperatorBoundMessage`), and
-    `OperatorChannel`, `OperatorChannelState`, `OperatorCheck`,
-    `OperatorMessageEvent`, `OperatorWindow`, `HandshakeOutcome`, and
-    `HandshakeRefusal` describe it.
+    after `timeoutMs` (`HANDSHAKE_TIMEOUT_MS`, 10 s), both final. Where
+    `ancestorOrigins` holds exactly one entry on `operatorOrigins`, it is
+    accepted at once with no `hello` (refuse a nested page before calling
+    `check`). Accepting fixes the operator origin and posts `welcome` to it;
+    `resize(measured)` then tells it the least height the content needs, a
+    minimum for the iframe's box, as an integer from 1 to `MAX_RESIZE_HEIGHT`.
+    Nothing is posted except to that origin, never to `*`, and the channel holds
+    no key, no token, and no launch code. `OPERATOR_SCHEMA`, the message types
+    (`OperatorHello`, `WelcomeMessage`, `ResizeMessage`,
+    `OperatorBoundMessage`), and `OperatorChannel`, `OperatorChannelState`,
+    `OperatorCheck`, `OperatorMessageEvent`, `OperatorWindow`,
+    `HandshakeOutcome`, and `HandshakeRefusal` describe it.
   - `takeLaunchCode(location, history)` takes the launch code out of the URL and
     `discardLaunchCode(code)` forgets one. `openPlaySession(options)` resolves
     with a `SessionOpening`: `open` with a `PlaySession`, or `no-launch-code`,

@@ -2,15 +2,17 @@
 // embedded by the fake operator page (harness/operator-page.ts). Every
 // project's browser has `location.ancestorOrigins` (Firefox's too, as its first
 // run showed, 2026-10-18), and that is asserted, so a browser without it
-// cannot pass this file silently; the Wrapper's path without the list is a
-// component test (apps/wrapper, operator-gate.test.ts).
+// cannot pass this file silently; the Wrapper's path without the list (where
+// `hello` is required, and a silent operator times out) is a component test
+// (apps/wrapper, operator-gate.test.ts).
 // - Without the `frame-ancestors` header (the suite's default, to prove the
 //   JavaScript layer alone): an unlisted framer gets the configuration-error
 //   state and nothing is redeemed; a listed operator that sends `hello` gets
-//   `welcome` and the session; one that sends nothing reaches the timeout
-//   state; a page that nests the Wrapper is refused; and a listed framer whose
-//   iframe has `referrerpolicy="no-referrer"` is refused where the engine masks
-//   the entry, which the test records.
+//   `welcome` and the session; one that sends nothing gets them too, since the
+//   list proves its origin (ADR-011), and a `hello` it sends later is answered
+//   with `welcome`; a page that nests the Wrapper is refused, `hello` or not;
+//   and a listed framer whose iframe has `referrerpolicy="no-referrer"` is
+//   refused where the engine masks the entry, which the test records.
 // - With the header: an unlisted framer gets no Wrapper document at all.
 // The round, `resize`, and the navigations are in t9a-operator-round.spec.ts
 // and t9a-navigations.spec.ts.
@@ -37,6 +39,24 @@ import {
 import { servedFor, TEXT, WRAPPER_PAGE } from "./harness/wrapper-page.ts";
 
 const WELCOME = { schema: "se.operator/1", type: "welcome" };
+
+/** The operator page posts one `hello` to the Wrapper's frame, by hand. */
+const sayHelloOnce = (page: Page, seOrigin: string): Promise<void> =>
+  page.evaluate(origin => {
+    const frame = document.querySelector<HTMLIFrameElement>(
+      'iframe[name="wrapper"]',
+    );
+    frame?.contentWindow?.postMessage(
+      { schema: "se.operator/1", type: "hello" },
+      origin,
+    );
+  }, seOrigin);
+
+/** The `type`s of the messages the operator page received, in order. */
+const receivedTypes = async (page: Page): Promise<readonly unknown[]> =>
+  (await operatorReceived(page)).map(
+    message => (message as { type?: unknown }).type,
+  );
 
 /** Serves a configuration whose `operatorOrigins` lists the fake operator. */
 const listOperator = (
@@ -150,7 +170,7 @@ test.describe("T-9a: operator embedding, without the frame-ancestors header", ()
     ]);
   });
 
-  test("a listed operator that sends nothing reaches the timeout state", async ({
+  test("a listed operator that sends nothing gets the session, welcome, then resize; a later hello is answered", async ({
     page,
     context,
     fakePlayApi,
@@ -158,35 +178,61 @@ test.describe("T-9a: operator embedding, without the frame-ancestors header", ()
   }) => {
     await page.clock.install();
     await listOperator(context, playApiBaseUrl);
+    idleSession(fakePlayApi);
     const frame = await embedWrapper(
       page,
       fakePlayApi.launchUrl(WRAPPER_PAGE),
-      {
-        hello: false,
-      },
+      { hello: false },
     );
-    await runUntilShown(page, frame, TEXT.configuration);
-    await expectRefused(frame, fakePlayApi);
-    expect(await operatorReceived(page)).toEqual([]);
+    await runUntilShown(page, frame, TEXT.idle);
+    // Well past the handshake timeout: the proven path runs no timer.
+    await page.clock.runFor(15_000);
+    await expect(frame.locator(".se-status h1")).toHaveText(TEXT.idle);
+    await expect(
+      frame.getByRole("heading", { name: TEXT.configuration }),
+    ).toHaveCount(0);
+    expect(servedFor(fakePlayApi, "redeemLaunchCode")).toHaveLength(1);
+    expect(await frame.evaluate(() => [...location.ancestorOrigins])).toEqual([
+      OPERATOR_ORIGIN,
+    ]);
+    await expect.poll(() => receivedTypes(page)).toContain("resize");
+    const before = await receivedTypes(page);
+    expect(before[0]).toBe("welcome");
+    expect(before.filter(type => type === "welcome")).toHaveLength(1);
+    // Only `welcome` and `resize`, whatever the number of heights.
+    expect(new Set(before)).toEqual(new Set(["welcome", "resize"]));
+    await sayHelloOnce(page, WRAPPER_ORIGIN);
+    await expect
+      .poll(async () =>
+        (await receivedTypes(page)).filter(type => type === "welcome"),
+      )
+      .toHaveLength(2);
+    expect(servedFor(fakePlayApi, "redeemLaunchCode")).toHaveLength(1);
   });
 
-  test("a page that nests the Wrapper is refused", async ({
-    page,
-    context,
-    fakePlayApi,
-    playApiBaseUrl,
-  }) => {
-    await listOperator(context, playApiBaseUrl);
-    const frame = await embedWrapper(
+  for (const [label, hello] of [
+    ["with hello", true],
+    ["without hello", false],
+  ] as const) {
+    test(`a page that nests the Wrapper is refused (${label})`, async ({
       page,
-      fakePlayApi.launchUrl(WRAPPER_PAGE),
-      {
-        nested: true,
-      },
-    );
-    await expectRefused(frame, fakePlayApi);
-    expect(await frame.evaluate(() => location.ancestorOrigins.length)).toBe(2);
-  });
+      context,
+      fakePlayApi,
+      playApiBaseUrl,
+    }) => {
+      await listOperator(context, playApiBaseUrl);
+      const frame = await embedWrapper(
+        page,
+        fakePlayApi.launchUrl(WRAPPER_PAGE),
+        { nested: true, hello },
+      );
+      await expectRefused(frame, fakePlayApi);
+      expect(await frame.evaluate(() => location.ancestorOrigins.length)).toBe(
+        2,
+      );
+      expect(await operatorReceived(page)).toEqual([]);
+    });
+  }
 
   test("a listed framer with referrerpolicy=no-referrer: refused where the engine masks the entry", async ({
     page,

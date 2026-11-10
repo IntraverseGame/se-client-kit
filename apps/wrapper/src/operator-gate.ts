@@ -3,10 +3,12 @@
 // page's one `message` listener (message-dispatch.ts) and, on a framed page,
 // the shell's operator channel, which records an early `hello`. Once the
 // configuration is validated, `open` decides the framing (embedding.ts) and,
-// on a framed page, awaits the `se.operator/1` handshake (the shell's
-// `check`, with the handshake timer on the injected clock). Until it resolves
-// open, nothing is redeemed, started, signed, mounted, or offered. Once open
-// and framed, the content's height is sent to the operator page (`resize`).
+// on a framed page, runs the shell's `check`: where `location.ancestorOrigins`
+// proves the one listed parent, the channel opens to it at once (ADR-011);
+// where the list is missing, it awaits the `se.operator/1` handshake, with the
+// handshake timer on the injected clock. Until it resolves open, nothing is
+// redeemed, started, signed, mounted, or offered. Once open and framed, the
+// content's height is sent to the operator page (`resize`).
 
 import {
   createOperatorChannel,
@@ -57,7 +59,10 @@ export type GateOutcome =
 export type OperatorGate = {
   /** The page's one `message` listener, for the game frame's route. */
   readonly messages: MessageDispatch;
-  /** Decides the framing, and awaits the handshake on a framed page. */
+  /**
+   * Decides the framing; on a framed page, opens to a proven parent origin or
+   * awaits the handshake.
+   */
   readonly open: (config: EnvironmentConfig) => Promise<GateOutcome>;
 };
 
@@ -88,15 +93,22 @@ export const createOperatorGate = (
       framed,
       operatorOrigins: config.operatorOrigins,
     });
-    if (!verdict.handshake) return { ok: true, links };
-    // A page the verdict holds framed but with no channel to check: no
-    // handshake can complete, so the framing stays unknown (fail closed).
-    if (channel === undefined) {
+    if (verdict.framing === "standalone") return { ok: true, links };
+    // A page the verdict holds framed but with no channel to check, or a
+    // proven parent origin the platform gave no window for: nothing could be
+    // posted to the operator, so the framing stays unknown (fail closed).
+    if (
+      channel === undefined ||
+      (verdict.framing === "proven" && options.parent === undefined)
+    ) {
       return { ok: false, reason: "ancestors-unknown" };
     }
     const outcome = await channel.check({
       operatorOrigins: config.operatorOrigins,
-      ancestorOrigins: embedding.ancestorOrigins,
+      // The proven path gives the channel the one entry it opens to; the
+      // handshake path has no list.
+      ancestorOrigins:
+        verdict.framing === "proven" ? [verdict.operatorOrigin] : undefined,
       clock: options.timers,
       ...(options.handshakeTimeoutMs === undefined
         ? {}

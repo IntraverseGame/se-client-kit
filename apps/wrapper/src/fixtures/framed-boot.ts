@@ -4,6 +4,8 @@
 // source and origin, a configuration read the test releases when it wants, a
 // switchable online state, and a scripted session that counts its openings
 // (and may be held open until the test finishes it). No real window or clock.
+// The default framing is the handshake path (no `location.ancestorOrigins`);
+// `DIRECT` is the proven path.
 
 import {
   createLogger,
@@ -34,7 +36,10 @@ export type Posted = {
 };
 
 export type FramedBootOptions = {
-  /** `DIRECT` unless given; `null`: the framing is unknown (none is given). */
+  /**
+   * `UNPROVEN` (the handshake path) unless given; `DIRECT` is the proven path;
+   * `null`: the framing is unknown (none is given).
+   */
   readonly embedding?: EmbeddingContext | null;
   /** The platform gives no `window.parent` (the gate's unreachable parent). */
   readonly noParent?: boolean;
@@ -72,11 +77,24 @@ export type FramedBoot = {
   readonly discarded: () => number;
 };
 
-/** A direct frame with `location.ancestorOrigins` = [OPERATOR]. */
+/**
+ * A direct frame with `location.ancestorOrigins` = [OPERATOR]: the proven path,
+ * which opens with no `hello` (ADR-011).
+ */
 export const DIRECT: EmbeddingContext = Object.freeze({
   framed: true,
   nested: false,
   ancestorOrigins: Object.freeze([OPERATOR]),
+});
+
+/**
+ * A direct frame on a browser without `location.ancestorOrigins`: the parent's
+ * origin is not proven, so the handshake is required (W-49c).
+ */
+export const UNPROVEN: EmbeddingContext = Object.freeze({
+  framed: true,
+  nested: false,
+  ancestorOrigins: undefined,
 });
 
 export const bootFramed = (options: FramedBootOptions = {}): FramedBoot => {
@@ -130,7 +148,7 @@ export const bootFramed = (options: FramedBootOptions = {}): FramedBoot => {
     },
     ...(options.embedding === null
       ? {}
-      : { embedding: options.embedding ?? DIRECT }),
+      : { embedding: options.embedding ?? UNPROVEN }),
     ...(options.noParent === true ? {} : { parent }),
     connectivity: {
       onLine: () => true,
