@@ -43,10 +43,11 @@ go on (it failed verification or is out of sync, for example).
   (`@intraverse/se-client-shell`). The page and the game never receive a secret.
 - The game runs in a sandboxed iframe and talks to the Wrapper only through the
   controller protocol `se.controller/1`.
-- The page that embeds the Wrapper can only unlock it, through the operator
-  protocol `se.operator/1`: it receives `welcome` and the least height the
-  Wrapper needs (a minimum for the iframe's box), never a secret, an id, or an
-  amount.
+- The page that embeds the Wrapper can only unlock it: by embedding it directly
+  from a listed origin that the browser reports, or, where the browser does not
+  report it, through the operator protocol `se.operator/1`. It receives
+  `welcome` and the least height the Wrapper needs (a minimum for the iframe's
+  box), never a secret, an id, or an amount.
 - The game shows in one place for the whole session and takes input only in a
   round the shell has checked and found ready; it is never sent a round in play
   before that.
