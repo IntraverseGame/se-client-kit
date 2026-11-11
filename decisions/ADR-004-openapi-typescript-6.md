@@ -2,7 +2,8 @@
 
 - Status: accepted
 - Date: 2026-10-17 (decided by the human in the contracts vendoring pull
-  request)
+  request; amended 2026-11-11: the generator's `undici` override raised from
+  6.29.0 to 6.29.1 for four advisories that affect 6.29.0)
 - Relates to: [ADR-001](./ADR-001-toolchain-and-signing.md) (decision 7, the
   supply-chain minimum; decision 8 and the dependency table, the allow-list)
 
@@ -95,6 +96,22 @@ has no TypeScript dependency or peer at all.
   exclusion. **Exit criterion:** drop the override, and `undici` from the
   allow-list, when `openapi-typescript` or the generator no longer pulls
   `undici`, or declares a range whose releases have no advisory.
+
+  Amendment note (2026-11-11, four advisories in 6.29.0): the override is raised
+  from 6.29.0 to exactly 6.29.1, which fixes four advisories that affect 6.29.0:
+  GHSA-2m5v-pch6-74hx (high, TLS certificate validation bypassed when `Agent`
+  drops its `tls` options), GHSA-qrxm-fqhp-jwvm (high, denial of service through
+  a TLS 1.2 renegotiation that changes the certificate), GHSA-xjj6-f33q-929c
+  (high, denial of service through an unhandled error on too many content
+  encodings), and GHSA-9fm3-97px-rjf6 (medium, unbounded buffering of WebSocket
+  PONG frames). The generator makes no request, so none of them was reachable in
+  the kit; the bump clears them all the same. 6.29.1 was published on
+  2026-10-15, so it passes `minimumReleaseAge` with no exclusion, and it carries
+  provenance from the same trusted publisher as 6.29.0, so `no-downgrade` passes
+  too. Nothing else changes: the selector stays scoped, the generated types are
+  unchanged, and `tools/openapi-generator.test.ts` now checks 6.29.1. The 6.29.0
+  above is the version the human decided on 2026-10-17.
+
 - **Dependency updates.** Dependabot proposes the 7.x line; such an update fails
   `check:contracts` (the generator cannot run) and is declined until the first
   exit criterion below holds (a later major works with the kit's TypeScript).

@@ -10,7 +10,8 @@
   ADR-008: `wrangler` added to the dependency table, and decision 9 superseded;
   amended 2026-10-27 (#3): the `intraverse` npm organization claimed, trusted
   publishing from the `release` environment; amended 2026-10-28 (#143): `wireit`
-  upgraded to 0.15.0)
+  upgraded to 0.15.0; amended 2026-11-11: the generator's `undici` override
+  raised from 6.29.0 to 6.29.1 for four advisories)
 
 Amendment note (2026-10-16, toolchain pull request): decision 3 and the
 dependency table named `prettier` for Markdown and YAML because `oxfmt` did not
@@ -113,6 +114,14 @@ the human: a waiver of the release age for `wireit@0.15.0` (it can go after
 0.15.0 needs and which was published without provenance (it goes when wireit
 moves off `chokidar` 4). Both are recorded in
 [supply chain](../specs/client-kit/supply-chain.md).
+
+Amendment note (2026-11-11, four advisories in `undici` 6.29.0): the scoped
+override of the generator's `undici` (`openapi-typescript>undici`) is raised
+from 6.29.0 to 6.29.1, which fixes four advisories that affect 6.29.0 (three
+high, one medium; listed in [ADR-004](./ADR-004-openapi-typescript-6.md)'s
+amendment note). 6.29.1 is older than the seven-day release age and carries
+provenance like 6.29.0, so neither supply-chain exception list changes. No
+dependency is added; `undici` stays on the allow-list for that override only.
 
 ## Context
 
@@ -330,19 +339,19 @@ from here). This ADR records the kit's own technical decisions.
 
 ### Dependency table
 
-| Package                                                                                                                                                                              | Kind                         | Why                                                                                                                                                                                                                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@noble/curves`                                                                                                                                                                      | runtime, `signing` only      | secp256k1 signing and recovery with RFC 6979                                                                                                                                                                                                                                         |
-| `@noble/hashes`                                                                                                                                                                      | runtime, `signing` only      | Keccak-256 and SHA-256                                                                                                                                                                                                                                                               |
-| `typescript`, `vite`, `vitest`, `jsdom`, `oxlint`, `oxfmt`, `@playwright/test`, `@axe-core/playwright`, `@changesets/cli`, `openapi-typescript`, `json-schema-to-typescript`, `pnpm` | development only             | compile, build, test, DOM for component tests, lint, format, accessibility checks, release notes, and the generated types                                                                                                                                                            |
-| `wireit`                                                                                                                                                                             | development only             | task orchestration and build and test caching without a separate orchestrator; local cache only, none in CI, no secret                                                                                                                                                               |
-| `@types/node`                                                                                                                                                                        | development only             | type definitions of the Node APIs used by the tooling and the e2e code (a type package; the libraries use none)                                                                                                                                                                      |
-| `tsdown`                                                                                                                                                                             | development only             | builds the packages' `dist/` (bundled ESM, declarations, source maps) with a separate chunk per entry; no companion package, no install script                                                                                                                                       |
-| `@changesets/changelog-github`                                                                                                                                                       | development only             | the changelog generator of changesets: entries link to the pull request, commit, and author; used by `changeset version` in the release job                                                                                                                                          |
-| `tsx`                                                                                                                                                                                | development only             | runs the TypeScript scripts under `tools/` with one behavior across Node versions; no lifecycle script (its `esbuild` install script is denied)                                                                                                                                      |
-| `stylelint`                                                                                                                                                                          | development only             | lints the CSS of both apps (the Wrapper and the reference game, amended 2026-10-17) for correctness and the CSP-driven constraints; hand-written config, no shared config package or plugin                                                                                          |
-| `undici`                                                                                                                                                                             | development only, transitive | the HTTP client `openapi-typescript` 6.x depends on; never used by the generator, and held at 6.29.0 for the generator only (the scoped pnpm override `openapi-typescript>undici`) because its 5.x releases have published advisories ([ADR-004](./ADR-004-openapi-typescript-6.md)) |
-| `wrangler`                                                                                                                                                                           | development only             | the Cloudflare Pages deploy (`wrangler pages deploy`) in the Pages workflow's deploy job only; its `workerd` install script is denied ([ADR-008](./ADR-008-pages-deploy-with-wrangler.md))                                                                                           |
+| Package                                                                                                                                                                              | Kind                         | Why                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@noble/curves`                                                                                                                                                                      | runtime, `signing` only      | secp256k1 signing and recovery with RFC 6979                                                                                                                                                                                                                                                                           |
+| `@noble/hashes`                                                                                                                                                                      | runtime, `signing` only      | Keccak-256 and SHA-256                                                                                                                                                                                                                                                                                                 |
+| `typescript`, `vite`, `vitest`, `jsdom`, `oxlint`, `oxfmt`, `@playwright/test`, `@axe-core/playwright`, `@changesets/cli`, `openapi-typescript`, `json-schema-to-typescript`, `pnpm` | development only             | compile, build, test, DOM for component tests, lint, format, accessibility checks, release notes, and the generated types                                                                                                                                                                                              |
+| `wireit`                                                                                                                                                                             | development only             | task orchestration and build and test caching without a separate orchestrator; local cache only, none in CI, no secret                                                                                                                                                                                                 |
+| `@types/node`                                                                                                                                                                        | development only             | type definitions of the Node APIs used by the tooling and the e2e code (a type package; the libraries use none)                                                                                                                                                                                                        |
+| `tsdown`                                                                                                                                                                             | development only             | builds the packages' `dist/` (bundled ESM, declarations, source maps) with a separate chunk per entry; no companion package, no install script                                                                                                                                                                         |
+| `@changesets/changelog-github`                                                                                                                                                       | development only             | the changelog generator of changesets: entries link to the pull request, commit, and author; used by `changeset version` in the release job                                                                                                                                                                            |
+| `tsx`                                                                                                                                                                                | development only             | runs the TypeScript scripts under `tools/` with one behavior across Node versions; no lifecycle script (its `esbuild` install script is denied)                                                                                                                                                                        |
+| `stylelint`                                                                                                                                                                          | development only             | lints the CSS of both apps (the Wrapper and the reference game, amended 2026-10-17) for correctness and the CSP-driven constraints; hand-written config, no shared config package or plugin                                                                                                                            |
+| `undici`                                                                                                                                                                             | development only, transitive | the HTTP client `openapi-typescript` 6.x depends on; never used by the generator, and held at 6.29.1 (6.29.0 until amended 2026-11-11) for the generator only (the scoped pnpm override `openapi-typescript>undici`) because its 5.x releases have published advisories ([ADR-004](./ADR-004-openapi-typescript-6.md)) |
+| `wrangler`                                                                                                                                                                           | development only             | the Cloudflare Pages deploy (`wrangler pages deploy`) in the Pages workflow's deploy job only; its `workerd` install script is denied ([ADR-008](./ADR-008-pages-deploy-with-wrangler.md))                                                                                                                             |
 
 Exact versions are pinned by the lockfile, the `packageManager` field, and
 `.node-version`; the dependencies are saved at an exact version, and a version
@@ -350,29 +359,29 @@ must be at least seven days old when it is resolved (pnpm's
 `minimumReleaseAge`). Versions pinned by the toolchain pull request
 (2026-10-16):
 
-| Tool                           | Version                                                    |
-| ------------------------------ | ---------------------------------------------------------- |
-| Node (`.node-version`)         | 24.20.0                                                    |
-| pnpm (`packageManager`)        | 12.10.1                                                    |
-| `typescript`                   | 7.0.2                                                      |
-| `vite`                         | 8.3.4                                                      |
-| `vitest`                       | 5.0.3                                                      |
-| `jsdom`                        | 30.1.2                                                     |
-| `oxlint`                       | 1.87.0                                                     |
-| `oxfmt`                        | 0.72.0                                                     |
-| `@playwright/test`             | 1.64.0                                                     |
-| `@axe-core/playwright`         | 4.13.0                                                     |
-| `@changesets/cli`              | 3.0.3                                                      |
-| `wireit`                       | 0.15.0 (amended 2026-10-28, #143)                          |
-| `@types/node`                  | 24.19.1                                                    |
-| `tsdown`                       | 0.23.0                                                     |
-| `@changesets/changelog-github` | 1.0.1                                                      |
-| `tsx`                          | 4.23.15                                                    |
-| `stylelint`                    | 17.16.0                                                    |
-| `openapi-typescript`           | 6.7.6 (not 7.x: see the note below)                        |
-| `json-schema-to-typescript`    | 16.0.0                                                     |
-| `undici`                       | 6.29.0 for the generator (a scoped pnpm override, ADR-004) |
-| `wrangler`                     | 4.151.2 (ADR-008)                                          |
+| Tool                           | Version                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------ |
+| Node (`.node-version`)         | 24.20.0                                                                        |
+| pnpm (`packageManager`)        | 12.10.1                                                                        |
+| `typescript`                   | 7.0.2                                                                          |
+| `vite`                         | 8.3.4                                                                          |
+| `vitest`                       | 5.0.3                                                                          |
+| `jsdom`                        | 30.1.2                                                                         |
+| `oxlint`                       | 1.87.0                                                                         |
+| `oxfmt`                        | 0.72.0                                                                         |
+| `@playwright/test`             | 1.64.0                                                                         |
+| `@axe-core/playwright`         | 4.13.0                                                                         |
+| `@changesets/cli`              | 3.0.3                                                                          |
+| `wireit`                       | 0.15.0 (amended 2026-10-28, #143)                                              |
+| `@types/node`                  | 24.19.1                                                                        |
+| `tsdown`                       | 0.23.0                                                                         |
+| `@changesets/changelog-github` | 1.0.1                                                                          |
+| `tsx`                          | 4.23.15                                                                        |
+| `stylelint`                    | 17.16.0                                                                        |
+| `openapi-typescript`           | 6.7.6 (not 7.x: see the note below)                                            |
+| `json-schema-to-typescript`    | 16.0.0                                                                         |
+| `undici`                       | 6.29.1 for the generator (a scoped pnpm override, ADR-004; amended 2026-11-11) |
+| `wrangler`                     | 4.151.2 (ADR-008)                                                              |
 
 Note (2026-10-17): `json-schema-to-typescript` is pinned at 16.0.0 and
 `openapi-typescript` at 6.7.6, for the `contracts` package's generated types.
@@ -380,7 +389,8 @@ Note (2026-10-17): `json-schema-to-typescript` is pinned at 16.0.0 and
 API, which the kit's `typescript` 7.0.2 does not have. Its own transitive
 `undici` is overridden to 6.29.0 (`openapi-typescript>undici`, scoped to it) for
 the advisories of 5.x, and is on the allow-list for that override only. See
-[ADR-004](./ADR-004-openapi-typescript-6.md).
+[ADR-004](./ADR-004-openapi-typescript-6.md). Amended 2026-11-11: the override
+is 6.29.1 (see the amendment note of that date above).
 
 The machine-readable allow-list is `tools/allowed-dependencies.json`; a test
 keeps it equal to the table above, and the `check:deps` script fails on any

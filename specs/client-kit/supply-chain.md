@@ -26,15 +26,17 @@ the attack surface a player cannot see. The rules:
   ([ADR-004](../../decisions/ADR-004-openapi-typescript-6.md)). One override
   exists (`overrides` in `pnpm-workspace.yaml`, checked by `check:deps` like any
   other): the `undici` of `openapi-typescript` 6.7.6, which it declares as
-  `^5.28.4`, is held at exactly 6.29.0, outside that range, because every 5.x
-  release has published advisories. The selector is scoped
-  (`openapi-typescript>undici`), so every other package keeps the `undici` it
-  declares (`jsdom` its 8.x); it goes when the generator no longer pulls
-  `undici` or declares a range without them (ADR-004). Dependabot's `cooldown`
-  is 7 days to match, for the `npm` and the `github-actions` ecosystems. Two
-  exceptions exist, each scoped to one exact version, accepted by the human on
-  2026-10-28 for the wireit upgrade (#143) and listed with their reason in
-  `pnpm-workspace.yaml`; the policies themselves are unchanged:
+  `^5.28.4`, is held at exactly 6.29.1, outside that range, because every 5.x
+  release has published advisories (6.29.1 since 2026-11-11, for four advisories
+  that affect 6.29.0; it passed the release age and the trust policy with no
+  exception). The selector is scoped (`openapi-typescript>undici`), so every
+  other package keeps the `undici` it declares (`jsdom` its 8.x); it goes when
+  the generator no longer pulls `undici` or declares a range without them
+  (ADR-004). Dependabot's `cooldown` is 7 days to match, for the `npm` and the
+  `github-actions` ecosystems. Two exceptions exist, each scoped to one exact
+  version, accepted by the human on 2026-10-28 for the wireit upgrade (#143) and
+  listed with their reason in `pnpm-workspace.yaml`; the policies themselves are
+  unchanged:
   - `minimumReleaseAgeExclude: [wireit@0.15.0]`, a one-time waiver of the
     release age: 0.15.0 (published 2026-10-24) carries the fix for
     google/wireit#1536 (google/wireit#1542). Its new transitive dependencies are
