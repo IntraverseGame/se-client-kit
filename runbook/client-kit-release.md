@@ -152,7 +152,7 @@ org owners apply the settings; ask them for each.
      (an unset `PAGES_OPERATOR_ORIGINS` instead deploys with no page allowed to
      embed the Wrapper);
    - after the first real publish, the one-time rehearsal in
-     [Roll back or deprecate](#roll-back-or-deprecate).
+     [Roll back or deprecate](#roll-back-or-deprecate) (#208).
    <!-- TODO(org owners, #154): RELEASE_PUBLISH_ENABLED, once steps 5 to 7 are done, the trusted publishers exist, and the production environments hold their secrets (#133). -->
 
 ### Sync a contract into the kit
@@ -907,7 +907,7 @@ revokes the old token. Record the date (the secret name and date only).
 - **A contract mismatch** (the backend moved): sync the contract, release a
   patch or minor, promote; until then keep the previous Wrapper digest in place.
 
-<!-- TODO(release, #154): deferred to #154 (owner: TPO, with an org owner for npm; reason: nothing is published yet). Rehearse once: the npm deprecation and dist-tag steps on the first published version, and a Pages rollback. The npm steps cannot be exercised before the first publish; the dry run covers everything up to the publish. -->
+<!-- TODO(release, #208): deferred to #208 (owner: TPO, with an org owner for npm; reason: it needs the first published version, and nothing is published yet). Rehearse once: the npm deprecation and dist-tag steps on the first published version, and a Pages rollback. The npm steps cannot be exercised before the first publish; the dry run covers everything up to the publish. -->
 
 ### Rotate the npm credential
 
