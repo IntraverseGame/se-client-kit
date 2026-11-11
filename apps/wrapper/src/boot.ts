@@ -6,7 +6,8 @@
 // The page's one `message` listener is installed first, before the document
 // is read, so an operator's early `hello` is recorded (operator-gate.ts,
 // W-49c). Once configured, the operator gate decides the framing (W-49a) and,
-// on a framed page, awaits the `se.operator/1` handshake: a refusal or a
+// on a framed page, opens to the parent origin `location.ancestorOrigins`
+// proves (ADR-011) or else awaits the `se.operator/1` handshake: a refusal or a
 // timeout is the configuration-error state, with the reason code logged and
 // nothing opened. Then the lobby and deposit controls are allowed (W-49e), and
 // the session is opened from the launch code the entry took out of the URL

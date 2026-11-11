@@ -1,9 +1,11 @@
 // T-9a's component cases (W-49a to W-49d): the Wrapper booted framed, with a
-// fake parent and a fake page window. The gate (4): before `welcome` nothing
-// is redeemed, mounted, or offered, on the path with `location.ancestorOrigins`
-// and the one without it, and 10 s on the injected clock with no valid `hello`
-// is the configuration-error state, finally. Record, then check (5). Framing
-// (6). `resize` (8). Channel separation (11). The refusal log (12).
+// fake parent and a fake page window. The gate (4): nothing is redeemed,
+// mounted, or offered before the framing is decided; where
+// `location.ancestorOrigins` is missing, nothing opens before an accepted
+// `hello`, and 10 s on the injected clock with none is the configuration-error
+// state, finally. Record, then check (5). Framing (6). `resize` (8). Channel
+// separation (11). The refusal log (12). The proven path (one listed entry,
+// no `hello` needed, ADR-011) is in operator-gate-proven.test.ts.
 
 import { CONTROLLER_SCHEMA } from "@intraverse/se-client-shell";
 import { describe, expect, it } from "vitest";
@@ -19,6 +21,7 @@ import {
   type FramedBoot,
   HELLO,
   OPERATOR,
+  UNPROVEN,
   WELCOME_POST,
 } from "./fixtures/framed-boot.ts";
 import { messagesFor } from "./messages.ts";
@@ -26,15 +29,11 @@ import { messagesFor } from "./messages.ts";
 const m = messagesFor("en").messages;
 const ignore = (): void => {};
 const OTHER = "https://evil.example";
-const NO_LIST: EmbeddingContext = {
-  framed: true,
-  nested: false,
-  ancestorOrigins: undefined,
-};
+const NO_LIST = UNPROVEN;
 
 /** Boots framed with an idle session ready to read, the config released. */
 const configured = async (
-  embedding: EmbeddingContext = DIRECT,
+  embedding: EmbeddingContext = NO_LIST,
   heights?: (report: (height: number) => void) => void,
 ): Promise<FramedBoot> => {
   const framed = bootFramed({
@@ -66,25 +65,30 @@ describe("the gate (T-9a, 4)", () => {
   it.each<[string, EmbeddingContext]>([
     ["with location.ancestorOrigins", DIRECT],
     ["without it", NO_LIST],
-  ])(
-    "%s: nothing before welcome, the session after it",
-    async (_path, embedding) => {
-      const framed = await configured(embedding);
-      expect(framed.host.textContent).toContain(m["status.loading"]);
-      nothingOpened(framed);
-      framed.send(HELLO);
-      expect((await framed.result).kind).toBe("configured");
-      expect(framed.posted).toEqual([WELCOME_POST]);
-      expect(framed.opened()).toBe(1);
-      expect(framed.session.mounts).toHaveLength(1);
-    },
-  );
+  ])("%s: nothing before the framing is decided", async (_path, embedding) => {
+    const framed = bootFramed({ embedding });
+    framed.session.reads.push(snapshotRead("coinflip-idle"));
+    framed.send(HELLO);
+    await flush();
+    expect(framed.host.textContent).toContain(m["status.loading"]);
+    nothingOpened(framed);
+    expect(framed.posted).toEqual([]);
+  });
 
-  it.each<[string, EmbeddingContext]>([
-    ["with location.ancestorOrigins", DIRECT],
-    ["without it", NO_LIST],
-  ])("%s: 10 s with no valid hello is final", async (_path, embedding) => {
-    const framed = await configured(embedding);
+  it("without the list: nothing before welcome, the session after it", async () => {
+    const framed = await configured(NO_LIST);
+    expect(framed.host.textContent).toContain(m["status.loading"]);
+    nothingOpened(framed);
+    expect(framed.posted).toEqual([]);
+    framed.send(HELLO);
+    expect((await framed.result).kind).toBe("configured");
+    expect(framed.posted).toEqual([WELCOME_POST]);
+    expect(framed.opened()).toBe(1);
+    expect(framed.session.mounts).toHaveLength(1);
+  });
+
+  it("without the list: 10 s with no valid hello is final", async () => {
+    const framed = await configured(NO_LIST);
     framed.send(HELLO, { origin: OTHER });
     await stepTimers(framed.timers, 9_900);
     nothingOpened(framed);
@@ -187,6 +191,7 @@ describe("framing (T-9a, 6)", () => {
 
   it("refuses a configuration that lists no operator", async () => {
     const framed = bootFramed({
+      embedding: DIRECT,
       document: environmentDocument({ operatorOrigins: [] }),
     });
     framed.send(HELLO);
@@ -199,7 +204,7 @@ describe("framing (T-9a, 6)", () => {
 describe("resize (T-9a, 8) and the controls after welcome", () => {
   it("sends the observed heights only after welcome, to the fixed origin", async () => {
     let report: (height: number) => void = ignore;
-    const framed = await configured(DIRECT, next => {
+    const framed = await configured(NO_LIST, next => {
       report = next;
       next(480);
     });

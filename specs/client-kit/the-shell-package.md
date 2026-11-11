@@ -492,8 +492,11 @@ are in brackets.
   called once the configuration is validated, resolves with `{ ok: true }` or
   `{ ok: false, reason }`: a recorded `hello` is checked at once (its origin on
   `operatorOrigins` and equal to `ancestorOrigins[0]` where that list exists:
-  accepted; any other: `operator-not-allowed`, final); otherwise the first valid
-  `hello` after it is accepted, and with none within `timeoutMs`
+  accepted; any other: `operator-not-allowed`, final); otherwise, where
+  `ancestorOrigins` holds exactly one entry on `operatorOrigins`, that entry
+  proves the parent's origin and is accepted at once with no `hello` (ADR-011;
+  the caller refuses a nested page first); otherwise the first valid `hello`
+  after it is accepted, and with none within `timeoutMs`
   (`HANDSHAKE_TIMEOUT_MS`, 10 s, on the injected clock) it is
   `handshake-timeout`, final. Accepting fixes the operator origin and posts
   `welcome` to it; a later valid `hello` from that origin and the parent gets

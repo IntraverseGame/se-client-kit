@@ -1,6 +1,7 @@
 // T-9a, the operator channel (W-49b, W-49c): source and origin, the first
-// valid `hello` counts and a repeat is welcomed again, record-then-check, and
-// the 10 s timeout on an injected clock. The closed schema and `resize` are in
+// valid `hello` counts and a repeat is welcomed again, record-then-check, the
+// proven parent origin that needs no `hello` (ADR-011), and the 10 s timeout on
+// an injected clock. The closed schema and `resize` are in
 // operator-protocol.test.ts. A fake parent window, no DOM.
 
 import { describe, expect, it } from "vitest";
@@ -47,7 +48,8 @@ describe("source and origin (T-9a, 1)", () => {
 
   it("ignores a listed origin that differs from location.ancestorOrigins[0]", () => {
     const op = createFakeOperator();
-    void op.check([OPERATOR], [OPERATOR, SECOND]);
+    // Two entries prove no single parent, so the handshake decides.
+    void op.check([OPERATOR, SECOND], [OPERATOR, SECOND]);
     op.send(HELLO, { origin: SECOND });
     expect(op.channel.state()).toBe("waiting");
     op.send(HELLO);
@@ -166,6 +168,52 @@ describe("record, then check (T-9a, 5)", () => {
     op.send(HELLO, { origin: OTHER });
     expect(await op.check()).toEqual({ ok: true });
   });
+});
+
+describe("a proven parent origin (T-9a, 4; ADR-011)", () => {
+  it("opens to the one listed ancestor with no hello, posts welcome once, and starts no timer", async () => {
+    const op = createFakeOperator();
+    expect(await op.check([OPERATOR])).toEqual({ ok: true });
+    expect(op.channel.state()).toBe("open");
+    expect(op.posted).toEqual([WELCOME_POST]);
+    expect(op.clock.dueTimes()).toEqual([]);
+  });
+
+  it("answers a later hello from the parent and that origin, and ignores any other", async () => {
+    const op = createFakeOperator();
+    await op.check([OPERATOR], [OPERATOR, SECOND]);
+    op.send(HELLO);
+    op.send(HELLO, { origin: SECOND });
+    op.send(HELLO, { source: {} });
+    op.send(HELLO, { origin: OTHER });
+    expect(op.posted).toEqual([WELCOME_POST, WELCOME_POST]);
+  });
+
+  it("sends resize to that origin once open", async () => {
+    const op = createFakeOperator();
+    await op.check([OPERATOR]);
+    op.channel.resize(480);
+    expect(op.posted.map(post => post.targetOrigin)).toEqual([
+      OPERATOR,
+      OPERATOR,
+    ]);
+  });
+
+  it.each<[string, readonly string[], readonly string[]]>([
+    ["an unlisted ancestor", [OTHER], [OPERATOR]],
+    ["two ancestors", [OPERATOR, SECOND], [OPERATOR, SECOND]],
+    ["a masked ancestor", ["null"], [OPERATOR]],
+    ["an empty list", [], [OPERATOR]],
+  ])(
+    "proves nothing with %s: it waits for a hello",
+    (_what, ancestors, listed) => {
+      const op = createFakeOperator();
+      void op.check(ancestors, listed);
+      expect(op.channel.state()).toBe("waiting");
+      expect(op.posted).toEqual([]);
+      expect(op.clock.dueTimes()).toEqual([HANDSHAKE_TIMEOUT_MS]);
+    },
+  );
 });
 
 describe("the timeout (T-9a, 4)", () => {

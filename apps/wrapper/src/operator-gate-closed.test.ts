@@ -15,7 +15,7 @@ import { createOperatorGate } from "./operator-gate.ts";
 
 vi.mock(import("./embedding.ts"), async importOriginal => ({
   ...(await importOriginal()),
-  checkEmbedding: () => ({ ok: true, handshake: true }),
+  checkEmbedding: () => ({ ok: true, framing: "handshake" }),
 }));
 
 /** The fixture document, validated. */

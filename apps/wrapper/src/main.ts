@@ -73,7 +73,8 @@ if (host !== null) {
       navigator.clipboard.writeText(text),
     embedding: embeddingOf(globalThis.window),
     // The operator page, when framed: only `welcome` and `resize` go to it,
-    // to the origin its handshake fixed (W-49b).
+    // to the origin its handshake or `location.ancestorOrigins` fixed (W-49b,
+    // ADR-011).
     parent: globalThis.window.parent,
     observeHeight: onHeight => {
       observeHeight(

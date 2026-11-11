@@ -104,17 +104,18 @@ defaults.
   the session-ended state when it learns that.
 
 **How it is built (#42).** Before the session opens, a framed Wrapper decides
-its framing and waits for the operator handshake
-([Operator embedding](./operator-embedding.md), W-49a to W-49c): refused, or
-with no valid `hello` within the handshake timeout, it redeems nothing (the code
-is never sent) and shows the configuration-error state. The launch code lives 60
-s from the operator's Launch call (the backend's TPO, 2026-10-18), which covers
-that wait. That 60 s holds only while the Wrapper's default, configurable
-timeouts stay at or below their defaults, W-43's 15 s for the configuration and
-the 10 s handshake (b6e1e48); raising either, by a change of the default or by
-an environment's configuration, requires telling the backend first (the
-backend's TPO, 2026-10-18). The Wrapper's entry calls the shell's
-`takeLaunchCode` first, before it fetches the environment configuration
+its framing and, where `location.ancestorOrigins` does not prove a single listed
+parent, waits for the operator handshake
+([Operator embedding](./operator-embedding.md), W-49a to W-49c; ADR-011):
+refused, or with no valid `hello` within the handshake timeout, it redeems
+nothing (the code is never sent) and shows the configuration-error state. The
+launch code lives 60 s from the operator's Launch call (the backend's TPO,
+2026-10-18), which covers that wait. That 60 s holds only while the Wrapper's
+default, configurable timeouts stay at or below their defaults, W-43's 15 s for
+the configuration and the 10 s handshake (b6e1e48); raising either, by a change
+of the default or by an environment's configuration, requires telling the
+backend first (the backend's TPO, 2026-10-18). The Wrapper's entry calls the
+shell's `takeLaunchCode` first, before it fetches the environment configuration
 document, so the fragment is gone before any request or log line (W-1). The code
 stays sealed (it prints `[redacted]`) and only the shell's `openPlaySession`
 reveals it, for the one redeem, then forgets it. When the Wrapper opens no

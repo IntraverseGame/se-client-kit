@@ -6,7 +6,8 @@
 // only messages whose source is that window and whose origin is the SE
 // origin; and it uses `resize` as the iframe's minimum height (`min-height`,
 // ADR-010), never as its height. Everything it received is kept
-// for the test. Also: serving the release bundle's page with a
+// for the test. When it nests the Wrapper, the page in between (the Wrapper's
+// real parent) is the one that listens and says `hello`. Also: serving the release bundle's page with a
 // `frame-ancestors` header, and scanning texts for the session's secrets.
 
 import { readFile } from "node:fs/promises";
@@ -84,7 +85,9 @@ export const startEmbedding = async (
       }
       let welcomed = false;
       let timer: ReturnType<typeof setInterval> | undefined;
-      globalThis.addEventListener("message", event => {
+      // The Wrapper posts to its parent: the page in between when nested.
+      const parentWindow = host.defaultView ?? globalThis;
+      parentWindow.addEventListener("message", event => {
         if (event.source !== frame.contentWindow) return;
         if (event.origin !== seOrigin) return;
         const data: unknown = event.data;
@@ -96,10 +99,19 @@ export const startEmbedding = async (
         }
       });
       const sayHello = (): void => {
-        frame.contentWindow?.postMessage(
-          { schema: "se.operator/1", type: "hello" },
-          seOrigin,
-        );
+        if (host === document) {
+          frame.contentWindow?.postMessage(
+            { schema: "se.operator/1", type: "hello" },
+            seOrigin,
+          );
+          return;
+        }
+        // Nested: post from the page in between's own realm, so the
+        // Wrapper sees its real parent as the source, not the top page.
+        const script = host.createElement("script");
+        script.textContent = `document.querySelector('iframe[name="wrapper"]')?.contentWindow?.postMessage({ schema: "se.operator/1", type: "hello" }, ${JSON.stringify(seOrigin)});`;
+        host.body.append(script);
+        script.remove();
       };
       frame.addEventListener("load", () => {
         state.loads += 1;

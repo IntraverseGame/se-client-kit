@@ -8,12 +8,16 @@
 //    and answers nothing.
 // 2. `check`, once the configuration is validated, checks a recorded `hello`
 //    at once (a listed origin opens the channel; any other is final, since the
-//    parent's origin cannot change), or else starts the handshake timer.
+//    parent's origin cannot change). Otherwise, where `ancestorOrigins` holds
+//    exactly one entry and it is on `operatorOrigins`, that entry proves the
+//    parent's origin and the channel opens to it at once, with no `hello`
+//    (ADR-011; the caller refuses a nested page first). Otherwise it starts the
+//    handshake timer.
 // 3. The first valid `hello` (from the parent, on `operatorOrigins`, and equal
-//    to `location.ancestorOrigins[0]` where that exists) fixes the operator
-//    origin for the document's life; the channel posts `welcome` to it. A
-//    later valid `hello` from that origin gets `welcome` again and changes
-//    nothing else.
+//    to `location.ancestorOrigins[0]` where that exists), or the proven entry,
+//    fixes the operator origin for the document's life; the channel posts
+//    `welcome` to it. A later valid `hello` from that origin gets `welcome`
+//    again and changes nothing else.
 // 4. With no valid `hello` within the timeout, the channel is refused, finally:
 //    a late `hello` is ignored.
 //
@@ -77,7 +81,11 @@ export type OperatorChannelState =
 export type OperatorCheck = {
   /** The configuration's `operatorOrigins` (exact match). */
   readonly operatorOrigins: readonly string[];
-  /** `location.ancestorOrigins`, nearest first; `undefined` where absent. */
+  /**
+   * `location.ancestorOrigins`, nearest first; `undefined` where absent. One
+   * entry on `operatorOrigins` proves the parent's origin: the channel opens to
+   * it with no `hello` (ADR-011). The caller refuses a nested page first.
+   */
   readonly ancestorOrigins: readonly string[] | undefined;
   /** The handshake timer's clock. */
   readonly clock: Pick<Clock, "setTimeout" | "clearTimeout">;
@@ -90,7 +98,8 @@ export type OperatorChannel = {
   readonly receive: (event: OperatorMessageEvent) => void;
   /**
    * Checks the handshake once the configuration is validated, and resolves once
-   * it is accepted or refused. A second call answers the first's outcome.
+   * it is accepted (a valid `hello`, or a proven parent origin) or refused. A
+   * second call answers the first's outcome.
    */
   readonly check: (check: OperatorCheck) => Promise<HandshakeOutcome>;
   /**
@@ -165,10 +174,9 @@ export const createOperatorChannel = (options: {
     const origins: readonly string[] = Object.freeze([
       ...given.operatorOrigins,
     ]);
+    const ancestors = given.ancestorOrigins;
     const nearest =
-      given.ancestorOrigins === undefined
-        ? undefined
-        : { origin: given.ancestorOrigins[0] };
+      ancestors === undefined ? undefined : { origin: ancestors[0] };
     allowed = (origin: string): boolean =>
       origins.includes(origin) &&
       (nearest === undefined || nearest.origin === origin);
@@ -179,6 +187,13 @@ export const createOperatorChannel = (options: {
       } else {
         refuse("operator-not-allowed");
       }
+      return outcome;
+    }
+    const proven = ancestors?.length === 1 ? ancestors[0] : undefined;
+    if (proven !== undefined && allowed(proven)) {
+      // The browser names the one parent, and it is listed: no `hello` to wait
+      // for (ADR-011). `welcome` is still posted, to that origin only.
+      accept(proven);
       return outcome;
     }
     state = "waiting";
