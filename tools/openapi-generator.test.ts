@@ -1,5 +1,5 @@
 // The Play API document's generator runs as ADR-004 pins it:
-// `openapi-typescript` 6.7.6 with its `undici` held at 6.29.0 by the pnpm
+// `openapi-typescript` 6.7.6 with its `undici` held at 6.29.1 by the pnpm
 // override (outside its declared `^5.28` range), and under that override it
 // loads and regenerates the committed types without a difference.
 
@@ -35,11 +35,11 @@ describe("the API documents' generator", () => {
     );
   });
 
-  it("gets undici 6.29.0 through the override scoped to it", () => {
-    expect(generatorUndici()).toBe("6.29.0");
+  it("gets undici 6.29.1 through the override scoped to it", () => {
+    expect(generatorUndici()).toBe("6.29.1");
     const workspace = readFileSync(join(root, "pnpm-workspace.yaml"), "utf8");
     expect(workspace).toMatch(
-      /^overrides:\n {2}openapi-typescript>undici: 6\.29\.0$/mu,
+      /^overrides:\n {2}openapi-typescript>undici: 6\.29\.1$/mu,
     );
     expect(workspace).not.toMatch(/^ {2}undici:/mu);
   });
