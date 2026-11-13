@@ -31,6 +31,16 @@ export {
   type Environment,
   type SourceConfig,
 } from "./chain-config.ts";
+export {
+  AUTOPLAY_MAX_COUNT,
+  AUTOPLAY_MAX_INTERVAL_MS,
+  type AutoplayBegin,
+  type AutoplayOutsideStop,
+  type AutoplayRefusal,
+  type AutoplayRequest,
+  type AutoplayState,
+  type AutoplayStop,
+} from "./autoplay-types.ts";
 export type { CancelState } from "./cancel-state.ts";
 export type { RpcEndpoint } from "./config-fields.ts";
 export {
@@ -51,6 +61,7 @@ export {
   ROUND_STATUSES,
   type ActionMessage,
   type GameBookDraw,
+  type GameCapability,
   type GameBookEvent,
   type GameEventData,
   type GameJsonValue,
@@ -59,6 +70,7 @@ export {
   type GameSnapshot,
   type GameStep,
   type HelloMessage,
+  type LayoutMessage,
   type Pick,
   type Presentation,
   type RejectMessage,
@@ -98,10 +110,13 @@ export {
 export { openPlaySession } from "./play-session.ts";
 export type { PlaySessionOptions, SessionParts } from "./session-options.ts";
 export type {
+  ChangeSource,
   GameMount,
   GameMountOptions,
   PlaySession,
+  RoundFailure,
   RoundState,
+  RoundTipFailure,
   SessionOpening,
   SessionRead,
 } from "./session-types.ts";

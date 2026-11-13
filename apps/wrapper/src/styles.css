@@ -1,80 +1,65 @@
 /*
- * The Wrapper's own UI (W-45 to W-48): WCAG 2.2 AA. Text contrast is at least
- * 4.5:1 on both themes, sizes are in rem so the UI reflows at 200 % zoom, every
- * target is at least 44 by 44 CSS pixels (W-47 asks 24), focus is always
- * visible, and motion stops under prefers-reduced-motion. No remote resource:
- * the Content Security Policy allows same-origin styles only, so the type is
- * the platform's own sans-serif and monospace faces.
+ * The Wrapper's own UI (W-45 to W-48, RFC-005): WCAG 2.2 AA. One dark theme
+ * (Q7). Text contrast is at least 4.5:1, sizes are in rem so the UI reflows at
+ * 200 % zoom, every target is at least 44 by 44 CSS pixels (W-47 asks 24),
+ * focus is always visible, and motion stops under prefers-reduced-motion. No
+ * remote resource: the Content Security Policy allows same-origin styles
+ * only, so the type is a named stack of faces the operating systems install
+ * (Q9: Bahnschrift on Windows, DIN Alternate on macOS, then the system UI
+ * face); no font file ships.
  */
 
 :root {
-  color-scheme: light dark;
-  --se-bg: #ffffff;
-  --se-panel: #f6f6f8;
-  --se-fg: #3e4248;
-  --se-strong: #101014;
-  --se-muted: #5f646c;
-  --se-border: #e0e1e6;
-  --se-control-border: #80838d;
-  --se-accent: #101014;
-  --se-accent-fg: #ffffff;
-  --se-win: #136b2f;
-  --se-loss: #a1261b;
-  --se-error: #a1261b;
-  --se-error-bg: #fdecea;
-  --se-notice: #a14a12;
-  --se-focus: #101014;
-  --se-radius: 1.25rem;
-  --se-pill: 62.5rem;
-  --se-mono: ui-monospace, monospace;
+  color-scheme: dark;
+  --se-page: #101318;
+  --se-bar: #1c2128;
+  --se-control: #252c35;
+  --se-control-hover: #2b333d;
+  --se-line: #2f3742;
+  --se-fg: #f5f7fa;
+  --se-strong: #f5f7fa;
+  --se-muted: #98a3b3;
+  --se-accent: #57d9b3;
+  --se-accent-press: #49c7a2;
+  --se-accent-deep: #4bc8a3;
+  --se-on-accent: #07231a;
+  --se-problem: #f0b35b;
+  --se-win: #57d9b3;
+  --se-loss: #f0b35b;
+  --se-error: #f0b35b;
+  --se-error-bg: #2b2418;
+  --se-busy: #2e6a59;
+  --se-on-busy: #d3f1e7;
+  --se-apron-bg: #0c0f13;
+  --se-popover: #1a1f26;
   /*
-   * The single screen (W-57): the stage's minimum S (270 CSS pixels at the
-   * default text size, provisional) and the one height every slot of the bar
-   * reserves, one row of controls: a 2.75rem target and, on each side, room
-   * for its focus outline (0.1875rem and its 0.125rem offset). No state makes
-   * the bar grow, so the stage never moves; the bar's height B depends only
-   * on the width and the text size.
+   * The glass of a floating bar (RFC-005 section 9): a translucent surface over
+   * a backdrop that is dimmed (--se-glass-dim) and blurred (--se-glass-blur).
+   * The dimming keeps its text at 4.5:1 even over a white game, and the blur
+   * keeps a game drawing under it from making its own text read as the bar's;
+   * so the surface itself can let the game's colours through.
+   */
+  --se-glass: rgb(22 26 33 / 0.45);
+  --se-glass-dim: 0.4;
+  /* Labels on the glass: lighter, for 4.5:1 over a dimmed white game. */
+  --se-muted-glass: #b4bfcc;
+  --se-glass-blur: 1.5rem;
+  --se-scrim: rgb(16 19 24 / 0.72);
+  --se-font: "Bahnschrift", "DIN Alternate", system-ui, sans-serif;
+  --se-radius: 0.75rem;
+  --se-control-radius: 0.5rem;
+  --se-pill: 62.5rem;
+  --se-row: 2.75rem;
+  /*
+   * The stage's minimum S (270 CSS pixels at the default text size,
+   * provisional) and the bar's heights (W-57): no state makes the bar grow,
+   * so the stage never moves.
    */
   --se-stage-min: 16.875rem;
-  --se-slot-pad: 0.3125rem;
-  --se-row-h: 3.375rem;
-  /*
-   * The bar's slots, from 52rem (832 CSS pixels) up, on two rows: the status
-   * slot takes the rest of the width, with the controls and the links on its
-   * right; the round line is the second row. The notices row is left out
-   * while it has nothing to show, so its gap is not reserved either.
-   */
-  --se-bar-columns: minmax(0, 1fr) auto auto;
-  --se-bar-areas: "notices notices notices" "status controls links"
-    "round round round";
-  --se-bar-areas-bare: "status controls links" "round round round";
-  /* The rows the primary controls and the round line reserve (under 52rem). */
-  --se-controls-rows: 1;
-  --se-round-rows: 1;
-  /* The bar's pills are a little narrower, so a row holds more of them. */
-  --se-bar-choice-pad: 0.875rem;
-  --se-scrim: rgb(255 255 255 / 0.72);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --se-bg: #111113;
-    --se-panel: #18191b;
-    --se-fg: #b0b4ba;
-    --se-strong: #edeef0;
-    --se-muted: #8b8d98;
-    --se-border: #2e3135;
-    --se-control-border: #696e77;
-    --se-accent: #f4f4f6;
-    --se-accent-fg: #101014;
-    --se-win: #7ddc97;
-    --se-loss: #ff9c90;
-    --se-error: #ff9c90;
-    --se-error-bg: #2b1513;
-    --se-notice: #fda677;
-    --se-focus: #f4f4f6;
-    --se-scrim: rgb(17 17 19 / 0.72);
-  }
+  --se-bar-h: 5.5rem;
+  --se-notices-h: 2.5rem;
+  --se-start-w: 11rem;
+  --se-autoplay-w: 3.75rem;
 }
 
 * {
@@ -83,10 +68,9 @@
 
 /*
  * The Wrapper fills its iframe's viewport (W-57 "The height"): the document is
- * exactly the viewport's height (`height: 100%`, never `vh`, so the
- * standalone page on a phone does not jump with the browser's toolbar), the
- * scroll bar's gutter is kept so it never changes the width, and so B, and
- * nothing scrolls sideways from 20rem (320 CSS pixels) up.
+ * exactly the viewport's height (`height: 100%`, never `vh`), the scroll bar's
+ * gutter is kept so it never changes the width, and nothing scrolls sideways
+ * from 20rem up.
  */
 html {
   height: 100%;
@@ -97,19 +81,13 @@ body {
   height: 100%;
   min-width: 20rem;
   margin: 0;
-  background: var(--se-bg);
+  background: var(--se-page);
   color: var(--se-fg);
-  font-family: system-ui, sans-serif;
+  font-family: var(--se-font);
   font-size: 1rem;
   line-height: 1.5;
 }
 
-/*
- * The stage takes the height the bar leaves, from the layout alone: never a
- * measured value written back into a style. Below the minimum (S + B) the
- * stage keeps S and the document scrolls inside the iframe. `#app` is the
- * page's host element (index.html).
- */
 #app {
   display: flex;
   flex-direction: column;
@@ -122,7 +100,19 @@ body {
   flex-direction: column;
 }
 
+/*
+ * The stage over the bar. The bar docks under the stage, or floats over its
+ * bottom on a wide screen (`data-bar="float"`, stage-layout.ts).
+ */
+/*
+ * The floating bar's gap is declared on the parent: the float rule below builds
+ * --se-gap and --se-apron from it, and custom properties only inherit downward
+ * (the bar, and main.ts through the bar, read it inherited).
+ */
 .se-main {
+  --se-float-gap: 0.875;
+
+  position: relative;
   display: grid;
   flex: 1 0 auto;
   grid-template-rows: minmax(var(--se-stage-min), 1fr) auto;
@@ -132,7 +122,7 @@ body {
   position: relative;
   min-height: var(--se-stage-min);
   overflow: hidden;
-  background: var(--se-panel);
+  background: var(--se-apron-bg);
 }
 
 .se-game,
@@ -148,7 +138,7 @@ body {
   border: 0;
 }
 
-/* The overlay: a translucent scrim, or an opaque cover (W-57). */
+/* The overlay spans the whole frame, under a floating bar too (RFC-005). */
 .se-overlay {
   position: absolute;
   inset: 0;
@@ -167,80 +157,106 @@ body {
 }
 
 .se-overlay[data-form="cover"] {
-  background: var(--se-bg);
+  background: var(--se-page);
 }
 
-/* The scrim's line sits on an opaque panel, so it keeps its contrast. */
 .se-overlay__text {
   margin: 0;
   padding: 0.75rem 1.25rem;
-  border: 0.0625rem solid var(--se-border);
+  border: 0.0625rem solid var(--se-line);
   border-radius: var(--se-radius);
-  background: var(--se-panel);
+  background: var(--se-bar);
   color: var(--se-strong);
 }
 
 /*
- * The control bar: each slot reserves one row of controls; text or controls
- * that do not fit scroll inside their slot and never spill onto the stage.
- * Each slot's own padding is the room for its focus outlines, so the bar's
- * padding and its row gap stay small.
+ * The control bar: one line of 2.75rem controls on a wide screen, with one
+ * centre line; the status slot moves to its own row under 66rem, and the bar
+ * has three rows under 35rem. Every slot keeps its size, so no state moves
+ * another (RFC-005: no layout shift).
  */
 .se-bar {
-  --se-pill-pad: 0.875rem;
-  --se-choice-pad: var(--se-bar-choice-pad);
+  --se-floatable: 0;
 
+  position: relative;
   display: grid;
-  grid-template-columns: var(--se-bar-columns);
-  grid-template-areas: var(--se-bar-areas);
-  gap: 0 0.75rem;
-  padding: 0.25rem 0.75rem;
-  border-top: 0.0625rem solid var(--se-border);
-  background: var(--se-bg);
+  grid-template-columns: var(--se-row) minmax(0, 1fr) auto;
+  grid-template-areas:
+    "notices notices notices" "status status status" "balance balance bet"
+    "menu start start";
+  gap: 0.75rem 0.5rem;
+  padding: 0.625rem 0.625rem 0.75rem;
+  border-top: 0.0625rem solid var(--se-line);
+  background: var(--se-bar);
+  color: var(--se-fg);
+}
+
+.se-bar:focus-visible {
+  outline: 0.125rem solid var(--se-accent);
+  outline-offset: -0.125rem;
 }
 
 .se-bar:has(> .se-notices:empty) {
-  grid-template-areas: var(--se-bar-areas-bare);
+  grid-template-areas:
+    "status status status" "balance balance bet"
+    "menu start start";
 }
 
 .se-notices {
   grid-area: notices;
+  height: 2.25rem;
 }
 
 .se-notices:empty {
   display: none;
 }
 
+.se-menu-slot {
+  grid-area: menu;
+}
+
+.se-balance {
+  display: flex;
+  align-items: center;
+  grid-area: balance;
+  min-width: 0;
+}
+
+.se-bet-slot {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  grid-area: bet;
+}
+
+.se-start-slot {
+  position: relative;
+  display: flex;
+  grid-area: start;
+  min-height: var(--se-row);
+}
+
+.se-controls {
+  display: flex;
+  flex: 1 1 auto;
+}
+
 /*
- * The bar's slots, each one row of controls high. Their items sit on one
- * line; what does not fit wraps and scrolls inside the slot, which never
- * grows (`safe` keeps the first line in reach when it overflows).
+ * The status slot: the fairness chip, the status line, after it on the same
+ * row the alert line, which takes the detail's place when it shows (W-57),
+ * then the round line. What does not fit wraps and scrolls inside the slot,
+ * which never grows; `safe` keeps the first line in reach.
  */
-.se-status-slot,
-.se-controls,
-.se-round,
-.se-links {
+.se-status-slot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   align-content: safe center;
-  height: var(--se-row-h);
-  padding: var(--se-slot-pad);
-  overflow-y: auto;
-}
-
-/*
- * The status slot: the status heading and, on the same row after it, the
- * detail or the alert line, which takes the detail's place when it shows
- * (W-57: the alert overlays the status). The two never wrap onto a second
- * row: the status line takes at most half the slot, the alert the rest. When
- * the status line's text does not fit, the slot scrolls; it never grows.
- */
-.se-status-slot {
-  flex-wrap: nowrap;
-  align-items: safe center;
-  gap: 0.75rem;
+  gap: 0.25rem 0.75rem;
   grid-area: status;
+  height: 6.75rem;
+  padding: 0.125rem;
+  overflow-y: auto;
 }
 
 .se-status {
@@ -248,88 +264,239 @@ body {
   flex: 0 1 auto;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0 0.75rem;
+  gap: 0 0.625rem;
   min-width: 0;
+  font-size: 0.9375rem;
+}
+
+.se-status:has(+ .se-alert:not([data-empty])) {
   max-width: 50%;
 }
 
-.se-status:has(+ .se-alert[data-empty]) {
-  max-width: none;
-}
-
-/*
- * The alert line, one row high: its icon, its heading, and the first line of
- * its detail on the row; the rest (more lines, the request id, its control)
- * scrolls inside the alert's own box, which stays within the slot, so its
- * border is never cut off.
- */
-.se-alert {
-  display: flex;
-  flex: 1 1 0;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0 0.5rem;
-  min-width: 0;
-  /* One line (1.5rem) with its padding and border: a second line is wholly
-     out of view until scrolled, never cut through. */
-  max-height: 2.125rem;
-  overflow-y: auto;
-}
-
-.se-controls {
-  gap: 0.5rem;
-  grid-area: controls;
-  height: calc(var(--se-row-h) * var(--se-controls-rows));
-}
-
 .se-round {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.25rem 0.625rem;
-  grid-area: round;
-  height: calc(var(--se-row-h) * var(--se-round-rows));
+  font-size: 0.875rem;
 }
 
-.se-links {
-  grid-area: links;
-  justify-content: end;
+.se-round:empty {
+  display: none;
 }
 
-/*
- * Under 52rem: the status slot shares its row with the operator links, the
- * primary controls take the next row, and the round line reserves two rows
- * (its amounts and the round id, then its copy control and the verify link).
- */
-@media (width < 52rem) {
-  :root {
-    --se-bar-columns: minmax(0, 1fr) auto;
-    --se-bar-areas: "notices notices" "status links" "controls controls"
-      "round round";
-    --se-bar-areas-bare: "status links" "controls controls" "round round";
-    --se-round-rows: 2;
+/* 35rem and up: the status slot over one line of controls. */
+@media (width >= 35rem) {
+  .se-bar {
+    grid-template-columns: auto auto auto minmax(0.5rem, 1fr) auto;
+    grid-template-areas:
+      "notices notices notices notices notices"
+      "status status status status status" "menu balance bet . start";
+    column-gap: 0.625rem;
+    padding: 0.625rem 0.75rem 0.75rem;
+  }
+
+  .se-bar:has(> .se-notices:empty) {
+    grid-template-areas:
+      "status status status status status"
+      "menu balance bet . start";
+  }
+
+  .se-status-slot {
+    height: 5.5rem;
+  }
+
+  .se-balance {
+    min-width: 7.5rem;
+  }
+
+  .se-start-slot {
+    width: var(--se-start-w);
+  }
+
+  .se-bar[data-autoplay] .se-start-slot {
+    width: calc(var(--se-start-w) + var(--se-autoplay-w));
+  }
+}
+
+/* 66rem and up: one line; the bar may float over the stage. */
+@media (width >= 66rem) {
+  .se-bar {
+    --se-floatable: 1;
+
+    grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "notices notices notices notices notices"
+      "menu balance bet status start";
+    grid-template-rows: auto var(--se-bar-h);
+    align-items: center;
+    row-gap: 0.25rem;
+    padding: 0 0.875rem 0 0.625rem;
+    border-radius: var(--se-radius);
+  }
+
+  .se-bar:has(> .se-notices:empty) {
+    grid-template-areas: "menu balance bet status start";
+    grid-template-rows: var(--se-bar-h);
+  }
+
+  .se-status-slot {
+    align-self: stretch;
+    height: auto;
+    max-height: var(--se-bar-h);
+    padding-inline-start: 1rem;
+    border-inline-start: 0.0625rem solid var(--se-line);
+  }
+
+  .se-balance {
+    min-width: 9.375rem;
+  }
+
+  .se-bet-slot {
+    padding-inline-start: 1rem;
+    border-inline-start: 0.0625rem solid var(--se-line);
+  }
+
+  .se-start-slot {
+    width: var(--se-start-w);
+  }
+
+  .se-bar[data-autoplay] .se-start-slot {
+    width: calc(var(--se-start-w) + var(--se-autoplay-w));
   }
 }
 
 /*
- * Narrow (under 40rem): the primary controls reserve two rows (the bet
- * options, then the start control), and the round line three (the amounts,
- * the round id, then its copy control and the verify link).
+ * A floating bar (RFC-005 section 1): over the bottom of the stage, inset by
+ * its gap, on glass. A game that draws under it (`data-frame="inset"`) gets
+ * the whole stage; any other game a frame above the apron, a neutral band as
+ * tall as the bar and its gaps (Q6).
  */
-@media (width < 40rem) {
-  :root {
-    --se-controls-rows: 2;
-    --se-round-rows: 3;
+.se-main[data-bar="float"] {
+  --se-gap: calc(var(--se-float-gap) * 1rem);
+  --se-apron: calc(var(--se-bar-h) + 2 * var(--se-gap));
+
+  grid-template-rows: minmax(var(--se-stage-min), 1fr);
+}
+
+.se-main[data-bar="float"]:has(.se-notice) {
+  --se-apron: calc(var(--se-bar-h) + var(--se-notices-h) + 2 * var(--se-gap));
+}
+
+.se-main[data-bar="float"] > .se-bar {
+  position: absolute;
+  right: var(--se-gap);
+  bottom: var(--se-gap);
+  left: var(--se-gap);
+  z-index: 1;
+  --se-muted: var(--se-muted-glass);
+  --se-control: rgb(255 255 255 / 0.07);
+
+  border: 0.0625rem solid rgb(255 255 255 / 0.12);
+  background: var(--se-glass);
+  box-shadow:
+    inset 0 0.0625rem 0 rgb(255 255 255 / 0.09),
+    0 0.75rem 2rem rgb(0 0 0 / 0.35);
+  backdrop-filter: blur(var(--se-glass-blur)) saturate(1.6)
+    brightness(var(--se-glass-dim));
+}
+
+.se-main[data-bar="float"] .se-stage[data-frame="apron"] .se-game {
+  bottom: var(--se-apron);
+  height: auto;
+}
+
+.se-main[data-bar="float"] .se-overlay {
+  padding-bottom: calc(var(--se-apron) + 1.5rem);
+}
+
+@supports not (backdrop-filter: blur(1rem)) {
+  .se-main[data-bar="float"] > .se-bar {
+    background: var(--se-bar);
   }
 }
 
 /*
- * Below the minimum height the bar stays at the bottom of the viewport while
- * the stage scrolls under it, so the status line and the money controls stay
- * in view; only while it takes at most half the viewport (`data-sticky`,
- * height-observer.ts). A taller bar (a high zoom) is not sticky, and the page
- * scrolls as a whole with nothing hidden.
+ * The state edge (W-60): a line along the bar's top edge, decoration only
+ * (`aria-hidden`), that mirrors the status line.
+ */
+.se-edge {
+  position: absolute;
+  top: -0.0625rem;
+  right: 0.875rem;
+  left: 0.875rem;
+  height: 0.125rem;
+  overflow: hidden;
+  border-radius: 0.125rem;
+  pointer-events: none;
+}
+
+.se-edge i {
+  position: absolute;
+  inset: 0;
+  background: var(--se-accent);
+  opacity: 0;
+}
+
+.se-bar[data-edge="sweep"] .se-edge__mark {
+  width: 26%;
+  opacity: 1;
+  animation: se-sweep 1.15s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.se-bar[data-edge="won"] .se-edge__mark {
+  animation: se-flash 1.8s ease-out forwards;
+}
+
+.se-bar[data-edge="problem"] .se-edge__mark {
+  background: var(--se-problem);
+  opacity: 0.85;
+}
+
+@keyframes se-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(385%);
+  }
+}
+
+@keyframes se-flash {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+/*
+ * Below the minimum height a docked bar stays at the bottom of the viewport
+ * while the stage scrolls under it, only while it takes at most half the
+ * viewport (`data-sticky`, height-observer.ts).
  */
 .se-bar[data-sticky] {
   position: sticky;
   bottom: 0;
+}
+
+.se-main[data-bar="float"] > .se-bar[data-sticky] {
+  position: absolute;
+}
+
+/* Labels: small capitals, condensed where the face has a width axis. */
+.se-label,
+.se-field__label,
+.se-popover__title {
+  color: var(--se-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-stretch: 87.5%;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
 }
 
 .se-heading {
@@ -339,12 +506,9 @@ body {
   gap: 0.5rem;
   margin: 0;
   color: var(--se-strong);
-  font-family: var(--se-mono);
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.2;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
 }
 
 h2.se-heading {
@@ -359,6 +523,12 @@ h2.se-heading {
   flex: none;
   width: 1.5rem;
   height: 1.5rem;
+}
+
+.se-glyph {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
 }
 
 .se-icon--win {
@@ -392,215 +562,461 @@ h2.se-heading {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.25rem 0.75rem;
-}
-
-.se-field__label,
-.se-bet__label {
-  color: var(--se-muted);
-  font-family: var(--se-mono);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  gap: 0.25rem 0.5rem;
 }
 
 .se-field__value {
   color: var(--se-strong);
-  font-family: var(--se-mono);
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 
+/* The balance: its label over its value (21 CSS pixels). */
+.se-balance .se-field {
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.se-balance .se-field__value {
+  font-size: 1.3125rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
 .se-round-id {
-  font-family: var(--se-mono);
+  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 
 .se-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
+/* Controls: 2.75rem tall, a radius of 0.5rem. */
 .se-button,
-.se-link {
+.se-link,
+.se-menu-button,
+.se-quick,
+.se-stepper__step,
+.se-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
   min-width: 2.75rem;
   min-height: 2.75rem;
-  padding: 0.5rem var(--se-pill-pad, 1.25rem);
-  border-radius: var(--se-pill);
+  padding: 0 0.75rem;
+  border: 0.0625rem solid var(--se-line);
+  border-radius: var(--se-control-radius);
+  background: var(--se-control);
+  color: var(--se-fg);
   font: inherit;
-}
-
-.se-button {
-  border: 0.0625rem solid var(--se-accent);
-  background: var(--se-accent);
-  color: var(--se-accent-fg);
-  font-family: var(--se-mono);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: opacity 0.2s ease-out;
 }
 
-/* A secondary control (copy the round id): outlined, like a link. */
 .se-button--quiet {
-  border-color: var(--se-border);
-  background: var(--se-bg);
-  color: var(--se-strong);
-  font-family: system-ui, sans-serif;
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.se-button--quiet:hover:not(:disabled) {
-  border-color: var(--se-accent);
-  opacity: 1;
-}
-
-.se-button:disabled {
-  border-color: var(--se-border);
   background: transparent;
-  color: var(--se-muted);
-  cursor: not-allowed;
 }
 
 .se-link {
-  border: 0.0625rem solid var(--se-border);
-  background: var(--se-bg);
   color: var(--se-strong);
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
 
-.se-link:hover {
-  border-color: var(--se-accent);
-}
-
-/* The bet selector and the start control, on one row of the bar. */
-.se-bet {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
-}
-
-.se-bet fieldset {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-/* The visible label, beside the options it names. */
-.se-bet__label {
-  margin-inline-end: 0.25rem;
+.se-menu-button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--se-muted);
 }
 
 /*
- * A bet option is a pill; its radio stays the real control, over the pill. Its
- * border is all that marks an unselected option, so it keeps 3:1 against the
- * page and the panel on both themes: WCAG 1.4.11, by the Wrapper's WCAG 2.2
- * AA target (specs/wrapper.md, Accessibility).
+ * The start control: one width in every state and label; its label centred;
+ * the spinner at its right edge, out of the flow, while a start is in flight.
+ * The cash-out and "check again" take its place and width.
  */
-.se-choice {
+.se-start-group {
+  display: flex;
+  flex: 1 1 auto;
+  height: var(--se-row);
+  overflow: hidden;
+  border-radius: var(--se-control-radius);
+}
+
+.se-start,
+.se-button--wide {
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--se-row);
+  padding: 0 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  font-stretch: 87.5%;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.se-start {
+  border: 0;
+  border-radius: 0;
+  background: var(--se-accent);
+  color: var(--se-on-accent);
+}
+
+.se-controls > .se-start {
+  border-radius: var(--se-control-radius);
+}
+
+.se-start[aria-busy="true"] {
+  background: var(--se-busy);
+  color: var(--se-on-busy);
+}
+
+.se-spinner {
+  position: absolute;
+  top: 50%;
+  right: 0.875rem;
+  display: none;
+  width: 0.8125rem;
+  height: 0.8125rem;
+  margin-top: -0.40625rem;
+  border: 0.125rem solid currentcolor;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+
+.se-start[aria-busy="true"] .se-spinner {
+  display: block;
+  animation: se-spin 0.8s linear infinite;
+}
+
+.se-button__value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: 0;
+  opacity: 0.85;
+}
+
+.se-autoplay {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
-  padding: 0 var(--se-choice-pad, 1.25rem);
-  border: 0.0625rem solid var(--se-control-border);
-  border-radius: var(--se-pill);
-  background: var(--se-bg);
-  color: var(--se-strong);
-  font-family: var(--se-mono);
-  font-weight: 700;
-  transition: border-color 0.2s ease-out;
-}
-
-.se-choice input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  border-radius: inherit;
-  opacity: 0;
+  width: var(--se-autoplay-w);
+  min-height: var(--se-row);
+  border: 0;
+  border-inline-start: 0.0625rem solid rgb(7 35 26 / 0.22);
+  background: var(--se-accent-deep);
+  color: var(--se-on-accent);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.se-choice:hover {
-  border-color: var(--se-accent);
+.se-autoplay--running {
+  border-inline-start-color: transparent;
+  background: var(--se-control);
+  color: var(--se-accent);
 }
 
-.se-choice:has(input:checked) {
-  border-color: var(--se-accent);
-  background: var(--se-accent);
-  color: var(--se-accent-fg);
-}
-
-/* The selected option shows a dot too, so colour never carries it alone. */
-.se-choice:has(input:checked)::before {
-  content: "";
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: currentcolor;
-}
-
-.se-choice:has(input:focus-visible) {
-  outline: 0.1875rem solid var(--se-focus);
-  outline-offset: 0.125rem;
-}
-
-.se-choice:has(input:disabled) {
-  border-style: dashed;
-  color: var(--se-muted);
-}
-
-.se-choice:has(input:disabled) input {
+.se-autoplay:disabled {
   cursor: not-allowed;
+  opacity: 0.55;
 }
 
-.se-choice__note {
+.se-autoplay-anchor {
+  display: flex;
+}
+
+/* The pick prompt holds the start control's place: text, not a control. */
+.se-pick-prompt {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   color: var(--se-muted);
-  font-family: system-ui, sans-serif;
-  font-weight: 400;
+  font-size: 0.9375rem;
 }
 
-.se-choice:has(input:checked) .se-choice__note {
-  color: inherit;
+/* The bet stepper: minus, the field with its rail, plus; MIN and MAX. */
+.se-bet {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
 }
 
-/* The cash-out control's amount or multiplier, beside its label. */
-.se-button__value {
-  margin-inline-start: 0.5rem;
-  font-weight: 400;
+.se-stepper {
+  display: flex;
+  align-items: stretch;
+  height: var(--se-row);
+  overflow: hidden;
+  border: 0.0625rem solid var(--se-line);
+  border-radius: var(--se-control-radius);
+  background: var(--se-control);
 }
 
-.se-button:hover:not(:disabled) {
-  opacity: 0.88;
+.se-stepper__step {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.se-stepper__field {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  row-gap: 0.25rem;
+  width: 6rem;
+  border-inline: 0.0625rem solid var(--se-line);
+  cursor: ns-resize;
+  user-select: none;
+}
+
+.se-stepper__field .se-label {
+  font-size: 0.65625rem;
+  line-height: 1;
+}
+
+.se-stepper__value {
+  height: 1.125rem;
+  overflow: hidden;
+  font-size: 1.0625rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: 1.125rem;
+}
+
+.se-stepper__value span {
+  display: block;
+}
+
+.se-roll-up {
+  animation: se-roll-up 0.16s ease-out;
+}
+
+.se-roll-down {
+  animation: se-roll-down 0.16s ease-out;
+}
+
+@keyframes se-roll-up {
+  from {
+    opacity: 0;
+    transform: translateY(70%);
+  }
+}
+
+@keyframes se-roll-down {
+  from {
+    opacity: 0;
+    transform: translateY(-70%);
+  }
+}
+
+.se-rail {
+  display: flex;
+  align-items: center;
+  gap: 0.1875rem;
+  height: 0.1875rem;
+}
+
+.se-rail__mark {
+  width: 0.1875rem;
+  height: 0.1875rem;
+  border-radius: 0.125rem;
+  background: #3a4350;
+}
+
+.se-rail__mark--past {
+  background: #5a6472;
+}
+
+.se-rail__mark--on {
+  width: 0.625rem;
+  background: var(--se-accent);
+}
+
+.se-rail__mark--off {
+  opacity: 0.4;
+}
+
+.se-quick-group {
+  display: flex;
+}
+
+.se-quick {
+  padding: 0 0.375rem;
+  border-color: transparent;
+  background: transparent;
+  color: var(--se-muted);
+  font-size: 0.78125rem;
+  font-weight: 600;
+}
+
+/* The fairness chip (W-59): a 44 px hit area around a small pill. */
+.se-chip {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.875rem;
+  padding: 0 0.625rem 0 0.5rem;
+  border: 0.0625rem solid var(--se-line);
+  border-radius: var(--se-pill);
+  background: transparent;
+  color: var(--se-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.se-chip::after {
+  position: absolute;
+  inset: -0.4375rem -0.125rem;
+  content: "";
+}
+
+.se-chip[data-kind="checked"],
+.se-chip[data-kind="dev"] {
+  border-color: rgb(87 217 179 / 0.35);
+  background: rgb(87 217 179 / 0.1);
+  color: var(--se-accent);
+}
+
+.se-chip[data-kind="not-verified"] {
+  border-color: var(--se-problem);
+  color: var(--se-problem);
+}
+
+/* Popovers: not dialogs, near-opaque, above the bar. */
+.se-anchor {
+  position: relative;
+}
+
+.se-anchor[hidden] {
+  display: none;
+}
+
+.se-popover {
+  position: absolute;
+  bottom: calc(100% + 0.625rem);
+  left: 0;
+  z-index: 2;
+  width: min(18.75rem, calc(100vw - 2rem));
+  max-height: 60vh;
+  padding: 0.875rem;
+  overflow-y: auto;
+  border: 0.0625rem solid var(--se-line);
+  border-radius: 0.625rem;
+  background: var(--se-popover);
+  color: var(--se-fg);
+  font-size: 0.8125rem;
+  text-align: start;
+}
+
+.se-popover[data-align="end"] {
+  right: 0;
+  left: auto;
+}
+
+.se-popover[hidden] {
+  display: none;
+}
+
+.se-popover p {
+  margin: 0 0 0.625rem;
+  color: var(--se-muted);
+}
+
+.se-popover__title {
+  margin: 0 0 0.625rem;
+}
+
+.se-popover__foot {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 0.0625rem solid var(--se-line);
+}
+
+.se-popover__hint {
+  margin-top: 0.75rem;
+}
+
+.se-checks {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0 0 0.75rem;
+  padding-inline-start: 1.125rem;
+}
+
+.se-checks__mark {
+  color: var(--se-muted);
+}
+
+.se-counts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.375rem;
+}
+
+.se-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.se-session {
+  margin-bottom: 0.625rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 0.0625rem solid var(--se-line);
+}
+
+.se-session__stats {
+  display: flex;
+  gap: 0.875rem;
+}
+
+.se-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.se-relaunch {
+  flex: 1 1 auto;
+}
+
+.se-relaunch:empty {
+  display: none;
 }
 
 /* The alert takes the rest of the row, beside the status heading. */
+.se-alert {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0 0.5rem;
+  min-width: 0;
+  max-height: 2.125rem;
+  overflow-y: auto;
+}
+
+.se-alert[data-empty] {
+  display: none;
+}
+
 .se-alert:not([data-empty]) {
   padding: 0.25rem 0.5rem;
   border: 0.0625rem solid var(--se-error);
   border-left-width: 0.25rem;
-  border-radius: 0.75rem;
+  border-radius: var(--se-control-radius);
   background: var(--se-error-bg);
 }
 
@@ -610,17 +1026,17 @@ h2.se-heading {
   align-items: center;
   gap: 0.5rem;
   margin: 0;
-  padding: 0.25rem 1rem;
-  border: 0.0625rem solid var(--se-border);
-  border-left: 0.25rem solid var(--se-notice);
-  border-radius: 0.75rem;
-  background: var(--se-panel);
+  padding: 0.25rem 0.75rem;
+  border: 0.0625rem solid var(--se-line);
+  border-left: 0.25rem solid var(--se-problem);
+  border-radius: var(--se-control-radius);
+  background: var(--se-control);
   color: var(--se-strong);
   font-size: 0.875rem;
 }
 
 .se-notice .se-icon {
-  color: var(--se-notice);
+  color: var(--se-problem);
 }
 
 /* A flex box ignores `hidden` unless told: a hidden notice or row is gone. */
@@ -631,8 +1047,39 @@ h2.se-heading {
   display: none;
 }
 
+/* The controls' states, after every control's own rule. */
+.se-start:focus-visible,
+.se-autoplay:focus-visible {
+  outline: 0.125rem solid var(--se-on-accent);
+  outline-offset: -0.25rem;
+}
+
+.se-button:disabled,
+.se-quick:disabled,
+.se-stepper__step:disabled {
+  color: var(--se-muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.se-start:disabled,
+.se-start[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.se-button:hover:not(:disabled),
+.se-menu-button:hover,
+.se-count:hover {
+  background: var(--se-control-hover);
+}
+
+.se-start:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--se-accent-press);
+}
+
+/* Focus: a 2 px accent ring on every control (RFC-005 section 9). */
 :focus-visible {
-  outline: 0.1875rem solid var(--se-focus);
+  outline: 0.125rem solid var(--se-accent);
   outline-offset: 0.125rem;
 }
 
@@ -641,7 +1088,7 @@ h2.se-heading {
 }
 
 .se-heading:focus-visible {
-  outline: 0.1875rem solid var(--se-focus);
+  outline: 0.125rem solid var(--se-accent);
 }
 
 .se-visually-hidden {
@@ -656,43 +1103,40 @@ h2.se-heading {
   border: 0;
 }
 
-/*
- * The bar's compact sizes (W-57): a heading and a line of text share one row.
- * After the base rules, so each override follows the rule it narrows.
- */
+/* The bar's compact sizes: a heading and a line of text share one row. */
 .se-bar .se-heading {
-  font-size: 1rem;
+  flex: none;
+  font-size: 0.9375rem;
 }
 
 .se-bar .se-heading .se-icon {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 .se-bar .se-detail {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--se-muted);
   font-size: 0.875rem;
   line-height: 1.25;
+  text-overflow: ellipsis;
 }
 
-/* "Something went wrong: The game is unavailable right now." */
+.se-status .se-field__value {
+  font-weight: 600;
+}
+
 .se-bar .se-alert .se-heading {
   flex-wrap: nowrap;
-  font-family: system-ui, sans-serif;
   font-size: 0.875rem;
   line-height: 1.5rem;
-  text-transform: none;
-  letter-spacing: normal;
 }
 
 .se-bar .se-alert .se-heading > span::after {
   content: ":";
 }
 
-/*
- * The alert's first line stays on the row beside its heading, its text
- * wrapping inside it; its lines are as tall as the row, so a further line is
- * wholly out of view until scrolled.
- */
 .se-bar .se-alert > .se-detail {
   line-height: 1.5rem;
 }
@@ -702,37 +1146,14 @@ h2.se-heading {
   min-width: 4rem;
 }
 
-.se-bar .se-field {
-  gap: 0.25rem 0.5rem;
-}
-
-.se-bar .se-field__value {
-  font-size: 1rem;
-}
-
-.se-round .se-actions {
-  gap: 0.5rem;
-}
-
-/* The narrowest (under 22.5rem): the bet options keep to one row. */
-@media (width < 22.5rem) {
-  :root {
-    --se-bar-choice-pad: 0.625rem;
+/* Under 35rem the stepper's MIN and MAX hide, and its steps widen. */
+@media (width < 35rem) {
+  .se-quick-group {
+    display: none;
   }
-}
 
-/*
- * The checked option opts out of forced colours to stay Highlight, so its
- * focus outline, drawn on the Canvas outside the pill, takes a system colour
- * too instead of the theme's --se-focus (W-45).
- */
-@media (forced-colors: active) {
-  .se-choice:has(input:checked) {
-    border-color: Highlight;
-    background: Highlight;
-    color: HighlightText;
-    forced-color-adjust: none;
-    outline-color: CanvasText;
+  .se-stepper__field {
+    width: 5.5rem;
   }
 }
 
@@ -750,8 +1171,181 @@ h2.se-heading {
     animation: none;
   }
 
-  .se-button,
-  .se-choice {
-    transition: none;
+  .se-start[aria-busy="true"] .se-spinner {
+    animation: none;
+  }
+
+  .se-roll-up {
+    animation: none;
+  }
+
+  .se-roll-down {
+    animation: none;
+  }
+
+  .se-bar[data-edge] .se-edge__mark {
+    animation: none;
+  }
+
+  .se-bar[data-edge="sweep"] .se-edge__mark {
+    width: 100%;
+    opacity: 0.6;
+  }
+}
+
+/*
+ * A result (RFC-005): the status slot as two rows of 2.75rem that never
+ * scroll. Row 1: the chip, the heading, and the payout (or the return to
+ * player, or the expired line); row 2: the round id, its copy control, and the
+ * verify link, as quiet text controls that keep their 2.75rem height. When an
+ * error shows beside a result, the slot keeps its usual wrapping layout.
+ */
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty]) {
+  display: grid;
+  grid-template-columns: repeat(3, max-content) minmax(0, 1fr);
+  grid-template-rows: repeat(2, 2.75rem);
+  align-items: center;
+  align-content: center;
+  gap: 0 0.75rem;
+  padding-block: 0;
+  overflow-y: auto;
+}
+
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  > .se-round,
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  .se-actions {
+  display: contents;
+}
+
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  > .se-chip-anchor {
+  grid-area: 1 / 1;
+}
+
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  > .se-status {
+  grid-area: 1 / 2;
+}
+
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  .se-round
+  > .se-field {
+  flex-wrap: nowrap;
+  align-items: center;
+  grid-row: 1;
+  white-space: nowrap;
+}
+
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  .se-round
+  > .se-field:has(.se-round-id) {
+  grid-area: 2 / 1;
+}
+
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  .se-round
+  [data-focus-key="copy-round-id"] {
+  grid-area: 2 / 2;
+}
+
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  .se-round
+  [data-focus-key="verify"] {
+  grid-area: 2 / 3;
+}
+
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  .se-round
+  .se-field__value {
+  font-weight: 600;
+  overflow-wrap: normal;
+}
+
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  .se-round
+  .se-button--quiet,
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  .se-round
+  .se-link {
+  min-width: 0;
+  padding: 0 0.25rem;
+  border-color: transparent;
+  background: transparent;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  text-decoration-color: var(--se-line);
+  text-underline-offset: 0.2em;
+}
+
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  .se-round
+  .se-button--quiet {
+  color: var(--se-muted);
+}
+
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  .se-round
+  .se-button--quiet:hover,
+.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+  .se-round
+  .se-link:hover {
+  color: var(--se-strong);
+  text-decoration-color: currentcolor;
+}
+
+/*
+ * A result on a phone: two rows that each lay out on their own (a line break
+ * between them, not shared columns), with the payout's and the round id's
+ * labels read, not shown, so both rows fit a 20rem slot.
+ */
+@media (width < 35rem) {
+  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: center;
+    gap: 0 0.5rem;
+  }
+
+  .se-status-slot:has(> .se-round:not(:empty)):has(
+      > .se-alert[data-empty]
+    )::before {
+    content: "";
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+    > :is(.se-chip-anchor, .se-status),
+  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+    .se-round
+    > .se-field:not(:has(.se-round-id)) {
+    order: 1;
+    min-height: 2.75rem;
+  }
+
+  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+    .se-round
+    > .se-field:has(.se-round-id),
+  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+    .se-round
+    [data-focus-key="copy-round-id"],
+  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+    .se-round
+    [data-focus-key="verify"] {
+    order: 3;
+  }
+
+  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
+    .se-round
+    > .se-field
+    .se-field__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

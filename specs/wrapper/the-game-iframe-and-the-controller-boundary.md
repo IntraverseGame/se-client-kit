@@ -101,17 +101,20 @@ Part of the [Wrapper spec](../wrapper.md), section
   it does not match. The game never receives the key, the token, a signature, a
   `CreateRoundAuth`, or a header: the Wrapper sends it the allow-listed copy of
   Snapshots that passed W-28 (below) and that the hold (below) does not keep,
-  and nothing else of the session.
+  and nothing else of the session but, to a game that declared the `inset`
+  capability, one value the Wrapper derives: the band its bar covers (`layout`,
+  below; RFC-005).
 - **`se.controller/1`, the first-release minimum.** Messages are JSON objects
   with `schema: "se.controller/1"` and a `type`. Controller variations come in
   later increments.
 
-  | Direction       | `type`     | Fields                                           | Meaning                                                                                                                                      |
-  | --------------- | ---------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-  | game to Wrapper | `hello`    | `presentations`, `statuses`                      | The game's capabilities. The Wrapper sends no variant the game did not declare.                                                              |
-  | game to Wrapper | `action`   | `id`, `verb` (`pick`), `args` (`step`, `option`) | A pick request. It is not an action: the Wrapper validates it (W-23) and builds the signed action.                                           |
-  | Wrapper to game | `snapshot` | `snapshot`                                       | A Snapshot that passed W-28, sent on every accepted change the hold does not keep: its `steps` copy, or (#146) its `playback` copy.          |
-  | Wrapper to game | `reject`   | `id`, `reason`                                   | An `action` request that was not accepted. `reason` is a closed list (`not_legal`, `not_active`, `busy`, `invalid`), never a server message. |
+  | Direction       | `type`     | Fields                                                 | Meaning                                                                                                                                           |
+  | --------------- | ---------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | game to Wrapper | `hello`    | `presentations`, `statuses`, `capabilities` (optional) | The game's capabilities. The Wrapper sends no variant the game did not declare. `capabilities` (RFC-005): today `inset` only.                     |
+  | game to Wrapper | `action`   | `id`, `verb` (`pick`), `args` (`step`, `option`)       | A pick request. It is not an action: the Wrapper validates it (W-23) and builds the signed action.                                                |
+  | Wrapper to game | `snapshot` | `snapshot`                                             | A Snapshot that passed W-28, sent on every accepted change the hold does not keep: its `steps` copy, or (#146) its `playback` copy.               |
+  | Wrapper to game | `reject`   | `id`, `reason`                                         | An `action` request that was not accepted. `reason` is a closed list (`not_legal`, `not_active`, `busy`, `invalid`), never a server message.      |
+  | Wrapper to game | `layout`   | `insetBottom`                                          | Only to a game whose accepted `hello` declared `inset` (RFC-005): the band the Wrapper's bar covers from the frame's bottom, in whole CSS pixels. |
 
   **The hold** (RFC-004, decided 2026-10-30; built in the shell:
   `game-hold.ts`'s `givenToGame`). The game is never sent an `active` Snapshot
@@ -219,7 +222,45 @@ Part of the [Wrapper spec](../wrapper.md), section
     a missing field, or an extra field fails the schema and is ignored.
   - `hello`: `presentations` is a non-empty array, with no repeats, of the
     Snapshot schema's presentations (`steps`, `playback`); `statuses` is a
-    non-empty array, with no repeats, of its seven `RoundStatus` values.
+    non-empty array, with no repeats, of its seven `RoundStatus` values;
+    `capabilities` (optional; RFC-005, on Q6's recommendation, pending the
+    human's decision: `se.controller/1` with an optional field) is a non-empty
+    array, with no repeats, of capabilities from a closed list, today `inset`
+    only. An unknown capability fails the `hello` as any extra field does, so
+    the list grows only with the spec.
+  - **The `inset` capability and `layout` (RFC-005 section 1).** A game that
+    declares `inset` draws its scene under the Wrapper's bar and keeps its
+    framing and every piece of its own interface above the band the bar covers.
+    The Wrapper then sizes the frame to the whole stage, bar included
+    ([W-57](./the-single-screen.md#the-height)), and sends
+    `{ schema: "se.controller/1", type: "layout", insetBottom }` **right after
+    it accepts the `hello`**, whether or not a `snapshot` goes with it (none
+    goes while the bridge has no Snapshot or holds an `active` one); when a
+    `snapshot` is due at that moment it goes first. That first `layout` is the
+    acknowledgement of the capability. It sends `layout` again whenever the
+    value changes, never twice with one value. `insetBottom` is an integer of
+    CSS pixels, rounded up, at least 0: 0 when the bar docks below; at most the
+    frame's height less 200 CSS pixels, since the bar docks below rather than
+    cover more. It is derived by the Wrapper, sent only to D after a valid
+    `hello` (never before it, never to an incompatible or closed bridge), and
+    says nothing of the session; it does reveal the bar's height, which follows
+    the width and the player's text size, a minor fingerprinting signal like the
+    frame's own size. The bridge takes the first value from the Wrapper
+    (`insetBottom` of its options) and later ones through `layout(insetBottom)`,
+    and tells the Wrapper the declared capabilities right after the `hello` is
+    accepted (`onCapabilities`).
+  - **Compatibility runs one way.** A game without the capability on this
+    Wrapper gets no `layout` and the apron (W-57). A game that declares it on an
+    older Wrapper has its `hello` ignored (that Wrapper's closed schema), so it
+    gets no answer; Wrapper releases that accept the field ship before any game
+    sends it. A game falls back only when **no `layout`** arrives within its own
+    timeout (never on a missing `snapshot`, which this Wrapper may rightly
+    withhold): it then sends a plain `hello` (an ignored `hello` is not the
+    first one) and draws as a game without the capability. The reference game
+    shows how (decided by the human, 2026-11-13): it declares `inset`, keeps its
+    whole interface above the band, lets only its background run under it, and
+    falls back to a plain `hello` after its own timeout
+    ([the reference game](../client-kit/the-reference-game.md)).
   - `action`: `id` is a string of 1 to 64 characters from `[A-Za-z0-9_-]`;
     `verb` is `pick`, the only verb; `args` is exactly `step` and `option`, each
     a non-negative safe integer, `step` a `Step.index` and `option` less than
@@ -367,4 +408,6 @@ Part of the [Wrapper spec](../wrapper.md), section
   The next bet is offered beside them (W-31). They go once the Snapshot of the
   round the player started from them is shown; a start that is refused (a typed
   error) or not answered yet keeps them, and so does a Snapshot of another round
-  that the player did not start from them.
+  that the player did not start from them. Under autoplay (W-61) the player's
+  start of the run is that act for every round of the run: each round's id and
+  link replace the last one's without a new act (RFC-005 section 7).

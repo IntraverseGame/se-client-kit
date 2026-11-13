@@ -16,18 +16,14 @@
 // a closed code; nothing here returns the key, the token, a signature, or the
 // transcript. It logs nothing.
 
-import type { RandomUuid } from "@intraverse/se-client-play-client";
+import type { Clock, RandomUuid } from "@intraverse/se-client-play-client";
 
-import type { Environment } from "./chain-config.ts";
-import {
-  type ControllerBridge,
-  createControllerBridge,
-  type PickUseCase,
-} from "./controller-bridge.ts";
+import { createAutoplayRun } from "./autoplay-run.ts";
 import { createPickUseCase } from "./pick-use-case.ts";
 import { redacting } from "./redaction.ts";
 import type { RoundFlowOptions } from "./round-flow.ts";
 import { type Bet, startSessionRound } from "./round-start.ts";
+import { createGameMounting, type GameMountingHost } from "./session-mount.ts";
 import {
   beforeOf,
   CHANGED,
@@ -40,8 +36,7 @@ import {
   type SessionReadsHost,
 } from "./session-reads.ts";
 import type {
-  GameMount,
-  GameMountOptions,
+  ChangeSource,
   PlaySession,
   SessionRead,
 } from "./session-types.ts";
@@ -64,9 +59,11 @@ export type PlaySessionParts = {
   /** The Wrapper's own origin, the SE origin, fixed at open. */
   readonly ownOrigin: string;
   /** The configuration's `environment`, for W-37's loopback exemption. */
-  readonly environment: Environment;
+  readonly environment: GameMountingHost["environment"];
   readonly ended: () => boolean;
   readonly end: () => void;
+  /** The session's clock: autoplay's interval between rounds (RFC-005). */
+  readonly clock: Pick<Clock, "setTimeout" | "clearTimeout">;
 };
 
 export type PlaySessionHandle = {
@@ -86,14 +83,13 @@ export const createPlaySession = (
 ): PlaySessionHandle => {
   const { flow: flowOptions, ended } = parts;
   const endListeners = new Set<() => void>();
-  const changeListeners = new Set<(read: SessionRead) => void>();
+  const changeListeners = new Set<
+    (read: SessionRead, source: ChangeSource) => void
+  >();
   // The round the session holds: a config round's flow or a book round.
   let current: ReturnType<SessionReadsHost["current"]>;
-  let bridge: ControllerBridge | undefined;
   // A start or a cash-out in flight: a second one is refused, never sent.
   let acting = false;
-  const gameOrigins: readonly string[] = Object.freeze([...parts.gameOrigins]);
-  const { ownOrigin, environment } = parts;
 
   const reader = createSnapshotReader({
     transport: flowOptions.transport,
@@ -102,13 +98,12 @@ export const createPlaySession = (
   const reads = createSessionReads({
     reader,
     current: () => current,
-    bridge: () => bridge,
+    bridge: () => mounting.bridge(),
     ended,
     // The Snapshot that changes the session closes the game's bridge: nothing
     // more is forwarded to the game (W-53).
     onChange: () => {
-      bridge?.close();
-      bridge = undefined;
+      mounting.close();
     },
   });
   const { see, settle, read, holdsOpenRound, admit, changed } = reads;
@@ -172,12 +167,50 @@ export const createPlaySession = (
     return changed() ? CHANGED : undefined;
   };
 
-  const start = (bet: Bet): Promise<SessionRead> => {
+  const startNow = (bet: Bet): Promise<SessionRead> => {
     const answer = closed();
     return answer === undefined
       ? oneAtATime(() => startOnce(bet))
       : Promise.resolve(answer);
   };
+
+  // Autoplay (RFC-005, W-61): the run sends W-22's starts through `startNow`
+  // and sees every answer the session gives; its starts' answers reach the UI
+  // through `onChange`.
+  const autoplay = createAutoplayRun({
+    // The newest of the round's own latest and the last read (W-29).
+    latest: () => {
+      const last = reader.latest();
+      const own = current?.latest();
+      return own === undefined ||
+        (last !== undefined && last.version > own.version)
+        ? last
+        : own;
+    },
+    start: startNow,
+    failure: () => reads.round()?.failure,
+    closed: () => closed() !== undefined,
+    // Marked as the run's, so the UI moves no focus for it (W-61).
+    answer: answer => {
+      for (const listener of changeListeners) listener(answer, "autoplay");
+    },
+    setTimeout: (callback, delayMs) =>
+      parts.clock.setTimeout(callback, delayMs),
+    clearTimeout: handle => {
+      parts.clock.clearTimeout(handle);
+    },
+  });
+
+  /** Lets the run see an answer before the UI gets it. */
+  const seen = async (answer: Promise<SessionRead>): Promise<SessionRead> => {
+    const outcome = await answer;
+    autoplay.see(outcome);
+    return outcome;
+  };
+
+  // The player's own start is refused while a run goes: the run sends them.
+  const start = (bet: Bet): Promise<SessionRead> =>
+    autoplay.running() ? Promise.resolve(refused("busy")) : seen(startNow(bet));
 
   const cashOutOnce = async (): Promise<SessionRead> => {
     const flow = current;
@@ -198,70 +231,49 @@ export const createPlaySession = (
   const flowPick = createPickUseCase(() => (changed() ? undefined : current));
   // The game's pick, through the round flow (the gate, W-23); its answer
   // reaches the UI through `onChange`.
-  const pick: PickUseCase = async value => {
+  const pick: GameMountingHost["pick"] = async value => {
     const flow = current;
     const before = beforeOf(flow);
     const outcome = await flowPick(value);
     if (outcome.accepted && flow !== undefined) {
       const answer = settle(flow, before);
-      for (const listener of changeListeners) listener(answer);
+      autoplay.see(answer);
+      for (const listener of changeListeners) listener(answer, "pick");
     }
     return outcome;
   };
 
-  const gameOrigin = (): string => parts.gameOrigin;
-
-  const mountGame = (mount: GameMountOptions): GameMount => {
-    const origin = gameOrigin();
-    if (ended()) {
-      return Object.freeze({ ok: false, refusal: "session-ended" });
-    }
-    const result = createControllerBridge({
-      ...mount,
-      gameOrigin: origin,
-      gameOrigins,
-      ownOrigin,
-      environment,
-      pick,
-    });
-    if (!result.ok)
-      return Object.freeze({ ok: false, refusal: result.refusal });
-    bridge?.close();
-    const mounted: GameMount = Object.freeze({
-      ok: true,
-      gameOrigin: origin,
-      gamePath: parts.gamePath,
-    });
-    if (changed()) {
-      // A changed session forwards nothing to the game (W-53).
-      result.bridge.close();
-      bridge = undefined;
-      return mounted;
-    }
-    bridge = result.bridge;
-    // W-38's hold at the mount: a held Snapshot is not given.
-    const latest = reads.atMount();
-    if (latest !== undefined) bridge.sendSnapshot(latest);
-    return mounted;
-  };
+  const mounting = createGameMounting({
+    ...parts,
+    pick,
+    changed,
+    atMount: reads.atMount,
+    stopAutoplay: autoplay.stop,
+  });
 
   const notifyEnd = (): void => {
-    bridge?.close();
-    bridge = undefined;
+    autoplay.stop("session-ended");
+    mounting.close();
     for (const listener of endListeners) listener();
     endListeners.clear();
   };
 
   const session: PlaySession = redacting({
-    read,
+    read: () => seen(read()),
     // From `check-later`, `read` is the cancel's "check again" read (W-35).
-    checkAgain: read,
+    checkAgain: () => seen(read()),
     start,
-    cashOut,
+    cashOut: () => seen(cashOut()),
+    autoplay: autoplay.begin,
+    stopAutoplay: autoplay.stop,
+    autoplayState: autoplay.state,
+    onAutoplay: autoplay.onState,
     round: reads.round,
-    gameOrigin,
-    mountGame,
-    onChange: (listener: (outcome: SessionRead) => void): (() => void) => {
+    gameOrigin: (): string => parts.gameOrigin,
+    mountGame: mounting.mountGame,
+    onChange: (
+      listener: (outcome: SessionRead, source: ChangeSource) => void,
+    ): (() => void) => {
       changeListeners.add(listener);
       return (): void => {
         changeListeners.delete(listener);

@@ -2,6 +2,12 @@
 // type here holds a key, a token, the launch code, a signature, a transcript,
 // or a signing capability.
 
+import type {
+  AutoplayBegin,
+  AutoplayOutsideStop,
+  AutoplayRequest,
+  AutoplayState,
+} from "./autoplay-types.ts";
 import type { CancelState } from "./cancel-state.ts";
 import type { FailReason } from "./chain-decision.ts";
 import type {
@@ -11,7 +17,21 @@ import type {
 import type { RejectReason } from "./controller-protocol.ts";
 import type { ShellErrorCode } from "./errors.ts";
 import type { Bet } from "./round-start.ts";
+import type { VerificationFailure } from "./round-verification.ts";
 import type { SnapshotRead } from "./snapshot-read.ts";
+import type { TipCheckFailure } from "./tip-check.ts";
+
+/**
+ * Which check refused a round (a machine code; the Wrapper gives each a player
+ * label, W-48, RFC-005): one of W-26's five check reasons (`missing`,
+ * `pinned-mismatch`, `cross-field`, `recover-mismatch`, `ready-mismatch`),
+ * `reissued` (a re-issue, W-26), `tip-check` (W-26a, W-26b; `tipFailure` says
+ * why), or `changed` (a book round whose record changed, W-52).
+ */
+export type RoundFailure = VerificationFailure | "changed";
+
+/** Why the tip check failed (W-26a, W-26b), or `bind` for the bind rule alone. */
+export type RoundTipFailure = TipCheckFailure | "bind";
 
 /** Why no session opened, or the session that did. */
 export type SessionOpening =
@@ -43,6 +63,13 @@ export type SessionRead =
       readonly reason: RejectReason | ShellErrorCode;
     };
 
+/**
+ * Where an answer outside a call of the UI came from: the game's pick (the
+ * player's own act, made in the frame), or a start of a run of autoplay (W-61),
+ * which is not the player's act and moves no focus.
+ */
+export type ChangeSource = "pick" | "autoplay";
+
 /** What the UI may know of the current round (read-only). */
 export type RoundState = {
   readonly roundId: string;
@@ -58,6 +85,13 @@ export type RoundState = {
    * chain".
    */
   readonly shown?: FailReason;
+  /**
+   * When `failed`: which check refused the round (`RoundFailure`). A machine
+   * code, never shown as it is: the Wrapper shows its player label.
+   */
+  readonly failure?: RoundFailure;
+  /** When `failure` is `tip-check`: why the tip check failed (W-26b). */
+  readonly tipFailure?: RoundTipFailure;
   /** The round is out of sync (W-19, W-44). */
   readonly outOfSync: boolean;
   /** The cash-out control may be offered (W-24). */
@@ -110,6 +144,12 @@ export type GameMount =
       readonly gameOrigin: string;
       /** The path of the game's page on D, to frame D plus it (W-37). */
       readonly gamePath: string;
+      /**
+       * The band the Wrapper's bar covers from the frame's bottom changed
+       * (RFC-005): sent as `layout` to a game that declared `inset`, through
+       * the bridge's rules (`ControllerBridge.layout`); nothing otherwise.
+       */
+      readonly layout: (insetBottom: number) => void;
     }
   | {
       readonly ok: false;
@@ -137,6 +177,21 @@ export type PlaySession = {
   readonly start: (bet: Bet) => Promise<SessionRead>;
   /** Cashes out the current round, on the player's request only (W-24). */
   readonly cashOut: () => Promise<SessionRead>;
+  /**
+   * Begins an autoplay run of book rounds (RFC-005, W-61): `count` W-22 starts
+   * of the bet, each copied from the latest Snapshot's own `Amount`, the next
+   * only `minIntervalMs` after the previous result, stopping on the first stop
+   * rule that holds. Refused, with nothing sent, when the session's rounds are
+   * not book rounds, a round is open, a run goes, or the bet is not offered or
+   * not covered. While a run goes `start` is refused `busy`; the run's answers
+   * reach the UI through `onChange`.
+   */
+  readonly autoplay: (request: AutoplayRequest) => AutoplayBegin;
+  /** A stop only the page sees: the player's, or the page hidden (Q3). */
+  readonly stopAutoplay: (reason: AutoplayOutsideStop) => void;
+  readonly autoplayState: () => AutoplayState;
+  /** Each change of the run's state. */
+  readonly onAutoplay: (listener: (state: AutoplayState) => void) => () => void;
   readonly round: () => RoundState | undefined;
   /**
    * The game origin D of the launched game: the `sessions:redeem` answer's
@@ -149,8 +204,13 @@ export type PlaySession = {
    * case, allow-list, and own origin (W-37).
    */
   readonly mountGame: (options: GameMountOptions) => GameMount;
-  /** Answers that arrive outside a call of the UI (a game's pick). */
-  readonly onChange: (listener: (read: SessionRead) => void) => () => void;
+  /**
+   * Answers that arrive outside a call of the UI, with where each came from: a
+   * game's pick, or a start of a run of autoplay (W-61).
+   */
+  readonly onChange: (
+    listener: (read: SessionRead, source: ChangeSource) => void,
+  ) => () => void;
   /** Called once when the session ends (W-7). */
   readonly onEnd: (listener: () => void) => () => void;
   readonly ended: () => boolean;

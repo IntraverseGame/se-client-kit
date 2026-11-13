@@ -41,6 +41,18 @@ export const ROUND_STATUSES: readonly RoundStatus[] = Object.freeze([
 
 export const STATUSES: ReadonlySet<string> = new Set(ROUND_STATUSES);
 
+/**
+ * A capability a game may declare in its `hello` (RFC-005, W-38): a closed list
+ * that grows only with the spec. `inset`: the game draws its scene under the
+ * Wrapper's bar and keeps its own interface above the band the `layout` message
+ * names.
+ */
+export type GameCapability = "inset";
+
+export const CAPABILITIES: ReadonlySet<string> = new Set<GameCapability>([
+  "inset",
+]);
+
 /** Why an `action` request was not accepted: a closed list, never a message. */
 export type RejectReason = "not_legal" | "not_active" | "busy" | "invalid";
 
@@ -50,6 +62,11 @@ export type HelloMessage = {
   readonly type: "hello";
   readonly presentations: readonly Presentation[];
   readonly statuses: readonly RoundStatus[];
+  /**
+   * Optional: a non-empty array, with no repeats, of capabilities from the
+   * closed list; an unknown one fails the `hello` (W-38).
+   */
+  readonly capabilities?: readonly GameCapability[];
 };
 
 /** A pick: the step (its `Step.index`) and the option chosen in it. */
@@ -173,11 +190,24 @@ export type RejectMessage = {
   readonly reason: RejectReason;
 };
 
+/**
+ * Wrapper to game, only to a game whose accepted `hello` declared `inset`: the
+ * height of the band the Wrapper's bar covers from the frame's bottom, in whole
+ * CSS pixels (0 when the bar docks below the frame). Sent right after that
+ * `hello` is accepted (after the `snapshot` due then, if any), which
+ * acknowledges the capability, and again whenever the value changes (W-38).
+ */
+export type LayoutMessage = {
+  readonly schema: typeof CONTROLLER_SCHEMA;
+  readonly type: "layout";
+  readonly insetBottom: number;
+};
+
 /** A message the game may send. */
 export type GameMessage = HelloMessage | ActionMessage;
 
 /** A message the Wrapper sends to the game. */
-export type WrapperMessage = SnapshotMessage | RejectMessage;
+export type WrapperMessage = SnapshotMessage | RejectMessage | LayoutMessage;
 
 const gameStep = (step: {
   readonly index: number;

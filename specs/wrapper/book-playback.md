@@ -147,21 +147,24 @@ game plays back. The player makes no move during the round.
   heading takes it when the player's own start led to the result, also when the
   result arrives by the poll after that start's `starting` answer (once, for
   that round only; any other poll moves no focus); the game never takes it from
-  there. Decided by the human, 2026-10-28.
+  there. Decided by the human, 2026-10-28. A round of a run of autoplay (W-61)
+  is not the player's own start: the exception does not fire on it, and its
+  answers move no focus (RFC-005 section 6).
 
 - **W-56. The RTP.** When a book Snapshot carries `config.rtp`, the Wrapper
-  shows the mode's return to player beside the bet selector (W-31's `idle` row
-  and the next bet) as "Return to player: <p>%", where `<p>` is `rtp.decimal`
-  turned into a percent with two fraction digits by string operations only,
-  never through a number. `rtp.decimal` is an integer digit (`0` or `1`), a
-  point, and four digits `abcd` (the schema's pattern); `<p>` is the integer
-  digit followed by `ab`, with leading zeros removed but at least one digit
-  kept, then a point, then `cd`. So `"0.9600"` is `96.00`, `"0.0500"` is `5.00`,
-  `"0.0050"` is `0.50`, `"0.0000"` is `0.00`, and `"1.0000"` is `100.00`: the
-  percent keeps the decimal's precision, four places of a fraction being two of
-  a percent. The Wrapper never shows or computes with `rtp.fraction` (the value
-  to verify against, which the verify page owns). An absent `rtp` shows nothing
-  and no error. The RTP is not forwarded to the game (W-38).
+  shows the mode's return to player in the round line beside the next bet
+  (W-31's `idle` row and the next bet; RFC-005) as "Return to player: <p>%",
+  where `<p>` is `rtp.decimal` turned into a percent with two fraction digits by
+  string operations only, never through a number. `rtp.decimal` is an integer
+  digit (`0` or `1`), a point, and four digits `abcd` (the schema's pattern);
+  `<p>` is the integer digit followed by `ab`, with leading zeros removed but at
+  least one digit kept, then a point, then `cd`. So `"0.9600"` is `96.00`,
+  `"0.0500"` is `5.00`, `"0.0050"` is `0.50`, `"0.0000"` is `0.00`, and
+  `"1.0000"` is `100.00`: the percent keeps the decimal's precision, four places
+  of a fraction being two of a percent. The Wrapper never shows or computes with
+  `rtp.fraction` (the value to verify against, which the verify page owns). An
+  absent `rtp` shows nothing and no error. The RTP is not forwarded to the game
+  (W-38).
 
 - **The controller boundary on a book round** (W-38, decided in
   [RFC-003](../../rfcs/archived/RFC-003-book-playback-over-the-controller-protocol.md)).

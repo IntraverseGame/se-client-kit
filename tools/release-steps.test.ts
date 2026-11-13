@@ -140,12 +140,12 @@ describe("checkReleaseSize", () => {
   it("reports a built output over the budget, nested files included", () => {
     const root = withDist({
       "index.html": new Uint8Array(1),
-      "assets/big.js": new Uint8Array(204_800),
+      "assets/big.js": new Uint8Array(286_720),
       "verify/index.html": new Uint8Array(1),
     });
     try {
       expect(checkReleaseSize(root).problems).toContain(
-        "wrapper output: 204801 bytes, over its size budget of 204800 bytes by 1",
+        "wrapper output: 286721 bytes, over its size budget of 286720 bytes by 1",
       );
     } finally {
       rmSync(root, { recursive: true, force: true });

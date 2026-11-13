@@ -31,7 +31,12 @@ export type ShellErrorCode =
    * A response that should be the round's Snapshot did not validate, or is not
    * a round's Snapshot (W-28): the Snapshot-rejected state (W-44).
    */
-  | "snapshot-rejected";
+  | "snapshot-rejected"
+  /**
+   * A use case failed with no answer to show (a run of autoplay's start that
+   * rejected, RFC-005): the generic error.
+   */
+  | "use-case-failed";
 
 // One fixed message per code. A message never carries an input value, so no
 // key, token, launch code, or signed bytes can reach an error (W-4, W-41).
@@ -44,6 +49,7 @@ const MESSAGES: Readonly<Record<ShellErrorCode, string>> = {
   equivocation: "a different action is already signed at this sequence",
   "round-stopped": "this round takes no new signatures",
   "snapshot-rejected": "the response is not a valid Snapshot of the round",
+  "use-case-failed": "the request failed with no answer to show",
 };
 
 /** The error the shell throws. Its message is fixed per `code`. */

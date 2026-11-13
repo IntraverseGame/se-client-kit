@@ -3,24 +3,27 @@
 // the game origin D, a way to listen for `message` events, and the pick use
 // case. The bridge holds no key, no token, and no signing capability: it sends
 // the game only the allow-listed copy of a validated Snapshot (its `steps` copy,
-// or its `playback` copy, in a presentation the game declared) and `reject`
-// messages, always with `targetOrigin = D`, and hands an accepted pick to the
-// use case. It touches no global: the window and the listener are injected.
+// or its `playback` copy, in a presentation the game declared), `reject`
+// messages, and, to a game that declared the `inset` capability, the `layout`
+// message (the band the Wrapper's bar covers, RFC-005), always with
+// `targetOrigin = D`, and hands an accepted pick to the use case. It touches no global: the window and the listener are injected.
 
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
 import { gameCopyOf, type HeldCopy, preCheck } from "./bridge-rules.ts";
 import type { Environment } from "./chain-config.ts";
+import { createLayoutSender } from "./controller-layout.ts";
+import { checkMount, type ControllerMountRefusal } from "./controller-mount.ts";
 import {
   type ActionMessage,
   CONTROLLER_SCHEMA,
+  type GameCapability,
   type HelloMessage,
   type Pick,
   type RejectReason,
   type WrapperMessage,
 } from "./controller-protocol.ts";
 import { isCompatible, parseGameMessage } from "./game-message.ts";
-import { isSerializedOrigin, mayShareSite } from "./serialized-origin.ts";
 
 /** The game frame's window (`iframe.contentWindow`): only `postMessage`. */
 export type GameFrame = {
@@ -88,21 +91,11 @@ export type ControllerBridgeOptions = {
    * when its copy was built.
    */
   readonly onCopy?: (copied: boolean) => void;
+  /** Once, after a compatible `hello`, with its capabilities (RFC-005). */
+  readonly onCapabilities?: (capabilities: readonly GameCapability[]) => void;
+  /** The bar's band over the frame, for the first `layout` (0 without it). */
+  readonly insetBottom?: () => number;
 };
-
-/** Why the bridge refused to mount the game (W-37). */
-export type ControllerMountRefusal =
-  /** D or the Wrapper's origin is not a serialized origin. */
-  | "invalid-origin"
-  /** D is not on the configuration's allow-list. */
-  | "origin-not-allowed"
-  /** D is the Wrapper's own origin. */
-  | "same-origin"
-  /**
-   * D's host shares its comparison key (its last two labels) with the
-   * Wrapper's: they may be on one registrable domain (W-37, ADR-007).
-   */
-  | "same-site";
 
 /** Where the bridge is. */
 export type ControllerBridgeState =
@@ -129,27 +122,20 @@ export type ControllerBridge = {
    */
   readonly sendSnapshot: (snapshot: ValidSnapshot) => void;
   readonly state: () => ControllerBridgeState;
+  /**
+   * A new band: `layout` to a game that declared `inset`
+   * (controller-layout.ts).
+   */
+  readonly layout: (insetBottom: number) => void;
   /** Stops listening; nothing more is sent or accepted. */
   readonly close: () => void;
 };
 
+export type { ControllerMountRefusal };
+
 export type ControllerBridgeResult =
   | { readonly ok: true; readonly bridge: ControllerBridge }
   | { readonly ok: false; readonly refusal: ControllerMountRefusal };
-
-const checkMount = (
-  options: ControllerBridgeOptions,
-): ControllerMountRefusal | undefined => {
-  const { gameOrigin, ownOrigin, gameOrigins, environment } = options;
-  if (!isSerializedOrigin(gameOrigin) || !isSerializedOrigin(ownOrigin)) {
-    return "invalid-origin";
-  }
-  if (gameOrigin === ownOrigin) return "same-origin";
-  // W-37's "different registrable domain", by the comparison key (ADR-007).
-  if (mayShareSite(gameOrigin, ownOrigin, environment)) return "same-site";
-  if (!gameOrigins.includes(gameOrigin)) return "origin-not-allowed";
-  return undefined;
-};
 
 /**
  * Mounts the bridge to the game frame, or refuses (W-37). A message is accepted
@@ -162,7 +148,15 @@ export const createControllerBridge = (
   const refusal = checkMount(options);
   if (refusal !== undefined) return Object.freeze({ ok: false, refusal });
 
-  const { gameOrigin, frame, pick, onIncompatible, onCopy } = options;
+  const {
+    gameOrigin,
+    frame,
+    pick,
+    onIncompatible,
+    onCopy,
+    onCapabilities,
+    insetBottom,
+  } = options;
   let state: ControllerBridgeState = "awaiting-hello";
   // The highest `version` given, whether or not its copy could be built.
   let latestVersion: number | undefined;
@@ -230,6 +224,8 @@ export const createControllerBridge = (
     });
   };
 
+  const layout = createLayoutSender(post, () => state === "ready");
+
   const onHello = (hello: HelloMessage): void => {
     if (state !== "awaiting-hello") return;
     if (!isCompatible(hello)) {
@@ -238,7 +234,13 @@ export const createControllerBridge = (
     }
     state = "ready";
     declared = hello.presentations;
+    // The `snapshot` due now goes first, then the `layout` that acknowledges
+    // the capability, whether or not a `snapshot` went (RFC-005).
     forward();
+    if (state !== "ready") return;
+    const capabilities = hello.capabilities ?? [];
+    onCapabilities?.(capabilities);
+    layout.acknowledge(capabilities, insetBottom);
   };
 
   const onAction = ({ id, args }: ActionMessage): void => {
@@ -286,6 +288,7 @@ export const createControllerBridge = (
       if (state === "ready") forward();
     },
     state: (): ControllerBridgeState => state,
+    layout: layout.send,
     close: (): void => {
       if (state === "closed") return;
       state = "closed";

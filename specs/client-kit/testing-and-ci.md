@@ -75,11 +75,13 @@ run by the `build` job), by the release dry run, which prints it in its summary
 and reports a problem once, and by the publish step; any measurement over its
 limit fails them. Two measurements, each with a limit in bytes (equal to the
 limit passes), decided by the human on 2026-10-18 at about 25% over the sizes
-measured that day (161873 and 52650 bytes):
+measured that day (161873 and 52650 bytes), and raised by the human on
+2026-11-13 for RFC-005 (the control bar, version 2) at about 25% over the sizes
+measured that day (231808 and 73299 bytes):
 
-- wrapper output: 204800 bytes. Every file of `apps/wrapper/dist/`,
+- wrapper output: 286720 bytes. Every file of `apps/wrapper/dist/`,
   uncompressed: what the release artifact holds.
-- wrapper page, gzip: 65536 bytes. `index.html` and every `.js` and `.css` file,
+- wrapper page, gzip: 92160 bytes. `index.html` and every `.js` and `.css` file,
   each compressed on its own with gzip at zlib's default level and summed: about
   what a player's browser downloads. Another Node's zlib can differ by a few
   bytes; the measurement CI makes, with the pinned Node, is the one that counts.

@@ -5,7 +5,9 @@
 
 import {
   type ActionMessage,
+  CAPABILITIES,
   CONTROLLER_SCHEMA,
+  type GameCapability,
   type HelloMessage,
   type Pick,
   type Presentation,
@@ -72,8 +74,17 @@ const readPick = (value: unknown): Pick | undefined => {
   return Object.freeze({ step, option });
 };
 
+const HELLO_FIELDS = ["schema", "type", "presentations", "statuses"];
+
 const parseHello = (fields: Fields): ParsedGameMessage => {
-  if (!hasExactly(fields, ["schema", "type", "presentations", "statuses"])) {
+  // `capabilities` is optional (RFC-005): with it, exactly five fields.
+  const declares = fields.has("capabilities");
+  if (
+    !hasExactly(
+      fields,
+      declares ? [...HELLO_FIELDS, "capabilities"] : HELLO_FIELDS,
+    )
+  ) {
     return IGNORED;
   }
   const presentations = readList<Presentation>(
@@ -81,12 +92,24 @@ const parseHello = (fields: Fields): ParsedGameMessage => {
     PRESENTATIONS,
   );
   const statuses = readList<RoundStatus>(fields.get("statuses"), STATUSES);
-  if (presentations === undefined || statuses === undefined) return IGNORED;
+  // A non-empty list of distinct capabilities from the closed list: an
+  // unknown one fails the `hello`, so the list grows only with the spec.
+  const capabilities = declares
+    ? readList<GameCapability>(fields.get("capabilities"), CAPABILITIES)
+    : undefined;
+  if (
+    presentations === undefined ||
+    statuses === undefined ||
+    (declares && capabilities === undefined)
+  ) {
+    return IGNORED;
+  }
   const message: HelloMessage = Object.freeze({
     schema: CONTROLLER_SCHEMA,
     type: "hello",
     presentations,
     statuses,
+    ...(capabilities === undefined ? {} : { capabilities }),
   });
   return Object.freeze({ kind: "hello", message });
 };

@@ -88,9 +88,9 @@ describe("the RTP (W-56)", () => {
     const ui = shownUnheld(book("idle", 1));
     expect(statusHeading(ui.host)).toBe(m["status.idle"]);
     expect(allText(ui.host)).toContain("Return to player: 96.00%");
-    expect(ui.host.querySelector(".se-bet legend")?.textContent).toBe(
-      m["label.bet"],
-    );
+    expect(
+      ui.host.querySelector('[role="spinbutton"]')?.getAttribute("aria-label"),
+    ).toBe(m["label.bet"]);
   });
 
   it("is shown beside the next bet after the result", () => {

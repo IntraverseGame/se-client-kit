@@ -168,6 +168,7 @@ export const openSessionOver = async (
     environment: options.config.environment,
     ended: keeper.ended,
     end: keeper.end,
+    clock: options.clock,
   });
   ending.notify = handle.notifyEnd;
   return Object.freeze({ kind: "open", session: handle.session });
