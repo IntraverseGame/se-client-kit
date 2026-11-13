@@ -7,14 +7,14 @@
   [the single screen](../../specs/wrapper/the-single-screen.md); W-31, W-33, and
   W-34 of [rendering](../../specs/wrapper/rendering-from-the-snapshot.md); W-22,
   W-26, W-26a, and W-26b of
-  [signing](../../specs/wrapper/signing-start-move-cash-out-and-cancel.md); W-39
-  and W-40 of
+  [signing](../../specs/wrapper/signing-start-move-cash-out-and-cancel.md);
+  W-37, W-38 (the `se.controller/1` messages), W-39, and W-40 of
   [the controller boundary](../../specs/wrapper/the-game-iframe-and-the-controller-boundary.md);
-  W-50 to W-56 of [book playback](../../specs/wrapper/book-playback.md); W-49e
-  and W-49f of [operator embedding](../../specs/wrapper/operator-embedding.md);
-  W-14, W-46, W-47, and W-48 and the
-  [configuration](../../specs/wrapper.md#configuration) of
-  [the Wrapper spec](../../specs/wrapper.md);
+  W-50 to W-56 of [book playback](../../specs/wrapper/book-playback.md); W-49d,
+  W-49e, and W-49f of
+  [operator embedding](../../specs/wrapper/operator-embedding.md); W-14, W-46,
+  W-47, and W-48 and the [configuration](../../specs/wrapper.md#configuration)
+  of [the Wrapper spec](../../specs/wrapper.md);
   [ADR-001](../../decisions/ADR-001-toolchain-and-signing.md) (no new
   dependency)
 
@@ -84,17 +84,65 @@ from W-59 and new tests from T-29.
   then the system UI font. Amounts use the same face with tabular figures. Text
   is sized for reading at a glance: the balance 21 px, the bet 17 px, the status
   15 px, the start control 16 px, labels 12 px.
-- **The apron and the glass** (decided; Q6 for its tone): the bar never covers
-  the game. On a wide screen the stage is followed by an **apron**, a band as
-  tall as the bar plus its 14 px inset, that continues the game's backdrop: it
-  starts in the tone of the game's bottom edge and darkens. The bar floats on
-  the apron with a translucent surface and a backdrop blur, and falls back to
-  the solid bar where the browser has no backdrop filter. The game frame is
-  never overlapped or resized (W-57 holds unchanged), so the game needs no safe
-  area. The Wrapper cannot read a cross-origin game's pixels, so the apron's
-  tone is a value, not a sample (Q6). On narrower layouts the bar docks under
-  the stage with no apron. The surface's opacity is bounded by contrast (section
-  9).
+- **The game extends behind the bar** (decided; Q6 for the protocol): the bar
+  never covers anything the game needs to show. On a wide screen the bar floats
+  over the bottom of the stage with a translucent surface and a backdrop blur
+  (the solid bar where the browser has no backdrop filter), and the game draws
+  its scene on underneath it. The Wrapper cannot paint for the game (a
+  cross-origin game's pixels are not readable; a reflection of the frame, tried
+  in the mockup, does not render), so the game does the extending, through a
+  proposed **addition to the controller protocol** (Q6: `se.controller/1` or
+  `/2`):
+  - the game declares `capabilities: ["inset"]` in its `hello`: a new optional
+    field, a non-empty array of distinct strings from a closed list (today
+    `"inset"` only); an unknown string fails the `hello` as any extra field does
+    (W-38), so the list grows only with the spec;
+  - the Wrapper then sizes the frame to the full stage, bar included, and sends
+    `{ schema: "se.controller/1", type: "layout", insetBottom: <px> }` **right
+    after it accepts a `hello` that declares the capability**, whether or not a
+    `snapshot` goes with it (W-38 sends none while the bridge has no Snapshot
+    yet or holds an `active` one); when a `snapshot` is due at the same moment
+    it goes first. That first `layout` is the acknowledgement of the capability.
+    The Wrapper sends `layout` again whenever the value changes. The value is
+    the height of the band the bar covers from the frame's bottom, an integer of
+    CSS pixels, rounded up: 0 when the bar docks below, and at most the frame's
+    height less a minimum visible game height this RFC proposes (**200 px**, a
+    new number); when the bar would cover more than that, it docks below instead
+    and the inset is 0, so a game's interface is never covered. It is derived by
+    the Wrapper, sent only to D after a valid `hello`, and says nothing of the
+    session; it does reveal the bar's height, which follows the width and the
+    player's text size, a minor fingerprinting signal like the frame's own size;
+  - the game keeps its framing and every piece of its own interface above the
+    inset and draws only scenery below it. The mockup's patched copy of a real
+    steps game does this with three.js `setViewOffset` (the shot is framed on
+    the visible part, the scene continues below) and its hint lifted by the
+    inset: about ten lines.
+  - **Compatibility runs one way.** An old game on a new Wrapper works (no
+    capability, so no `layout`, and the apron below). A new game on an older
+    Wrapper does not: that Wrapper's closed `hello` schema ignores a `hello`
+    with `capabilities` (W-38), so it answers nothing and the game waits.
+    Wrapper releases that accept the field therefore ship before any game sends
+    it. A game falls back only when **no `layout`** arrives within its own
+    timeout (never on a missing `snapshot`, which a new Wrapper may rightly
+    withhold): it then sends a plain `hello` (an ignored `hello` is not the
+    first one, W-38) and draws as a game without the capability.
+  - A game without the capability gets an **apron** instead: the frame keeps its
+    size and the bar floats on a band below it (as tall as the bar plus its 14
+    px inset) in a neutral dark tone (Q6), so it is never covered either. On
+    narrower layouts the bar docks under the stage, and the inset is 0.
+  - **The game draws behind money controls**, and the game is untrusted (W-37):
+    under a translucent bar it could paint a fake balance or a fake "Verified".
+    So the surface's opacity has a floor, for contrast and against spoofing
+    (section 9), and the Wrapper's own text always sits on that surface.
+  - **What else follows (W-57, W-49d).** The overlay's scrim and cover span the
+    whole frame, under the bar too, or a held game view would show through the
+    glass in a cover state. W-57's rule that the bar never spills onto the stage
+    becomes: it overlaps only the inset a game asked for. The frame resizes once
+    after the `hello` and at a layout change, never on a status change. `H_min`
+    (W-49d) depends on the game's capability (apron or inset), so the first
+    `resize` may change once after the `hello`; T-9a's "same value in every
+    state" then holds from that point. The value is derived, so no game message
+    reaches the operator page.
 
 ### 2. The bet stepper (W-31's bet selector)
 
@@ -222,7 +270,10 @@ responsible gaming need a source the Wrapper does not have today (Q4).
   stylesheet contrast test checks the worst case: the surface composited over a
   white game and over a black one. At the mockup's 58 % opacity the muted labels
   fail over white; they pass from about 86 %, so the surface is at least that
-  opaque, whatever the blur.
+  opaque, whatever the blur. The same floor is the anti-spoofing bound of
+  section 1: a game drawing under the bar cannot make its own text read as the
+  bar's. If review finds 86 % too weak for that, the surface over game pixels is
+  solid and only its edge is blurred.
 - Focus is visible on every control (a 2 px accent ring); the popovers close on
   Escape and return focus; the bar never moves focus unless the player acted
   (W-46).
@@ -252,8 +303,16 @@ responsible gaming need a source the Wrapper does not have today (Q4).
 ## Tradeoffs
 
 - More moving parts in the bar (a popover, a run state) and more tests.
-- The apron adds about 116 px under the stage on a wide screen, which the height
-  the Wrapper reports to the operator page (W-49d) includes.
+- The `inset` capability is a change to the controller protocol (W-37, W-38 in
+  [the controller boundary](../../specs/wrapper/the-game-iframe-and-the-controller-boundary.md)):
+  the `hello` validator and the reference game change with it, compatibility
+  runs one way (section 1), and a game that claims it but draws its interface
+  under the bar is that game's bug, not one the Wrapper can detect. W-38's
+  "nothing else of the session" goes to the game gains one derived value, the
+  inset.
+- For a game without it, the apron adds about 116 px under the stage on a wide
+  screen, which the height the Wrapper reports to the operator page (W-49d)
+  includes.
 - Autoplay adds a configuration field, a state, and a regulatory surface; it is
   off unless configured.
 - The chip's words become a promise: they must change whenever the shell's
@@ -266,14 +325,20 @@ responsible gaming need a source the Wrapper does not have today (Q4).
   and autoplay columns),
   [rendering](../../specs/wrapper/rendering-from-the-snapshot.md) (W-31's bet
   selector), [operator embedding](../../specs/wrapper/operator-embedding.md)
-  (W-49f: the menu and the autoplay run), and
-  [the Wrapper spec](../../specs/wrapper.md) (the `autoplay` configuration field
-  and its validation, accessibility, the test plan).
-- **Code** (`apps/wrapper` only): the stylesheet, the bar view, the bet selector
-  (to a stepper), a fairness-chip view over the shell's existing verdicts, an
-  autoplay use case beside the start, the configuration validator, and their
-  tests. The shell does not change unless the chip needs a verdict it does not
-  expose yet (the implementer checks). No package boundary moves.
+  (W-49d: `H_min` per capability; W-49f: the menu and the autoplay run),
+  [the controller boundary](../../specs/wrapper/the-game-iframe-and-the-controller-boundary.md)
+  (W-38: the `hello` field, the `layout` message, the message table, what the
+  game is sent), and [the Wrapper spec](../../specs/wrapper.md) (the `autoplay`
+  configuration field and its validation, accessibility, the test plan).
+- **Code**: in `apps/wrapper`, the stylesheet, the bar view, the bet selector
+  (to a stepper), a fairness-chip view over the shell's verdicts, an autoplay
+  use case beside the start, the frame sizing and the `layout` sender, the
+  configuration validator, and their tests. In `packages/shell`, the `hello`
+  parser (`game-message.ts`) and the exported `HelloMessage` type gain
+  `capabilities`, and a `layout` message type: a change to the shell's public
+  API, so the shell spec and a changeset go with it. In `apps/reference-game`,
+  its closed protocol parser (`protocol.ts`) learns `layout`. No package
+  boundary moves.
 - **Dependencies**: none (ADR-001); no font file.
 - **Size budget**: a few kB of CSS and script; `pnpm check:size-budget` decides.
 - **Telemetry**: none; autoplay and the session summary emit and store nothing.
@@ -290,6 +355,11 @@ responsible gaming need a source the Wrapper does not have today (Q4).
 - Operators see a dark bar and a menu where the lobby and deposit were; the
   operator protocol (`se.operator/1`) does not change, and W-49d's minimum
   height is recomputed from the new layout.
+- Game developers: existing games need no change and get the apron. A game that
+  wants to draw behind the bar adds the capability only once the Wrapper
+  releases that accept it are deployed, handles `layout`, and falls back to a
+  plain `hello` only when no `layout` arrives within its timeout (section 1).
+  The reference game shows how.
 - One release: no flag and no light/dark switch unless Q7 says otherwise.
 
 ## Unresolved questions
@@ -318,13 +388,19 @@ responsible gaming need a source the Wrapper does not have today (Q4).
 - **Q5. The Space shortcut.** A one-key start can place a bet by accident. Keep
   it, keep it but require the focus on the bar, or drop it? _Recommendation_:
   keep it only while the focus is on the bar itself.
-- **Q6. The apron's tone.** The apron (section 1) starts in the tone of the
-  game's bottom edge, which the Wrapper cannot sample from a cross-origin frame
-  (a reflection of the frame, tried in the mockup, does not render). Either one
-  neutral dark tone for every game, or an optional colour the game declares in
-  its `hello` (a backward-compatible addition to `se.controller/1`, validated as
-  a hex colour, ignored when absent). _Recommendation_: the neutral tone in this
-  version; the `hello` field in its own small RFC.
+- **Q6. The `inset` addition to the controller protocol.** Three choices:
+  - stay on `se.controller/1` with an optional field, compatible one way only (a
+    new game on an older Wrapper has its `hello` ignored, section 1);
+  - move to `se.controller/2`, which W-38's "closed, versioned" schema points
+    to: a game can offer both and the Wrapper answers the one it speaks;
+  - keep it out of this RFC, in its own RFC and ADR.
+
+  Also: is an unknown capability string refused (proposed) or ignored, and is
+  the apron one neutral dark tone (proposed) or a colour the game declares?
+  _Recommendation_: an ADR for the addition, decided with this RFC, on
+  `se.controller/1` with the fallback to a plain `hello`; unknown strings
+  refused; the neutral tone.
+
 - **Q7. Theme.** Dark only, dark with a light variant from
   `prefers-color-scheme`, or a theme the operator chooses? _Recommendation_:
   dark only in this version.
@@ -351,6 +427,7 @@ Decided by the human before this draft:
 - **Fonts**: system fonts; no font file ships.
 - **The start control** is 44 px tall, the same as every other control, keeps
   one width in every state, and has no icon at rest.
-- **The bar never covers the game**: on a wide screen it floats on an apron
-  below the stage that continues the game's backdrop (section 1), tried with a
-  real `se.controller/1` steps game.
+- **The bar never covers the game, and the game extends behind it**: the game
+  draws its scene under the bar and keeps its interface above it (section 1),
+  rather than the Wrapper adding a plain band. Tried with a real
+  `se.controller/1` steps game.
