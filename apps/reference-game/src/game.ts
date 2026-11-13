@@ -26,11 +26,8 @@ import {
   optionOf,
   type Side,
 } from "./coin-flip.ts";
-import {
-  actionMessage,
-  helloMessage,
-  parseWrapperMessage,
-} from "./protocol.ts";
+import { type GameTimers, sayHello } from "./inset.ts";
+import { actionMessage, parseWrapperMessage } from "./protocol.ts";
 import { type StepsRound, stepsRound } from "./steps-round.ts";
 
 /** A window the game can post to (`window.parent`): only `postMessage`. */
@@ -94,6 +91,10 @@ export type GameOptions = {
   readonly listen: ListenForMessages;
   /** Called with every new view. */
   readonly onView: (view: GameView, cause: ViewCause) => void;
+  /** The band the Wrapper's bar covers, on each `layout` (RFC-005). */
+  readonly onLayout?: (insetBottom: number) => void;
+  /** The `inset` fallback's timers (inset.ts); without them, no fallback. */
+  readonly timers?: GameTimers;
 };
 
 export type Game = {
@@ -227,10 +228,18 @@ export const createGame = (options: GameOptions): Game => {
     const message = parseWrapperMessage(event.data);
     if (message === undefined) return;
     if (message.type === "snapshot") onSnapshot(message.snapshot);
-    else onReject(message.id, message.reason);
+    else if (message.type === "reject") onReject(message.id, message.reason);
+    else inset.layout(message.insetBottom);
   });
 
-  parent.postMessage(helloMessage(), parentOrigin);
+  // The capable `hello`, with its fallback to a plain one (inset.ts).
+  const inset = sayHello({
+    post: message => {
+      parent.postMessage(message, parentOrigin);
+    },
+    timers: options.timers,
+    onLayout: insetBottom => options.onLayout?.(insetBottom),
+  });
   emit("update");
 
   return Object.freeze({
@@ -277,6 +286,7 @@ export const createGame = (options: GameOptions): Game => {
     close: (): void => {
       if (closed) return;
       closed = true;
+      inset.close();
       unlisten();
     },
   });

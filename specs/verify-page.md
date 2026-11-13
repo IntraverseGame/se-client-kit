@@ -157,15 +157,17 @@ Out of scope:
 
 - **V-3.** The page reads the same environment configuration document as the
   Wrapper, from the same origin, and validates it with the same schema before it
-  reads anything else (the one field apart is `earlierPins`, V-3b). An invalid
-  document shows the configuration-error state and the page makes no request. It
-  uses `runtimeSigner`, `registryDomain`, `earlierPins`, and `entropyChainId` as
-  the trust anchor (as W-26 does, `earlierPins` apart); `rpcEndpoints`,
-  `minRpcQuorum`, and `environment` for the chain read (V-12, check 6); and the
-  verify API's base from a field of its own, **`verifyApiBaseUrl`** (D-4): an
-  absolute URL under `playApiBaseUrl`'s rule (`https:`, or `http:` on a loopback
-  host, no credentials, query, or fragment) whose path ends with `/verify/v1`,
-  with no trailing slash. The page will read
+  reads anything else (the one field apart is `earlierPins`, V-3b). The
+  Wrapper's optional `autoplay` (RFC-005, W-61) is validated by the same rule,
+  so the two judge a document alike (`invalid-autoplay`), and the page does not
+  use it. An invalid document shows the configuration-error state and the page
+  makes no request. It uses `runtimeSigner`, `registryDomain`, `earlierPins`,
+  and `entropyChainId` as the trust anchor (as W-26 does, `earlierPins` apart);
+  `rpcEndpoints`, `minRpcQuorum`, and `environment` for the chain read (V-12,
+  check 6); and the verify API's base from a field of its own,
+  **`verifyApiBaseUrl`** (D-4): an absolute URL under `playApiBaseUrl`'s rule
+  (`https:`, or `http:` on a loopback host, no credentials, query, or fragment)
+  whose path ends with `/verify/v1`, with no trailing slash. The page will read
   `<verifyApiBaseUrl>/rounds/{roundId}`. The field is required (D-4), never
   derived or defaulted, and its origin is the page's own (V-3a). The field is
   part of the one configuration schema: the Wrapper's validator accepts it and

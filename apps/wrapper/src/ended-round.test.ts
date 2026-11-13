@@ -109,7 +109,7 @@ describe("the round id and the verify link (W-39, W-40)", () => {
       expect(statusHeading(ui.host)).toBe(m[`status.${snapshot.status}`]);
       expect(fullRoundId(ui.host)).toBe(snapshot.roundId);
       expect(
-        ui.host.querySelectorAll('.se-controls input[type="radio"]'),
+        ui.host.querySelectorAll(".se-bet-slot .se-rail__mark"),
       ).toHaveLength(snapshot.bet.suggestedBets.length);
       expect(buttonNamed(ui.host, m["action.playAgain"])).toBeDefined();
     }

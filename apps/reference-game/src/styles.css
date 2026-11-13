@@ -63,8 +63,14 @@
   box-sizing: border-box;
 }
 
+/*
+ * The game declares the `inset` capability (RFC-005): the band the Wrapper's
+ * bar covers (`--rg-inset`, set from its `layout` message) is kept free of the
+ * game's interface, which ends above it; only the background runs under it.
+ */
 body {
   margin: 0;
+  padding-bottom: var(--rg-inset, 0rem);
   background: var(--rg-bg);
   color: var(--rg-fg);
   font-family: system-ui, sans-serif;

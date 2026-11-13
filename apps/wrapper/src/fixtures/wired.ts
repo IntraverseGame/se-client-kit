@@ -8,6 +8,7 @@ import {
   type MessageTarget,
 } from "../message-dispatch.ts";
 import { wireSession } from "../session-wiring.ts";
+import type { StageLayout } from "../stage-layout.ts";
 import { mount, type Mounted } from "./app.ts";
 import {
   createFakeSession,
@@ -38,8 +39,14 @@ export type Wired = Mounted & {
 
 export const wired = async (
   prepare: (fake: FakeSession) => void = () => {},
+  options: {
+    /** The environment document (`environmentDocument()` by default). */
+    readonly document?: Readonly<Record<string, unknown>>;
+    /** Where the bar sits and the band it covers (RFC-005). */
+    readonly layout?: StageLayout;
+  } = {},
 ): Promise<Wired> => {
-  const ui = mount();
+  const ui = options.document === undefined ? mount() : mount(options.document);
   const fake = createFakeSession();
   prepare(fake);
   wireSession(
@@ -48,6 +55,7 @@ export const wired = async (
       doc: globalThis.document,
       ownOrigin: SE_ORIGIN,
       messages: createMessageDispatch(fakeWindow()),
+      ...(options.layout === undefined ? {} : { layout: options.layout }),
     },
     fake.session,
   );

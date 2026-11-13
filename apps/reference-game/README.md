@@ -31,12 +31,19 @@ How a game talks to the Wrapper through the controller protocol
   other package reaches its bundle.
 - Its page carries a Content Security Policy that allows only its own scripts
   and stylesheets.
-- On load it sends `hello`, declaring the `steps` and `playback` presentations
-  and all seven round statuses.
+- On load it sends `hello`, declaring the `steps` and `playback` presentations,
+  all seven round statuses, and the `inset` capability.
 - It accepts a message only from its parent window, at its parent's origin, and
   only when the message matches the protocol exactly: a `snapshot` with the
-  game's copy of the round, or a `reject` for its own pick. Anything else is
-  ignored. It posts only to its parent's origin.
+  game's copy of the round, a `reject` for its own pick, or a `layout` (the band
+  the Wrapper's bar covers). Anything else is ignored. It posts only to its
+  parent's origin.
+- It declares the `inset` capability in its `hello`: the Wrapper then gives its
+  frame the whole stage and tells it the band its control bar covers. The game
+  keeps its whole interface above that band, and only its background runs under
+  the bar. If no `layout` arrives within 2 seconds (a Wrapper that does not know
+  the capability ignores such a `hello`), it says a plain `hello` and lays out
+  as a game without it.
 - It learns its parent's origin from the `parentOrigin` query parameter of its
   URL, checked against `location.ancestorOrigins` where the browser has it. When
   it cannot tell, it talks to nobody.

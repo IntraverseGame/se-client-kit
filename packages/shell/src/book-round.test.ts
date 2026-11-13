@@ -118,6 +118,7 @@ describe("what the shell checks on a book round (W-52)", () => {
       expect(round.verdict()).toEqual({
         state: "failed",
         shown: "verification-failed",
+        failure: "changed",
       });
       const { first, changes } = round.evidence();
       expect(first?.blockNumber).toBe(21_000_123);

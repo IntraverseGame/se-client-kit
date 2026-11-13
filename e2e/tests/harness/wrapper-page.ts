@@ -50,6 +50,9 @@ export const TEXT = {
   rejected: "The game state could not be read",
   verify: "Verify this round",
   lobby: "Back to the lobby",
+  /** The bar's menu, which holds the lobby and the deposit (RFC-005). */
+  menu: "Menu",
+  raiseBet: "Raise bet",
   notHeld: "This round can't be played here",
   waitingMove: "Waiting for your move to be confirmed.",
 } as const;

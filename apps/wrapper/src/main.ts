@@ -24,6 +24,7 @@ import {
 } from "./height-observer.ts";
 import { createJsonRpcTransport } from "./json-rpc.ts";
 import { ENVIRONMENT_CONFIG_PATH } from "./load-environment-config.ts";
+import { createStageLayout, type StageLayout } from "./stage-layout.ts";
 import { platformTimers } from "./timers.ts";
 
 const launchCode = takeLaunchCode(globalThis.location, globalThis.history);
@@ -47,8 +48,42 @@ const wallClock: Clock = Object.freeze({
   },
 });
 
+/** The stage's minimum `S` of an element, from its computed style. */
+const minHeightOf = (element: Element): number =>
+  stageMinimumOf(globalThis.getComputedStyle(element).minHeight);
+
 const host = document.querySelector<HTMLElement>("#app");
 if (host !== null) {
+  // Where the bar sits and the band it covers (RFC-005), once the UI exists.
+  let layout: StageLayout | undefined;
+  const stageLayout = (): StageLayout => {
+    layout ??= createStageLayout({
+      doc: document,
+      createObserver: onResize => new ResizeObserver(onResize),
+      onViewportResize: onResize => {
+        globalThis.addEventListener("resize", onResize);
+      },
+      floatable: bar =>
+        globalThis
+          .getComputedStyle(bar)
+          .getPropertyValue("--se-floatable")
+          .trim() === "1",
+      gapOf: bar => {
+        const gap = Number(
+          globalThis.getComputedStyle(bar).getPropertyValue("--se-float-gap"),
+        );
+        // The gap is in rem; the root font size turns it into CSS pixels.
+        const root = Number(
+          globalThis
+            .getComputedStyle(document.documentElement)
+            .fontSize.replace(/px$/u, ""),
+        );
+        return Number.isFinite(gap) && Number.isFinite(root) ? gap * root : 0;
+      },
+      minHeightOf,
+    });
+    return layout;
+  };
   void boot({
     doc: document,
     host,
@@ -84,12 +119,13 @@ if (host !== null) {
           requestFrame: callback => {
             globalThis.requestAnimationFrame(callback);
           },
-          minHeightOf: element =>
-            stageMinimumOf(globalThis.getComputedStyle(element).minHeight),
+          minHeightOf,
+          minimum: () => stageLayout().minimum(),
         },
         onHeight,
       );
     },
+    stageLayout,
     window: {
       addEventListener: (type, listener) => {
         globalThis.addEventListener(type, listener);
@@ -126,8 +162,10 @@ if (host !== null) {
         ownOrigin: globalThis.location.origin,
       }),
   });
-  // The UI is rendered: the bar is sticky only while it takes at most half the
-  // viewport, and the alert line is reachable while it overflows (W-57).
+  // The UI is rendered: the bar floats or docks (RFC-005), it is sticky only
+  // while it takes at most half the viewport, and the alert line is reachable
+  // while it overflows (W-57).
+  stageLayout();
   followBarLayout({
     doc: document,
     createObserver: onResize => new ResizeObserver(onResize),

@@ -1,8 +1,10 @@
 // The height the operator page is told (W-49d, W-57 "The height", ADR-010):
 // the least height the Wrapper's content needs at its current width and text
-// size, `H_min = ceil(B) + S`: the control bar's reserved height `B`, measured
-// and rounded up, plus the stage's minimum `S` (its computed `min-height`,
-// 16.875rem, 270 CSS pixels at the default text size). Never the viewport's
+// size, `H_min = ceil(B) + S`: the band the control bar takes under the game
+// `B` (the docked bar's height; where the bar floats, RFC-005, the bar and
+// its gaps, which depend on the game's `inset` capability: stage-layout.ts),
+// measured and rounded up, plus the stage's minimum `S` (its computed
+// `min-height`, 16.875rem, 270 CSS pixels at the default text size). Never the viewport's
 // height or the `<body>`'s box: the Wrapper fills its iframe's viewport, so
 // those would only echo the iframe's height and could loop with a page that
 // sets the iframe's height from them. `B` changes only with the width or the
@@ -13,7 +15,7 @@
 // once per animation frame, and passed on only when it changed; the operator
 // channel bounds it. The platform is injected, so tests drive the frames.
 
-import { markOverflow } from "./bar-view.ts";
+import { markOverflow } from "./bar-slots.ts";
 
 /** The bar's and the stage's elements, as render.ts builds them. */
 const BAR = ".se-bar";
@@ -43,6 +45,8 @@ export type HeightPlatform = {
   readonly requestFrame: (callback: () => void) => void;
   /** An element's computed `min-height`, in CSS pixels. */
   readonly minHeightOf: (element: Element) => number;
+  /** `H_min` as the stage's layout computes it (stage-layout.ts), if known. */
+  readonly minimum?: () => number | undefined;
 };
 
 /** `H_min = ceil(B) + S`, a whole number of CSS pixels. */
@@ -66,10 +70,12 @@ export const observeHeight = (
   let reported: number | undefined;
   const measure = (): void => {
     scheduled = false;
-    const height = minimumHeight(
-      bar.getBoundingClientRect().height,
-      platform.minHeightOf(stage),
-    );
+    const height =
+      platform.minimum?.() ??
+      minimumHeight(
+        bar.getBoundingClientRect().height,
+        platform.minHeightOf(stage),
+      );
     if (height === reported) return;
     reported = height;
     onHeight(height);
@@ -81,6 +87,10 @@ export const observeHeight = (
   });
   observer.observe(bar);
   observer.observe(stage);
+  // The frame's box changes when the game's capability moves it from over an
+  // apron to the whole stage (RFC-005), with no change of the stage's.
+  const game = doc.querySelector(".se-game");
+  if (game !== null) observer.observe(game);
   measure();
 };
 

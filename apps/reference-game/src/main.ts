@@ -16,6 +16,12 @@ if (host !== null) {
     parentOrigin: framed
       ? parentOriginOf(location.search, [...(location.ancestorOrigins ?? [])])
       : undefined,
+    timers: {
+      setTimeout: (callback, ms) => window.setTimeout(callback, ms),
+      clearTimeout: handle => {
+        if (typeof handle === "number") window.clearTimeout(handle);
+      },
+    },
     listen: handler => {
       const listener = (event: MessageEvent): void => {
         handler({

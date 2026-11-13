@@ -91,9 +91,11 @@ test.describe("T-9a: a listed operator's round", () => {
       message => (message as { height: number }).height,
     );
     expect(repeats(heights)).toEqual([]);
-    // `H_min`: the same in every state at one width, so it was sent once; the
-    // operator page set its `min-height` from it, and nothing more came.
-    expect(heights).toHaveLength(1);
+    // `H_min`: the same in every state at one width; it may change once after
+    // the game's `hello`, which declares `inset` (W-49d, RFC-005), and nothing
+    // more came.
+    expect(heights.length).toBeGreaterThanOrEqual(1);
+    expect(heights.length).toBeLessThanOrEqual(2);
     expect(
       secretsIn(
         received.map(message => JSON.stringify(message)),

@@ -40,8 +40,8 @@ describe("ended (W-25, W-33)", () => {
     expect(linkNamed(ui.host, m["action.verify"])).toBeDefined();
     expect(buttonNamed(ui.host, m["action.playAgain"])).toBeDefined();
     expect(
-      ui.host.querySelectorAll('.se-controls input[type="radio"]').length,
-    ).toBeGreaterThan(0);
+      ui.host.querySelectorAll('.se-bet-slot [role="spinbutton"]'),
+    ).toHaveLength(1);
     for (const claim of [
       m["status.won"],
       m["status.lost"],

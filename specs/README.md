@@ -107,9 +107,11 @@ the specs' headings.
   - [Book playback](./wrapper/book-playback.md) — W-50 to W-56 (#146, decided
     2026-10-28): a book round's base-mode playback, nothing signed, its checks,
     the RTP
-  - [The single screen](./wrapper/the-single-screen.md) — W-57, W-58 (RFC-004,
-    decided 2026-10-30): the stage over one control bar, every state's place in
-    it, the height, when the frame takes input
+  - [The single screen](./wrapper/the-single-screen.md) — W-57 to W-61 (RFC-004,
+    decided 2026-10-30; RFC-005's control bar, version 2, built on its
+    recommendations): the stage over one control bar, every state's place in it,
+    the height and the floating bar, when the frame takes input, the fairness
+    chip (W-59), the state edge (W-60), autoplay (W-61)
   - [Error and degraded states](./wrapper.md#error-and-degraded-states) — W-41
     to W-44
   - [Accessibility](./wrapper.md#accessibility) — W-45 to W-48

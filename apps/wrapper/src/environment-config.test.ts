@@ -62,8 +62,9 @@ describe("validateEnvironmentConfig", () => {
   });
 
   it("lists every field of the Configuration table", () => {
+    // `autoplay` is optional (RFC-005): the fixture's document has none.
     expect(new Set(ENVIRONMENT_CONFIG_FIELDS)).toEqual(
-      new Set(Object.keys(environmentDocument())),
+      new Set([...Object.keys(environmentDocument()), "autoplay"]),
     );
   });
 

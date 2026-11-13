@@ -2,10 +2,10 @@
 // box. In boxes of 1280 by 720, 1142 by 620, 800 by 600, and 400 by 900 CSS
 // pixels its document is exactly the box, with no scroll bar, in every state
 // of a round to a win, a loss, and a typed error, and the stage's box never
-// moves between states. From 52rem the bar is two rows (the status slot, the
-// controls, and the links; the round line); the controls and the round line
-// always fit their rows. Below `H_min` its document scrolls inside the iframe,
-// the bar sticky only while it takes at most half the viewport, and the scroll
+// moves between states. From 66rem the bar is one line (RFC-005), floating over
+// the stage's apron, never over the game's frame; the controls always fit their
+// slot. Below `H_min` its document scrolls inside the iframe, the bar (docked)
+// sticky only while it takes at most half the viewport, and the scroll
 // bar does not change the content's width or send a `resize`. A long alert
 // sits in the status slot, after the status line, scrolls inside the bar,
 // never covers the stage, and leaves the bar's height as it was. At 200 %
@@ -13,12 +13,18 @@
 
 import type { Frame, Page } from "@playwright/test";
 
-import { roundEnvironmentConfig } from "./harness/environment-config.ts";
 import {
-  embedWrapper,
-  operatorReceived,
-  serveListing,
-} from "./harness/operator-page.ts";
+  type Box,
+  alertInBar,
+  expectFills,
+  expectOneLine,
+  expectResultFits,
+  layoutOf,
+  resizesOf,
+  shrinkBox,
+} from "./harness/box-layout.ts";
+import { roundEnvironmentConfig } from "./harness/environment-config.ts";
+import { embedWrapper, serveListing } from "./harness/operator-page.ts";
 import {
   advanceUntil,
   expect,
@@ -28,125 +34,12 @@ import {
 import { pickCheck, ROUND_PINS } from "./harness/round-vector.ts";
 import { TEXT, WRAPPER_PAGE } from "./harness/wrapper-page.ts";
 
-type Box = { readonly width: number; readonly height: number };
-
 const BOXES: readonly Box[] = [
   { width: 1280, height: 720 },
   { width: 1142, height: 620 },
   { width: 800, height: 600 },
   { width: 400, height: 900 },
 ];
-
-type Layout = {
-  /** The document scrolls that way: a scroll moved it. */
-  readonly scrollsX: boolean;
-  readonly scrollsY: boolean;
-  readonly clientHeight: number;
-  /** The content's width, the scroll bar's gutter left out. */
-  readonly clientWidth: number;
-  readonly stage: readonly number[];
-  readonly bar: number;
-  readonly sticky: boolean;
-  /** The tops of the status slot, the controls, the links, and the round line. */
-  readonly tops: readonly number[];
-  /** The primary controls and the round line fit their reserved rows. */
-  readonly fits: boolean;
-};
-
-/** One reserved row of the bar (3.375rem) at the default text size. */
-const ROW = 54;
-
-/**
- * The Wrapper's document and its stage, measured inside its iframe. Whether it
- * scrolls is tried, not read from `scrollWidth`, which counts the gutter that
- * `scrollbar-gutter: stable` keeps.
- */
-const measure = (): Layout => {
-  const root = document.documentElement;
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- runs in the page: `frame.evaluate` serializes only `measure`
-  const rect = (selector: string): DOMRect =>
-    document.querySelector(selector)?.getBoundingClientRect() ?? new DOMRect();
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- runs in the page: `frame.evaluate` serializes only `measure`
-  const scrolls = (left: number, top: number): boolean => {
-    globalThis.scrollTo(left, top);
-    const moved = globalThis.scrollX > 0 || globalThis.scrollY > 0;
-    globalThis.scrollTo(0, 0);
-    return moved;
-  };
-  const stage = rect(".se-stage");
-  const slots = [".se-status-slot", ".se-controls", ".se-links", ".se-round"];
-  return {
-    scrollsX: scrolls(50, 0),
-    scrollsY: scrolls(0, 50),
-    clientHeight: root.clientHeight,
-    clientWidth: root.clientWidth,
-    stage: [stage.x, stage.y, stage.width, stage.height],
-    bar: rect(".se-bar").height,
-    sticky:
-      document.querySelector<HTMLElement>(".se-bar")?.dataset["sticky"] !==
-      undefined,
-    tops: slots.map(selector => rect(selector).top),
-    fits: [".se-controls", ".se-round"].every(selector => {
-      const slot = document.querySelector(selector);
-      return slot !== null && slot.scrollHeight <= slot.clientHeight;
-    }),
-  };
-};
-
-const layoutOf = (frame: Frame): Promise<Layout> => frame.evaluate(measure);
-
-/** The document is the box exactly, and the controls fit their rows. */
-const expectFills = (layout: Layout): void => {
-  expect(layout.scrollsY).toBe(false);
-  expect(layout.scrollsX).toBe(false);
-  expect(layout.fits).toBe(true);
-};
-
-/** From 52rem (832 CSS pixels) the bar is two rows (W-57 "The height"). */
-const expectTwoRows = (box: Box, layout: Layout): void => {
-  if (box.width < 832) return;
-  const [status = 0, controls = 0, links = 0, round = 0] = layout.tops;
-  expect([controls, links, round]).toEqual([status, status, status + ROW]);
-  expect(layout.bar).toBeLessThanOrEqual(2 * ROW + 16);
-};
-
-/**
- * The alert sits in the status slot after the status line (W-57), its box
- * wholly inside the slot, scrolling (a tab stop) when its text overflows.
- */
-const alertInBar = (element: Element): boolean => {
-  const slot = element.parentElement;
-  const stage = document.querySelector(".se-stage")?.getBoundingClientRect();
-  if (slot?.classList.contains("se-status-slot") !== true) return false;
-  const own = slot.getBoundingClientRect();
-  const box = element.getBoundingClientRect();
-  return (
-    stage !== undefined &&
-    element.previousElementSibling?.classList.contains("se-status") === true &&
-    own.top >= stage.bottom &&
-    box.top >= own.top - 0.5 &&
-    box.bottom <= own.bottom + 0.5 &&
-    box.left >= own.left - 0.5 &&
-    box.right <= own.right + 0.5 &&
-    (element.scrollHeight <= element.clientHeight ||
-      element.getAttribute("tabindex") === "0")
-  );
-};
-
-/** The `resize` heights the operator page received, in order. */
-const resizesOf = async (page: Page): Promise<number[]> =>
-  (await operatorReceived(page))
-    .filter(message => (message as { type?: unknown }).type === "resize")
-    .map(message => (message as { height: number }).height);
-
-/** The operator page sets the box's height, ignoring the minimum. */
-const shrinkBox = (height: number): void => {
-  const box = document.querySelector<HTMLIFrameElement>(
-    'iframe[name="wrapper"]',
-  );
-  box?.style.setProperty("min-height", "0");
-  box?.style.setProperty("height", `${String(height)}px`);
-};
 
 const heading = (frame: Frame): ReturnType<Frame["locator"]> =>
   frame.locator(".se-status h1");
@@ -211,7 +104,8 @@ for (const box of BOXES) {
       expect(active.stage).toEqual(idle.stage);
       expect(result.stage).toEqual(idle.stage);
       expect(result.bar).toBe(idle.bar);
-      expectTwoRows(box, result);
+      expectOneLine(box, result);
+      expectResultFits(box, result);
     });
   }
 
@@ -237,7 +131,7 @@ for (const box of BOXES) {
     expectFills(after);
     expect(after.stage).toEqual(before.stage);
     expect(after.bar).toBe(before.bar);
-    expectTwoRows(box, after);
+    expectOneLine(box, after);
     // The alert stays in the status slot: below the stage, inside the bar.
     const inBar = await alert.evaluate(alertInBar);
     expect(inBar).toBe(true);
@@ -252,8 +146,12 @@ test("below H_min the document scrolls, the stage keeps its minimum, and the scr
   const frame = await embedded(page, fakePlayApi, { width: 1280, height: 720 });
   const roomy = await layoutOf(frame);
   const resizes = (): Promise<number[]> => resizesOf(page);
-  await expect.poll(async () => (await resizes()).length).toBe(1);
-  const [minimum = 0] = await resizes();
+  // The game declares `inset`: `H_min` changes once after its `hello`, from
+  // the apron's band to the inset's (W-49d, RFC-005), then holds.
+  await expect(frame.locator('.se-stage[data-frame="inset"]')).toHaveCount(1);
+  await expect.poll(async () => (await resizes()).length).toBe(2);
+  const sent = await resizes();
+  const [, minimum = 0] = sent;
   expect(minimum).toBeGreaterThanOrEqual(Math.ceil(roomy.bar) + 270);
   // The operator page shrinks the box under the minimum, ignoring it.
   await page.evaluate(shrinkBox, minimum - 40);
@@ -275,7 +173,7 @@ test("below H_min the document scrolls, the stage keeps its minimum, and the scr
     .toBe(true);
   // The money control stays reachable.
   await toPlayable(page, frame);
-  expect(await resizes()).toEqual([minimum]);
+  expect(await resizes()).toEqual(sent);
 });
 
 test("at 200 % zoom (a 640 by 360 box) every control stays usable", async ({

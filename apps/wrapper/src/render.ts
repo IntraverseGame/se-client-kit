@@ -76,6 +76,8 @@ export const createView = (
   ]);
   host.replaceChildren(root);
   const intoGame = createIntoGame();
+  // Whether a run of autoplay went at the last update (W-46, W-61).
+  let running = false;
 
   const update = (state: WrapperState, cause: ChangeCause): void => {
     const options = currentOptions();
@@ -105,9 +107,21 @@ export const createView = (
     });
     const coverHeading = stage.coverHeading();
 
+    // A frame of a game that draws under the bar spans the stage (RFC-005).
+    stage.element.dataset["frame"] =
+      state.gameInset === true ? "inset" : "apron";
+
     // The polite announcement: the status line's heading, the slow notice, or
-    // the heading of a cover that is not the alert.
-    if (state.slow) {
+    // the heading of a cover that is not the alert. A run of autoplay is
+    // announced when it starts and when it stops, and a single round of it is
+    // not (W-46, W-61).
+    const run = options.autoplay?.run !== undefined;
+    if (run !== running) {
+      running = run;
+      announce(m[run ? "autoplay.started" : "autoplay.stopped"]);
+    } else if (run) {
+      // Nothing more is announced while the run goes.
+    } else if (state.slow) {
       announce(m["notice.slow"]);
     } else if (shown.statusHeading?.textContent !== undefined) {
       announce(shown.statusHeading.textContent);

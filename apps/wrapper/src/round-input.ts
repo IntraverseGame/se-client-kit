@@ -6,9 +6,14 @@
 // the golden vectors to that). The UI never reads a field it does not list
 // here, so an absent field is never read as hidden state (W-29).
 
-import { type CancelState, isRoundOver } from "@intraverse/se-client-shell";
+import {
+  type CancelState,
+  isRoundOver,
+  type RoundFailure,
+  type RoundTipFailure,
+} from "@intraverse/se-client-shell";
 
-export type { CancelState };
+export type { CancelState, RoundFailure, RoundTipFailure };
 
 /** `Amount`: the fields used for a decision (`value`) and for display. */
 export type ShownAmount = {
@@ -183,6 +188,12 @@ export type RoundCheck = {
     | "ready"
     | "verification-failed"
     | "chain-unverified";
+  /**
+   * When the verdict failed: which check refused the round, a machine code the
+   * fairness chip labels (W-48, W-59), and why the tip check failed.
+   */
+  readonly failure?: RoundFailure;
+  readonly tipFailure?: RoundTipFailure;
   /** W-19's out-of-sync state (W-44). */
   readonly outOfSync: boolean;
   /** The cash-out control is offered (W-24). */

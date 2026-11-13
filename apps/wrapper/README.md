@@ -24,7 +24,7 @@ round that ended shows its result with the next bet beside it. A book round
 shows `idle`, `starting` ("preparing the round"), and `won` or `lost`, with the
 payout as served, never computed from the draw, while the game plays the draw
 back with no input; when its Snapshot carries the mode's `rtp`, "Return to
-player: 96.00%" (for example) shows beside the bet selector. The game iframe is
+player: 96.00%" (for example) shows beside the next bet. The game iframe is
 mounted at the game's origin from the session's redeem answer, and only when the
 shell accepts that origin. Embedded by an operator page, it opens a session only
 when it is embedded directly by a listed operator origin. Where the browser
@@ -34,8 +34,20 @@ the operator page; where it does not, it waits for the page's `se.operator/1`
 `hello` within 10 s it shows that the game cannot start. It then tells the
 operator page the least height its content needs (a minimum for the iframe's
 box), and offers the operator's lobby and deposit as the player's own links
-between rounds, and the lobby alone when the session ended or the round cannot
-go on (it failed verification or is out of sync, for example).
+between rounds, in the bar's menu, and the lobby alone when the session ended
+(then in the bar itself) or the round cannot go on (it failed verification or is
+out of sync, for example).
+
+The control bar is one dark line: a menu (the lobby, the deposit, and this
+session's time and rounds), the balance, a bet stepper over the Snapshot's own
+options, the status with a chip that says what the browser checked for the round
+(never "verified"), and one start control. On a wide screen it floats over the
+bottom of the stage: a game that declares the `inset` capability in its `hello`
+draws its scene under the bar and is told the band the bar covers (`layout`);
+any other game keeps its frame above a neutral band. Autoplay of book rounds is
+offered only when the environment configuration's `autoplay` field turns it on;
+it stops on any error, a connection problem, a changed round, a balance below
+the bet, or when the page is hidden, and keeps nothing past the page.
 
 ## What it guarantees
 
@@ -108,7 +120,10 @@ the controller protocol. It shows from the session's start, at `idle` too, and
 takes input only while a round is playable, so it must play a reveal with no
 input and render every state it is sent. See the Wrapper specification for the
 protocol, and its operator guidance for how an operator page embeds the Wrapper:
-the Wrapper fills the box it is given, and `resize` is a minimum height.
+the Wrapper fills the box it is given, and `resize` is a minimum height. A game
+may declare the `inset` capability in its `hello` to draw under the bar; it
+falls back to a plain `hello` when no `layout` arrives within its own timeout,
+since a Wrapper that does not know the capability ignores such a `hello`.
 
 ## More
 

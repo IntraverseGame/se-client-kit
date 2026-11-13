@@ -29,11 +29,13 @@ import { messagesFor } from "./messages.ts";
 
 const m = messagesFor("en").messages;
 
-/** A control's visible text label (an input's is its `<label>`). */
+/** A control's name: its `aria-label`, else its text (an input's `<label>`). */
 const labelOf = (control: Element): string =>
-  (control instanceof HTMLInputElement
-    ? control.closest("label")?.textContent
-    : control.textContent
+  (
+    control.getAttribute("aria-label") ??
+    (control instanceof HTMLInputElement
+      ? control.closest("label")?.textContent
+      : control.textContent)
   )?.trim() ?? "";
 
 /** A stylesheet line with a px length, outside the visually-hidden helper. */

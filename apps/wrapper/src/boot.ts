@@ -34,7 +34,11 @@ import {
   type OperatorGate,
   type OperatorGateOptions,
 } from "./operator-gate.ts";
-import { showOpening, wireSession } from "./session-wiring.ts";
+import {
+  type SessionWiringOptions,
+  showOpening,
+  wireSession,
+} from "./session-wiring.ts";
 import { DEFAULT_POLL_CONFIG } from "./snapshot-poller.ts";
 import type { Timers } from "./timers.ts";
 import { createWrapperApp, type WrapperApp } from "./wrapper-app.ts";
@@ -74,6 +78,8 @@ export type BootOptions = {
   readonly handshakeTimeoutMs?: number;
   /** Observes the content's height for `resize` (W-49d, height-observer.ts). */
   readonly observeHeight?: (onHeight: (height: number) => void) => void;
+  /** Where the bar sits and the band it covers (RFC-005), once rendered. */
+  readonly stageLayout?: () => NonNullable<SessionWiringOptions["layout"]>;
   /**
    * Discards the sealed launch code, called once when boot opens no session
    * with it (a refused configuration or framing): it is never redeemed.
@@ -151,7 +157,15 @@ export const boot = (options: BootOptions): Promise<BootResult> => {
     const session = showOpening(app, opening);
     if (session !== undefined) {
       wireSession(
-        { app, doc: options.doc, ownOrigin: options.window.origin, messages },
+        {
+          app,
+          doc: options.doc,
+          ownOrigin: options.window.origin,
+          messages,
+          ...(options.stageLayout === undefined
+            ? {}
+            : { layout: options.stageLayout() }),
+        },
         session,
       );
     }

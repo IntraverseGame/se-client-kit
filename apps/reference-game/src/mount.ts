@@ -17,6 +17,8 @@ export const mountGame = (options: MountOptions): Game => {
     parentOrigin: options.parentOrigin,
     listen: options.listen,
     onView: page.show,
+    onLayout: page.layout,
+    ...(options.timers === undefined ? {} : { timers: options.timers }),
   });
   page.onCall(game.pick);
   page.onTile(game.pickTile);

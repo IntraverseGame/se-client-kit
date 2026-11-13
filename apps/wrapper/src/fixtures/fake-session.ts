@@ -7,12 +7,16 @@
 
 import { snapshotVectors } from "@intraverse/se-client-contracts/testing";
 import type {
+  AutoplayRequest,
+  AutoplayState,
   Bet,
+  ChangeSource,
   GameMount,
   GameMountOptions,
   PlaySession,
   RoundState,
   SessionRead,
+  ValidPlayProblem,
   ValidSnapshot,
 } from "@intraverse/se-client-shell";
 
@@ -20,6 +24,15 @@ import type {
 export const validSnapshot = (name: string): ValidSnapshot => {
   const file = snapshotVectors.valid[name] as { readonly input: unknown };
   return structuredClone(file.input) as ValidSnapshot;
+};
+
+/** A valid typed-error vector as the shell hands it over (T-5 validates it). */
+export const problemRead = (name: string): SessionRead => {
+  const file = snapshotVectors.valid[name] as { readonly input: unknown };
+  return {
+    kind: "problem",
+    problem: structuredClone(file.input) as ValidPlayProblem,
+  };
 };
 
 export const snapshotRead = (name: string): SessionRead => ({
@@ -42,10 +55,15 @@ export type FakeSession = {
   readonly setRound: (round: RoundState | undefined) => void;
   readonly setMount: (answer: (options: GameMountOptions) => GameMount) => void;
   readonly mounts: GameMountOptions[];
-  /** Fires an answer that arrives outside a call (a game's pick). */
-  readonly change: (read: SessionRead) => void;
+  /** Fires an answer that arrives outside a call (a game's pick, by default). */
+  readonly change: (read: SessionRead, source?: ChangeSource) => void;
   /** Ends the session, as a refresh failure would (W-7). */
   readonly endNow: () => void;
+  /** The runs of autoplay asked for, and the stops (W-61). */
+  readonly autoplays: AutoplayRequest[];
+  readonly stops: string[];
+  /** Reports the shell's run state to the Wrapper. */
+  readonly runState: (state: AutoplayState) => void;
 };
 
 /** The next answer of a queue (the last one repeats). */
@@ -70,7 +88,9 @@ export const createFakeSession = (): FakeSession => {
   const mounts: GameMountOptions[] = [];
   const startAnswers: SessionRead[] = [];
   const cashOutAnswers: SessionRead[] = [];
-  const changeListeners = new Set<(read: SessionRead) => void>();
+  const changeListeners = new Set<
+    (read: SessionRead, source: ChangeSource) => void
+  >();
   const endListeners = new Set<() => void>();
   let cashOuts = 0;
   let checks = 0;
@@ -78,6 +98,10 @@ export const createFakeSession = (): FakeSession => {
   let round: RoundState | undefined;
   let ended = false;
   let mount = refuseMount;
+  const autoplays: AutoplayRequest[] = [];
+  const stops: string[] = [];
+  const runListeners = new Set<(state: AutoplayState) => void>();
+  let run: AutoplayState = { kind: "idle" };
   const nextRead = (): Promise<SessionRead> =>
     Promise.resolve(ended ? { kind: "session-ended" } : next(reads));
   const session: PlaySession = {
@@ -119,6 +143,18 @@ export const createFakeSession = (): FakeSession => {
     end: () => {
       ended = true;
     },
+    autoplay: request => {
+      autoplays.push(request);
+      return { ok: true };
+    },
+    stopAutoplay: reason => {
+      stops.push(reason);
+    },
+    autoplayState: () => run,
+    onAutoplay: listener => {
+      runListeners.add(listener);
+      return () => runListeners.delete(listener);
+    },
   };
   return {
     session,
@@ -136,12 +172,18 @@ export const createFakeSession = (): FakeSession => {
       mount = answer;
     },
     mounts,
-    change: read => {
-      for (const listener of changeListeners) listener(read);
+    change: (read, source = "pick") => {
+      for (const listener of changeListeners) listener(read, source);
     },
     endNow: () => {
       ended = true;
       for (const listener of endListeners) listener();
+    },
+    autoplays,
+    stops,
+    runState: state => {
+      run = state;
+      for (const listener of runListeners) listener(state);
     },
   };
 };

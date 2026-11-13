@@ -7,6 +7,7 @@
 // document carries: the page reads it and the Wrapper refuses it as an unknown
 // field. An issue names a field, never a value.
 
+import { readAutoplayConfig } from "./autoplay-config.ts";
 import type { RpcEndpoint } from "./chain-read.ts";
 import {
   type Fields,
@@ -68,7 +69,8 @@ export type ConfigIssueCode =
   | "invalid-verify-api-base"
   | "invalid-game-origins"
   | "invalid-operator-origins"
-  | "overlapping-origins";
+  | "overlapping-origins"
+  | "invalid-autoplay";
 
 export type ConfigIssue = {
   readonly code: ConfigIssueCode;
@@ -95,6 +97,7 @@ export const CONFIG_FIELDS: readonly string[] = Object.freeze([
   "tipLagMargin",
   "gameOrigins",
   "operatorOrigins",
+  "autoplay",
 ]);
 
 const ENVIRONMENTS: ReadonlySet<string> = new Set([
@@ -253,6 +256,12 @@ export const validateEnvironmentConfig = (
     issues.push({ code: "invalid-operator-origins", field: "operatorOrigins" });
   }
   issues.push(...overlaps(ownOrigin, gameOrigins, operatorOrigins));
+  if (
+    Object.hasOwn(fields, "autoplay") &&
+    readAutoplayConfig(own(fields, "autoplay")) === undefined
+  ) {
+    issues.push({ code: "invalid-autoplay", field: "autoplay" });
+  }
   if (
     issues.length > 0 ||
     runtimeSigner === undefined ||

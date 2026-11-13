@@ -36,3 +36,47 @@ export const icon = (doc: Document, name: IconName, label: string): Element => {
   svg.append(path);
   return svg;
 };
+
+/** The bar's decorative glyphs (RFC-005): each sits beside its own text. */
+export type GlyphName =
+  | "shield"
+  | "shield-ok"
+  | "shield-off"
+  | "menu"
+  | "minus"
+  | "plus"
+  | "stop"
+  | "up";
+
+const GLYPHS: Readonly<Record<GlyphName, string>> = {
+  shield: "M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z",
+  "shield-ok":
+    "M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6zM8.8 12.2l2.2 2.2 4.4-4.6",
+  "shield-off":
+    "M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6zM12 8v5M12 16v.5",
+  menu: "M4 7h16M4 12h16M4 17h10",
+  minus: "M5 12h14",
+  plus: "M12 5v14M5 12h14",
+  stop: "M8 8h8v8H8z",
+  up: "M12 19V5M6 11l6-6 6 6",
+};
+
+/** A glyph hidden from assistive technology: the text beside it says it. */
+export const glyph = (doc: Document, name: GlyphName): Element => {
+  const svg = doc.createElementNS(SVG, "svg");
+  svg.setAttribute("class", `se-glyph se-glyph--${name}`);
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("width", "16");
+  svg.setAttribute("height", "16");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const path = doc.createElementNS(SVG, "path");
+  path.setAttribute("d", GLYPHS[name]);
+  path.setAttribute("fill", name === "stop" ? "currentColor" : "none");
+  path.setAttribute("stroke", "currentColor");
+  path.setAttribute("stroke-width", "2");
+  path.setAttribute("stroke-linecap", "round");
+  path.setAttribute("stroke-linejoin", "round");
+  svg.append(path);
+  return svg;
+};

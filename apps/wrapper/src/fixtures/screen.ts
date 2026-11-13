@@ -57,9 +57,20 @@ export type Shown = {
   readonly status: string;
   readonly alertLine: string;
   readonly roundLine: string;
-  /** The labels of the controls a player can use in the bar, in order. */
+  /** The bar's balance slot (RFC-005). */
+  readonly balance: string;
+  /**
+   * The labels of the round's controls a player can use in the bar, in order:
+   * the alert's control, the round line's, the start slot's, and the menu's
+   * links; not the bar's own furniture (the menu button, the fairness chip and
+   * its popover, the bet stepper), which every state with a session has.
+   */
   readonly controls: readonly string[];
 };
+
+/** The bar's furniture, left out of `Shown.controls`. */
+const FURNITURE =
+  ".se-menu-button, .se-chip-anchor *, .se-stepper *, .se-quick, .se-autoplay";
 
 /** A control's label, without a display value beside it (W-57). */
 const labelOf = (control: HTMLElement): string => {
@@ -89,6 +100,7 @@ export const shownOf = (screen: Screen): Shown => {
     ),
   ].filter(
     control =>
+      !control.matches(FURNITURE) &&
       !(control instanceof HTMLButtonElement && control.disabled) &&
       !(control instanceof HTMLInputElement && control.disabled),
   );
@@ -101,6 +113,18 @@ export const shownOf = (screen: Screen): Shown => {
     status: text(host.querySelector(".se-status h1")),
     alertLine: text(host.querySelector(".se-alert")),
     roundLine: text(host.querySelector(".se-round")),
+    balance: text(host.querySelector(".se-balance")),
     controls: usable.map(control => labelOf(control)),
   };
+};
+
+/**
+ * The bar's text as shown: its popovers' panels are closed (the session
+ * summary's time and count are not amounts, W-34).
+ */
+export const barShown = (host: HTMLElement): string => {
+  const bar = host.querySelector(".se-bar")?.cloneNode(true);
+  if (!(bar instanceof Element)) return "";
+  for (const panel of bar.querySelectorAll(".se-popover")) panel.remove();
+  return text(bar);
 };

@@ -13,6 +13,7 @@ import {
 } from "./round-input.ts";
 import {
   clearProblem,
+  endRound,
   gameCopied,
   leaveEndedRound,
 } from "./state-transitions.ts";
@@ -44,6 +45,11 @@ export type EndedRound = {
    * claim (W-25, W-33).
    */
   readonly status: Extract<RoundStatus, "won" | "lost" | "canceled"> | "ended";
+  /**
+   * The shell's last verdict of the round when it ended, for the fairness chip
+   * (W-59): a failure stays a failure after the round ends.
+   */
+  readonly verdict?: Pick<RoundCheck, "verdict" | "failure" | "tipFailure">;
 };
 
 export type WrapperState = {
@@ -56,6 +62,8 @@ export type WrapperState = {
   readonly refused?: true;
   /** The game's `hello` did not declare what the Wrapper sends (W-38). */
   readonly gameIncompatible?: true;
+  /** The game declared `inset`: it draws under the bar (RFC-005, W-38). */
+  readonly gameInset?: true;
   /** The latest `playback` copy failed closed (W-38, W-55; stage-plan.ts). */
   readonly gameCopyFailed?: true;
   readonly endedRound?: EndedRound;
@@ -133,30 +141,6 @@ const checkBlocking = (check: RoundCheck): BlockingState | undefined => {
 };
 
 /**
- * The shown round is over: it is kept as the ended round until the player
- * starts another one (W-40), with its result, or `ended` when the shell's
- * cancel ended it (W-33). The slow notice goes with the poll.
- */
-const endRound = (
-  state: WrapperState,
-  snapshot: SnapshotInput,
-  cancel: CancelState | undefined,
-): WrapperState =>
-  snapshot.roundId === undefined
-    ? state
-    : {
-        ...state,
-        slow: false,
-        endedRound: {
-          roundId: snapshot.roundId,
-          status:
-            cancel === "ended"
-              ? "ended"
-              : (snapshot.status as EndedRound["status"]),
-        },
-      };
-
-/**
  * Records the shell's checks of the shown round. A failed check blocks the
  * round until it is over (W-26: the round ends by its expiry rule); a round
  * that is over shows its result. A cancel that is `ended` ends the round,
@@ -175,7 +159,7 @@ const withCheck = (
       next.blocking !== undefined && ROUND_STATES.has(next.blocking)
         ? without(next, "blocking")
         : next;
-    return endRound(lifted, shown, check.cancel);
+    return endRound(lifted, shown, check);
   }
   const blocking = checkBlocking(check);
   return blocking === undefined ||
@@ -224,7 +208,7 @@ export const acceptSnapshot = (
     next = { ...next, slow: false };
   }
   if (roundEnded(snapshot, check?.cancel)) {
-    next = endRound(next, snapshot, check?.cancel);
+    next = endRound(next, snapshot, check);
   }
   return withCheck(next, check);
 };

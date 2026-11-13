@@ -51,7 +51,7 @@ describe("the single screen, a round's rows (T-25)", () => {
     expect(shown.controls).toContain(m["action.placeBet"]);
     expect(shown.controls).not.toContain(m["action.playAgain"]);
     expect(shown.controls).toContain(m["action.lobby"]);
-    expect(shown.roundLine).toContain(m["label.balance"]);
+    expect(shown.balance).toContain(m["label.balance"]);
   });
 
   it("idle with a typed error: the alert line owns the alert, the start stays", () => {
@@ -225,38 +225,17 @@ describe("the single screen, a round's rows (T-25)", () => {
   );
 });
 
-/**
- * Jsdom has no layout, so the slot's size is stubbed, as the stylesheet makes
- * it: the links share the slot's row, so a text of 200 fits while they are away
- * and overflows once they show. This proves the order of the check and the
- * links' update, not the stylesheet; t27-status-slot-tab-stop.spec.ts is the
- * real layout.
- */
-const slotBesideLinks = (host: HTMLElement): HTMLElement => {
-  const slot = host.querySelector<HTMLElement>(".se-status-slot");
-  const links = host.querySelector(".se-links");
-  if (slot === null || links === null) throw new Error("no bar");
-  Object.defineProperty(slot, "scrollWidth", { value: 200 });
-  Object.defineProperty(slot, "clientWidth", {
-    get: () => (links.childElementCount > 0 ? 100 : 300),
-  });
-  return slot;
-};
+/** How many links the menu holds (-1 without a menu). */
+const menuLinks = (host: HTMLElement): number =>
+  host.querySelector(".se-menu .se-links")?.childElementCount ?? -1;
 
-describe("the status slot's tab stop follows the operator links (W-57)", () => {
-  it("takes its tab stop in the update that adds the links, and drops it in the one that removes them", () => {
+describe("the menu's operator links follow a call in flight (W-49f, RFC-005)", () => {
+  it("holds the lobby and the deposit, takes them away while a call is in flight, and gives them back", () => {
     const screen = screenAfter(readOf("coinflip-idle"));
-    expect(screen.host.querySelector(".se-links")?.childElementCount).toBe(2);
-    const slot = slotBesideLinks(screen.host);
-    // A call in flight takes the links away (W-49f): the text fits.
+    expect(menuLinks(screen.host)).toBe(2);
     screen.app.callInFlight(true);
-    expect(screen.host.querySelector(".se-links")?.childElementCount).toBe(0);
-    expect(slot.hasAttribute("tabindex")).toBe(false);
-    // Its answer brings them back: the same text now overflows.
+    expect(menuLinks(screen.host)).toBe(0);
     screen.app.callInFlight(false);
-    expect(screen.host.querySelector(".se-links")?.childElementCount).toBe(2);
-    expect(slot.getAttribute("tabindex")).toBe("0");
-    screen.app.callInFlight(true);
-    expect(slot.hasAttribute("tabindex")).toBe(false);
+    expect(menuLinks(screen.host)).toBe(2);
   });
 });
