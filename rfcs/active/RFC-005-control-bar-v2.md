@@ -19,18 +19,22 @@
   dependency)
 
 This RFC proposes a new look and five new parts for the Wrapper's control bar.
-It changes no money control, no signature, and no check of the shell. A visual
-mockup was reviewed with the human on 2026-11-13; it is not in the repository,
-and where it and this RFC differ, this RFC holds. The decisions already taken
-are in [Decisions](#decisions-2026-11-13); the points still open are in
+It changes no signature and no check of the shell. It does touch money controls:
+the bet selector becomes a stepper over the same served options (section 2), and
+autoplay is a new way of sending W-22's starts (section 6), each under the same
+rules as a start the player presses. A visual mockup was reviewed with the human
+on 2026-11-13; it is not in the repository, and where it and this RFC differ,
+this RFC holds. The decisions already taken are in
+[Decisions](#decisions-2026-11-13); the points still open are in
 [Unresolved questions](#unresolved-questions).
 
 ## Problem
 
-The bar W-57 defines works, but it reads as a generic form: a light panel, a row
-of bet chips, and a plain start button. Players of embedded games expect a
-compact, dark bar under the game, with the balance, a bet stepper, and one clear
-primary action, and they read anything else as unfinished.
+The bar W-57 defines works, but it reads as a generic form: a plain panel (light
+or dark, following `prefers-color-scheme`), a row of bet chips, and a plain
+start button. Players of embedded games expect a compact, dark bar under the
+game, with the balance, a bet stepper, and one clear primary action, and they
+read anything else as unfinished.
 
 The bar also hides what makes this product different. Every config round is
 checked in the player's browser before it can be played (W-26), and the player's
@@ -55,15 +59,19 @@ from W-59 and new tests from T-29.
 
 ### 1. Layout and visual system (W-57)
 
-- **One bar**, 88 px tall on a wide screen, radius 12 px, with one line of
-  controls in this order: the **menu**, the **balance**, the **bet**, the
-  **status slot**, and the **start control**. Every control is 44 px tall (the
-  start control too), radius 8 px, so the row has one centre line; the bet's
-  label sits inside its field, not above it.
-- **Narrow screens**: under about 980 px the status slot moves to its own row
-  above the controls; under about 560 px the bar has three rows: the status
-  slot, then the balance and the bet, then the menu and a full-width start
-  control. No control shrinks below 44 × 44 px.
+- **One bar**, 88 px tall on a wide screen (its tab order follows the visual
+  order, menu first: a change to W-46's order bullet), radius 12 px, with one
+  line of controls in this order: the **menu**, the **balance**, the **bet**,
+  the **status slot**, and the **start control**. Every control is 44 px tall
+  (the start control too), radius 8 px, so the row has one centre line; the
+  bet's label sits inside its field, not above it.
+- **Units**: every size and breakpoint here is its value at the default text
+  size, written in `rem` (W-57's heights follow the text size), so the bar
+  reflows at 200 % zoom without loss of function (W-47).
+- **Narrow screens**: under about 1040 px of bar width the status slot moves to
+  its own row above the controls; under about 560 px the bar has three rows: the
+  status slot, then the balance and the bet, then the menu and a full-width
+  start control. No control shrinks below 44 × 44 px.
 - **No layout shift**: the start control and its autoplay segment keep one width
   in every state and label ("Place bet", "Play again", "Cash out ×1.46", busy,
   autoplay running), and its label is centred; the busy spinner sits at its
@@ -71,9 +79,11 @@ from W-59 and new tests from T-29.
   balance does not move the bet.
 - **The status line has room**: the start control is narrow (about 176 px on a
   wide screen), the heading and the multiplier never truncate (only the
-  secondary text may), and below about 1040 px the bar takes two rows rather
-  than squeeze the status slot.
-- **Theme**: dark (Q7). Tokens: page `#101318`, bar `#1C2128`, controls
+  secondary text may), and the two-row layout above starts early enough that the
+  status slot is never squeezed.
+- **Theme**: dark (Q7). Today the Wrapper has a light and a dark theme, chosen
+  by `prefers-color-scheme` (`apps/wrapper/src/styles.css`); a dark-only bar
+  removes the light one. Tokens: page `#101318`, bar `#1C2128`, controls
   `#252C35`, text `#F5F7FA`, labels `#98A3B3`, one accent `#57D9B3` (the start
   control and selected or passed states), and `#F0B35B` for a problem. No
   gradient, glow, or neon on the bar.
@@ -128,8 +138,9 @@ from W-59 and new tests from T-29.
     first one, W-38) and draws as a game without the capability.
   - A game without the capability gets an **apron** instead: the frame keeps its
     size and the bar floats on a band below it (as tall as the bar plus its 14
-    px inset) in a neutral dark tone (Q6), so it is never covered either. On
-    narrower layouts the bar docks under the stage, and the inset is 0.
+    px inset above and below, about 116 px) in a neutral dark tone (Q6), so it
+    is never covered either. On narrower layouts the bar docks under the stage,
+    and the inset is 0.
   - **The game draws behind money controls**, and the game is untrusted (W-37):
     under a translucent bar it could paint a fake balance or a fake "Verified".
     So the surface's opacity has a floor, for contrast and against spoofing
@@ -160,8 +171,12 @@ MIN and MAX text controls beside it (hidden on the narrowest layout).
   placeholder for a control the state does not offer"; W-57 would say so.
 - A **rail** of small marks under the value shows where the bet sits in the
   list. The field is a `spinbutton`: the arrow keys, Page Up and Page Down,
-  Home, End, and the mouse wheel step it; its text value is the option's
-  `formatted`.
+  Home, End, and the mouse wheel step it. Its `aria-valuenow` is the option's
+  index in the list, never the amount as a number (W-34), and its
+  `aria-valuetext` is the option's `formatted`.
+- A change of option **rolls** the value: the old `formatted` string slides out
+  and the new one in. It never shows an interpolated amount between the two
+  (W-34, W-48), and with reduced motion it does not move.
 - While a start is in flight (and through an autoplay run) the stepper is
   disabled, as the chips are.
 
@@ -171,19 +186,35 @@ A small chip at the start of the status slot shows what the shell has checked
 for the current round, in plain words, and opens a popover that lists it. It
 reads the shell's verdicts and claims nothing the shell did not check.
 
-| Round, state                                       | Chip                    | Popover                                                                                                                                             |
-| -------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| no round yet, `idle`                               | "How it's checked" (Q1) | what the shell checks for this game's kind of round, and that the key is made in this tab and never leaves it                                       |
-| config round, `starting` until the verdict         | "Checking"              | the W-26 checks as they pass: the server's signature against the pinned signer (checks 1 to 4), the ready evidence (check 5), the chain tip (W-26b) |
-| config round, verdict `ready`                      | "Verified"              | the same list, all passed; the round id with its copy control and the verify link (as in the bar, section 7)                                        |
-| config round, W-26a's degraded check (development) | "Checked (dev)"         | the list, with the chain tip marked "one endpoint only (development)"; never "Verified"                                                             |
-| any round that failed verification                 | "Not verified"          | which check refused it, in W-26's reason words; the cover and status of the failed-verification state stay as they are                              |
-| book round (W-50 to W-56)                          | "Recorded" (Q1)         | that the round's randomness record stayed the same from start to result (W-52), and that checking the draw is the verify page's job (not yet, #156) |
+| Round, state                                                                    | Chip                       | Popover                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| no round yet, `idle`                                                            | "How it's checked" (Q1)    | what the shell checks for this game's kind of round, and that the key is made in this tab and never leaves it                                                                                                                                                                                                                                                                                                                                              |
+| config round, `starting` until the verdict                                      | "Checking"                 | the W-26 checks the shell is running, without progress per check (the shell's `RoundVerdict` is `checking`, `ready`, or `failed`): the round bound to its id, this player's key, bet, and currency, the round's secret commitment, the pinned entropy chain, and the randomness target, under the pinned domain and signed by the pinned signer (checks 1 to 4); the ready evidence (check 5); the chain tip (W-26b)                                       |
+| config round, verdict `ready`, through `active` and `resolving`                 | "Checked before play" (Q1) | the same list, all passed, and what it does not cover: the ready evidence is taken from the Snapshot as given until anchoring, the domain, signer, and `CreateRoundAuth` are not yet checked on-chain (W-26's TODO), the round's other terms (`playerRef`, `gameId`, `gameVersion`, `circuitVersion`, `payoutTermsHash`) are taken as signed, `expiry` and `prepareWindow` are not checked, and the shell never checks the outcome (the verify page's job) |
+| config round ended (`won`, `lost`, or `canceled`) whose last verdict is `ready` | "Checked before play" (Q1) | the same, with the round id, its copy control, and the verify link, as in the bar after a round ends (W-39)                                                                                                                                                                                                                                                                                                                                                |
+| config round, W-26a's degraded check (development)                              | "Checked (dev)"            | the list, with the chain tip marked "one endpoint only (development)"; never "Checked before play"                                                                                                                                                                                                                                                                                                                                                         |
+| any round that failed verification                                              | "Not verified"             | which check refused it, as a player label (W-48) for each machine code: the shell's `VerificationFailure` (the five check reasons, `reissued`, `tip-check`), the tip check's `tipFailure` causes (W-26b), and W-52's changed book round; the cover and status of the failed-verification state stay as they are. W-26a's "could not verify the chain" reads "Not verified" too, with that text                                                             |
+| book round (W-50 to W-56)                                                       | "Recorded" (Q1)            | that the round's randomness record stayed the same from start to result (W-52), and that checking the draw is the verify page's job (not yet, #156)                                                                                                                                                                                                                                                                                                        |
 
-- **A book round is never "Verified".** The shell checks only that a book
-  round's record did not change (W-52); it does not check the draw from
-  `roundSecret`, and the verify page does not show book rounds yet (W-50). A
-  slot is a book round, so on a slot the chip must not claim more.
+- **A failure wins, and stays.** A round whose verdict is `failed` (any W-26
+  check, a re-issue after `ready`, the tip check, W-26a) or that changed (W-52)
+  reads "Not verified" from then on, after it ends too, through the required
+  cancel and W-33's cancel states; "Checked before play" needs the round's last
+  verdict to be `ready`.
+- **The round id and the verify link show only once a round has ended** (W-39);
+  during a round the popover lists the checks only, since what the verify page
+  shows for a round in play is not specified.
+- **The chip keys on the round's kind, not on the verdict alone**: the shell's
+  book-round verdict is `ready` too (`book-round.ts`), and must never read as a
+  config round's.
+- **W-26a's indicator stays.** The non-dismissable "chain check not independent
+  (development)" badge of W-26a and W-57 stays in the bar for the whole session,
+  apart from the chip, which at `idle` reads "How it's checked".
+- **A book round is never "Checked before play" or "Verified".** The shell
+  checks only that a book round's record did not change (W-52); it does not
+  check the draw from `roundSecret`, and the verify page does not show book
+  rounds yet (W-50). A slot is a book round, so on a slot the chip must not
+  claim more.
 - The chip is a button with a 44 px hit area; its popover is not a dialog and
   traps no focus; Escape closes it and returns focus to the chip. The chip's
   text change is not announced (the status line already is, W-46).
@@ -203,14 +234,16 @@ reduced motion it does not move.
   every game (decided); the controller protocol does not change.
 - No icon at rest; a small spinner shows beside the label while the start is in
   flight, with `aria-busy` (W-57's busy rule).
-- A **keyboard shortcut**: Space starts a round when the focus is on the page
-  itself, never when it is on a control, in a field, or in the game frame (the
-  frame's keys are the game's), and never cashes out. The control says so in its
-  tooltip and `aria-keyshortcuts`, not in a visible hint (Q5).
-- During a steps round the control becomes "Cash out" with the multiplier (W-24,
-  W-57). While the player owes the first pick it is not offered (W-57: no
-  disabled placeholder); its space is kept, so nothing moves, and holds the text
-  "↑ Make your pick", pointing at the game. That text is not a control, is
+- A **keyboard shortcut**: Space starts a round while the focus is on the bar
+  itself (not on one of its controls, in a field, or in the game frame, whose
+  keys are the game's), and never cashes out. The control says so in its tooltip
+  and `aria-keyshortcuts`, not in a visible hint (Q5).
+- During a steps round, when the shell offers it, the control becomes "Cash out"
+  with the Snapshot's `cashOutValue.formatted` when the Snapshot carries one,
+  and the `currentMultiplier` as a display value only without it (W-24, W-57's
+  labels, W-31). While the player owes the first pick it is not offered (W-57:
+  no disabled placeholder); its space is kept, so nothing moves, and holds the
+  text "↑ Make your pick", pointing at the game. That text is not a control, is
   hidden from assistive technology, and the status line carries the same words
   for it. The words name no game's own objects: the Wrapper does not know them.
 - Its right end is the **autoplay segment** (section 6) when autoplay is
@@ -230,38 +263,50 @@ reduced motion it does not move.
   document like any other issue (`invalid-autoplay`). Whether the switch also
   needs to be per operator is Q2.
 - **The run.** The player chooses a count from `counts`. The bet is fixed for
-  the run (the stepper is disabled). The next start is sent only after the
-  previous round's result has been shown for at least `minIntervalMs`.
+  the run (the stepper is disabled), and each start copies its `AmountRequest`
+  from the latest Snapshot's own `Amount` of that option, as every start does
+  (W-22, W-51, W-31). The next start is sent only after the previous round's
+  result has been shown for at least `minIntervalMs`.
 - **It stops**, before the next start, on any of: the player's stop (the round
   in flight finishes); the count reached; the balance below the bet (a `bigint`
-  comparison, W-34); any typed or generic error (W-42); a connection problem
-  (W-43); a round that ends other than `won` or `lost` (`canceled`, a changed
-  round W-52, out of sync); a changed session (W-53); the session's end or a
-  token that cannot be refreshed; the signer lock lost (W-14); the page hidden
-  (Q3).
+  comparison, W-34); the chosen bet no longer offered by the latest Snapshot
+  (outside its `suggestedBets`, `minBet`, or `maxBet`); any typed or generic
+  error (W-42), a void or refusal of a start included (it shows `idle`, W-54); a
+  connection problem (W-43); a changed round (W-52), usually seen on the `won`
+  or `lost` read itself; a round that ends other than `won` or `lost` (a book
+  round cannot be `canceled`, W-54, or out of sync, W-51); a Snapshot rejected
+  (W-28); "game not compatible" (W-38); a `playback` copy that fails closed
+  (W-55), since the player could no longer see the rounds being played; a
+  changed session (W-53); the session's end or a token that cannot be refreshed;
+  the signer lock lost (W-14); the page hidden (Q3).
 - **On screen.** The segment shows the remaining count and a stop square; the
-  status line reads "Autoplay · n left"; the start and stop of a run are
-  announced politely, a single round is not (W-46).
+  status line reads "Autoplay · n left". The start and the stop of a run are
+  announced politely and a single round of it is not: a change to W-46 ("a
+  status change MUST be announced"), which this RFC proposes. W-55's focus
+  exception after a book result does not fire on a round of a run.
 - **Operator links.** The whole run counts as a call in flight for W-49f: no
   lobby and no deposit until it stops.
 - **Nothing is stored.** The count lives in memory and is gone on reload; a
   reload never resumes a run. Nothing is logged or sent.
 
-### 7. The round line (W-39, W-40 unchanged)
+### 7. The round line (W-39 unchanged, W-40 changed for autoplay)
 
 The round id with its copy control and the verify link stay in the bar after a
-round, as W-39 and W-40 require, after the result in the status slot; the
-fairness chip's popover shows them too. (The mockup moved them into the popover
-only; this RFC does not, so W-39 and W-40 need no change.)
+round, as W-39 requires, after the result in the status slot; the fairness
+chip's popover shows them too. W-40 keeps them "until the player starts another
+round": under autoplay the player's start of the run is that act for every round
+of the run, so each round's id and link replace the last one's without a new
+act. W-40 gains that sentence.
 
 ### 8. The menu (W-49e, W-49f)
 
 The lobby and the deposit move from the bar into a menu at its start. Each item
-is offered exactly when W-49f offers it today; when the state offers neither,
-the menu holds only what remains, and with nothing left the menu button is not
-shown (W-57: no disabled placeholder). The menu also starts with **this
-session**: the time since the session opened and the number of rounds played,
-kept in memory only (Q4 for amounts). Links to the game's rules and to
+is offered exactly when W-49f offers it today. The menu always holds the session
+summary below, so it is never empty. In the session-ended state the lobby is the
+only way out (W-49f: "labelled as the way to relaunch"), so there it stays a
+visible control in the bar, not an item of the menu. The menu also starts with
+**this session**: the time since the session opened and the number of rounds
+played, kept in memory only (Q4 for amounts). Links to the game's rules and to
 responsible gaming need a source the Wrapper does not have today (Q4).
 
 ### 9. Accessibility (W-46, W-47, W-48)
@@ -291,9 +336,9 @@ responsible gaming need a source the Wrapper does not have today (Q4).
 
 - **Restyle only** (new tokens on today's chips and button): smaller, but keeps
   the chips' width problem on narrow screens and adds nothing a player trusts.
-- **A light theme** or both themes: game stages are mostly dark, and a light bar
-  under a dark stage reads as a separate page; both themes double the contrast
-  matrix. Kept as Q7.
+- **Keep both themes** (today's light and dark, by `prefers-color-scheme`): game
+  stages are mostly dark, and a light bar under a dark stage reads as a separate
+  page; both themes double the contrast matrix of the new surfaces. Kept as Q7.
 - **Autoplay as a game feature** (the game asks for repeated starts): it would
   put a money loop behind the controller protocol, where the Wrapper can see
   less; keeping it in the Wrapper keeps every start behind the shell's rules.
@@ -328,8 +373,11 @@ responsible gaming need a source the Wrapper does not have today (Q4).
   (W-49d: `H_min` per capability; W-49f: the menu and the autoplay run),
   [the controller boundary](../../specs/wrapper/the-game-iframe-and-the-controller-boundary.md)
   (W-38: the `hello` field, the `layout` message, the message table, what the
-  game is sent), and [the Wrapper spec](../../specs/wrapper.md) (the `autoplay`
-  configuration field and its validation, accessibility, the test plan).
+  game is sent; W-40 under autoplay),
+  [book playback](../../specs/wrapper/book-playback.md) (W-55's focus exception
+  under autoplay), and [the Wrapper spec](../../specs/wrapper.md) (the
+  `autoplay` configuration field and its validation; W-46's announcements and
+  order; W-48's labels for W-26's reason codes; the test plan).
 - **Code**: in `apps/wrapper`, the stylesheet, the bar view, the bet selector
   (to a stepper), a fairness-chip view over the shell's verdicts, an autoplay
   use case beside the start, the frame sizing and the `layout` sender, the
@@ -342,11 +390,15 @@ responsible gaming need a source the Wrapper does not have today (Q4).
 - **Dependencies**: none (ADR-001); no font file.
 - **Size budget**: a few kB of CSS and script; `pnpm check:size-budget` decides.
 - **Telemetry**: none; autoplay and the session summary emit and store nothing.
-- **Tests** (from T-29): the stepper's bounds and keys; the chip's text per
-  round kind and verdict, with "Verified" never on a book round or a degraded
-  check; autoplay's every stop rule, the interval, and a configuration without
-  the field; W-49f during a run; contrast of the glass surface over white and
-  black; no layout shift of the start control across its states.
+- **Tests** (from T-29): the stepper's bounds, keys, and `aria-valuenow` as an
+  index; the chip's text per round kind and verdict, with "Checked before play"
+  never on a book round or a degraded check, and the round id only after a round
+  ends; a round whose verdict was `failed`, or a changed book round, never reads
+  "Checked before play", after it ends and through the required cancel's states
+  too; W-26a's badge kept; autoplay's every stop rule, the interval, the bet
+  copied from the latest Snapshot, and a configuration without the field; W-40
+  and W-46 during a run; W-49f during a run; contrast of the glass surface over
+  white and black; no layout shift of the start control across its states.
 
 ## Migration considerations
 
@@ -360,20 +412,27 @@ responsible gaming need a source the Wrapper does not have today (Q4).
   releases that accept it are deployed, handles `layout`, and falls back to a
   plain `hello` only when no `layout` arrives within its timeout (section 1).
   The reference game shows how.
-- One release: no flag and no light/dark switch unless Q7 says otherwise.
+- One release: no flag. A dark-only bar removes today's light theme for players
+  whose system asks for light (Q7).
 
 ## Unresolved questions
 
-- **Q1. The chip's words.** "How it's checked" at `idle` and "Recorded" on a
-  book round, or other words? Should a game whose rounds are book rounds show
-  the chip at all before #156 lets the verify page check its draw?
-  _Recommendation_: show it, with these words; never "Verified" or "Provably
-  fair" on a book round.
+- **Q1. The chip's words.** "How it's checked" at `idle`, "Checked before play"
+  on a config round that passed W-26 (with its limits in the popover), and
+  "Recorded" on a book round, or other words? "Verified" alone would read as
+  "the outcome was verified", which the shell never checks. Should a game whose
+  rounds are book rounds show the chip at all before #156 lets the verify page
+  check its draw? _Recommendation_: show it, with these words; never "Verified"
+  or "Provably fair".
 - **Q2. Who turns autoplay on.** The environment document is per deployment. If
   one deployment serves operators in markets with different rules, the switch
-  must be per operator (a field in the operator's `hello`, or an operator-keyed
-  map in the document). _Recommendation_: per deployment first; per operator
-  when a deployment needs it.
+  must be per operator: an operator-keyed map in the environment document, or a
+  field in the operator's `hello`. The `hello` field changes `se.operator/1`,
+  which needs an ADR superseding ADR-006; the operator's `hello` is absent on
+  ADR-011's proven path; and a switch for a money loop read from a message is
+  weaker than one in the document the SE origin serves. _Recommendation_: per
+  deployment first; an operator-keyed map in the document when a deployment
+  needs it, never the `hello`.
 - **Q3. Autoplay in a hidden tab.** Stop the run when the page is hidden, or
   only pause it? _Recommendation_: stop; a run never continues unattended.
 - **Q4. Amounts the server did not format, and the menu's links.** The mockup's
@@ -386,8 +445,8 @@ responsible gaming need a source the Wrapper does not have today (Q4).
   configuration). _Recommendation_: served amounts only for now; links from the
   operator, as the lobby and deposit are.
 - **Q5. The Space shortcut.** A one-key start can place a bet by accident. Keep
-  it, keep it but require the focus on the bar, or drop it? _Recommendation_:
-  keep it only while the focus is on the bar itself.
+  it as proposed (only while the focus is on the bar itself), allow it anywhere
+  on the page, or drop it? _Recommendation_: as proposed.
 - **Q6. The `inset` addition to the controller protocol.** Three choices:
   - stay on `se.controller/1` with an optional field, compatible one way only (a
     new game on an older Wrapper has its `hello` ignored, section 1);
@@ -401,9 +460,9 @@ responsible gaming need a source the Wrapper does not have today (Q4).
   `se.controller/1` with the fallback to a plain `hello`; unknown strings
   refused; the neutral tone.
 
-- **Q7. Theme.** Dark only, dark with a light variant from
-  `prefers-color-scheme`, or a theme the operator chooses? _Recommendation_:
-  dark only in this version.
+- **Q7. Theme.** Today the Wrapper follows `prefers-color-scheme` (light and
+  dark). Dark only (removing the light theme), keep both for the new bar, or a
+  theme the operator chooses? _Recommendation_: dark only in this version.
 - **Q8. Unaffordable options.** Plus and MAX stop at the highest affordable
   option (proposed), or reach every option and let the start be refused?
   _Recommendation_: stop at the highest affordable one, as the chips do today.
@@ -413,6 +472,13 @@ responsible gaming need a source the Wrapper does not have today (Q4).
   differs by platform by nature: Bahnschrift exists only on Windows, so macOS
   gets DIN Alternate and other systems the UI font. _Recommendation_:
   Bahnschrift, then DIN Alternate.
+- **Q10. Where autoplay's run lives.** Its stop rules read the shell's state
+  (the signer lock, a changed session, the session's end, a token that cannot be
+  refreshed), and it sends starts. A use case in `apps/wrapper` beside the
+  start, or a run in `packages/shell` that the Wrapper drives and shows?
+  _Recommendation_: the shell (a run with its stop rules, reported to the UI as
+  state), so no money logic sits outside the shell; the Wrapper shows the count
+  and the stop control.
 
 ## Decisions (2026-11-13)
 
