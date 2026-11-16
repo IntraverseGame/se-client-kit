@@ -79,7 +79,7 @@ the attack surface a player cannot see. The rules:
   | ---------------------------------- | ------- | ------------------------------------------ | ---------- |
   | `actions/checkout`                 | v7.0.1  | `3d3c42e5aac5ba805825da76410c181273ba90b1` | ADR-001    |
   | `actions/setup-node`               | v7.1.0  | `949feb2413d6458794dcd2491c4babbbce0c15c1` | ADR-001    |
-  | `pnpm/action-setup`                | v6.1.0  | `ea17c68df8912ef543352723c149a84f56e3d413` | ADR-001    |
+  | `pnpm/action-setup`                | v6.1.1  | `73e46992e05b19abd31f2f3c20e0e7370d762115` | ADR-001    |
   | `actions/dependency-review-action` | v5.0.0  | `a1d282b36b6f3519aa1f3fc636f609c47dddb294` | ADR-001    |
   | `actions/upload-artifact`          | v7.0.2  | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` | ADR-005    |
   | `actions/download-artifact`        | v8.0.2  | `9000827ccba6bdab643e8b6fd33ac0654aef8333` | ADR-008    |
