@@ -114,14 +114,16 @@ test("a wide box: the frame is the whole stage, the bar floats over it, and the 
   expect(layout.bottom).toBeLessThanOrEqual(layout.viewport - band);
 });
 
-test("a narrower box: the bar docks under the stage and the band drops to 0", async ({
+test("a box under 40rem: the bar docks under the stage and the band drops to 0", async ({
   page,
   fakePlayApi,
 }) => {
   scriptRound(fakePlayApi);
+  // From 40rem the two-row bar floats over an inset game (RFC-005); under it,
+  // it docks.
   const frame = await embedded(page, fakePlayApi.launchUrl(WRAPPER_PAGE), {
-    width: 800,
-    height: 600,
+    width: 560,
+    height: 800,
   });
   const boxes = await frame.evaluate(boxesOf);
   expect(boxes.main).toBe("dock");

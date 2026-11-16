@@ -47,13 +47,14 @@ Q8).
      default text size) with a radius of 0.5rem, so the row has one centre line,
      in this visual and tab order: the **menu**, the **balance**, the **bet**
      (the stepper, W-31), the **status slot**, and the **start control**.
-     W-26a's badge sits in a row of its own above, for the whole session. Its
-     top edge is the **state edge** (W-60). The bar element itself takes the
-     focus on a click (`tabindex="-1"`, not a tab stop), and while the focus is
-     on the bar itself, never on one of its controls, a field, or the game
-     frame, Space presses the start control (Q5); never a cash-out. The start
-     control names the shortcut in its tooltip and `aria-keyshortcuts`, not in a
-     visible hint. Its slots:
+     W-26a's badge is a small icon in the bar's top corner, for the whole
+     session: its words are its tooltip and its accessible text, and it takes no
+     row. Its top edge is the **state edge** (W-60). The bar element itself
+     takes the focus on a click (`tabindex="-1"`, not a tab stop), and while the
+     focus is on the bar itself, never on one of its controls, a field, or the
+     game frame, Space presses the start control (Q5); never a cash-out. The
+     start control names the shortcut in its tooltip and `aria-keyshortcuts`,
+     not in a visible hint. Its slots:
      - the **menu**: a button whose popover holds "This session" (the time since
        the session opened, in whole minutes, and the rounds played, kept in
        memory only, never stored, logged, or sent; no amount, Q4), then the
@@ -273,8 +274,8 @@ common one), so the stage's ratio follows it.
     balance and the bet, then the menu and a full-width start control; MIN and
     MAX are hidden. No control shrinks below 2.75rem by 2.75rem.
 
-  W-26a's badge takes a row of its own above (2.25rem) while it shows; it is set
-  for the session, so it never changes `B` between states.
+  W-26a's badge is an icon in the bar's top corner and takes no row, so it never
+  changes `B`.
 
 - **The bar floats or docks** (RFC-005 section 1; decided: the bar never covers
   anything the game needs to show, and the game extends behind it). From 66rem,

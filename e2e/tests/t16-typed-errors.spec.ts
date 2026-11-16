@@ -166,7 +166,12 @@ test.describe("T-16: degraded states (W-44)", () => {
       vector: "coinflip-idle",
     });
     await launch(page, fakePlayApi);
-    await expect(page.getByText(TEXT.chainNotIndependent)).toBeVisible();
+    // A small icon in the bar's corner: its words are its tooltip and its
+    // accessible text.
+    const notice = page.locator(".se-notice--chain");
+    await expect(notice).toBeVisible();
+    await expect(notice).toHaveAttribute("title", TEXT.chainNotIndependent);
+    await expect(notice).toContainText(TEXT.chainNotIndependent);
     await expect(statusHeading(page)).toHaveText(TEXT.idle);
     expect(ENVIRONMENT_CONFIG_PATH).toBe("/environment-config.json");
     expect(await auditAccessibility(page)).toEqual([]);

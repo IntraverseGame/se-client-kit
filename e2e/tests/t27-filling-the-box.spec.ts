@@ -54,6 +54,9 @@ const embedded = async (
     box,
   });
   await expect(heading(frame)).toHaveText(TEXT.idle);
+  // The reference game declares `inset`: the layout changes once after its
+  // `hello` (the bar may float from 40rem then), and holds.
+  await expect(frame.locator('.se-stage[data-frame="inset"]')).toHaveCount(1);
   return frame;
 };
 
