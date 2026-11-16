@@ -175,6 +175,31 @@ describe("the receipt's popover (T-30)", () => {
     expect(chip.getAttribute("aria-expanded")).toBe("false");
   });
 
+  it("re-places the open panel beside its chip on a scroll (Popover API)", () => {
+    const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
+    proto["showPopover"] = (): void => undefined;
+    proto["hidePopover"] = (): void => undefined;
+    try {
+      const ui = after("coinflip-won");
+      const chip = chipOf(ui.host);
+      let top = 500;
+      chip.getBoundingClientRect = (): DOMRect =>
+        ({ top, left: 20, right: 140, bottom: top + 30 }) as DOMRect;
+      chip.click();
+      const panel = panelOf(ui.host);
+      const bottom = (): string =>
+        panel.style.getPropertyValue("--se-pop-bottom");
+      expect(bottom()).toBe(`${String(globalThis.innerHeight - 500 + 10)}px`);
+      top = 300;
+      document.dispatchEvent(new Event("scroll"));
+      expect(bottom()).toBe(`${String(globalThis.innerHeight - 300 + 10)}px`);
+      expect(chip.getAttribute("aria-expanded")).toBe("true");
+    } finally {
+      delete proto["showPopover"];
+      delete proto["hidePopover"];
+    }
+  });
+
   it("stays open on a scroll, which only moves it with its chip", () => {
     const ui = after("coinflip-won");
     const chip = chipOf(ui.host);

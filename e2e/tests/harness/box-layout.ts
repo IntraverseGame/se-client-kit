@@ -109,11 +109,17 @@ export const alertInBar = (element: Element): boolean => {
   if (slot?.classList.contains("se-status-slot") !== true) return false;
   const own = slot.getBoundingClientRect();
   const box = element.getBoundingClientRect();
+  // After the status line in the slot (the receipt may stand between them).
+  const siblings = [...slot.children];
+  const status = siblings.findIndex(each =>
+    each.classList.contains("se-status"),
+  );
+  const afterStatus = status !== -1 && siblings.indexOf(element) > status;
   // Inside the bar, docked under the stage or floating over the band the
   // game left for it (RFC-005): never over the game's interface.
   return (
     bar !== undefined &&
-    slot.querySelector(":scope > .se-status") !== null &&
+    afterStatus &&
     own.top >= bar.top - 0.5 &&
     own.bottom <= bar.bottom + 0.5 &&
     box.top >= own.top - 0.5 &&

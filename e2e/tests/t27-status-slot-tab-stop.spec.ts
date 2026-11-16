@@ -5,7 +5,9 @@
 // heading and the round receipt) fits: no tab stop. At three times the text
 // size of its words alone (a text-only zoom: the slot's own size, set in rem,
 // stays) the result no longer fits, so it overflows for sure: a tab stop,
-// kept when a typed error joins it.
+// kept when a typed error joins it. A larger root text size scales the slot
+// with its words, so the result still fits at 320 CSS pixels: no case of it
+// overflows to test there (T-27's 200 % zoom row covers the zoom).
 
 import type { Frame } from "@playwright/test";
 

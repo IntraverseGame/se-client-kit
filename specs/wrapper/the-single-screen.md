@@ -137,14 +137,15 @@ Q8).
      the start control at 1rem, labels at 0.75rem. Every size is in `rem`. The
      bar's popovers (the menu, the round receipt, the autoplay counts) are not
      dialogs and trap no focus; Escape closes one and returns the focus to its
-     button; a click outside closes it; opening one leaves the focus on its
-     button (W-46). A floating bar's surface is translucent (`--se-glass`, 0.45
-     opaque) over a backdrop dimmed to at most 0.4 of its brightness and blurred
-     by at least 1.25rem (1.5rem today); its labels take a lighter tone there
-     (`--se-muted-glass`) and its controls are translucent. Its text and labels
-     keep 4.5:1 over a dimmed white game and a dimmed black one, and the blur is
-     the anti-spoofing bound: a game drawing under it cannot make its own text
-     read as the bar's (RFC-005 section 9).
+     button; a click outside, the page losing the focus, and a resize close it;
+     a scroll re-places it beside its button; opening one leaves the focus on
+     its button (W-46). A floating bar's surface is translucent (`--se-glass`,
+     0.45 opaque) over a backdrop dimmed to at most 0.4 of its brightness and
+     blurred by at least 1.25rem (1.5rem today); its labels take a lighter tone
+     there (`--se-muted-glass`) and its controls are translucent. Its text and
+     labels keep 4.5:1 over a dimmed white game and a dimmed black one, and the
+     blur is the anti-spoofing bound: a game drawing under it cannot make its
+     own text read as the bar's (RFC-005 section 9).
 
   **The overlay** is a panel over the stage, at the stage's size, so it spans
   the whole frame, under a floating bar too (RFC-005), for a state in which the
@@ -466,9 +467,12 @@ second action is signed at the sequence.
     ("…7a8b9c0d") beside the same icon, and "Not verified …7a8b9c0d" after a
     failure (a failure wins and stays).
   - **Its accessible name** says it in full with Q1's words, the words of the
-    table below and the popover's heading: "Checked before play, round
-    01927c5e-…: show the checks, copy the round ID, or verify" once the round
-    has ended, and "Checked before play: show what was checked" before.
+    table below and the popover's heading, led by the visible label when those
+    words do not already start with it (WCAG 2.5.3: the name holds what a player
+    sees): "…7a8b9c0d. Checked before play, round 01927c5e-…: show the checks,
+    copy the round ID, or verify" once the round has ended, and "Checked before
+    play: show what was checked" (or "Fairness. How it's checked: show what was
+    checked") before.
   - **Its popover** (in the top layer, so the status slot cannot clip it and the
     game cannot cover it) holds the content of the table below, and, once the
     round has ended, the full round id (monospace, selectable), the **Copy round
@@ -476,7 +480,9 @@ second action is signed at the sequence.
     context, `rel="noopener noreferrer"`, the verify URL as before). It is not a
     dialog and traps no focus; Escape closes it and returns the focus to the
     chip; a click outside it, the page losing the focus (a click in the game's
-    frame never reaches the page), a scroll, and a resize close it.
+    frame never reaches the page), and a resize close it; a scroll re-places it
+    beside its chip (bringing its link into view scrolls, and must not close
+    it).
   - **W-40 holds for the receipt**: the ended round's receipt stays until the
     round the player started from it shows; another round's Snapshot before that
     does not replace it. It reads the shell's verdicts only and claims nothing
