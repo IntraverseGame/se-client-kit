@@ -33,19 +33,16 @@ the attack surface a player cannot see. The rules:
   other package keeps the `undici` it declares (`jsdom` its 8.x); it goes when
   the generator no longer pulls `undici` or declares a range without them
   (ADR-004). Dependabot's `cooldown` is 7 days to match, for the `npm` and the
-  `github-actions` ecosystems. Two exceptions exist, each scoped to one exact
-  version, accepted by the human on 2026-10-28 for the wireit upgrade (#143) and
-  listed with their reason in `pnpm-workspace.yaml`; the policies themselves are
-  unchanged:
-  - `minimumReleaseAgeExclude: [wireit@0.15.0]`, a one-time waiver of the
-    release age: 0.15.0 (published 2026-10-24) carries the fix for
-    google/wireit#1536 (google/wireit#1542). Its new transitive dependencies are
-    all older than the window. The entry can go after 2026-10-31, when 0.15.0 is
-    seven days old.
-  - `trustPolicyExclude: [chokidar@4.0.3]`, an exception to `no-downgrade`:
-    wireit 0.15.0 needs `chokidar` `^4.0.3`, and 4.0.2 and 4.0.3 were published
-    without provenance by the same maintainer who published 4.0.0 and 4.0.1 with
-    it. The entry goes when wireit moves off `chokidar` 4.
+  `github-actions` ecosystems. The release age has no exception. One exception
+  to the trust policy exists, scoped to one exact version, accepted by the human
+  on 2026-10-28 for the wireit upgrade (#143) and listed with its reason in
+  `pnpm-workspace.yaml`; the policy itself is unchanged:
+  `trustPolicyExclude: [chokidar@4.0.3]`, an exception to `no-downgrade`: wireit
+  0.15.0 needs `chokidar` `^4.0.3`, and 4.0.2 and 4.0.3 were published without
+  provenance by the same maintainer who published 4.0.0 and 4.0.1 with it. The
+  entry goes when wireit moves off `chokidar` 4. The one-time waiver of the
+  release age for `wireit@0.15.0`, accepted with it, was removed on 2026-11-16,
+  once 0.15.0 was past the window.
 - **Runtime dependencies are an allow-list**: `@noble/curves` and
   `@noble/hashes`, and nothing else
   ([ADR-001](../../decisions/ADR-001-toolchain-and-signing.md)). Anything else

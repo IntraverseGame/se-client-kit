@@ -7,12 +7,6 @@ packages:
 # A version must have been published for at least 7 days (in minutes).
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true
-# A one-time waiver of that window, scoped to one exact version: wireit 0.15.0
-# (published 2026-10-24) carries the fix for google/wireit#1536 (in
-# google/wireit#1542), and the human waived the wait on 2026-10-28 (#143).
-# Remove this entry after 2026-10-31, when 0.15.0 is seven days old.
-minimumReleaseAgeExclude:
-  - wireit@0.15.0
 # Dependency lifecycle scripts are off. A package may run one only if it is
 # listed here with `true`; no entry is `true`, on purpose.
 allowBuilds:

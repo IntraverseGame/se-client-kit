@@ -11,7 +11,8 @@
   amended 2026-10-27 (#3): the `intraverse` npm organization claimed, trusted
   publishing from the `release` environment; amended 2026-10-28 (#143): `wireit`
   upgraded to 0.15.0; amended 2026-11-11: the generator's `undici` override
-  raised from 6.29.0 to 6.29.1 for four advisories)
+  raised from 6.29.0 to 6.29.1 for four advisories; amended 2026-11-16: the
+  `wireit@0.15.0` release-age waiver removed)
 
 Amendment note (2026-10-16, toolchain pull request): decision 3 and the
 dependency table named `prettier` for Markdown and YAML because `oxfmt` did not
@@ -122,6 +123,13 @@ high, one medium; listed in [ADR-004](./ADR-004-openapi-typescript-6.md)'s
 amendment note). 6.29.1 is older than the seven-day release age and carries
 provenance like 6.29.0, so neither supply-chain exception list changes. No
 dependency is added; `undici` stays on the allow-list for that override only.
+
+Amendment note (2026-11-16, the `wireit` release-age waiver removed): the
+one-time waiver of the release age for `wireit@0.15.0` (the 2026-10-28 note
+above) is removed from `pnpm-workspace.yaml`, since 0.15.0 is past the seven-day
+window; the release age now has no exception. The trust exception for
+`chokidar@4.0.3` stays until wireit moves off `chokidar` 4. No dependency or
+version changes.
 
 ## Context
 
