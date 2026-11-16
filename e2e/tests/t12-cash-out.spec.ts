@@ -109,8 +109,8 @@ test.describe("T-12: a cash-out and a last-row win", () => {
     await expect(page.locator(".se-status")).toContainText(
       `${TEXT.payout} ${CASH_OUT_PAYOUT.formatted}`,
     );
-    await expect(page.getByText(CASH_OR_CRASH_ROUND_ID)).toBeVisible();
     await openReceipt(page);
+    await expect(page.getByText(CASH_OR_CRASH_ROUND_ID)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toHaveAttribute(
       "rel",
       "noopener noreferrer",
@@ -169,8 +169,8 @@ test.describe("T-12: a cash-out and a last-row win", () => {
     await expect(page.locator(".se-status")).toContainText(
       `${TEXT.payout} ${payout.formatted}`,
     );
-    await expect(page.getByText(LAST_ROW_ROUND_ID)).toBeVisible();
     await openReceipt(page);
+    await expect(page.getByText(LAST_ROW_ROUND_ID)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toHaveAttribute(
       "rel",
       "noopener noreferrer",

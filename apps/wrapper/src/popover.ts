@@ -3,8 +3,9 @@
 // focus (W-45, W-46); the button says whether it is open (`aria-expanded`) and
 // which panel it controls; Escape closes it and returns the focus to the
 // button; a click outside it closes it, and so does the page losing the focus
-// (a click in the game's frame never reaches the page), a scroll (the panel
-// would drift from its button), and a resize. It never moves the focus on its own:
+// (a click in the game's frame never reaches the page) and a resize; a scroll
+// moves it with its button (placing a link into view scrolls, and must not
+// close the panel it is in). It never moves the focus on its own:
 // opening leaves the focus on the button the player pressed.
 
 import type { Builder, Child } from "./dom.ts";
@@ -92,11 +93,14 @@ export const popover = (
   const onViewport = (): void => {
     close();
   };
+  const onScroll = (): void => {
+    if (topLayer && !panel.hidden) place();
+  };
   const listen = (on: boolean): void => {
     const method = on ? "addEventListener" : "removeEventListener";
     view?.[method]("resize", onViewport);
     view?.[method]("blur", onViewport);
-    doc[method]("scroll", onViewport, true);
+    doc[method]("scroll", onScroll, true);
     doc[method]("pointerdown", outside, true);
   };
 

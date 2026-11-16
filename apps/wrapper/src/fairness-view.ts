@@ -77,12 +77,22 @@ export const receiptLabel = (m: Messages, plan: ChipPlan): string => {
   return words.keeps ? `${m[words.label]} ${id}` : id;
 };
 
-/** The chip's accessible name: the full meaning (Q1's words). */
+/**
+ * The chip's accessible name: the full meaning (Q1's words), led by the visible
+ * label when the meaning does not already start with it, so the name holds the
+ * words a player sees (WCAG 2.5.3, axe's label-content-name-mismatch).
+ */
 export const receiptName = (m: Messages, plan: ChipPlan): string => {
   const words = m[CHIP[plan.kind].text];
-  return plan.endedRoundId === undefined
-    ? `${words}: ${m["chip.openLabel"]}`
-    : `${words}, ${m["receipt.round"]} ${plan.endedRoundId}: ${m["receipt.openEnded"]}`;
+  const meaning =
+    plan.endedRoundId === undefined
+      ? `${words}: ${m["chip.openLabel"]}`
+      : `${words}, ${m["receipt.round"]} ${plan.endedRoundId}: ${m["receipt.openEnded"]}`;
+  const label = receiptLabel(m, plan);
+  // A trailing ellipsis ("Checking…") is not a word of the label.
+  return meaning.startsWith(label.replace(/…$/u, ""))
+    ? meaning
+    : `${label}. ${meaning}`;
 };
 
 /** Checks 1 to 4 of W-26 in full, then check 5 and the tip check (W-26b). */

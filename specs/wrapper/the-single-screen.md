@@ -264,10 +264,11 @@ common one), so the stage's ratio follows it.
     controls, the menu, the balance, the bet, the status slot (which takes the
     rest of the width), and the start control, 5.5rem tall (88 CSS pixels), a
     radius of 0.75rem;
-  - from 35rem to 66rem: **two rows**: the status slot on a row of its own
+  - from 40rem to 66rem: **two rows**: the status slot on a row of its own
     (3.375rem; a result is one row), then the menu, the balance, the bet, and
-    the start control (as wide as on one line);
-  - under 35rem: **three rows**: the status slot (two rows of 3.375rem), the
+    the start control; under 45rem MIN and MAX are hidden, so the row fits 40rem
+    (640 CSS pixels: a 1280 by 720 screen at 200 % zoom) without scrolling;
+  - under 40rem: **three rows**: the status slot (two rows of 3.375rem), the
     balance and the bet, then the menu and a full-width start control; MIN and
     MAX are hidden. No control shrinks below 2.75rem by 2.75rem.
 
@@ -322,7 +323,7 @@ common one), so the stage's ratio follows it.
   slot as two rows of 2.75rem: the chip, the status heading, and the payout (or
   the return to player, or the `expired` line); then the shortened round id, its
   copy control, and the verify link, as quiet text controls that keep their
-  2.75rem height. From 35rem up the two rows share columns; under 35rem each row
+  2.75rem height. From 40rem up the two rows share columns; under 40rem each row
   lays out on its own, and the payout's and the round id's labels are read, not
   shown (they stay the accessible text). At the default text size it fits from
   320 CSS pixels up without scrolling; content that cannot fit (a long served

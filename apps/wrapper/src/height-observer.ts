@@ -125,7 +125,17 @@ export const followBarLayout = (
       if (slot !== null) markOverflow(slot);
     }
   };
-  platform.createObserver(apply).observe(bar);
+  const observer = platform.createObserver(apply);
+  observer.observe(bar);
+  // A larger text size for the slot's words alone grows its content, not the
+  // bar: the status line and the receipt are watched too.
+  for (const selector of [
+    `${STATUS_SLOT} > .se-status`,
+    `${STATUS_SLOT} > .se-chip-anchor`,
+  ]) {
+    const part = doc.querySelector(selector);
+    if (part !== null) observer.observe(part);
+  }
   platform.onViewportResize(apply);
   apply();
 };

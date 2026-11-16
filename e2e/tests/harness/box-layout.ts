@@ -113,7 +113,7 @@ export const alertInBar = (element: Element): boolean => {
   // game left for it (RFC-005): never over the game's interface.
   return (
     bar !== undefined &&
-    element.previousElementSibling?.classList.contains("se-status") === true &&
+    slot.querySelector(":scope > .se-status") !== null &&
     own.top >= bar.top - 0.5 &&
     own.bottom <= bar.bottom + 0.5 &&
     box.top >= own.top - 0.5 &&

@@ -55,20 +55,29 @@ const panelOf = (host: HTMLElement): HTMLElement => {
 };
 
 describe("the receipt's label (T-30)", () => {
+  // The visible label leads the name (WCAG 2.5.3): only Fairness is not
+  // already the start of Q1's words.
+  const open = m["chip.openLabel"];
   it.each([
-    ["how", m["receipt.fairness"], m["chip.how"]],
-    ["checking", m["receipt.checking"], m["chip.checking"]],
-    ["checked", m["receipt.checked"], m["chip.checked"]],
-    ["dev", m["chip.dev"], m["chip.dev"]],
-    ["not-verified", m["chip.notVerified"], m["chip.notVerified"]],
-    ["recorded", m["chip.recorded"], m["chip.recorded"]],
+    [
+      "how",
+      m["receipt.fairness"],
+      `${m["receipt.fairness"]}. ${m["chip.how"]}: ${open}`,
+    ],
+    ["checking", m["receipt.checking"], `${m["chip.checking"]}: ${open}`],
+    ["checked", m["receipt.checked"], `${m["chip.checked"]}: ${open}`],
+    ["dev", m["chip.dev"], `${m["chip.dev"]}: ${open}`],
+    [
+      "not-verified",
+      m["chip.notVerified"],
+      `${m["chip.notVerified"]}: ${open}`,
+    ],
+    ["recorded", m["chip.recorded"], `${m["chip.recorded"]}: ${open}`],
   ] as const)(
     "reads short words before a round ends, and Q1's in its name: %s",
-    (kind, words, full) => {
+    (kind, words, name) => {
       expect(receiptLabel(m, plan(kind, false))).toBe(words);
-      expect(receiptName(m, plan(kind, false))).toBe(
-        `${full}: ${m["chip.openLabel"]}`,
-      );
+      expect(receiptName(m, plan(kind, false))).toBe(name);
     },
   );
 
@@ -76,6 +85,7 @@ describe("the receipt's label (T-30)", () => {
     "reads the shortened round id once the round has ended: %s",
     kind => {
       expect(receiptLabel(m, plan(kind, true))).toBe(SHORT);
+      expect(receiptName(m, plan(kind, true)).startsWith(SHORT)).toBe(true);
       expect(receiptName(m, plan(kind, true))).toContain(ROUND_ID);
       expect(receiptName(m, plan(kind, true))).toContain(
         m["receipt.openEnded"],
@@ -165,11 +175,13 @@ describe("the receipt's popover (T-30)", () => {
     expect(chip.getAttribute("aria-expanded")).toBe("false");
   });
 
-  it("closes on a scroll, so it never drifts from its chip", () => {
+  it("stays open on a scroll, which only moves it with its chip", () => {
     const ui = after("coinflip-won");
     const chip = chipOf(ui.host);
     chip.click();
+    // Placing its verify link into view scrolls: the panel must stay.
     document.dispatchEvent(new Event("scroll"));
-    expect(chip.getAttribute("aria-expanded")).toBe("false");
+    expect(chip.getAttribute("aria-expanded")).toBe("true");
+    expect(panelOf(ui.host).hidden).toBe(false);
   });
 });

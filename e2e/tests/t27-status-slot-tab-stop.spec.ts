@@ -3,8 +3,9 @@
 // height, in the real layout of every browser project. In a box of 320 CSS
 // pixels, the narrowest the Wrapper supports, a loss's one-row result (its
 // heading and the round receipt) fits: no tab stop. At three times the text
-// size the receipt alone (a chip that never wraps) is wider than the slot, so
-// it overflows for sure: a tab stop, kept when a typed error joins it.
+// size of its words alone (a text-only zoom: the slot's own size, set in rem,
+// stays) the result no longer fits, so it overflows for sure: a tab stop,
+// kept when a typed error joins it.
 
 import type { Frame } from "@playwright/test";
 
@@ -19,9 +20,16 @@ import {
 import { pickCheck, ROUND_PINS } from "./harness/round-vector.ts";
 import { TEXT, WRAPPER_PAGE } from "./harness/wrapper-page.ts";
 
-/** Three times the text size, through the CSSOM (the page's CSP allows it). */
+/**
+ * Three times the size of the slot's words alone, through the CSSOM (the page's
+ * CSP allows it): a root text size would scale the slot with them.
+ */
 const tripleText = (): void => {
-  document.documentElement.style.setProperty("font-size", "300%");
+  const sheet = document.styleSheets[0];
+  sheet?.insertRule(
+    ".se-status-slot * { font-size: 3rem; }",
+    sheet.cssRules.length,
+  );
 };
 
 /** Whether the status slot's text overflows it, in one synchronous read. */
@@ -63,7 +71,7 @@ test("the status slot takes its tab stop while it overflows, and the bar's heigh
   // The one-row result fits: no tab stop.
   expect(await slot.evaluate(overflows)).toBe(false);
   await expect(slot).not.toHaveAttribute("tabindex");
-  // Three times the text size: the receipt is wider than the slot.
+  // Three times the size of its words: the result no longer fits.
   await frame.evaluate(tripleText);
   await expect(slot).toHaveAttribute("tabindex", "0");
   expect(await slot.evaluate(overflows)).toBe(true);

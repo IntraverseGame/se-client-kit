@@ -98,9 +98,14 @@ test.describe("T-9a: the lobby and deposit navigations", () => {
     const frame = await embedWrapper(page, fakePlayApi.launchUrl(WRAPPER_PAGE));
     const lobby = frame.getByRole("link", { name: TEXT.lobby });
     const deposit = frame.getByRole("link", { name: /Make a deposit/u });
+    // The links live in the bar's menu (RFC-005 section 8).
+    await frame.getByRole("button", { name: "Menu" }).click();
     await expect(lobby).toBeVisible();
     await expect(deposit).toBeVisible();
+    await frame.getByRole("button", { name: "Menu" }).click();
     await frame.getByRole("button", { name: TEXT.placeBet }).click();
+    // The menu opened again during the start holds neither.
+    await frame.getByRole("button", { name: "Menu" }).click();
     await expect(lobby).toHaveCount(0);
     await expect(deposit).toHaveCount(0);
     await expect
