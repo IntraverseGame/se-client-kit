@@ -82,7 +82,7 @@ Part of the [Wrapper spec](../wrapper.md), section
 
   | `status`                                   | The Wrapper shows                                                                                                                                                                                                                                                                                                           | Input                                                                      |
   | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-  | `idle`                                     | the bet stepper (`bet.suggestedBets`, defaulting to `bet.defaultBet`, within `minBet` and `maxBet`) and the start control, the balance. A typed error from the call that led here (a void) shows beside it                                                                                                                  | start enabled                                                              |
+  | `idle`                                     | the bet stepper (`bet.suggestedBets`, or the fallback ladder below when empty, defaulting to `bet.defaultBet`, within `minBet` and `maxBet`) and the start control, the balance. A typed error from the call that led here (a void) shows beside it                                                                         | start enabled                                                              |
   | `starting`                                 | "preparing the round"; the game is not shown as ready; the shell is verifying (W-26)                                                                                                                                                                                                                                        | none; cancel is not offered                                                |
   | `active`                                   | the game, ready, only after W-26 passed; the multiplier; cash-out when allowed, its control showing the Snapshot's `cashOutValue` as `formatted` when it carries one (below), else the multiplier                                                                                                                           | game picks, cash-out, cancel (if the game offers it, W-25)                 |
   | `active`, a move or cash-out not confirmed | "your move hasn't been confirmed" (or "your cash-out hasn't been confirmed"), "if it never arrives, the round ends by its time limit", the round id, and "check again" in place of the round; the game stays shown, waiting (W-16)                                                                                          | "check again" (a read only); no pick, no cash-out                          |
@@ -109,24 +109,33 @@ Part of the [Wrapper spec](../wrapper.md), section
   (hidden under 35rem), over the same options as before: the Snapshot's
   `suggestedBets` within `minBet` and `maxBet`, with `defaultBet` among them
   (first when not listed), preset to `defaultBet`, shown in ascending order of
-  `value` as a `bigint`. It never invents a value between two options, and every
-  comparison stays a `bigint` comparison of `Amount.value` (W-34). An option
-  above the balance is shown on the rail but cannot be chosen: plus and MAX stop
-  at the highest affordable option (Q8's recommendation, pending the human's
-  decision). Minus and MIN are disabled at the lowest option, plus and MAX at
-  the highest one it may reach (a bound of a control the state offers, not
-  W-57's placeholder). A rail of small marks under the value shows where the bet
-  sits in the list. The field is a `spinbutton`: the arrow keys, Page Up and
-  Page Down (three options), Home, End, and the mouse wheel step it; its
-  `aria-valuenow` is the option's index in the list, never the amount as a
-  number (W-34), `aria-valuemax` the highest index it may reach, and
-  `aria-valuetext` the option's `formatted`. A change of option rolls the value:
-  the new `formatted` slides in; it never shows an interpolated amount between
-  two (W-34, W-48), and with reduced motion it does not move. The choice is kept
-  across reads of the same options (unless it is no longer affordable). While a
-  start is in flight, and through a run of autoplay (W-61), the stepper is
-  disabled. With no affordable option the lowest shows, disabled, and the start
-  control cannot be pressed.
+  `value` as a `bigint`. When `suggestedBets` is empty, the Wrapper offers a
+  fallback ladder in its place (the shell's `suggestedOrLadder`, which
+  autoplay's "still offered" rule reads too): 1, 10, 20, 50, and 100 whole units
+  of `minBet`'s currency (`value` = n × 10^`decimals`), each kept only within
+  `minBet` and `maxBet`. A ladder amount's `formatted` is `minBet.formatted`
+  with its number replaced: with as many zero fraction digits as `minBet` shows
+  when it shows all `decimals` ("€0.10" gives "€20.00"), else none ("0.1 USD"
+  gives "20 USD"); a `minBet.formatted` with no number adds no ladder (decided
+  2026-11-16, the backend sends no suggested bets yet). Apart from that ladder
+  it never invents a value between two options, and every comparison stays a
+  `bigint` comparison of `Amount.value` (W-34). An option above the balance is
+  shown on the rail but cannot be chosen: plus and MAX stop at the highest
+  affordable option (Q8's recommendation, pending the human's decision). Minus
+  and MIN are disabled at the lowest option, plus and MAX at the highest one it
+  may reach (a bound of a control the state offers, not W-57's placeholder). A
+  rail of small marks under the value shows where the bet sits in the list. The
+  field is a `spinbutton`: the arrow keys, Page Up and Page Down (three
+  options), Home, End, and the mouse wheel step it; its `aria-valuenow` is the
+  option's index in the list, never the amount as a number (W-34),
+  `aria-valuemax` the highest index it may reach, and `aria-valuetext` the
+  option's `formatted`. A change of option rolls the value: the new `formatted`
+  slides in; it never shows an interpolated amount between two (W-34, W-48), and
+  with reduced motion it does not move. The choice is kept across reads of the
+  same options (unless it is no longer affordable). While a start is in flight,
+  and through a run of autoplay (W-61), the stepper is disabled. With no
+  affordable option the lowest shows, disabled, and the start control cannot be
+  pressed.
 
   **The payout.** Since se-backend `f8cc92b`, `se.snapshot/1` carries `payout`,
   an `Amount` the server computes that says what the finished round credits the

@@ -121,6 +121,7 @@ export type {
   SessionRead,
 } from "./session-types.ts";
 export type { Bet } from "./round-start.ts";
+export { type OfferedAmount, suggestedOrLadder } from "./bet-ladder.ts";
 export type {
   Clock,
   FetchLike,

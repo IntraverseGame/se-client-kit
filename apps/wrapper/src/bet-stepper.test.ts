@@ -113,6 +113,21 @@ describe("the bet stepper (T-29, W-31)", () => {
     expect(shown(ui.host).now).toBe("0");
   });
 
+  it("steps the fallback ladder when the Snapshot suggests no bet", () => {
+    const ui = stepper(
+      withFields(IDLE, {
+        bet: { ...IDLE.bet, suggestedBets: [], defaultBet: IDLE.bet.minBet },
+      }),
+    );
+    expect(shown(ui.host)).toEqual({ now: "0", text: "€0.10" });
+    expect(control(ui.host, "bet-plus").disabled).toBe(false);
+    control(ui.host, "bet-plus").click();
+    expect(shown(ui.host).text).toBe("€1.00");
+    control(ui.host, "bet.max").click();
+    expect(shown(ui.host)).toEqual({ now: "5", text: "€100.00" });
+    expect(control(ui.host, "bet-plus").disabled).toBe(true);
+  });
+
   it("stops plus and MAX at the highest affordable option (Q8), showing the rest on the rail", () => {
     const ui = stepper(withBalance(SECOND.value));
     control(ui.host, "bet.max").click();

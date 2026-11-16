@@ -569,16 +569,17 @@ second action is signed at the sequence.
   - **It stops**, before the next start, on any of: the player's stop (the round
     in flight finishes); the count reached; the balance below the bet (a
     `bigint` comparison, W-34); the bet no longer offered by the latest Snapshot
-    (not one of its `suggestedBets` or `defaultBet`, or outside `minBet` and
-    `maxBet`); any typed or generic error (W-42), a void or a refusal of a start
-    included; a connection problem (W-43); a Snapshot rejected (W-28); a round
-    that ends other than `won` or `lost`, or goes back to `idle`; a changed
-    round (W-52), its own stop rule, usually seen on the `won` or `lost` read
-    itself; "game not compatible" (W-38); a `playback` copy that fails closed
-    (W-55), since the player could no longer see the rounds being played; a
-    changed session (W-53); the session's end or a token that cannot be
-    refreshed (W-7); the signer lock lost (W-14); the page hidden (Q3's
-    recommendation: a run never continues unattended).
+    (not one of its `suggestedBets`, or of W-31's fallback ladder when it has
+    none, or `defaultBet`, or outside `minBet` and `maxBet`); any typed or
+    generic error (W-42), a void or a refusal of a start included; a connection
+    problem (W-43); a Snapshot rejected (W-28); a round that ends other than
+    `won` or `lost`, or goes back to `idle`; a changed round (W-52), its own
+    stop rule, usually seen on the `won` or `lost` read itself; "game not
+    compatible" (W-38); a `playback` copy that fails closed (W-55), since the
+    player could no longer see the rounds being played; a changed session
+    (W-53); the session's end or a token that cannot be refreshed (W-7); the
+    signer lock lost (W-14); the page hidden (Q3's recommendation: a run never
+    continues unattended).
   - **On screen.** The segment at the start control's right end opens a popover
     of the configured counts; during a run it shows the count left and a stop
     square, and stops the run; the start control is busy; the status line's

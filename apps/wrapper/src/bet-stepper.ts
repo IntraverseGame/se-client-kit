@@ -1,8 +1,9 @@
 // The bet stepper (W-31, RFC-005 section 2): a minus control, the bet field, a
 // plus control, and MIN and MAX beside it, over the same options W-31 offers
 // (bet-options.ts: the Snapshot's `suggestedBets` within `minBet` and
-// `maxBet`, the `defaultBet` preset), in ascending order. It never invents a
-// value between two options; every comparison is a `bigint` comparison of
+// `maxBet`, or the fallback ladder when there are none, the `defaultBet`
+// preset), in ascending order. Apart from that ladder it never invents a value
+// between two options; every comparison is a `bigint` comparison of
 // `Amount.value` (W-34). An option above the balance shows on the rail but
 // cannot be chosen: plus and MAX stop at the highest affordable option (Q8).
 // The field is a `spinbutton` whose `aria-valuenow` is the option's index in

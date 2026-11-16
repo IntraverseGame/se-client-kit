@@ -46,6 +46,20 @@ describe("compareAmounts", () => {
   });
 });
 
+const usd = (value: string, formatted: string): ShownAmount => ({
+  value,
+  decimals: 2,
+  unit: "USD",
+  formatted,
+});
+
+const eur = (value: string, formatted: string): ShownAmount => ({
+  value,
+  decimals: 2,
+  unit: "EUR",
+  formatted,
+});
+
 describe("betChoice (W-31, idle)", () => {
   it("offers the suggested bets and preselects the default", () => {
     const { bet } = snapshotVector("coinflip-idle");
@@ -114,6 +128,81 @@ describe("betChoice (W-31, idle)", () => {
       defaultBet: amount("5"),
     });
     expect(choice.selected).toBeUndefined();
+  });
+
+  it("offers the fallback ladder when no bet is suggested", () => {
+    const choice = betChoice({
+      balance: usd("9992", "99.92 USD"),
+      minBet: usd("10", "0.1 USD"),
+      maxBet: usd("100000", "1000 USD"),
+      suggestedBets: [],
+      defaultBet: usd("10", "0.1 USD"),
+    });
+    expect(
+      choice.options.map(option => [
+        option.amount.value,
+        option.amount.formatted,
+      ]),
+    ).toEqual([
+      ["10", "0.1 USD"],
+      ["100", "1 USD"],
+      ["1000", "10 USD"],
+      ["2000", "20 USD"],
+      ["5000", "50 USD"],
+      ["10000", "100 USD"],
+    ]);
+    expect(choice.options.map(option => option.affordable)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+    ]);
+    expect(choice.selected).toBe(0);
+  });
+
+  it("keeps the fallback ladder within minBet and maxBet, at full precision", () => {
+    const choice = betChoice({
+      balance: eur("100000", "€1,000.00"),
+      minBet: eur("200", "€2.00"),
+      maxBet: eur("5000", "€50.00"),
+      suggestedBets: [],
+      defaultBet: eur("200", "€2.00"),
+    });
+    expect(choice.options.map(option => option.amount.formatted)).toEqual([
+      "€2.00",
+      "€10.00",
+      "€20.00",
+      "€50.00",
+    ]);
+  });
+
+  it("puts a default bet that is not on the ladder first", () => {
+    const choice = betChoice({
+      balance: usd("100000", "1000 USD"),
+      minBet: usd("10", "0.1 USD"),
+      maxBet: usd("1000", "10 USD"),
+      suggestedBets: [],
+      defaultBet: usd("50", "0.5 USD"),
+    });
+    expect(choice.options.map(option => option.amount.formatted)).toEqual([
+      "0.5 USD",
+      "1 USD",
+      "10 USD",
+    ]);
+    expect(choice.selected).toBe(0);
+  });
+
+  it("does not add the ladder when the Snapshot suggests bets", () => {
+    const choice = betChoice({
+      balance: amount("1000"),
+      minBet: amount("1"),
+      maxBet: amount((10n ** 21n).toString()),
+      suggestedBets: [amount("5")],
+      defaultBet: amount("5"),
+    });
+    expect(choice.options.map(option => option.amount.value)).toEqual(["5"]);
   });
 
   it("renders the 2^256 - 1 golden vector's amounts as given", () => {

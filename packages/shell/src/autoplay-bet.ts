@@ -5,6 +5,7 @@
 
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
+import { suggestedOrLadder } from "./bet-ladder.ts";
 import type { Bet } from "./round-start.ts";
 
 const BASE_UNITS = /^(?:0|[1-9][0-9]{0,77})$/u;
@@ -34,15 +35,16 @@ const sameAmount = (a: Amount, bet: Bet): boolean => {
 };
 
 /**
- * The latest Snapshot's own `Amount` of the bet, when it still offers it: one
- * of `suggestedBets` or `defaultBet`, within `minBet` and `maxBet`.
+ * The latest Snapshot's `Amount` of the bet, when it still offers it: one of
+ * its offered bets (`suggestedBets`, or the fallback ladder when there are
+ * none, bet-ladder.ts) or `defaultBet`, within `minBet` and `maxBet`.
  */
 export const offeredAmount = (
   snapshot: ValidSnapshot,
   bet: Bet,
 ): Amount | undefined => {
-  const { minBet, maxBet, suggestedBets, defaultBet } = snapshot.bet;
-  const amount = [...suggestedBets, defaultBet].find(option =>
+  const { minBet, maxBet, defaultBet } = snapshot.bet;
+  const amount = [...suggestedOrLadder(snapshot.bet), defaultBet].find(option =>
     sameAmount(option, bet),
   );
   if (amount === undefined) return undefined;

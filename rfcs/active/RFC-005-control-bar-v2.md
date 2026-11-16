@@ -161,9 +161,10 @@ The chips become a stepper: a minus control, the bet field, a plus control, and
 MIN and MAX text controls beside it (hidden on the narrowest layout).
 
 - It steps through the same list W-31 offers today: the Snapshot's
-  `suggestedBets` within `minBet` and `maxBet`, preset to `defaultBet`. It never
-  invents a value between two options, and every comparison stays a `bigint`
-  comparison of `Amount.value` (W-34).
+  `suggestedBets` (or, when there are none, W-31's fallback ladder, added
+  2026-11-16) within `minBet` and `maxBet`, preset to `defaultBet`. Apart from
+  that ladder it never invents a value between two options, and every comparison
+  stays a `bigint` comparison of `Amount.value` (W-34).
 - An option above the balance is shown on the rail but cannot be chosen, as
   today: plus and MAX stop at the highest affordable option (Q8).
 - Minus is disabled at the lowest option and plus at the highest one it may
@@ -270,15 +271,16 @@ reduced motion it does not move.
 - **It stops**, before the next start, on any of: the player's stop (the round
   in flight finishes); the count reached; the balance below the bet (a `bigint`
   comparison, W-34); the chosen bet no longer offered by the latest Snapshot
-  (outside its `suggestedBets`, `minBet`, or `maxBet`); any typed or generic
-  error (W-42), a void or refusal of a start included (it shows `idle`, W-54); a
-  connection problem (W-43); a changed round (W-52), usually seen on the `won`
-  or `lost` read itself; a round that ends other than `won` or `lost` (a book
-  round cannot be `canceled`, W-54, or out of sync, W-51); a Snapshot rejected
-  (W-28); "game not compatible" (W-38); a `playback` copy that fails closed
-  (W-55), since the player could no longer see the rounds being played; a
-  changed session (W-53); the session's end or a token that cannot be refreshed;
-  the signer lock lost (W-14); the page hidden (Q3).
+  (outside its `suggestedBets`, or W-31's fallback ladder when it has none,
+  `minBet`, or `maxBet`); any typed or generic error (W-42), a void or refusal
+  of a start included (it shows `idle`, W-54); a connection problem (W-43); a
+  changed round (W-52), usually seen on the `won` or `lost` read itself; a round
+  that ends other than `won` or `lost` (a book round cannot be `canceled`, W-54,
+  or out of sync, W-51); a Snapshot rejected (W-28); "game not compatible"
+  (W-38); a `playback` copy that fails closed (W-55), since the player could no
+  longer see the rounds being played; a changed session (W-53); the session's
+  end or a token that cannot be refreshed; the signer lock lost (W-14); the page
+  hidden (Q3).
 - **On screen.** The segment shows the remaining count and a stop square; the
   status line reads "Autoplay · n left". The start and the stop of a run are
   announced politely and a single round of it is not: a change to W-46 ("a

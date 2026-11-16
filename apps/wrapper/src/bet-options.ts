@@ -1,7 +1,10 @@
 // The bet selector's options (W-31, `idle`): the Snapshot's suggested bets
-// within `minBet` and `maxBet`, with `defaultBet` preselected. Every
+// within `minBet` and `maxBet`, with `defaultBet` preselected; with no
+// suggested bet, the shell's fallback ladder (`suggestedOrLadder`). Every
 // comparison is on `Amount.value` as a `bigint` in base units (W-34); nothing
 // here reads `normalized`, a multiplier, or a JS number for money.
+
+import { suggestedOrLadder } from "@intraverse/se-client-shell";
 
 import type { ShownAmount } from "./round-input.ts";
 
@@ -60,16 +63,16 @@ const within = (amount: ShownAmount, bet: BetContext): boolean => {
 };
 
 /**
- * The selector's options for a bet context: the suggested bets, and the default
- * bet first when it is not one of them.
+ * The selector's options for a bet context: the suggested bets (or the fallback
+ * ladder when there are none), and the default bet first when it is not one of
+ * them.
  */
 export const betChoice = (bet: BetContext): BetChoice => {
-  const listed = bet.suggestedBets.some(
+  const suggested = suggestedOrLadder(bet);
+  const listed = suggested.some(
     amount => compareAmounts(amount, bet.defaultBet) === 0,
   );
-  const candidates = listed
-    ? bet.suggestedBets
-    : [bet.defaultBet, ...bet.suggestedBets];
+  const candidates = listed ? suggested : [bet.defaultBet, ...suggested];
   const options = candidates
     .filter(amount => within(amount, bet))
     .map(amount => {
