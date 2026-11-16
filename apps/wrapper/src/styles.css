@@ -57,7 +57,6 @@
    */
   --se-stage-min: 16.875rem;
   --se-bar-h: 5.5rem;
-  --se-notices-h: 2.5rem;
   --se-start-w: 11rem;
   --se-autoplay-w: 3.75rem;
 }
@@ -182,7 +181,7 @@ body {
   display: grid;
   grid-template-columns: var(--se-row) minmax(0, 1fr) auto;
   grid-template-areas:
-    "notices notices notices" "status status status" "balance balance bet"
+    "status status status" "balance balance bet"
     "menu start start";
   gap: 0.75rem 0.5rem;
   padding: 0.625rem 0.625rem 0.75rem;
@@ -199,15 +198,13 @@ body {
   outline-offset: -0.125rem;
 }
 
-.se-bar:has(> .se-notices:empty) {
-  grid-template-areas:
-    "status status status" "balance balance bet"
-    "menu start start";
-}
-
+/* W-26a's notice: a small icon in the bar's top corner, its words its tooltip
+   and its accessible text; it takes no row of the bar. */
 .se-notices {
-  grid-area: notices;
-  height: 2.25rem;
+  position: absolute;
+  top: 0.1875rem;
+  right: 0.3125rem;
+  z-index: 1;
 }
 
 .se-notices:empty {
@@ -303,16 +300,10 @@ body {
   .se-bar {
     grid-template-columns: auto auto auto minmax(0.5rem, 1fr) auto;
     grid-template-areas:
-      "notices notices notices notices notices"
-      "status status status status status" "menu balance bet . start";
-    column-gap: 0.625rem;
-    padding: 0.625rem 0.75rem 0.75rem;
-  }
-
-  .se-bar:has(> .se-notices:empty) {
-    grid-template-areas:
       "status status status status status"
       "menu balance bet . start";
+    column-gap: 0.625rem;
+    padding: 0.625rem 0.75rem 0.75rem;
   }
 
   .se-status-slot {
@@ -336,6 +327,13 @@ body {
   .se-bar[data-autoplay] .se-start-slot {
     width: calc(var(--se-start-w) - 1.25rem + var(--se-autoplay-w));
   }
+
+  /* Over a game that draws under it (`inset`), the two-row bar may float on
+     glass too; over any other game it docks under 66rem, since the apron is
+     sized for the one-line bar (RFC-005 section 1). */
+  .se-main:has(.se-stage[data-frame="inset"]) > .se-bar {
+    --se-floatable: 1;
+  }
 }
 
 /* 66rem and up: one line; the bar may float over the stage. */
@@ -344,19 +342,11 @@ body {
     --se-floatable: 1;
 
     grid-template-columns: auto auto auto minmax(0, 1fr) auto;
-    grid-template-areas:
-      "notices notices notices notices notices"
-      "menu balance bet status start";
-    grid-template-rows: auto var(--se-bar-h);
-    align-items: center;
-    row-gap: 0.25rem;
-    padding: 0 0.875rem 0 0.625rem;
-    border-radius: var(--se-radius);
-  }
-
-  .se-bar:has(> .se-notices:empty) {
     grid-template-areas: "menu balance bet status start";
     grid-template-rows: var(--se-bar-h);
+    align-items: center;
+    padding: 0 0.875rem 0 0.625rem;
+    border-radius: var(--se-radius);
   }
 
   .se-status-slot {
@@ -398,12 +388,9 @@ body {
   grid-template-rows: minmax(var(--se-stage-min), 1fr);
 }
 
-.se-main[data-bar="float"]:has(.se-notice) {
-  --se-apron: calc(var(--se-bar-h) + var(--se-notices-h) + 2 * var(--se-gap));
-}
-
 .se-main[data-bar="float"] > .se-bar {
   position: absolute;
+  border-radius: var(--se-radius);
   right: var(--se-gap);
   bottom: var(--se-gap);
   left: var(--se-gap);
@@ -1082,21 +1069,10 @@ h2.se-heading {
 
 .se-notice {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
   margin: 0;
-  padding: 0.25rem 0.75rem;
-  border: 0.0625rem solid var(--se-line);
-  border-left: 0.25rem solid var(--se-problem);
-  border-radius: var(--se-control-radius);
-  background: var(--se-control);
-  color: var(--se-strong);
-  font-size: 0.875rem;
-}
-
-.se-notice .se-icon {
   color: var(--se-problem);
+  font-size: 0.875rem;
+  cursor: help;
 }
 
 /* A flex box ignores `hidden` unless told: a hidden notice or row is gone. */

@@ -56,10 +56,19 @@ export const createBarChrome = (
       JSON.stringify([localized.language, state.chainNotIndependent]),
       () => [
         state.chainNotIndependent &&
-          el("p", { class: "se-notice se-notice--chain" }, [
-            icon(doc, "info", m["icon.info"]),
-            el("span", {}, [m["notice.chainNotIndependent"]]),
-          ]),
+          el(
+            "p",
+            {
+              class: "se-notice se-notice--chain",
+              title: m["notice.chainNotIndependent"],
+            },
+            [
+              icon(doc, "info", m["icon.info"]),
+              el("span", { class: "se-visually-hidden" }, [
+                m["notice.chainNotIndependent"],
+              ]),
+            ],
+          ),
       ],
     );
     const busy =

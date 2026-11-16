@@ -47,13 +47,14 @@ Q8).
      default text size) with a radius of 0.5rem, so the row has one centre line,
      in this visual and tab order: the **menu**, the **balance**, the **bet**
      (the stepper, W-31), the **status slot**, and the **start control**.
-     W-26a's badge sits in a row of its own above, for the whole session. Its
-     top edge is the **state edge** (W-60). The bar element itself takes the
-     focus on a click (`tabindex="-1"`, not a tab stop), and while the focus is
-     on the bar itself, never on one of its controls, a field, or the game
-     frame, Space presses the start control (Q5); never a cash-out. The start
-     control names the shortcut in its tooltip and `aria-keyshortcuts`, not in a
-     visible hint. Its slots:
+     W-26a's badge is a small icon in the bar's top corner, for the whole
+     session: its words are its tooltip and its accessible text, and it takes no
+     row. Its top edge is the **state edge** (W-60). The bar element itself
+     takes the focus on a click (`tabindex="-1"`, not a tab stop), and while the
+     focus is on the bar itself, never on one of its controls, a field, or the
+     game frame, Space presses the start control (Q5); never a cash-out. The
+     start control names the shortcut in its tooltip and `aria-keyshortcuts`,
+     not in a visible hint. Its slots:
      - the **menu**: a button whose popover holds "This session" (the time since
        the session opened, in whole minutes, and the rounds played, kept in
        memory only, never stored, logged, or sent; no amount, Q4), then the
@@ -273,16 +274,17 @@ common one), so the stage's ratio follows it.
     balance and the bet, then the menu and a full-width start control; MIN and
     MAX are hidden. No control shrinks below 2.75rem by 2.75rem.
 
-  W-26a's badge takes a row of its own above (2.25rem) while it shows; it is set
-  for the session, so it never changes `B` between states.
+  W-26a's badge is an icon in the bar's top corner and takes no row, so it never
+  changes `B`.
 
 - **The bar floats or docks** (RFC-005 section 1; decided: the bar never covers
-  anything the game needs to show, and the game extends behind it). From 66rem
-  the stylesheet lets the bar float: it sits over the bottom of the stage, inset
-  by 0.875rem from its sides and bottom, on a translucent surface with a
-  backdrop blur (the solid bar where the browser has no backdrop filter): a
-  surface 0.45 opaque over a backdrop dimmed to at most 0.4 and blurred by at
-  least 1.25rem (The look, above). Then:
+  anything the game needs to show, and the game extends behind it). From 66rem,
+  and from 40rem over a game whose `hello` declared `inset` (its two-row bar
+  then floats too), the stylesheet lets the bar float: it sits over the bottom
+  of the stage, inset by 0.875rem from its sides and bottom, on a translucent
+  surface with a backdrop blur (the solid bar where the browser has no backdrop
+  filter): a surface 0.45 opaque over a backdrop dimmed to at most 0.4 and
+  blurred by at least 1.25rem (The look, above). Then:
   - a game whose accepted `hello` declared the `inset` capability (W-38) gets a
     frame the size of the whole stage, bar included, and draws only scenery
     under the bar: the Wrapper sends it the band the bar covers, `insetBottom`,
@@ -293,11 +295,12 @@ common one), so the stage's ratio follows it.
     pixels), which the bar floats on, so it covers no part of the frame; its
     `insetBottom` is 0 and it is sent nothing.
 
-  The bar **docks** under the stage, and the inset is 0, under 66rem, and
-  whenever floating would leave less than the stage's minimum `S` of the game in
-  view, and never less than **200 CSS pixels** (`MIN_VISIBLE_GAME`, a new number
-  of RFC-005), so a game's interface is never covered. The decision is an
-  attribute of the page's main element (`data-bar`, `float` or `dock`;
+  The bar **docks** under the stage, and the inset is 0, under 40rem, under
+  66rem over a game without `inset` (the apron is sized for the one-line bar),
+  and whenever floating would leave less than the stage's minimum `S` of the
+  game in view, and never less than **200 CSS pixels** (`MIN_VISIBLE_GAME`, a
+  new number of RFC-005), so a game's interface is never covered. The decision
+  is an attribute of the page's main element (`data-bar`, `float` or `dock`;
   `stage-layout.ts`), never a measured value written into a style. The frame
   resizes once after the `hello` (a capable game's frame grows to the whole
   stage) and at a layout change, never on a status change. A game that declared
@@ -308,10 +311,11 @@ common one), so the stage's ratio follows it.
   pixels wide (the reflow width of WCAG 2.2, 1.4.10; narrower is not supported),
   and `H_min = ceil(B') + S` tall, where `S`, the stage's minimum, is
   PROVISIONAL at 270 CSS pixels until this spec gives another number, and `B'`
-  is the band the bar takes under the game's view: the docked bar's height under
-  66rem; from 66rem, the floating bar and its bottom gap over an `inset` game,
-  and the bar and both gaps over an apron. So `H_min` depends on the game's
-  capability, and the first `resize` may change once after the `hello` (W-49d).
+  is the band the bar takes under the game's view: the docked bar's height where
+  the bar may not float (above); where it may, the floating bar and its bottom
+  gap over an `inset` game, and the bar and both gaps over an apron. So `H_min`
+  depends on the game's capability, and the first `resize` may change once after
+  the `hello` (W-49d).
 - **Below the minimum height** the bar docks, the stage keeps `S`, and the
   Wrapper's own document scrolls vertically inside the iframe. The docked bar is
   sticky at the bottom of the viewport, so the status line and the money
