@@ -327,7 +327,8 @@ body {
     width: calc(var(--se-start-w) - 1.25rem);
   }
 
-  /* A narrower start control here: its label on one line, less padding. */
+  /* A narrower start control here, with less padding, so its label most often
+     takes one line; a longer one wraps rather than leave its slot. */
   .se-start {
     padding-inline: 0.5rem;
   }
@@ -680,7 +681,6 @@ h2.se-heading {
 }
 
 .se-start {
-  white-space: nowrap;
   border: 0;
   border-radius: 0;
   background: var(--se-accent);

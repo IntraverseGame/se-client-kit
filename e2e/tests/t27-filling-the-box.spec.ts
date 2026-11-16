@@ -158,6 +158,8 @@ test("below H_min the document scrolls, the stage keeps its minimum, and the scr
   await expect
     .poll(async () => (await layoutOf(frame)).clientHeight)
     .toBe(minimum - 40);
+  // The bar docks on the layout's next measure, a frame after the box shrank.
+  await expect.poll(async () => (await layoutOf(frame)).scrollsY).toBe(true);
   const tight = await layoutOf(frame);
   expect(tight.scrollsY).toBe(true);
   expect(tight.scrollsX).toBe(false);
