@@ -33,19 +33,16 @@ the attack surface a player cannot see. The rules:
   other package keeps the `undici` it declares (`jsdom` its 8.x); it goes when
   the generator no longer pulls `undici` or declares a range without them
   (ADR-004). Dependabot's `cooldown` is 7 days to match, for the `npm` and the
-  `github-actions` ecosystems. Two exceptions exist, each scoped to one exact
-  version, accepted by the human on 2026-10-28 for the wireit upgrade (#143) and
-  listed with their reason in `pnpm-workspace.yaml`; the policies themselves are
-  unchanged:
-  - `minimumReleaseAgeExclude: [wireit@0.15.0]`, a one-time waiver of the
-    release age: 0.15.0 (published 2026-10-24) carries the fix for
-    google/wireit#1536 (google/wireit#1542). Its new transitive dependencies are
-    all older than the window. The entry can go after 2026-10-31, when 0.15.0 is
-    seven days old.
-  - `trustPolicyExclude: [chokidar@4.0.3]`, an exception to `no-downgrade`:
-    wireit 0.15.0 needs `chokidar` `^4.0.3`, and 4.0.2 and 4.0.3 were published
-    without provenance by the same maintainer who published 4.0.0 and 4.0.1 with
-    it. The entry goes when wireit moves off `chokidar` 4.
+  `github-actions` ecosystems. The release age has no exception. One exception
+  to the trust policy exists, scoped to one exact version, accepted by the human
+  on 2026-10-28 for the wireit upgrade (#143) and listed with its reason in
+  `pnpm-workspace.yaml`; the policy itself is unchanged:
+  `trustPolicyExclude: [chokidar@4.0.3]`, an exception to `no-downgrade`: wireit
+  0.15.0 needs `chokidar` `^4.0.3`, and 4.0.2 and 4.0.3 were published without
+  provenance by the same maintainer who published 4.0.0 and 4.0.1 with it. The
+  entry goes when wireit moves off `chokidar` 4. The one-time waiver of the
+  release age for `wireit@0.15.0`, accepted with it, was removed on 2026-11-16,
+  once 0.15.0 was past the window.
 - **Runtime dependencies are an allow-list**: `@noble/curves` and
   `@noble/hashes`, and nothing else
   ([ADR-001](../../decisions/ADR-001-toolchain-and-signing.md)). Anything else
@@ -79,7 +76,7 @@ the attack surface a player cannot see. The rules:
   | ---------------------------------- | ------- | ------------------------------------------ | ---------- |
   | `actions/checkout`                 | v7.0.1  | `3d3c42e5aac5ba805825da76410c181273ba90b1` | ADR-001    |
   | `actions/setup-node`               | v7.1.0  | `949feb2413d6458794dcd2491c4babbbce0c15c1` | ADR-001    |
-  | `pnpm/action-setup`                | v6.1.0  | `ea17c68df8912ef543352723c149a84f56e3d413` | ADR-001    |
+  | `pnpm/action-setup`                | v6.1.1  | `73e46992e05b19abd31f2f3c20e0e7370d762115` | ADR-001    |
   | `actions/dependency-review-action` | v5.0.0  | `a1d282b36b6f3519aa1f3fc636f609c47dddb294` | ADR-001    |
   | `actions/upload-artifact`          | v7.0.2  | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` | ADR-005    |
   | `actions/download-artifact`        | v8.0.2  | `9000827ccba6bdab643e8b6fd33ac0654aef8333` | ADR-008    |
