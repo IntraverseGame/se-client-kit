@@ -63,8 +63,38 @@ export const popover = (
     }
   };
 
+  // The panel opens in the top layer where the platform has the Popover API,
+  // placed above its button by two custom properties (CSSOM, so the page's
+  // Content Security Policy holds): a scrolling status slot cannot clip it
+  // and the game frame cannot cover it. Without the API it stays in place.
+  const topLayer = typeof panel.showPopover === "function";
+  if (topLayer) panel.setAttribute("popover", "manual");
+  const view = doc.defaultView;
+  const GAP = 10;
+  const MARGIN = 8;
+  const place = (): void => {
+    if (view === null) return;
+    const anchor = button.getBoundingClientRect();
+    const width = panel.getBoundingClientRect().width;
+    const wanted = options.align === "end" ? anchor.right - width : anchor.left;
+    const left = Math.max(
+      MARGIN,
+      Math.min(wanted, view.innerWidth - width - MARGIN),
+    );
+    panel.style.setProperty("--se-pop-left", `${String(Math.round(left))}px`);
+    panel.style.setProperty(
+      "--se-pop-bottom",
+      `${String(Math.round(view.innerHeight - anchor.top + GAP))}px`,
+    );
+  };
+  const onViewport = (): void => {
+    close();
+  };
+
   const close = (): void => {
     if (panel.hidden) return;
+    if (topLayer && panel.matches(":popover-open")) panel.hidePopover();
+    view?.removeEventListener("resize", onViewport);
     panel.hidden = true;
     if (options.prefill !== true) panel.replaceChildren();
     button.setAttribute("aria-expanded", "false");
@@ -85,6 +115,11 @@ export const popover = (
   const show = (): void => {
     fill();
     panel.hidden = false;
+    if (topLayer) {
+      panel.showPopover();
+      place();
+      view?.addEventListener("resize", onViewport);
+    }
     button.setAttribute("aria-expanded", "true");
     doc.addEventListener("pointerdown", outside, true);
   };

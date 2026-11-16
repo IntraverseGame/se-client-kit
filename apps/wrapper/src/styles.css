@@ -931,6 +931,13 @@ h2.se-heading {
   display: none;
 }
 
+/* Open in the top layer (popover.ts): fixed above its button, never clipped. */
+.se-popover[popover] {
+  position: fixed;
+  inset: auto auto var(--se-pop-bottom, auto) var(--se-pop-left, auto);
+  margin: 0;
+}
+
 .se-popover p {
   margin: 0 0 0.625rem;
   color: var(--se-muted);
