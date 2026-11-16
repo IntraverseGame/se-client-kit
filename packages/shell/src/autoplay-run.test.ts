@@ -226,6 +226,25 @@ describe("autoplay's run (RFC-005, W-61)", () => {
     expect(h.timers).toEqual([]);
   });
 
+  it("stops when a start is answered with no round to wait on", async () => {
+    const h = harness();
+    h.run.begin(REQUEST);
+    await h.answer(read(book("idle", 2)));
+    expect(stopped(h)).toBe("round-ended");
+    expect(h.timers).toEqual([]);
+    expect(h.starts).toHaveLength(1);
+  });
+
+  it("refuses to begin while a stopped run's start is still in flight", async () => {
+    const h = harness();
+    h.run.begin(REQUEST);
+    h.run.stop("player");
+    expect(h.run.begin(REQUEST)).toEqual({ ok: false, refusal: "busy" });
+    expect(h.starts).toHaveLength(1);
+    await h.answer(read(book("starting", 2)));
+    expect(h.starts).toHaveLength(1);
+  });
+
   it("stops on a round that ends other than won or lost, and on a void", async () => {
     const h = harness();
     h.run.begin(REQUEST);

@@ -49,6 +49,8 @@ test.describe("T-9a: a listed operator's round", () => {
     const launchUrl = fakePlayApi.launchUrl(WRAPPER_PAGE);
     secretScan.allowLaunchNavigation(launchUrl);
     const frame = await embedWrapper(page, launchUrl);
+    // The game declares `inset`; its `hello` changes `H_min` once (W-49d).
+    await expect(frame.locator('.se-stage[data-frame="inset"]')).toHaveCount(1);
     await expect(heading(frame)).toHaveText(TEXT.idle);
     await frame.getByRole("button", { name: TEXT.placeBet }).click();
     // The `starting` poll (W-35) runs on the page's clock; the frame shows
@@ -91,11 +93,10 @@ test.describe("T-9a: a listed operator's round", () => {
       message => (message as { height: number }).height,
     );
     expect(repeats(heights)).toEqual([]);
-    // `H_min`: the same in every state at one width; it may change once after
-    // the game's `hello`, which declares `inset` (W-49d, RFC-005), and nothing
-    // more came.
-    expect(heights.length).toBeGreaterThanOrEqual(1);
-    expect(heights.length).toBeLessThanOrEqual(2);
+    // `H_min`: the same in every state at one width, except that it changes
+    // exactly once after the game's `hello`, which declares `inset` (W-49d,
+    // RFC-005): the apron's value, then the inset's, and nothing more.
+    expect(heights).toHaveLength(2);
     expect(
       secretsIn(
         received.map(message => JSON.stringify(message)),

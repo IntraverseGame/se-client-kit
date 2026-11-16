@@ -92,8 +92,7 @@ const parseRejectMessage = (fields: Fields): RejectMessage | undefined => {
 /**
  * The `layout` message (RFC-005): the band the Wrapper's bar covers, a whole
  * number of CSS pixels. The Wrapper sends it only to a game that declared the
- * `inset` capability, which this game does not; it parses it so that a game
- * built from it does.
+ * `inset` capability, as this game does (inset.ts).
  */
 const parseLayoutMessage = (fields: Fields): LayoutMessage | undefined => {
   if (!hasFields(fields, ["schema", "type", "insetBottom"])) return undefined;

@@ -166,6 +166,12 @@ export const createAutoplayRun = (ports: AutoplayPorts): AutoplayRun => {
           awaited = answer.snapshot.roundId;
         }
         see(answer);
+        // A start answered with no round to wait on would leave the run
+        // waiting for ever: a void back to `idle` ends it, anything else is
+        // an error.
+        if (running() && awaited === undefined && answer.kind === "snapshot") {
+          stop(answer.snapshot.status === "idle" ? "round-ended" : "error");
+        }
         ports.answer(answer);
         return null;
       },
@@ -235,6 +241,8 @@ export const createAutoplayRun = (ports: AutoplayPorts): AutoplayRun => {
     }
     if (ports.closed()) return refuse("closed");
     if (running()) return refuse("busy");
+    // A stopped run's start still in flight: the session takes one at a time.
+    if (inFlight) return refuse("busy");
     const latest = ports.latest();
     if (latest === undefined || latest.presentation !== "playback") {
       return refuse("not-book");
