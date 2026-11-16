@@ -91,11 +91,11 @@ describe("stageMinimumOf (W-49d)", () => {
 });
 
 describe("observeHeight (W-49d)", () => {
-  it("reports H_min once, observing the bar and the stage", () => {
+  it("reports H_min once, observing the bar, the stage, and the frame's host", () => {
     const layout = { bar: 296, stageMinimum: S };
     const run = observed(documentOf(layout), layout);
     expect(run.heights).toEqual([566]);
-    expect(run.elements).toHaveLength(2);
+    expect(run.elements).toHaveLength(3);
   });
 
   it("measures at most once per frame however many resizes", () => {

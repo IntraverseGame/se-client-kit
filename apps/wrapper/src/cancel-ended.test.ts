@@ -15,6 +15,7 @@ import {
   allText,
   buttonNamed,
   linkNamed,
+  openReceipt,
   statusHeading,
 } from "./fixtures/app.ts";
 import {
@@ -36,12 +37,14 @@ describe("ended (W-25, W-33)", () => {
     const ui = await onCancel("ended");
     expect(statusHeading(ui.host)).toBe(m["status.ended"]);
     expect(alertText(ui.host)).toBe("");
+    // The round id and the verify link: the receipt's (W-39, W-59).
+    openReceipt(ui.host);
     expect(allText(ui.host)).toContain(activeId);
     expect(linkNamed(ui.host, m["action.verify"])).toBeDefined();
     expect(buttonNamed(ui.host, m["action.playAgain"])).toBeDefined();
     expect(
-      ui.host.querySelectorAll('.se-controls input[type="radio"]').length,
-    ).toBeGreaterThan(0);
+      ui.host.querySelectorAll('.se-bet-slot [role="spinbutton"]'),
+    ).toHaveLength(1);
     for (const claim of [
       m["status.won"],
       m["status.lost"],
@@ -96,6 +99,7 @@ describe("ended (W-25, W-33)", () => {
     expect(statusHeading(ui.host)).toBe(m["status.ended"]);
     expect(allText(ui.host)).toContain(current);
     expect(allText(ui.host)).not.toContain(active.bet.balance.formatted);
+    openReceipt(ui.host);
     expect(allText(ui.host)).toContain(activeId);
     expect(await readsOver(ui, 60_000)).toBe(0);
     // Still "round ended", with the bet selector of that read's `bet`.

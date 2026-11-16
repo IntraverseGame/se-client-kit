@@ -47,6 +47,8 @@ test.describe("T-9a: the lobby and deposit navigations", () => {
       request.url().startsWith(OPERATOR_LINKS.deposit),
     );
     const popup = context.waitForEvent("page");
+    // The links are in the bar's menu (RFC-005 section 8).
+    await frame.getByRole("button", { name: TEXT.menu }).click();
     await frame.getByRole("link", { name: /Make a deposit/u }).click();
     const deposit = await popup;
     await deposit.waitForLoadState();
@@ -62,6 +64,8 @@ test.describe("T-9a: the lobby and deposit navigations", () => {
     expect(received[0]).toEqual({ schema: "se.operator/1", type: "welcome" });
 
     // The lobby: the player's click navigates the top-level window.
+    // The menu is still open: a click outside it closes it, and the deposit's
+    // click was inside it.
     await frame.getByRole("link", { name: TEXT.lobby }).click();
     await page.waitForURL(OPERATOR_LINKS.lobby);
     await expect(page.getByRole("heading")).toHaveText("Fake operator lobby");
@@ -94,9 +98,14 @@ test.describe("T-9a: the lobby and deposit navigations", () => {
     const frame = await embedWrapper(page, fakePlayApi.launchUrl(WRAPPER_PAGE));
     const lobby = frame.getByRole("link", { name: TEXT.lobby });
     const deposit = frame.getByRole("link", { name: /Make a deposit/u });
+    // The links live in the bar's menu (RFC-005 section 8).
+    await frame.getByRole("button", { name: "Menu" }).click();
     await expect(lobby).toBeVisible();
     await expect(deposit).toBeVisible();
+    await frame.getByRole("button", { name: "Menu" }).click();
     await frame.getByRole("button", { name: TEXT.placeBet }).click();
+    // The menu opened again during the start holds neither.
+    await frame.getByRole("button", { name: "Menu" }).click();
     await expect(lobby).toHaveCount(0);
     await expect(deposit).toHaveCount(0);
     await expect

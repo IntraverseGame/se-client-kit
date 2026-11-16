@@ -12,19 +12,23 @@
 // shell's checks of the round (W-19, W-26), and the states it decides at open
 // (`session-ended`, `other-tab`, `unsupported-browser`) arrive through `block`.
 
-import type { Connectivity } from "./connectivity.ts";
+import { createAppExtras } from "./app-extras.ts";
 import type { EnvironmentConfig } from "./environment-config.ts";
 import { createResultFocus, followed } from "./poll-follow.ts";
 import { createView } from "./render.ts";
 import type { SnapshotRead } from "./round-input.ts";
-import { createSnapshotPoller, type PollConfig } from "./snapshot-poller.ts";
+import { createSnapshotPoller } from "./snapshot-poller.ts";
 import {
   createSnapshotReread,
   droppedLower,
   readQuietly,
 } from "./snapshot-reread.ts";
-import type { Timers } from "./timers.ts";
 import type { ChangeCause, Intents, ViewOptions } from "./view-options.ts";
+import type {
+  RoundIntents,
+  WrapperApp,
+  WrapperAppOptions,
+} from "./wrapper-app-types.ts";
 import {
   acceptRead,
   block,
@@ -36,48 +40,7 @@ import {
   type WrapperState,
 } from "./wrapper-state.ts";
 
-export type WrapperAppOptions = {
-  readonly doc: Document;
-  readonly host: HTMLElement;
-  readonly timers: Timers;
-  readonly connectivity?: Connectivity;
-  /** The platform clipboard, for the round id's copy control (W-39). */
-  readonly copyText?: (text: string) => Promise<void>;
-  readonly pollConfig?: PollConfig;
-};
-
-/** The player intents the session wires in (start, cash-out, "check again"). */
-export type RoundIntents = Pick<Intents, "start" | "cashOut" | "checkAgain">;
-
-export type WrapperApp = {
-  /** Applies a validated environment configuration (W-26a, W-39). */
-  readonly configure: (config: EnvironmentConfig) => void;
-  /** Offers the lobby and deposit controls, once the gate opened (W-49e). */
-  readonly allowLinks: (rules: NonNullable<ViewOptions["links"]>) => void;
-  /** A start or cash-out call is in flight: no lobby or deposit (W-49f). */
-  readonly callInFlight: (inFlight: boolean) => void;
-  /** Connects the session's Snapshot read and the round flows' intents. */
-  readonly connect: (session: {
-    readonly readSnapshot: () => Promise<SnapshotRead>;
-    readonly intents?: RoundIntents;
-  }) => void;
-  /** A read the Wrapper did not poll for, such as the answer to an action. */
-  readonly accept: (read: SnapshotRead, cause: ChangeCause) => void;
-  /** Shows a blocking state (W-44). */
-  readonly block: (state: BlockingState, cause?: ChangeCause) => void;
-  /** The game's `hello` did not declare what the Wrapper sends (W-38). */
-  readonly gameIncompatible: () => void;
-  /** Whether the latest game copy was built (W-38, W-55; `onCopy`). */
-  readonly gameCopied: (copied: boolean) => void;
-  /** Where the game iframe is mounted (W-37); see `View.gameHost`. */
-  readonly gameHost: () => HTMLElement;
-  readonly state: () => WrapperState;
-  /** A start or cash-out call is in flight (W-49f). */
-  readonly calling: () => boolean;
-  /** One quiet read of the session's Snapshot (RFC-001 Q16); see `readQuiet`. */
-  readonly readQuiet: () => Promise<void>;
-  readonly dispose: () => void;
-};
+export type { RoundIntents, WrapperApp, WrapperAppOptions };
 
 export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
   let state: WrapperState = {
@@ -87,6 +50,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
   let verifyBaseUrl: string | undefined;
   let links: ViewOptions["links"];
   let calling = false;
+  const extras = createAppExtras(options.timers.now);
   let readSnapshot: (() => Promise<SnapshotRead>) | undefined;
   let roundIntents: RoundIntents = {};
   // The round whose `ended` cancel was followed by its one read (W-33).
@@ -108,6 +72,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
       state = leaveEndedRound(state, startedFrom);
       startedFrom = undefined;
     }
+    state = extras.follow(state);
     view.update(state, focus.causeOf(state, cause));
     const { round, cancel, unconfirmed } = followed(state);
     poller.follow(round, cancel, unconfirmed);
@@ -172,11 +137,15 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
       ...(readSnapshot === undefined ? {} : { retry }),
       ...(options.copyText === undefined ? {} : { copyText: options.copyText }),
     };
+    const autoplay = extras.autoplay();
+    const summary = extras.summary();
     return {
       intents,
       ...(verifyBaseUrl === undefined ? {} : { verifyBaseUrl }),
       ...(links === undefined ? {} : { links }),
       ...(calling ? { calling } : {}),
+      ...(autoplay === undefined ? {} : { autoplay }),
+      ...(summary === undefined ? {} : { summary }),
     };
   };
 
@@ -239,6 +208,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
   return Object.freeze({
     configure: (config: EnvironmentConfig): void => {
       verifyBaseUrl = config.verifyBaseUrl;
+      extras.configure(config.autoplay);
       apply(
         {
           ...state,
@@ -258,6 +228,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     },
     connect: (session): void => {
       readSnapshot = session.readSnapshot;
+      extras.opened();
       const { start, ...others } = session.intents ?? {};
       roundIntents =
         start === undefined
@@ -288,7 +259,16 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     },
     gameHost: (): HTMLElement => view.gameHost,
     state: (): WrapperState => state,
-    calling: (): boolean => calling,
+    calling: (): boolean => calling || extras.running(),
+    autoplayInterval: extras.interval,
+    autoplayRun: (next): void => {
+      extras.setRun(next);
+      view.update(state, "poll");
+    },
+    gameCapable: (inset: boolean): void => {
+      const { gameInset: _was, ...rest } = state;
+      apply(inset ? { ...state, gameInset: true } : rest, "poll");
+    },
     readQuiet,
     dispose: (): void => {
       poller.stop();

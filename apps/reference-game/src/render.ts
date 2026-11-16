@@ -32,6 +32,11 @@ export type GamePage = {
   readonly onCall: (handler: (side: Side) => void) => void;
   /** Called with the row and tile the player clicks (a `steps` round). */
   readonly onTile: (handler: (step: number, option: number) => void) => void;
+  /**
+   * The band the Wrapper's bar covers (RFC-005): the page keeps its whole
+   * interface above it, and only its background runs under it.
+   */
+  readonly layout: (insetBottom: number) => void;
 };
 
 /** Builds the page into `host` and returns how to update it. */
@@ -157,5 +162,12 @@ export const createPage = (doc: Document, host: HTMLElement): GamePage => {
       handler = next;
     },
     onTile: board.onTile,
+    // The one value written through the CSSOM (a custom property the
+    // stylesheet reads), which the Content Security Policy allows: no style
+    // attribute or element is ever built.
+    layout: (insetBottom: number): void => {
+      root.style.setProperty("--rg-inset", `${String(insetBottom)}px`);
+      root.dataset["inset"] = String(insetBottom);
+    },
   });
 };

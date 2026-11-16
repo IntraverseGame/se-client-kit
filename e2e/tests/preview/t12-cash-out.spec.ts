@@ -41,7 +41,7 @@ test.describe("T-12 (preview): a cash-out", () => {
       timeout: STACK_STEP_TIMEOUT_MS,
     });
     await expectSettledRound(page, session, "won", endedBefore);
-    await expect(page.locator(".se-round")).toContainText(
+    await expect(page.locator(".se-status")).toContainText(
       `${TEXT.payout} ${quoted}`,
     );
     await expectNothingOffered(page);

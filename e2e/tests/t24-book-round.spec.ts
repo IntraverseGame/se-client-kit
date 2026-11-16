@@ -31,6 +31,7 @@ import { validVector } from "./harness/vectors.ts";
 import {
   coverHeading,
   launch,
+  openReceipt,
   servedFor,
   statusHeading,
   TEXT,
@@ -220,7 +221,8 @@ test.describe("T-24: a book round", () => {
       // The result: the payout as its `formatted` only when it is above 0, the
       // round id, the verify link, and the next bet with the RTP line (W-54,
       // W-39, W-56).
-      await expectPayoutLine(page.locator(".se-round"), ending);
+      await expectPayoutLine(page.locator(".se-status"), ending);
+      await openReceipt(page);
       await expect(page.getByText(ending.roundId)).toBeVisible();
       await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
       await expect(

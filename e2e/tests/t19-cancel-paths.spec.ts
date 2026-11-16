@@ -31,6 +31,7 @@ import { ROUND } from "./harness/round-vector.ts";
 import {
   alertPanel,
   launchAndStart,
+  openReceipt,
   servedFor,
   statusHeading,
   TEXT,
@@ -115,6 +116,7 @@ test.describe("T-19: the required cancel", () => {
       timeout: 15_000,
     });
     await expect(page.getByText(TEXT.canceledUnverified)).toBeVisible();
+    await openReceipt(page);
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     expect(await auditAccessibility(page)).toEqual([]);
   });
@@ -135,6 +137,7 @@ test.describe("T-19: the required cancel", () => {
     await expect(page.getByText(TEXT.unverified)).toBeVisible();
     await expect(page.getByText(TEXT.expired)).toBeVisible();
     await expect(page.getByText(TEXT.canceledUnverified)).toHaveCount(0);
+    await openReceipt(page);
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     expect(await auditAccessibility(page)).toEqual([]);
   });
@@ -151,6 +154,7 @@ test.describe("T-19: the required cancel", () => {
       timeout: 15_000,
     });
     await expect(page.getByText(TEXT.closedBeforeCancel)).toBeVisible();
+    await openReceipt(page);
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
     await expect(
@@ -171,6 +175,7 @@ test.describe("T-19: the required cancel", () => {
     await expect(statusHeading(page)).toHaveText(TEXT.ended, {
       timeout: 15_000,
     });
+    await openReceipt(page);
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
     await expect(

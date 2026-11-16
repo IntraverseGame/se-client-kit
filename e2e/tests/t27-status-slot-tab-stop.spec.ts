@@ -1,34 +1,47 @@
-// T-27 (W-57 "Overflow stays in the bar", W-49f): the status slot is a tab stop
-// exactly while its text overflows, also when only the operator links changed
-// its width. A start's call takes the links away and its end brings them back
-// beside the slot, on the same row, with no change of the bar's height, so the
-// bar's resize observer has nothing to answer: the update that shows the links
-// decides the tab stop, in the real layout of every browser project.
+// T-27 and T-34 (W-57 "Overflow stays in the bar", RFC-005): the status slot
+// is a tab stop exactly while its text overflows, with no change of the bar's
+// height, in the real layout of every browser project. In a box of 320 CSS
+// pixels, the narrowest the Wrapper supports, a loss's one-row result (its
+// heading and the round receipt) fits: no tab stop. At three times the text
+// size of its words alone (a text-only zoom: the slot's own size, set in rem,
+// stays) the result no longer fits, so it overflows for sure: a tab stop,
+// kept when a typed error joins it. A larger root text size scales the slot
+// with its words, so the result still fits at 320 CSS pixels: no case of it
+// overflows to test there (T-27's 200 % zoom row covers the zoom).
+
+import type { Frame } from "@playwright/test";
 
 import { roundEnvironmentConfig } from "./harness/environment-config.ts";
 import { embedWrapper, serveListing } from "./harness/operator-page.ts";
-import { OPERATOR_ORIGIN } from "./harness/origins.ts";
-import { expect, test } from "./harness/round-play.ts";
-import { ROUND_PINS } from "./harness/round-vector.ts";
+import {
+  advanceUntil,
+  expect,
+  scriptRound,
+  test,
+} from "./harness/round-play.ts";
+import { pickCheck, ROUND_PINS } from "./harness/round-vector.ts";
 import { TEXT, WRAPPER_PAGE } from "./harness/wrapper-page.ts";
 
 /**
- * Whether the status slot overflows with the operator links as they are, and
- * with them out of the layout, in one synchronous read.
+ * Three times the size of the slot's words alone, through the CSSOM (the page's
+ * CSP allows it): a root text size would scale the slot with them.
  */
-const overflowWithAndWithoutLinks = (slot: Element): readonly boolean[] => {
-  const overflows = (): boolean =>
-    slot.scrollHeight > slot.clientHeight ||
-    slot.scrollWidth > slot.clientWidth;
-  const links = document.querySelector<HTMLElement>(".se-links");
-  const withLinks = overflows();
-  links?.style.setProperty("display", "none");
-  const withoutLinks = overflows();
-  links?.style.removeProperty("display");
-  return [withLinks, withoutLinks];
+const tripleText = (): void => {
+  const sheet = document.styleSheets[0];
+  sheet?.insertRule(
+    ".se-status-slot * { font-size: 3rem; }",
+    sheet.cssRules.length,
+  );
 };
 
-test("the status slot takes its tab stop when the links narrow it, and the bar's height stays", async ({
+/** Whether the status slot's text overflows it, in one synchronous read. */
+const overflows = (slot: Element): boolean =>
+  slot.scrollHeight > slot.clientHeight || slot.scrollWidth > slot.clientWidth;
+
+const heading = (frame: Frame): ReturnType<Frame["locator"]> =>
+  frame.locator(".se-status h1");
+
+test("the status slot takes its tab stop while it overflows, and the bar's height stays", async ({
   context,
   page,
   fakePlayApi,
@@ -38,38 +51,44 @@ test("the status slot takes its tab stop when the links narrow it, and the bar's
     context,
     roundEnvironmentConfig(playApiBaseUrl, ROUND_PINS),
   );
-  fakePlayApi.answerEvery("getSnapshot", {
-    kind: "snapshot",
-    vector: "coinflip-idle",
-    links: {
-      lobby: `${OPERATOR_ORIGIN}/lobby`,
-      deposit: `${OPERATOR_ORIGIN}/deposit`,
-    },
+  scriptRound(fakePlayApi);
+  const frame = await embedWrapper(page, fakePlayApi.launchUrl(WRAPPER_PAGE), {
+    box: { width: 320, height: 900 },
   });
-  fakePlayApi.answerEvery("startRound", {
+  await expect(heading(frame)).toHaveText(TEXT.idle);
+  await frame.getByRole("button", { name: TEXT.placeBet }).click();
+  const game = frame.locator("iframe:not([inert])");
+  await advanceUntil(page, () => game.isVisible());
+  fakePlayApi.answer("continueRound", {
+    kind: "snapshot",
+    vector: "coinflip-lost",
+    expect: pickCheck,
+  });
+  await frame
+    .frameLocator("iframe")
+    .getByRole("button", { name: "Tails" })
+    .click();
+  await expect(heading(frame)).toHaveText(TEXT.lost);
+  const slot = frame.locator(".se-status-slot");
+  // The one-row result fits: no tab stop.
+  expect(await slot.evaluate(overflows)).toBe(false);
+  await expect(slot).not.toHaveAttribute("tabindex");
+  // Three times the size of its words: the result no longer fits.
+  await frame.evaluate(tripleText);
+  await expect(slot).toHaveAttribute("tabindex", "0");
+  expect(await slot.evaluate(overflows)).toBe(true);
+  const bar = frame.locator(".se-bar");
+  const before = await bar.boundingBox();
+  // The next start is refused: the error joins the result.
+  fakePlayApi.answer("startRound", {
     kind: "problem",
     vector: "problem-insufficient-funds",
   });
-  // From 52rem (832 CSS pixels): the status slot, the controls, and the links
-  // share one row.
-  const frame = await embedWrapper(page, fakePlayApi.launchUrl(WRAPPER_PAGE), {
-    box: { width: 840, height: 720 },
-  });
-  await expect(frame.locator(".se-status h1")).toHaveText(TEXT.idle);
-  const bar = frame.locator(".se-bar");
-  const before = await bar.boundingBox();
-  await frame.getByRole("button", { name: TEXT.placeBet }).click();
-  // The error fills the slot while the links are gone; then they come back.
+  await frame.getByRole("button", { name: TEXT.playAgain }).click();
   await expect(frame.locator(".se-alert")).toContainText(
     "Your balance is too low for this bet.",
   );
-  await expect(frame.locator(".se-links a")).toHaveCount(2);
-  const slot = frame.locator(".se-status-slot");
-  // The links are what makes it overflow.
-  expect(await slot.evaluate(overflowWithAndWithoutLinks)).toEqual([
-    true,
-    false,
-  ]);
-  expect((await bar.boundingBox())?.height).toBe(before?.height);
+  expect(await slot.evaluate(overflows)).toBe(true);
   await expect(slot).toHaveAttribute("tabindex", "0");
+  expect((await bar.boundingBox())?.height).toBe(before?.height);
 });

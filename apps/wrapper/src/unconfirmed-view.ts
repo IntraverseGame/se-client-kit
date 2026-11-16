@@ -6,10 +6,11 @@
 // (nothing is sent or signed). The game stays shown, waiting and inert (W-58);
 // a read that settles the round replaces this view.
 
+import { checkAgainControl } from "./cancel-views.ts";
 import {
   type BarParts,
-  button,
   type Builder,
+  EMPTY_BAR,
   heading,
   roundIdField,
   STATUS_HEADING_ID,
@@ -40,14 +41,12 @@ export const unconfirmedView = (
   );
   title.dataset["focusKey"] = "unconfirmed";
   return {
+    ...EMPTY_BAR,
     status: [
       title,
       el("p", { class: "se-detail" }, [m["state.unconfirmedDetail"]]),
     ],
-    controls: [
-      checkAgain !== undefined &&
-        button(el, m["action.checkAgain"], "check-again", checkAgain),
-    ],
+    controls: checkAgainControl(el, m, checkAgain),
     round: [
       roundId !== undefined && roundIdField(el, m["label.roundId"], roundId),
     ],

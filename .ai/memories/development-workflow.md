@@ -258,9 +258,10 @@ Several agents and people work in one clone at once. Rules:
   table in its summary. Its script has no `files` on purpose (always runs).
 - **Size budget** (`tools/size-budget.ts`, pure, unit-tested): two Wrapper
   measurements, `wrapper output` (every file of `apps/wrapper/dist/`,
-  uncompressed, limit 204800) and `wrapper page, gzip` (`index.html`, `.js`,
-  `.css`, each gzip at zlib's default level, summed, limit 65536), decided by
-  the human on 2026-10-18 (`WRAPPER_BUDGET`), plus two of the verify page's
+  uncompressed, limit 286720) and `wrapper page, gzip` (`index.html`, `.js`,
+  `.css`, each gzip at zlib's default level, summed, limit 92160), decided by
+  the human on 2026-10-18 and raised on 2026-11-13 for RFC-005
+  (`WRAPPER_BUDGET`), plus two of the verify page's
   under `verify/` (`verify output`, `verify page, gzip`; `VERIFY_BUDGET`,
   limits 150000 and 49152, set 2026-10-20 about 25% over the first build's 119788 and 39199; V-16, D-3), counted apart from the
   Wrapper's. Enforced by

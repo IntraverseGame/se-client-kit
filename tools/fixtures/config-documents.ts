@@ -239,6 +239,44 @@ const DOCUMENTS: readonly (readonly [string, unknown, string?])[] = [
     "an origin both operator and game",
     configDocument({ operatorOrigins: ["https://game.example"] }),
   ],
+  // RFC-005: the optional `autoplay` field, judged alike (V-3).
+  [
+    "valid, autoplay turned on",
+    configDocument({
+      autoplay: { counts: [10, 25, 50, 100], minIntervalMs: 2500 },
+    }),
+  ],
+  [
+    "valid, autoplay at its bounds",
+    configDocument({
+      autoplay: { counts: [1, 2, 3, 4, 5, 6, 7, 1000], minIntervalMs: 0 },
+    }),
+  ],
+  ...(
+    [
+      ["not an object", [10]],
+      ["no counts", { minIntervalMs: 2500 }],
+      ["an extra field", { counts: [10], minIntervalMs: 2500, turbo: true }],
+      ["no count", { counts: [], minIntervalMs: 2500 }],
+      [
+        "nine counts",
+        { counts: [1, 2, 3, 4, 5, 6, 7, 8, 9], minIntervalMs: 0 },
+      ],
+      ["a count of 0", { counts: [0, 10], minIntervalMs: 2500 }],
+      ["a count over 1000", { counts: [1001], minIntervalMs: 2500 }],
+      ["a fractional count", { counts: [2.5], minIntervalMs: 2500 }],
+      ["a count as text", { counts: ["10"], minIntervalMs: 2500 }],
+      ["counts not ascending", { counts: [25, 10], minIntervalMs: 2500 }],
+      ["a repeated count", { counts: [10, 10], minIntervalMs: 2500 }],
+      ["a negative interval", { counts: [10], minIntervalMs: -1 }],
+      ["an interval over 600 000", { counts: [10], minIntervalMs: 600_001 }],
+      ["a fractional interval", { counts: [10], minIntervalMs: 2.5 }],
+      ["a null value", null],
+    ] as const
+  ).map(([name, autoplay]): readonly [string, unknown] => [
+    `autoplay with ${name}`,
+    configDocument({ autoplay }),
+  ]),
 ];
 
 /** The shared cases that both validators must judge alike. */

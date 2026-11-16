@@ -82,6 +82,7 @@ describe("the shell's checks of the round (W-26, W-31, W-44)", () => {
         ok: true,
         gameOrigin: FAKE_GAME_ORIGIN,
         gamePath: "/",
+        layout: () => {},
       }));
     });
     expect(statusHeading(ui.host)).toBe(m["status.active"]);

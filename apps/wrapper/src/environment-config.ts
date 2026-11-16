@@ -17,6 +17,8 @@ import {
   validateChainConfig,
 } from "@intraverse/se-client-shell";
 
+import { type AutoplayConfig, readAutoplayConfig } from "./autoplay-config.ts";
+
 /** A document that passed `validateEnvironmentConfig`, frozen. */
 export type EnvironmentConfig = {
   /** The chain part, as the shell validated it (W-26, W-26a, W-26b). */
@@ -34,6 +36,8 @@ export type EnvironmentConfig = {
   readonly gameOrigins: readonly string[];
   /** The allow-list of operator page origins A (W-49); may be empty. */
   readonly operatorOrigins: readonly string[];
+  /** Autoplay of book rounds, when the deployment turns it on (RFC-005). */
+  readonly autoplay?: AutoplayConfig;
 };
 
 /** Why a document was refused: the shell's chain codes, and the Wrapper's. */
@@ -58,7 +62,9 @@ export type EnvironmentConfigIssueCode =
    * The disjoint-origins rule: `operatorOrigins` holds the SE origin or an
    * entry of `gameOrigins`, or `gameOrigins` holds the SE origin.
    */
-  | "overlapping-origins";
+  | "overlapping-origins"
+  /** `autoplay` is present and malformed (RFC-005). */
+  | "invalid-autoplay";
 
 export type EnvironmentConfigIssue = {
   readonly code: EnvironmentConfigIssueCode;
@@ -84,6 +90,7 @@ export const ENVIRONMENT_CONFIG_FIELDS: readonly string[] = Object.freeze([
   "tipLagMargin",
   "gameOrigins",
   "operatorOrigins",
+  "autoplay",
 ]);
 
 const PLAY_API_SUFFIX = "/play/v1";
@@ -251,6 +258,12 @@ export const validateEnvironmentConfig = (
     issues.push({ code: "invalid-operator-origins", field: "operatorOrigins" });
   }
   issues.push(...overlaps(ownOrigin, gameOrigins, operatorOrigins));
+  const autoplay = Object.hasOwn(fields, "autoplay")
+    ? readAutoplayConfig(fields["autoplay"])
+    : null;
+  if (autoplay === undefined) {
+    issues.push({ code: "invalid-autoplay", field: "autoplay" });
+  }
   if (
     !chain.ok ||
     issues.length > 0 ||
@@ -274,6 +287,7 @@ export const validateEnvironmentConfig = (
       verifyApiBaseUrl,
       gameOrigins,
       operatorOrigins,
+      ...(autoplay === null || autoplay === undefined ? {} : { autoplay }),
     }),
   });
 };

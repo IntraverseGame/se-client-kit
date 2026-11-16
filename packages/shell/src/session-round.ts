@@ -5,7 +5,9 @@
 
 import type { FailReason } from "./chain-decision.ts";
 import type { RoundFlow } from "./round-flow.ts";
+import type { VerificationFailure } from "./round-verification.ts";
 import type { RoundState } from "./session-types.ts";
+import type { TipCheckFailure } from "./tip-check.ts";
 
 /**
  * What the session reads of a round's verdict: `checking` until W-26 decided,
@@ -16,7 +18,14 @@ import type { RoundState } from "./session-types.ts";
 export type FlowVerdict =
   | { readonly state: "checking" }
   | { readonly state: "ready" }
-  | { readonly state: "failed"; readonly shown: FailReason };
+  | {
+      readonly state: "failed";
+      readonly shown: FailReason;
+      /** Which check refused the round, or `changed` for a book round (W-52). */
+      readonly failure: VerificationFailure | "changed";
+      /** The tip check's failure, when `failure` is `tip-check` (W-26b). */
+      readonly tipFailure?: TipCheckFailure | "bind";
+    };
 
 /**
  * What the session holds of the current round, a config round's flow or a book
@@ -52,7 +61,15 @@ export const roundStateOf = (flow: SessionRound): RoundState => {
   return Object.freeze({
     roundId: flow.roundId,
     verdict: verdict.state,
-    ...(verdict.state === "failed" ? { shown: verdict.shown } : {}),
+    ...(verdict.state === "failed"
+      ? {
+          shown: verdict.shown,
+          failure: verdict.failure,
+          ...(verdict.tipFailure === undefined
+            ? {}
+            : { tipFailure: verdict.tipFailure }),
+        }
+      : {}),
     outOfSync: flow.phase() === "out-of-sync",
     cashOutOffered: flow.cashOutOffered(),
     cancel: flow.cancel(),

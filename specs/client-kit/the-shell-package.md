@@ -27,44 +27,47 @@ are in brackets.
   `se.controller/1` message types (`CONTROLLER_SCHEMA`, `ROUND_STATUSES`,
   `HelloMessage`, `ActionMessage`, `SnapshotMessage`, `RejectMessage`,
   `GameSnapshot`, `GameStep`, `GamePlaybackSnapshot`, `GameBookDraw`,
-  `GameBookEvent`, `GameEventData`, `GameJsonValue`, `Pick`, `RejectReason`, and
-  the unions), the operator channel (`createOperatorChannel`,
-  `HANDSHAKE_TIMEOUT_MS`, and the types `OperatorChannel`,
-  `OperatorChannelState`, `OperatorCheck`, `OperatorMessageEvent`,
-  `OperatorWindow`, `HandshakeOutcome`, and `HandshakeRefusal`) with the
-  `se.operator/1` message types (`OPERATOR_SCHEMA`, `MAX_RESIZE_HEIGHT`,
-  `OperatorHello`, `WelcomeMessage`, `ResizeMessage`, and
+  `GameBookEvent`, `GameEventData`, `GameJsonValue`, `Pick`, `RejectReason`,
+  `GameCapability`, `LayoutMessage`, and the unions; RFC-005), the operator
+  channel (`createOperatorChannel`, `HANDSHAKE_TIMEOUT_MS`, and the types
+  `OperatorChannel`, `OperatorChannelState`, `OperatorCheck`,
+  `OperatorMessageEvent`, `OperatorWindow`, `HandshakeOutcome`, and
+  `HandshakeRefusal`) with the `se.operator/1` message types (`OPERATOR_SCHEMA`,
+  `MAX_RESIZE_HEIGHT`, `OperatorHello`, `WelcomeMessage`, `ResizeMessage`, and
   `OperatorBoundMessage`), and the UI's Snapshot reader (`createSnapshotReader`
   with `SnapshotReader`, `SnapshotReaderOptions`, and `SnapshotRead`, and the
   re-exported `ValidSnapshot` and `ValidPlayProblem` of the `snapshot` package),
   and the session: `takeLaunchCode` and `discardLaunchCode` with
   `MAX_LAUNCH_CODE_LENGTH` and the types `LaunchCode`, `LaunchLocation`, and
   `LaunchHistory`; `openPlaySession` with `PlaySessionOptions`, `SessionParts`,
-  `SessionOpening`, `PlaySession`, `SessionRead`, `RoundState`, `GameMount`,
-  `GameMountOptions`, `Bet`, `BindMode`, `FailReason`, and `CancelState` (the
-  required cancel's states, which `RoundState.cancel` gives); `isRoundOver` with
-  `RoundEnd`; and the re-exported platform types of `play-client` the session
-  takes (`Clock`, `FetchLike`, `RefreshConfig`, `TimerHandle`), since the
-  Wrapper imports only `shell`. The validation is public because the Wrapper
-  applies W-26a's boot rule before it starts; the transport types because the
-  Wrapper supplies the transport (it owns `fetch` and the Content Security
-  Policy); the bridge because the Wrapper mounts the game iframe and owns the
-  window it talks through; the operator channel because the Wrapper routes the
-  parent window's messages to it and awaits its handshake before it opens the
-  session; the reader because the Wrapper UI renders only what the shell
-  validated (decided in human review, 2026-10-17). The protocol types are also
-  exported, as types only, at the subpath
-  `@intraverse/se-client-shell/controller` (`src/controller.ts`, a `types`
-  condition only, no value): the message types, `GameSnapshot`, `GameStep`,
-  `GamePlaybackSnapshot`, `GameBookDraw`, `GameBookEvent`, `GameEventData`,
-  `GameJsonValue`, `Pick`, `Presentation`, `RoundStatus`, and `RejectReason`,
-  for the `reference-game` app ([The reference game](./the-reference-game.md)).
-  Key custody, the signer lock, the transcript state, the tip check, its
-  decision, the `CreateRoundAuth` checks, the round's verdict, the round flows,
-  the pick use case, and the token keeper are internal: the UI gets use cases
-  and read-only state, never a signing capability ([Packages](./packages.md)).
-  The round flows are reached only through the session's use cases (decided with
-  the session, 2026-10-17).
+  `SessionOpening`, `PlaySession`, `SessionRead`, `RoundState`, `RoundFailure`,
+  `RoundTipFailure`, `GameMount`, `GameMountOptions`, `Bet`, `BindMode`,
+  `FailReason`, and `CancelState` (the required cancel's states, which
+  `RoundState.cancel` gives); autoplay's types (RFC-005, W-61):
+  `AutoplayRequest`, `AutoplayState`, `AutoplayStop`, `AutoplayOutsideStop`,
+  `AutoplayRefusal`, `AutoplayBegin`, with `AUTOPLAY_MAX_COUNT` (1000) and
+  `AUTOPLAY_MAX_INTERVAL_MS` (600 000); `isRoundOver` with `RoundEnd`; and the
+  re-exported platform types of `play-client` the session takes (`Clock`,
+  `FetchLike`, `RefreshConfig`, `TimerHandle`), since the Wrapper imports only
+  `shell`. The validation is public because the Wrapper applies W-26a's boot
+  rule before it starts; the transport types because the Wrapper supplies the
+  transport (it owns `fetch` and the Content Security Policy); the bridge
+  because the Wrapper mounts the game iframe and owns the window it talks
+  through; the operator channel because the Wrapper routes the parent window's
+  messages to it and awaits its handshake before it opens the session; the
+  reader because the Wrapper UI renders only what the shell validated (decided
+  in human review, 2026-10-17). The protocol types are also exported, as types
+  only, at the subpath `@intraverse/se-client-shell/controller`
+  (`src/controller.ts`, a `types` condition only, no value): the message types,
+  `GameSnapshot`, `GameStep`, `GamePlaybackSnapshot`, `GameBookDraw`,
+  `GameBookEvent`, `GameEventData`, `GameJsonValue`, `Pick`, `Presentation`,
+  `RoundStatus`, and `RejectReason`, for the `reference-game` app
+  ([The reference game](./the-reference-game.md)). Key custody, the signer lock,
+  the transcript state, the tip check, its decision, the `CreateRoundAuth`
+  checks, the round's verdict, the round flows, the pick use case, and the token
+  keeper are internal: the UI gets use cases and read-only state, never a
+  signing capability ([Packages](./packages.md)). The round flows are reached
+  only through the session's use cases (decided with the session, 2026-10-17).
 - **The launch code (W-1, W-1a).** `takeLaunchCode(location, history)` reads
   `location.hash` and `location.href` once, removes the fragment with
   `history.replaceState(null, "", <href without the fragment>)` whenever the URL
@@ -155,35 +158,78 @@ are in brackets.
     with the one before it, and the cancel state with the one before it (the #61
     review found the start answering with the cancel call's failure);
   - `round()`: `RoundState`, the read-only state of the current round: the
-    verdict (`checking`, `ready`, `failed` with what is shown), whether it is
-    out of sync, whether a cash-out is offered (`cashOutOffered`: the flow's
-    gate and legality, with nothing signed), the required cancel's state
-    (`cancel`: `none` until it is reached; W-25, W-33, W-35), and, only while it
-    holds, `unconfirmed` (`move` or `cash-out`): the flow's `unconfirmed()`, the
-    move or cash-out not confirmed (W-16, below); and `pending` (`move` or
-    `cash-out`; RFC-004, 2026-10-30), the flow's `pending()`, derived and read
-    only: the round signer's pending move or cash-out (`RoundSigner.pending()`,
-    never a cancel) while the signer's phase (`phase()`) is `open` or `adopted`,
-    and absent otherwise: set from the signature (recorded before its send)
-    until a Snapshot shows the action applied; absent once a final answer has
-    held signing (`stale` after a 400 or 409, W-19, where the action stays
-    pending inside the signer until a read shows it applied or out of sync),
-    once the round is out of sync, re-issued, failed, or over, and once the
-    session has ended; kept beside `unconfirmed` after the lost resend; with no
-    signature, key, or bytes
+    verdict (`checking`, `ready`, `failed` with what is shown, and, when
+    `failed`, `failure`, which check refused it: W-26's five check reasons,
+    `reissued`, `tip-check` with `tipFailure`, W-26b's cause or `bind`, or
+    `changed` for a book round, W-52; machine codes the Wrapper labels, W-48,
+    RFC-005), whether it is out of sync, whether a cash-out is offered
+    (`cashOutOffered`: the flow's gate and legality, with nothing signed), the
+    required cancel's state (`cancel`: `none` until it is reached; W-25, W-33,
+    W-35), and, only while it holds, `unconfirmed` (`move` or `cash-out`): the
+    flow's `unconfirmed()`, the move or cash-out not confirmed (W-16, below);
+    and `pending` (`move` or `cash-out`; RFC-004, 2026-10-30), the flow's
+    `pending()`, derived and read only: the round signer's pending move or
+    cash-out (`RoundSigner.pending()`, never a cancel) while the signer's phase
+    (`phase()`) is `open` or `adopted`, and absent otherwise: set from the
+    signature (recorded before its send) until a Snapshot shows the action
+    applied; absent once a final answer has held signing (`stale` after a 400 or
+    409, W-19, where the action stays pending inside the signer until a read
+    shows it applied or out of sync), once the round is out of sync, re-issued,
+    failed, or over, and once the session has ended; kept beside `unconfirmed`
+    after the lost resend; with no signature, key, or bytes
     ([A pick during an error or offline](../wrapper/the-single-screen.md#a-pick-during-an-error-or-offline));
   - `gameOrigin()` and `mountGame(options)`: the controller bridge for D with
     the session's pick use case, which answers the game and reports the answer's
     Snapshot through `onChange`, and the session's own `gameOrigins` and
     `ownOrigin` (the options, `GameMountOptions`, are only the frame, its
-    message listener, and the incompatible-game notice; a list or an origin a
-    caller adds is overridden). `gameOrigin()` is D, unchecked (the bridge
-    checks it at mount); an accepted `mountGame` also returns `gamePath`, the
-    redeem answer's page path on D (`/` when the answer has none; W-37), and
-    `mountGame` refuses `session-ended` once the session ended;
-  - `onChange`, `onEnd`, `ended()`, and `end()`. Every answer is a validated
-    Snapshot, a validated typed error, or a closed code: no key, token, launch
-    code, signature, or transcript. The session logs nothing.
+    message listener, the incompatible-game notice, the copy notice, and the
+    `inset` capability's two hooks, `onCapabilities` and `insetBottom`; a list
+    or an origin a caller adds is overridden). `gameOrigin()` is D, unchecked
+    (the bridge checks it at mount); an accepted `mountGame` also returns
+    `gamePath`, the redeem answer's page path on D (`/` when the answer has
+    none; W-37), and `layout(insetBottom)`, which sends a new band to a game
+    that declared `inset` through the bridge's rules (RFC-005; nothing on a
+    changed session's closed bridge); `mountGame` refuses `session-ended` once
+    the session ended;
+  - **autoplay** (RFC-005, W-61; the run lives in the shell, Q10's
+    recommendation, pending the human's decision):
+    `autoplay({ count, bet, minIntervalMs })` begins a run of book rounds
+    (`autoplay-run.ts`, its bet rules `autoplay-bet.ts`) and answers
+    `{ ok: true }` or `{ ok: false, refusal }` with nothing sent:
+    `invalid-request` (a count outside 1 to 1000 or an interval outside 0 to 600
+    000 ms, not whole), `not-book` (the latest Snapshot is not `playback`),
+    `busy` (a run goes or a round is open), `bet-not-offered`, `balance`, or
+    `closed`. Each start is the session's own start use case (W-22: a fresh
+    `idempotencyKey`, the signer lock, the single resend), its bet copied from
+    the latest Snapshot's own `Amount` of that option. The run waits on the
+    round the start's own answer names: a Snapshot read that lands while a start
+    is in flight (the previous round's result, say) names nothing and arms
+    nothing; each result arms one timer at most, and the next start is sent only
+    after that round's `won` or `lost` was seen and `minIntervalMs` passed on
+    the session's clock (no floor above 0: decided by the human, 2026-11-13). A
+    start whose use case rejects stops the run (`error`) and is answered
+    `refused` `use-case-failed`, the generic error. The run sees every answer
+    the session gives (`read`, `checkAgain`, `start`, `cashOut`, a pick's) and
+    stops before the next start on the stop rules of W-61 (`AutoplayStop`):
+    `player`, `count`, `balance` (a `bigint` comparison), `bet-not-offered`,
+    `error` (a typed error, a refusal, a failed start), `connection`,
+    `rejected`, `round-ended` (ended other than `won` or `lost`, or back to
+    `idle`), `changed-round` (the round's `failure` is `changed`, W-52),
+    `incompatible` and `playback-failed` (the bridge's notices),
+    `session-changed`, `session-ended` (also the session's end), `lock-lost`,
+    and `hidden`. `stopAutoplay(reason)` takes the stops only the page sees
+    (`player`, `hidden`; the round in flight finishes); `autoplayState()` is
+    `idle`, `running` with the count and the starts `left`, or `stopped` with
+    the reason and the starts sent; `onAutoplay` reports each change. Its
+    starts' answers reach the UI through `onChange`, marked with the source
+    `autoplay` (`ChangeSource`; a pick's answer is `pick`), so the UI moves no
+    focus for them, also for the answer that stopped the run (W-61). While a run
+    goes `start` answers `refused` `busy`. The run lives in memory; nothing is
+    stored, logged, or sent but the starts;
+  - `onChange` (each answer outside a call with its `ChangeSource`), `onEnd`,
+    `ended()`, and `end()`. Every answer is a validated Snapshot, a validated
+    typed error, or a closed code: no key, token, launch code, signature, or
+    transcript. The session logs nothing.
 - **Whether a round is over (W-35, W-39).**
   `isRoundOver({ status, closeReason })` is the kit's one check from a Snapshot:
   `won`, `lost`, and `canceled`, with or without a `closeReason` (`canceled` is
@@ -237,8 +283,8 @@ are in brackets.
   itself logs nothing yet.
 - **Errors.** `ShellError` has a stable `code` (`lock-not-held`,
   `session-ended`, `invalid-input`, `key-generation`, `round-exists`,
-  `equivocation`, `round-stopped`, `snapshot-rejected`) and a fixed message per
-  code that never carries an input value (W-41).
+  `equivocation`, `round-stopped`, `snapshot-rejected`, `use-case-failed`) and a
+  fixed message per code that never carries an input value (W-41).
 - **The chain configuration (W-26a, W-26b, the Wrapper's Configuration).**
   `validateChainConfig(document)` reads the chain part of the parsed environment
   configuration document and returns `{ ok: true, config }` (typed, deeply
@@ -404,7 +450,10 @@ are in brackets.
   `gameOrigins` and `environment`, the Wrapper's own origin, the game frame's
   window (only its `postMessage`), a `listen` function that subscribes to the
   page's `message` events and returns the unsubscribe, the pick use case, and
-  `onIncompatible`. It touches no global. It returns `{ ok: false, refusal }`
+  `onIncompatible`, and optionally `onCopy`, `onCapabilities` (called once,
+  right after the first valid compatible `hello`, with its capabilities, an
+  empty list when it declared none), and `insetBottom` (the first `layout`
+  value; RFC-005). It touches no global. It returns `{ ok: false, refusal }`
   without listening when D or the Wrapper's origin is not a serialized origin as
   `event.origin` gives it (a malformed host, a port above 65535, or an explicit
   default port included; `invalid-origin`), D is the Wrapper's origin
@@ -423,9 +472,16 @@ are in brackets.
   out of sync, evaluated after the round observed it, in `session-reads.ts`'s
   `show` and `session-play.ts`'s `mountGame` (its `atMount`); every other
   Snapshot is given as before), `state()` is `awaiting-hello`, `ready`,
-  `incompatible`, or `closed`, and `close()` unsubscribes. A message counts only
-  when its `source` is the frame and its `origin` is D; the parser reads only
-  own data properties of a plain object, so no game code runs. The rules of the
+  `incompatible`, or `closed`, `layout(insetBottom)` sends `layout` to a game
+  whose accepted `hello` declared `inset` (`controller-layout.ts`: only once
+  acknowledged, only on a change, rounded up, a value not finite or below 0
+  ignored; never before the `hello`, to an incompatible game, or once closed;
+  the acknowledgement is sent right after the `hello` is accepted, after the
+  `snapshot` due then), and `close()` unsubscribes. The `hello`'s optional
+  `capabilities` is a non-empty list, with no repeats, from a closed list
+  (`inset` only); an unknown one fails the `hello`. A message counts only when
+  its `source` is the frame and its `origin` is D; the parser reads only own
+  data properties of a plain object, so no game code runs. The rules of the
   message set, the allow-list, and the order of the pick checks are in
   [W-38](../wrapper/the-game-iframe-and-the-controller-boundary.md). The game's
   copy of a Snapshot is built field by field from the allow-list, never by
@@ -1065,11 +1121,26 @@ are in brackets.
   stand-in round (`game-hold.test.ts`), `givenToGame` holds an `active` Snapshot
   for `checking` (a tip check that gave no decision), `failed`, out of sync, no
   round, and another round, and gives one for `ready` in `open`, `adopted`, or
-  `unopened`, and gives every other status whatever the verdict.
-  `RoundState.pending` (T-28's shell half, `play-session-pending.test.ts`) is
-  absent before any action; `move` while the move's send is unanswered and
-  absent once its answer shows it applied; `cash-out` while the cash-out is in
-  flight; kept while a lost move waits for a read and beside `unconfirmed` after
-  the lost resend; absent after a 400 or a 409 (and after the read that adopts
-  the move or puts the round out of sync), after a re-issue, a result, and the
-  session's end; never for the required cancel in flight; and carries no hex.
+  `unopened`, and gives every other status whatever the verdict. The `inset`
+  capability (T-33's shell half, `controller-layout.test.ts`): the `hello`'s
+  capabilities parsed from a closed list (unknown, repeated, empty, malformed,
+  or accessor-built lists ignored); `layout` acknowledged right after a capable
+  `hello`, after the `snapshot` due, at 0 with no value, then sent only on a
+  change, rounded up, and never before the `hello`, to a game without the
+  capability, to an incompatible game, or once closed. Autoplay (T-31's shell
+  half, `autoplay-run.test.ts` over `fixtures/autoplay.ts`, and
+  `play-session-autoplay.test.ts` on the scripted Play API and the manual wall
+  clock): the count and the interval; the bet copied from the latest Snapshot's
+  own `Amount`; one timer per result, armed only by the round the start's own
+  answer names (a read of the previous round during an in-flight start arms
+  none); a rejected start answered `use-case-failed`; the refusals; every stop
+  rule; the player's start refused `busy`; the starts' answers through
+  `onChange` with the source `autoplay`; and `RoundState.failure` with
+  `tipFailure`. `RoundState.pending` (T-28's shell half,
+  `play-session-pending.test.ts`) is absent before any action; `move` while the
+  move's send is unanswered and absent once its answer shows it applied;
+  `cash-out` while the cash-out is in flight; kept while a lost move waits for a
+  read and beside `unconfirmed` after the lost resend; absent after a 400 or a
+  409 (and after the read that adopts the move or puts the round out of sync),
+  after a re-issue, a result, and the session's end; never for the required
+  cancel in flight; and carries no hex.

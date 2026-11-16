@@ -15,18 +15,23 @@ export const ALERT_HEADING_ID = "se-alert-heading";
 export const COVER_HEADING_ID = "se-cover-heading";
 
 /**
- * What the control bar's slots hold (W-57): the status line (its heading and at
- * most one line of detail), the primary controls, and the round line. The alert
- * line and the operator links are render.ts's own.
+ * What the control bar's slots hold (W-57, RFC-005): the status line (its
+ * heading, the multiplier, and at most one line of detail), the bet stepper,
+ * the start slot's control (the start control, the cash-out, "check again", or
+ * the pick prompt), and the round line (the payout and the round id with its
+ * copy control and the verify link, after the status line). The alert line, the
+ * balance, the chip, and the menu are bar-view.ts's own.
  */
 export type BarParts = {
   readonly status: readonly Child[];
+  readonly bet: readonly Child[];
   readonly controls: readonly Child[];
   readonly round: readonly Child[];
 };
 
 export const EMPTY_BAR: BarParts = Object.freeze({
   status: Object.freeze([]),
+  bet: Object.freeze([]),
   controls: Object.freeze([]),
   round: Object.freeze([]),
 });
@@ -115,7 +120,7 @@ const ROUND_ID_SHOWN = 8;
  * characters (a UUIDv7's first ones are its timestamp, the same for rounds
  * close in time); an id that short or shorter is shown whole.
  */
-const shortRoundId = (roundId: string): string =>
+export const shortRoundId = (roundId: string): string =>
   roundId.length <= ROUND_ID_SHOWN
     ? roundId
     : `…${roundId.slice(-ROUND_ID_SHOWN)}`;

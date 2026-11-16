@@ -3,32 +3,31 @@
 // check later, "still resolving — contact support" with "check again". Neither
 // shows a win, a loss, a refund, or "your bet was returned".
 
-import { betSelector } from "./bet-selector.ts";
 import {
   type BarParts,
   button,
   type Builder,
-  field,
+  type Child,
+  EMPTY_BAR,
   heading,
   STATUS_HEADING_ID,
 } from "./dom.ts";
 import type { Messages } from "./messages.ts";
-import type { SnapshotInput } from "./round-input.ts";
 import type { Intents } from "./view-options.ts";
 
 /**
  * The round the shell's cancel ended (W-25, W-33), in the bar (W-57): a neutral
- * "round ended", the balance (of `snapshot`: the round's last one, then the
- * read that followed), and the next bet, from that Snapshot's `bet` (W-31). The
- * round id and the verify link show in the round line. The heading keeps the
- * focus across that read.
+ * "round ended" and the next bet (`next`: the stepper and "Play again", from
+ * the Snapshot's `bet`, W-31); the balance is the bar's own slot, of the
+ * round's last Snapshot, then the read that followed. The round id and the
+ * verify link show in the round line. The heading keeps the focus across that
+ * read.
  */
 export const endedView = (
   el: Builder,
   doc: Document,
   m: Messages,
-  snapshot: SnapshotInput,
-  intents: Intents,
+  next: Pick<BarParts, "bet" | "controls" | "round">,
 ): BarParts & { readonly heading: HTMLElement } => {
   const title = heading(
     el,
@@ -43,9 +42,20 @@ export const endedView = (
   return {
     heading: title,
     status: [title],
-    controls: [betSelector(el, m, snapshot, intents, "action.playAgain")],
-    round: [field(el, m["label.balance"], snapshot.bet.balance.formatted)],
+    ...next,
   };
+};
+
+/** "Check again" in the start slot, as a secondary control (W-16, W-33). */
+export const checkAgainControl = (
+  el: Builder,
+  m: Messages,
+  checkAgain: (() => void) | undefined,
+): Child[] => {
+  if (checkAgain === undefined) return [];
+  const control = button(el, m["action.checkAgain"], "check-again", checkAgain);
+  control.classList.add("se-button--wide");
+  return [control];
 };
 
 /**
@@ -62,6 +72,7 @@ export const checkLaterView = (
 ): BarParts => {
   const { checkAgain } = intents;
   return {
+    ...EMPTY_BAR,
     status: [
       heading(
         el,
@@ -73,10 +84,6 @@ export const checkLaterView = (
         m["icon.info"],
       ),
     ],
-    controls: [
-      checkAgain !== undefined &&
-        button(el, m["action.checkAgain"], "check-again", checkAgain),
-    ],
-    round: [],
+    controls: checkAgainControl(el, m, checkAgain),
   };
 };

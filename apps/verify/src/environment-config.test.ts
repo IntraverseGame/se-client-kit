@@ -60,9 +60,9 @@ describe("a valid document", () => {
   });
 
   it("knows the Wrapper's fields and earlierPins, and only them", () => {
-    expect(new Set(CONFIG_FIELDS)).toEqual(
-      new Set([...Object.keys(environmentDocument()), "earlierPins"]),
-    );
+    // `autoplay` (RFC-005) is validated by the Wrapper's rule, and not used.
+    const fields = [...Object.keys(environmentDocument()), "earlierPins"];
+    expect(new Set(CONFIG_FIELDS)).toEqual(new Set([...fields, "autoplay"]));
   });
 
   it("defaults minRpcQuorum to 2", () => {

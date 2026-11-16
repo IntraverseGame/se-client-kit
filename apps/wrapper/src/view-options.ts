@@ -21,6 +21,25 @@ export type Intents = {
   readonly retry?: () => void;
   /** Copies a round id (the platform clipboard). */
   readonly copyText?: (text: string) => Promise<void>;
+  /** Begins a run of autoplay of `count` rounds at `bet` (W-61, the shell's). */
+  readonly autoplay?: (count: number, bet: ShownAmount) => void;
+  /** The player's stop of the run (W-61). */
+  readonly stopAutoplay?: () => void;
+};
+
+/** Autoplay as the bar shows it (W-61): the configured counts, and the run. */
+export type AutoplayView = {
+  readonly counts: readonly number[];
+  /** A run goes: `left` starts are still to come. */
+  readonly run?: { readonly left: number };
+};
+
+/** The session summary of the menu (RFC-005 section 8), kept in memory. */
+export type SessionSummary = {
+  /** Whole minutes since the session opened. */
+  readonly minutes: number;
+  /** Rounds played to their end. */
+  readonly rounds: number;
 };
 
 export type ViewOptions = {
@@ -37,6 +56,10 @@ export type ViewOptions = {
    * its answer, so no lobby or deposit is offered (W-49f).
    */
   readonly calling?: true;
+  /** Autoplay, when the environment configuration turns it on (W-61). */
+  readonly autoplay?: AutoplayView;
+  /** The session summary, read when the menu opens (RFC-005 section 8). */
+  readonly summary?: () => SessionSummary;
 };
 
 /**

@@ -10,7 +10,12 @@ import type { FrameLocator, Locator, Page } from "@playwright/test";
 
 import { auditAccessibility } from "../harness/accessibility.ts";
 import { expect } from "../harness/worker-browser.ts";
-import { playableFrame, statusHeading, TEXT } from "../harness/wrapper-page.ts";
+import {
+  openReceipt,
+  playableFrame,
+  statusHeading,
+  TEXT,
+} from "../harness/wrapper-page.ts";
 import type { PreviewSession } from "./preview-session.ts";
 import { payoutsAgree } from "./preview-snapshots.ts";
 import type { RoundOutcome } from "./round-loop.ts";
@@ -102,6 +107,7 @@ export const expectSettledRound = async (
     throw new Error("no settled Snapshot was read");
   }
   expect(settled.status).toBe(outcome);
+  await openReceipt(page);
   await expect(page.getByText(roundId)).toBeVisible();
   await expect(page.getByRole("link", { name: TEXT.verify })).toHaveAttribute(
     "rel",
@@ -117,7 +123,7 @@ export const expectSettledRound = async (
     }),
   ).toBe(true);
   const paid = (settled.payout?.value ?? 0n) > 0n;
-  const line = page.locator(".se-round");
+  const line = page.locator(".se-status");
   await (paid && settled.payout !== undefined
     ? expect(line).toContainText(`${TEXT.payout} ${settled.payout.formatted}`)
     : expect(line).not.toContainText(TEXT.payout));

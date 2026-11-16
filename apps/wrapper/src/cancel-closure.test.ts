@@ -16,6 +16,7 @@ import {
   allText,
   buttonNamed,
   linkNamed,
+  openReceipt,
   statusHeading,
 } from "./fixtures/app.ts";
 import {
@@ -84,6 +85,7 @@ describe("after the shell's cancel was sent (W-33)", () => {
       const ui = await afterSentCancel(closedRead(name));
       expect(statusHeading(ui.host)).toBe(m[heading]);
       expect(allText(ui.host)).toContain(m["detail.closedBeforeCancel"]);
+      openReceipt(ui.host);
       expect(allText(ui.host)).toContain(activeId);
       expect(linkNamed(ui.host, m["action.verify"])).toBeDefined();
       expect(buttonNamed(ui.host, m["action.playAgain"])).toBeDefined();

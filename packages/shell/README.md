@@ -9,14 +9,14 @@ package's error type, the validation of the chain part of the environment
 configuration, the game bridge with the `se.controller/1` message types, the
 operator channel with the `se.operator/1` message types, the Snapshot reader,
 and the session: `takeLaunchCode`, `discardLaunchCode`, and `openPlaySession`,
-whose use cases (`read`, `checkAgain`, `start`, `cashOut`, the game's pick
-through `mountGame`) and read-only round state (with the required cancel's
-state) are what a UI gets. Key custody, the signer lock, the transcript state,
-the play token and its refresh, the chain tip check, the round's
-`CreateRoundAuth` and `T_0` checks, and the one cancel a round that failed only
-its tip check requires are built and tested inside the package and are not
-exposed. The bind mode is a provisional input until the contract that carries it
-is published.
+whose use cases (`read`, `checkAgain`, `start`, `cashOut`, a run of autoplay of
+book rounds, the game's pick through `mountGame`) and read-only round state
+(with the required cancel's state) are what a UI gets. Key custody, the signer
+lock, the transcript state, the play token and its refresh, the chain tip check,
+the round's `CreateRoundAuth` and `T_0` checks, and the one cancel a round that
+failed only its tip check requires are built and tested inside the package and
+are not exposed. The bind mode is a provisional input until the contract that
+carries it is published.
 
 ## Install
 
@@ -200,25 +200,29 @@ else showGenericError(); // rejected: not rendered
     the Wrapper's; with `environment` `local`, two loopback hosts are exempt),
     or is not a serialized origin (`ControllerMountRefusal`). It accepts a
     message only from the frame's window and the game origin, parses it against
-    the closed message set (`hello`, `action` with the `pick` verb), and ignores
+    the closed message set (`hello`, with an optional `capabilities` list from a
+    closed list, today `inset`; `action` with the `pick` verb), and ignores
     anything else. It sends the game nothing before its `hello`, then the
     allow-listed copy of each validated Snapshot (no proofs, session id, links,
-    or amounts) and `reject` messages (`not_legal`, `not_active`, `busy`,
-    `invalid`), always with the game origin as `targetOrigin`. A pick that
-    passes its early pre-check goes to the pick use case you pass, which is the
-    gate: it must re-check the pick against the shell's own latest Snapshot and
-    refuse a step it already signed. A book round's copy is a
-    `GamePlaybackSnapshot`. `onIncompatible` is called once when the game's
-    first valid `hello` does not declare all seven statuses, or when a Snapshot
-    has a presentation the game did not declare; the bridge then sends and
-    accepts nothing more. The optional `onCopy(copied)` is called with each
-    Snapshot given that is not stale: `false` when its `playback` copy failed
-    closed and it is not forwarded, `true` when its copy was built. The bridge
-    never holds a key, a token, or a signed action. `CONTROLLER_SCHEMA`,
-    `ROUND_STATUSES`, and the message types (`HelloMessage`, `ActionMessage`,
-    `SnapshotMessage`, `RejectMessage`, `GameSnapshot`, `GamePlaybackSnapshot`,
-    `GameBookDraw`, `GameBookEvent`, `GameEventData`, `GameJsonValue`,
-    `GameStep`, `Pick`, `RejectReason`, and the unions) describe the protocol.
+    or amounts), `reject` messages (`not_legal`, `not_active`, `busy`,
+    `invalid`), and, to a game that declared `inset`, `layout` with the band the
+    Wrapper's bar covers (right after the `hello`, then on each change, via
+    `bridge.layout`; `onCapabilities` and `insetBottom` are its options), always
+    with the game origin as `targetOrigin`. A pick that passes its early
+    pre-check goes to the pick use case you pass, which is the gate: it must
+    re-check the pick against the shell's own latest Snapshot and refuse a step
+    it already signed. A book round's copy is a `GamePlaybackSnapshot`.
+    `onIncompatible` is called once when the game's first valid `hello` does not
+    declare all seven statuses, or when a Snapshot has a presentation the game
+    did not declare; the bridge then sends and accepts nothing more. The
+    optional `onCopy(copied)` is called with each Snapshot given that is not
+    stale: `false` when its `playback` copy failed closed and it is not
+    forwarded, `true` when its copy was built. The bridge never holds a key, a
+    token, or a signed action. `CONTROLLER_SCHEMA`, `ROUND_STATUSES`, and the
+    message types (`HelloMessage`, `ActionMessage`, `SnapshotMessage`,
+    `RejectMessage`, `GameSnapshot`, `GamePlaybackSnapshot`, `GameBookDraw`,
+    `GameBookEvent`, `GameEventData`, `GameJsonValue`, `GameStep`, `Pick`,
+    `RejectReason`, and the unions) describe the protocol.
   - `createOperatorChannel({ parent })` gates the session on the `se.operator/1`
     handshake with the page that embeds the Wrapper. Route the `message` events
     whose `source` is the parent to `receive`; until `check` it records the
@@ -243,7 +247,19 @@ else showGenericError(); // rejected: not rendered
     with a `SessionOpening`: `open` with a `PlaySession`, or `no-launch-code`,
     `redeem-failed`, `other-tab`, or `unsupported`. A `PlaySession` is what a UI
     plays through: `read`, `checkAgain`, `start`, `cashOut`, `round`,
-    `gameOrigin`, `mountGame`, `onChange`, `onEnd`, `ended`, and `end`.
+    `gameOrigin`, `mountGame`, `autoplay`, `stopAutoplay`, `autoplayState`,
+    `onAutoplay`, `onChange`, `onEnd`, `ended`, and `end`.
+    - `autoplay({ count, bet, minIntervalMs })` begins a run of book rounds:
+      `count` starts of the bet, each copied from the latest Snapshot's own
+      amount, the next only `minIntervalMs` after the previous result. It
+      answers `{ ok: true }` or `{ ok: false, refusal }` with nothing sent
+      (`AutoplayRefusal`). The run stops on its own on any error, a connection
+      problem, a rejected Snapshot, a round that ended otherwise or changed, a
+      balance below the bet, a bet no longer offered, the game's copy failing,
+      or the session's end or change (`AutoplayStop`); `stopAutoplay` takes the
+      player's stop and the page hidden. `autoplayState` and `onAutoplay` give
+      its state; its starts' answers reach `onChange`, and `start` is refused
+      `busy` while it runs. Nothing of it is stored or logged.
     - A use case answers a `SessionRead`: a `SnapshotRead`, `session-ended`,
       `refused` (the shell did not act: nothing was signed or sent), or
       `session-changed` (a Snapshot changed the session's presentation, model,
@@ -251,15 +267,19 @@ else showGenericError(); // rejected: not rendered
       is reloaded the session reads, signs, starts, and forwards nothing).
     - `round()` gives the read-only `RoundState`, when there is a round:
       `roundId`, `verdict`, `outOfSync`, `cashOutOffered`, `cancel`, and, when
-      set, `shown` (what a `failed` verdict tells the player), `unconfirmed` (a
-      lost resend, settled only by a read) and `pending` (the move or cash-out
-      signed and not yet seen applied, with no signature, key, or bytes in it).
-    - `mountGame({ frame, listen, onIncompatible, onCopy? })` mounts the bridge
-      with the session's own game origin, allow-list, environment, and pick use
-      case. It answers `{ ok: true, gameOrigin, gamePath }` or
-      `{ ok: false, refusal }`, a `ControllerMountRefusal` or `session-ended`.
-      Frame `gameOrigin` followed by `gamePath`, with the page's own origin as
-      the query parameter `parentOrigin`, built with the `URL` API.
+      set, `shown` (what a `failed` verdict tells the player), `failure` and
+      `tipFailure` (which check refused the round, as a machine code a UI
+      labels: `RoundFailure`, `RoundTipFailure`), `unconfirmed` (a lost resend,
+      settled only by a read) and `pending` (the move or cash-out signed and not
+      yet seen applied, with no signature, key, or bytes in it).
+    - `mountGame({ frame, listen, onIncompatible, onCopy?, onCapabilities?, insetBottom? })`
+      mounts the bridge with the session's own game origin, allow-list,
+      environment, and pick use case. It answers
+      `{ ok: true, gameOrigin, gamePath, layout }` or `{ ok: false, refusal }`,
+      a `ControllerMountRefusal` or `session-ended`; `layout(insetBottom)` sends
+      a new band to a game that declared the `inset` capability. Frame
+      `gameOrigin` followed by `gamePath`, with the page's own origin as the
+      query parameter `parentOrigin`, built with the `URL` API.
     - `isRoundOver` tells whether a Snapshot's round is over.
       `PlaySessionOptions`, `SessionParts`, `GameMount`, `GameMountOptions`, and
       `Bet` type the rest.

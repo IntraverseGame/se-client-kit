@@ -25,20 +25,29 @@ import {
 const active = SNAPSHOTS.active;
 
 describe("what the game sends", () => {
-  it("says hello with both presentations and all seven statuses", () => {
+  it("says hello with both presentations, all seven statuses, and inset", () => {
+    const statuses = [
+      "idle",
+      "starting",
+      "active",
+      "resolving",
+      "won",
+      "lost",
+      "canceled",
+    ];
     expect(helloMessage()).toEqual({
       schema: "se.controller/1",
       type: "hello",
       presentations: ["steps", "playback"],
-      statuses: [
-        "idle",
-        "starting",
-        "active",
-        "resolving",
-        "won",
-        "lost",
-        "canceled",
-      ],
+      statuses,
+      capabilities: ["inset"],
+    });
+    // The fallback's plain `hello` (RFC-005): no capability.
+    expect(helloMessage(false)).toEqual({
+      schema: "se.controller/1",
+      type: "hello",
+      presentations: ["steps", "playback"],
+      statuses,
     });
     expect(STATUSES).toHaveLength(7);
   });

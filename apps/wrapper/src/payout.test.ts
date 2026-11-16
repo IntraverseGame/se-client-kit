@@ -41,15 +41,29 @@ const ownFormatted = (snapshot: SnapshotInput): string[] => [
   ...(snapshot.payout === undefined ? [] : [snapshot.payout.formatted]),
 ];
 
-/** The text of the field labelled "Payout", or `undefined`. */
+/**
+ * The amount labelled "Payout" after the result's heading (its label read, not
+ * shown; decided by the human, 2026-11-13), or `undefined`.
+ */
 const payoutField = (host: HTMLElement): string | undefined =>
-  [...host.querySelectorAll(".se-field")]
-    .find(
-      field =>
-        field.querySelector(".se-field__label")?.textContent ===
+  [...host.querySelectorAll(".se-status .se-amount")]
+    .filter(
+      amount =>
+        amount.querySelector(".se-visually-hidden")?.textContent?.trim() ===
         m["label.payout"],
     )
-    ?.querySelector(".se-field__value")?.textContent ?? undefined;
+    .map(amount => amount.lastChild?.textContent ?? "")[0];
+
+/**
+ * The bar as it shows amounts: without the round receipt, whose label is the
+ * shortened round id, not an amount (W-59).
+ */
+const amountsOf = (host: HTMLElement): Element | null => {
+  const bar = host.querySelector(".se-bar")?.cloneNode(true);
+  if (!(bar instanceof Element)) return null;
+  for (const chip of bar.querySelectorAll(".se-chip-anchor")) chip.remove();
+  return bar;
+};
 
 describe("the payout of a finished round (W-31)", () => {
   it.each([
@@ -98,7 +112,7 @@ describe("the payout of a finished round (W-31)", () => {
     name => {
       const snapshot = snapshotVector(name);
       const ui = rendered(snapshot);
-      const shown = numbersIn(ui.host.querySelector(".se-bar"));
+      const shown = numbersIn(amountsOf(ui.host));
       expect(shown.length).toBeGreaterThan(0);
       const own = new Set(
         ownFormatted(snapshot).flatMap(text => numbersOf(text)),

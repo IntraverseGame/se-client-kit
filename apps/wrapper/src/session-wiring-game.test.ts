@@ -54,7 +54,12 @@ describe("the game iframe (W-37, W-38)", () => {
 
   it("mounts a sandboxed, titled frame on D once the bridge accepts it", async () => {
     const ui = await wired(fake => {
-      fake.setMount(() => ({ ok: true, gameOrigin: D, gamePath: "/" }));
+      fake.setMount(() => ({
+        ok: true,
+        gameOrigin: D,
+        gamePath: "/",
+        layout: () => {},
+      }));
     });
     const frame = ui.host.querySelector("iframe");
     expect(frame?.getAttribute("sandbox")).toBe(
@@ -65,10 +70,20 @@ describe("the game iframe (W-37, W-38)", () => {
       `${D}/?parentOrigin=${encodeURIComponent(SE_ORIGIN)}`,
     );
     // The allow-list and the Wrapper's own origin are the session's, fixed
-    // at open: the UI gives only the frame, its messages, and the notice.
+    // at open: the UI gives only the frame, its messages, the notices, and
+    // the inset capability's two hooks (RFC-005).
     expect(
       ui.fake.mounts.map(options => Object.keys(options).toSorted()),
-    ).toEqual([["frame", "listen", "onCopy", "onIncompatible"]]);
+    ).toEqual([
+      [
+        "frame",
+        "insetBottom",
+        "listen",
+        "onCapabilities",
+        "onCopy",
+        "onIncompatible",
+      ],
+    ]);
   });
 
   it("frames the game's page at its gamePath on D", async () => {
@@ -77,6 +92,7 @@ describe("the game iframe (W-37, W-38)", () => {
         ok: true,
         gameOrigin: D,
         gamePath: "/coin-flip/",
+        layout: () => {},
       }));
     });
     expect(ui.host.querySelector("iframe")?.getAttribute("src")).toBe(
@@ -116,7 +132,7 @@ describe("the game iframe (W-37, W-38)", () => {
     const ui = await wired(fake => {
       fake.setMount(options => {
         options.onIncompatible();
-        return { ok: true, gameOrigin: D, gamePath: "/" };
+        return { ok: true, gameOrigin: D, gamePath: "/", layout: () => {} };
       });
     });
     expect(alertText(ui.host)).toContain(m["error.gameIncompatible"]);

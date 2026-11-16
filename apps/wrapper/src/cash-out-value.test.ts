@@ -14,7 +14,7 @@
 import { describe, expect, it } from "vitest";
 
 import { alertText, mount } from "./fixtures/app.ts";
-import { HELD, type Screen, shownOf } from "./fixtures/screen.ts";
+import { barShown, HELD, type Screen, shownOf } from "./fixtures/screen.ts";
 import {
   SNAPSHOT_VECTORS,
   snapshotVector,
@@ -211,7 +211,7 @@ describe("the cash-out value on the control (W-31, W-57)", () => {
     expect(alertText(screen.host)).toBe("");
   });
 
-  it("keeps the round line's multiplier and the playable frame beside it", () => {
+  it("keeps the status line's multiplier and the playable frame beside it", () => {
     const screen = rendered(quoted());
     const shown = shownOf(screen);
     expect(shown).toMatchObject({
@@ -220,8 +220,10 @@ describe("the cash-out value on the control (W-31, W-57)", () => {
       status: m["status.active"],
       controls: [m["action.cashOut"]],
     });
-    expect(shown.roundLine).toContain(m["label.multiplier"]);
-    expect(shown.roundLine).toContain(multiplierOf(quoted()));
+    // The multiplier sits in the status line and never truncates (RFC-005).
+    const line = text(screen.host.querySelector(".se-status"));
+    expect(line).toContain(m["label.multiplier"]);
+    expect(line).toContain(multiplierOf(quoted()));
   });
 
   it("reads Cash out with the multiplier when the Snapshot carries no value", () => {
@@ -251,7 +253,7 @@ describe("the cash-out value on the control (W-31, W-57)", () => {
     "%s shows no number but the Snapshot's own ones (W-34)",
     (_, snapshot) => {
       const screen = rendered(snapshot);
-      const shown = numbersOf(text(screen.host.querySelector(".se-bar")));
+      const shown = numbersOf(barShown(screen.host));
       expect(shown.length).toBeGreaterThan(0);
       const own = ownNumbers(snapshot);
       expect(shown.filter(number => !own.has(number))).toEqual([]);

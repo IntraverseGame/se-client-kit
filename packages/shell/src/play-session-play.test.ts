@@ -141,6 +141,7 @@ describe("the open session", () => {
       ok: true,
       gameOrigin: GAME,
       gamePath: "/",
+      layout: expect.any(Function),
     });
     game.send(HELLO);
     expect(game.posted.at(-1)?.message).toMatchObject({ type: "snapshot" });
@@ -170,6 +171,7 @@ describe("the open session", () => {
       ok: true,
       gameOrigin: GAME,
       gamePath: "/coin-flip/",
+      layout: expect.any(Function),
     });
   });
 

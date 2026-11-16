@@ -15,6 +15,7 @@ import type {
 import type { MessageDispatch } from "./message-dispatch.ts";
 import { messagesFor } from "./messages.ts";
 import type { RoundCheck, ShownAmount, SnapshotRead } from "./round-input.ts";
+import type { StageLayout } from "./stage-layout.ts";
 import type { ChangeCause } from "./view-options.ts";
 import type { WrapperApp } from "./wrapper-app.ts";
 
@@ -25,6 +26,12 @@ export type SessionWiringOptions = {
   readonly ownOrigin: string;
   /** The page's one `message` listener: the game frame's route (W-49b). */
   readonly messages: MessageDispatch;
+  /**
+   * Where the bar sits and the band it covers (RFC-005): the frame of a game
+   * that declared `inset` is told it through `layout`. Without it the band is 0
+   * (the bar docks).
+   */
+  readonly layout?: StageLayout;
 };
 
 /** The shell's checks of the round, as the UI reads them. */
@@ -33,6 +40,8 @@ const checkOf = (round: RoundState): RoundCheck => ({
     round.verdict === "failed"
       ? (round.shown ?? "verification-failed")
       : round.verdict,
+  ...(round.failure === undefined ? {} : { failure: round.failure }),
+  ...(round.tipFailure === undefined ? {} : { tipFailure: round.tipFailure }),
   outOfSync: round.outOfSync,
   cashOutOffered: round.cashOutOffered,
   cancel: round.cancel,
@@ -158,11 +167,20 @@ const mountGame = (
     onCopy: copied => {
       app.gameCopied(copied);
     },
+    // A game that draws under the bar gets the whole stage (RFC-005), and
+    // the band the bar covers right after its `hello`.
+    onCapabilities: capabilities => {
+      app.gameCapable(capabilities.includes("inset"));
+    },
+    insetBottom: () => options.layout?.measure() ?? 0,
   });
   if (!mounted.ok) {
     frame.remove();
     return;
   }
+  options.layout?.onInset(insetBottom => {
+    mounted.layout(insetBottom);
+  });
   frame.src = gameUrlOf(
     mounted.gameOrigin,
     mounted.gamePath,
@@ -218,9 +236,24 @@ export const wireSession = (
   session.onEnd(() => {
     app.block("session-ended");
   });
-  session.onChange(read => {
-    // A pick is the player's own action, made in the frame (W-46).
-    show(read, "pick");
+  session.onChange((read, source) => {
+    // A pick is the player's own action, made in the frame (W-46); an answer
+    // of a run of autoplay is not, and moves no focus (W-61), also the one
+    // that stops the run.
+    show(read, source === "autoplay" ? "poll" : "pick");
+  });
+  // The run's state, shown by the bar (W-61); it counts as a call in flight
+  // for the lobby and the deposit (W-49f).
+  session.onAutoplay(state => {
+    app.autoplayRun(
+      state.kind === "running" ? { left: state.left } : undefined,
+    );
+  });
+  // A run never continues unattended: it stops when the page is hidden (Q3).
+  options.doc.addEventListener("visibilitychange", () => {
+    if (options.doc.visibilityState === "hidden") {
+      session.stopAutoplay("hidden");
+    }
   });
   app.connect({
     readSnapshot: async (): Promise<SnapshotRead> =>
@@ -234,6 +267,21 @@ export const wireSession = (
       },
       checkAgain: (): void => {
         run(() => session.checkAgain());
+      },
+      // A run of autoplay of book rounds (W-61): the shell sends its starts.
+      autoplay: (count: number, bet: ShownAmount): void => {
+        // Only a count the configuration offers, at its interval.
+        const minIntervalMs = app.autoplayInterval(count);
+        if (minIntervalMs === undefined) return;
+        const begun = session.autoplay({
+          count,
+          bet: betOf(bet),
+          minIntervalMs,
+        });
+        if (!begun.ok) app.accept({ kind: "refused" }, "player");
+      },
+      stopAutoplay: (): void => {
+        session.stopAutoplay("player");
       },
     },
   });

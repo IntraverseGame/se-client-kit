@@ -200,12 +200,12 @@ describe("releaseSizeReport", () => {
     const report = releaseSizeReport(
       new Map([
         ["index.html", new Uint8Array(1)],
-        ["headers.json", new Uint8Array(204_800)],
+        ["headers.json", new Uint8Array(286_720)],
         VERIFY_PAGE,
       ]),
     );
     expect(report.problems).toEqual([
-      "wrapper output: 204801 bytes, over its size budget of 204800 bytes by 1",
+      "wrapper output: 286721 bytes, over its size budget of 286720 bytes by 1",
     ]);
   });
 

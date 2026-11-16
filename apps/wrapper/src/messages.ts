@@ -3,7 +3,10 @@
 // falls back to English, and the UI's `lang` attribute names the language
 // actually shown. Texts never carry a value from the network except where the
 // UI places one beside them (an amount's `formatted`, a round id, a
-// `requestId`), always as text, never as markup.
+// `requestId`), always as text, never as markup. The bar's texts of RFC-005
+// are bar-messages.ts's, joined into the same catalogue.
+
+import { type BarMessageKey, EN_BAR } from "./bar-messages.ts";
 
 export type MessageKey =
   | "status.loading"
@@ -91,7 +94,8 @@ export type MessageKey =
   | "icon.loss"
   | "icon.error"
   | "icon.info"
-  | "icon.progress";
+  | "icon.progress"
+  | BarMessageKey;
 
 export type Messages = Readonly<Record<MessageKey, string>>;
 
@@ -193,6 +197,7 @@ const EN: Messages = {
   "icon.error": "Error",
   "icon.info": "Information",
   "icon.progress": "In progress",
+  ...EN_BAR,
 };
 
 /** The language shown when the session's has no catalogue. */

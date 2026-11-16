@@ -163,18 +163,26 @@ describe("status details (W-31 to W-33)", () => {
   it("offers no input while starting or resolving", () => {
     for (const name of ["coinflip-starting", "coinflip-resolving"]) {
       const ui = rendered(snapshotVector(name));
-      expect(ui.host.querySelectorAll("button, input")).toHaveLength(0);
+      // The bar's furniture (the menu, the chip) stays; no round control does.
+      expect(
+        ui.host.querySelectorAll(
+          '.se-controls button, .se-bet-slot button, [role="spinbutton"], input',
+        ),
+      ).toHaveLength(0);
     }
   });
 
-  it("shows the bet selector with the balance when idle", () => {
-    const ui = rendered(snapshotVector("coinflip-idle"));
-    const radios = [
-      ...ui.host.querySelectorAll<HTMLInputElement>('input[type="radio"]'),
-    ];
-    expect(radios).toHaveLength(3);
-    expect(radios.map(radio => radio.checked)).toEqual([true, false, false]);
-    expect(ui.host.querySelector("legend")?.textContent).toBe(m["label.bet"]);
+  it("shows the bet stepper with the balance when idle, preset to defaultBet", () => {
+    const snapshot = snapshotVector("coinflip-idle");
+    const ui = rendered(snapshot);
+    const field = ui.host.querySelector('[role="spinbutton"]');
+    expect(ui.host.querySelectorAll(".se-rail__mark")).toHaveLength(3);
+    // `aria-valuenow` is the option's index, never the amount (W-34).
+    expect(field?.getAttribute("aria-valuenow")).toBe("0");
+    expect(field?.getAttribute("aria-valuetext")).toBe(
+      snapshot.bet.defaultBet.formatted,
+    );
+    expect(field?.getAttribute("aria-label")).toBe(m["label.bet"]);
     expect(allText(ui.host)).toContain(`${m["label.balance"]} €100.00`);
   });
 
@@ -193,10 +201,9 @@ describe("status details (W-31 to W-33)", () => {
       { kind: "snapshot", snapshot: snapshotVector("coinflip-idle") },
       "poll",
     );
-    const radios = ui.host.querySelectorAll<HTMLInputElement>(
-      'input[type="radio"]',
-    );
-    radios[1]?.click();
+    ui.host
+      .querySelector<HTMLButtonElement>('[data-focus-key="bet-plus"]')
+      ?.click();
     buttonNamed(ui.host, m["action.placeBet"])?.click();
     expect(started).toEqual(["500 EUR"]);
   });

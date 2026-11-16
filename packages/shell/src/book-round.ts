@@ -80,6 +80,7 @@ const READY: FlowVerdict = Object.freeze({ state: "ready" });
 const CHANGED: FlowVerdict = Object.freeze({
   state: "failed",
   shown: "verification-failed",
+  failure: "changed",
 });
 
 // A book round takes no input but the start (W-51): nothing is signed or sent.

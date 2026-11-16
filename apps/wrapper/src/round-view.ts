@@ -1,28 +1,30 @@
 // The round as its status gives it (W-31 to W-34), in the control bar's slots
-// (W-57): the status line, the primary controls (the bet selector when `idle`
-// and beside the result of a round that is over, the cash-out control when the
-// shell offers it, with the Snapshot's `cashOutValue` as `formatted` beside it
-// when the Snapshot carries one, else the multiplier; round-amounts.ts says
-// which), and the round line (the multiplier, the payout, the balance, and
-// `closeReason`'s line). An `active` round is shown as ready only once the
-// shell's checks passed (W-26); until then it reads as being prepared, under
-// the stage's scrim. After the shell's own cancel (W-25, W-33), `ended`
-// is a neutral "round ended" with no result claim, and a `canceled` result is
-// the round failed verification and canceled (W-26). A move or cash-out not
+// (W-57, RFC-005): the status line (with the multiplier, which never
+// truncates), the bet stepper and the start control when `idle` and beside the
+// result of a round that is over, the cash-out control in the start control's
+// place when the shell offers it, with the Snapshot's `cashOutValue` as
+// `formatted` beside it when the Snapshot carries one, else the multiplier
+// (round-amounts.ts says which), the pick prompt while the first pick is owed,
+// and, in the status line too, the payout as `formatted` after the heading and
+// `closeReason`'s line; the round id, its copy control, and the verify link are
+// the round receipt's (W-59, fairness-view.ts). The balance is the bar's own
+// slot. An `active` round is shown as ready only once the shell's
+// checks passed (W-26); until then it reads as being prepared, under the
+// stage's scrim. After the shell's own cancel (W-25, W-33), `ended` is a
+// neutral "round ended" with no result claim, and a `canceled` result is the
+// round failed verification and canceled (W-26). A move or cash-out not
 // confirmed (W-16) shows its own state in place of the `active` round. Money
 // is the Snapshot's `formatted`; a choice compares `value` as a `bigint`
 // (bet-options.ts). A `won` round shows its `payout` as `formatted`, and a
 // `lost` one only when `payout.value` is above 0 (compared as a `bigint`); an
 // absent `payout` shows nothing. None is ever computed (W-31, W-34). A book
-// round (`playback`, W-54) shows its mode's return to player beside the bet
-// selector, from `config.rtp.decimal` by string operations (W-56); never an
-// amount from the draw's `payoutMultiplier`, the bet, or the RTP.
+// round (`playback`, W-54) shows its mode's return to player in the round
+// line, from `config.rtp.decimal` by string operations (W-56); never an amount
+// from the draw's `payoutMultiplier`, the bet, or the RTP.
 
-import { betSelector } from "./bet-selector.ts";
 import { endedView } from "./cancel-views.ts";
 import {
   type BarParts,
-  button,
   type Builder,
   type Child,
   field,
@@ -31,19 +33,23 @@ import {
 } from "./dom.ts";
 import type { IconName } from "./icons.ts";
 import type { Localized, MessageKey } from "./messages.ts";
+import { formatMultiplier, shownPayout } from "./round-amounts.ts";
 import {
-  formatMultiplier,
-  shownCashOutValue,
-  shownPayout,
-} from "./round-amounts.ts";
+  type BarContext,
+  cashOutButton,
+  nextBet,
+  owesPick,
+} from "./round-controls.ts";
 import {
   type RoundCheck,
   roundEnded,
   type SnapshotInput,
 } from "./round-input.ts";
-import { rtpPercent } from "./rtp.ts";
+import { pickPrompt } from "./start-control.ts";
 import { unconfirmedView } from "./unconfirmed-view.ts";
 import type { Intents } from "./view-options.ts";
+
+export type { BarContext };
 
 const STATUS_ICON: Partial<Record<SnapshotInput["status"], IconName>> = {
   won: "win",
@@ -61,28 +67,6 @@ export const ICON_LABEL: Readonly<Record<IconName, MessageKey>> = {
   progress: "icon.progress",
 };
 
-/**
- * The bet selector, and beside it a book round's return to player when its
- * Snapshot carries `config.rtp` (W-56): "Return to player: 96.00%". None when
- * it is absent, with no error.
- */
-const betWithRtp = (
-  el: Builder,
-  m: Localized["messages"],
-  snapshot: SnapshotInput,
-  intents: Intents,
-): Child[] => {
-  const decimal =
-    snapshot.presentation === "playback"
-      ? snapshot.config.rtp?.decimal
-      : undefined;
-  const percent = decimal === undefined ? undefined : rtpPercent(decimal);
-  return [
-    betSelector(el, m, snapshot, intents),
-    percent !== undefined && field(el, m["label.rtp"], `${percent}%`),
-  ];
-};
-
 /** The status line: the state's heading and at most one line of detail. */
 export const statusLine = (
   el: Builder,
@@ -92,36 +76,6 @@ export const statusLine = (
   title,
   detail !== undefined && el("p", { class: "se-detail" }, [detail]),
 ];
-
-/**
- * The cash-out control (W-24, W-57): "Cash out" with the Snapshot's
- * `cashOutValue` as `formatted` beside it when the Snapshot carries one (what
- * cashing out now credits, computed by the server), else with the Snapshot's
- * multiplier as a display value. Never an amount the Wrapper computed (W-34).
- */
-const cashOutButton = (
-  el: Builder,
-  localized: Localized,
-  snapshot: SnapshotInput,
-  cashOut: () => void,
-): HTMLButtonElement => {
-  const control = button(
-    el,
-    localized.messages["action.cashOut"],
-    "cash-out",
-    cashOut,
-  );
-  const value = shownCashOutValue(snapshot);
-  const shown =
-    value?.formatted ??
-    (snapshot.currentMultiplier === undefined
-      ? undefined
-      : formatMultiplier(localized.language, snapshot.currentMultiplier));
-  if (shown !== undefined) {
-    control.append(" ", el("span", { class: "se-button__value" }, [shown]));
-  }
-  return control;
-};
 
 /** The result's own line (W-33, W-54), when it has one. */
 const resultDetail = (
@@ -152,6 +106,88 @@ const resultDetail = (
     : undefined;
 };
 
+/** The pieces of a round's own state, before the next bet joins them. */
+type Own = {
+  readonly multiplier: Child[];
+  readonly controls: Child[];
+  readonly round: Child[];
+  readonly detail: string | undefined;
+};
+
+const ownOf = (
+  el: Builder,
+  doc: Document,
+  localized: Localized,
+  snapshot: SnapshotInput,
+  intents: Intents,
+  check: RoundCheck | undefined,
+  verifying: boolean,
+): Own => {
+  const m = localized.messages;
+  const own: Own = {
+    multiplier: [],
+    controls: [],
+    round: [],
+    detail: undefined,
+  };
+  switch (verifying ? "verifying" : snapshot.status) {
+    case "starting":
+    case "resolving": {
+      return {
+        ...own,
+        detail:
+          m[`detail.${snapshot.status as "starting" | "resolving"}` as const],
+      };
+    }
+    case "active": {
+      if (snapshot.currentMultiplier !== undefined) {
+        own.multiplier.push(
+          field(
+            el,
+            m["label.multiplier"],
+            formatMultiplier(localized.language, snapshot.currentMultiplier),
+          ),
+        );
+      }
+      const { cashOut } = intents;
+      if (check?.cashOutOffered === true && cashOut !== undefined) {
+        own.controls.push(cashOutButton(el, localized, snapshot, cashOut));
+        return own;
+      }
+      // The first pick is owed: its words hold the control's place, and the
+      // status line says them too (RFC-005 section 5).
+      return owesPick(snapshot, check)
+        ? {
+            ...own,
+            controls: [pickPrompt(el, doc, m)],
+            detail: m["start.pickDetail"],
+          }
+        : own;
+    }
+    case "won":
+    case "lost":
+    case "canceled": {
+      const payout = shownPayout(snapshot);
+      if (payout !== undefined) {
+        // "✓ You won €1.94": the amount after the heading, its label read,
+        // not shown (decided by the human, 2026-11-13).
+        own.multiplier.push(
+          el("p", { class: "se-amount" }, [
+            el("span", { class: "se-visually-hidden" }, [
+              `${m["label.payout"]} `,
+            ]),
+            payout.formatted,
+          ]),
+        );
+      }
+      return { ...own, detail: resultDetail(m, snapshot, check) };
+    }
+    default: {
+      return own;
+    }
+  }
+};
+
 /**
  * The round as its status gives it (W-31 to W-34), in the bar's slots (W-57).
  * `detail`, when given, replaces the status line's detail: the slow notice
@@ -163,17 +199,23 @@ export const roundView = (
   localized: Localized,
   snapshot: SnapshotInput,
   intents: Intents,
+  bar: BarContext,
   check?: RoundCheck,
   cancelEnded: boolean = check?.cancel === "ended",
   detail?: string,
 ): BarParts => {
   const m = localized.messages;
-  const balance = field(el, m["label.balance"], snapshot.bet.balance.formatted);
   if (cancelEnded) {
-    const ended = endedView(el, doc, m, snapshot, intents);
+    const ended = endedView(
+      el,
+      doc,
+      m,
+      nextBet(el, doc, m, snapshot, intents, bar, "action.playAgain"),
+    );
     return {
       ...ended,
-      status: statusLine(el, ended.heading, detail),
+      status: [...statusLine(el, ended.heading, detail), ...ended.round],
+      round: [],
     };
   }
   // An `active` round the shell has not passed is not shown as ready (W-26):
@@ -206,57 +248,8 @@ export const roundView = (
     iconName,
     iconName === undefined ? "" : m[ICON_LABEL[iconName]],
   );
-  const controls: Child[] = [];
-  const round: Child[] = [];
-  let own: string | undefined;
-  switch (verifying ? "verifying" : snapshot.status) {
-    case "idle": {
-      round.push(balance);
-      controls.push(...betWithRtp(el, m, snapshot, intents));
-      break;
-    }
-    case "starting":
-    case "resolving": {
-      own = m[`detail.${snapshot.status as "starting" | "resolving"}` as const];
-      round.push(balance);
-      break;
-    }
-    case "verifying": {
-      round.push(balance);
-      break;
-    }
-    case "active": {
-      if (snapshot.currentMultiplier !== undefined) {
-        round.push(
-          field(
-            el,
-            m["label.multiplier"],
-            formatMultiplier(localized.language, snapshot.currentMultiplier),
-          ),
-        );
-      }
-      round.push(balance);
-      const { cashOut } = intents;
-      if (check?.cashOutOffered === true && cashOut !== undefined) {
-        controls.push(cashOutButton(el, localized, snapshot, cashOut));
-      }
-      break;
-    }
-    case "won":
-    case "lost":
-    case "canceled": {
-      own = resultDetail(m, snapshot, check);
-      const payout = shownPayout(snapshot);
-      if (payout !== undefined) {
-        round.push(field(el, m["label.payout"], payout.formatted));
-      }
-      round.push(balance);
-      break;
-    }
-    default: {
-      break;
-    }
-  }
+  const own = ownOf(el, doc, localized, snapshot, intents, check, verifying);
+  const round = [...own.round];
   if (snapshot.closeReason === "expired") {
     round.push(
       el("p", { class: "se-detail se-detail--close" }, [m["detail.expired"]]),
@@ -265,12 +258,24 @@ export const roundView = (
   // A round that is over offers the next bet beside its result, from its own
   // Snapshot's `bet` (W-31, W-40): the read keeps showing the ended round until
   // the next start.
-  if (roundEnded(snapshot, check?.cancel)) {
-    controls.push(...betWithRtp(el, m, snapshot, intents));
-  }
+  const next =
+    snapshot.status === "idle" || roundEnded(snapshot, check?.cancel)
+      ? nextBet(el, doc, m, snapshot, intents, bar)
+      : undefined;
+  const shownDetail = detail ?? own.detail;
+  // The return to player and the `expired` line stay in the status line
+  // (RFC-005): a result is one row, its round id on the receipt (W-59).
   return {
-    status: statusLine(el, title, detail ?? own),
-    controls,
-    round,
+    status: [
+      title,
+      ...own.multiplier,
+      shownDetail !== undefined &&
+        el("p", { class: "se-detail" }, [shownDetail]),
+      ...round,
+      ...(next?.round ?? []),
+    ],
+    bet: next?.bet ?? [],
+    controls: [...own.controls, ...(next?.controls ?? [])],
+    round: [],
   };
 };

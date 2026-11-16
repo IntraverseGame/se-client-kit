@@ -140,8 +140,24 @@ else.
   (`protocol.ts`, `game-snapshot.ts`): a plain object with exactly its fields,
   read through its own data properties only; a `snapshot` whose copy has exactly
   the W-38 allow-listed fields, each well formed; a `reject` with an `id` of 1
-  to 64 characters from `[A-Za-z0-9_-]` and a `reason` from the closed list.
-  Anything else is ignored. A Snapshot with a lower `version` than the latest is
+  to 64 characters from `[A-Za-z0-9_-]` and a `reason` from the closed list; and
+  a `layout` (RFC-005) with an `insetBottom` that is a whole number of at
+  least 0. Anything else is ignored.
+- **The `inset` capability** (RFC-005, W-38; decided by the human, 2026-11-13:
+  the reference game shows how). Its `hello` declares `capabilities: ["inset"]`
+  (`inset.ts`, `protocol.ts`'s `helloMessage()`). On each `layout` it keeps its
+  whole interface above `insetBottom`: the page sets one custom property through
+  the CSSOM, `--rg-inset` (and `data-inset` on its root, for tests), which the
+  stylesheet reads as the body's bottom padding, so its content ends above the
+  band and only its background (the scenery) runs under the Wrapper's bar; no
+  style attribute or element is built, so the Content Security Policy holds.
+  When no `layout` arrives within `LAYOUT_TIMEOUT_MS` (2 s; an older Wrapper
+  ignores a `hello` with `capabilities`), it sends a plain `hello` once
+  (`helloMessage(false)`) and lays out as a game without the capability (a band
+  of 0); it never falls back on a missing `snapshot`. A `layout` that comes in
+  time stops the fallback's timer, and a closed game stops it too. The timers
+  are injected (`main.ts` gives the window's), so the tests fire them
+  (`inset.test.ts`). A Snapshot with a lower `version` than the latest is
   ignored (W-29).
 - **Coin Flip, and rows of tiles.** A round is Coin Flip when its config has
   exactly one step, index 0, with two options: option 0 is heads, option 1 is

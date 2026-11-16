@@ -82,6 +82,8 @@ test.describe("the reference game", () => {
           type: "hello",
           // Both presentations since the book-slot page (#146).
           presentations: ["steps", "playback"],
+          // It draws under the Wrapper's bar (RFC-005, W-38).
+          capabilities: ["inset"],
           statuses: [
             "idle",
             "starting",

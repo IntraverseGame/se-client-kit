@@ -34,12 +34,14 @@ export const WRAPPER_PAGE_GZIP = "wrapper page, gzip";
 
 /**
  * The Wrapper's budget, in bytes (decided by the human, 2026-10-18: about 25%
- * over the 161873 and 52650 bytes measured that day). A change is a reviewed
- * change to this list and the spec's together.
+ * over the 161873 and 52650 bytes measured that day; raised by the human on
+ * 2026-11-13 for RFC-005, about 25% over the 231808 and 73299 bytes measured
+ * that day). A change is a reviewed change to this list and the spec's
+ * together.
  */
 export const WRAPPER_BUDGET: readonly Budget[] = [
-  { name: WRAPPER_OUTPUT, limit: 204_800 },
-  { name: WRAPPER_PAGE_GZIP, limit: 65_536 },
+  { name: WRAPPER_OUTPUT, limit: 286_720 },
+  { name: WRAPPER_PAGE_GZIP, limit: 92_160 },
 ];
 
 /** Every file under `verify/`, uncompressed. */

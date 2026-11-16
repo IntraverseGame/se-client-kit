@@ -222,11 +222,11 @@ and deposit anchors (`operator-links.ts`). ADR-006 is accepted.
   2026-10-29; [ADR-010](../../decisions/ADR-010-resize-height-is-a-minimum.md),
   accepted):
 
-  | Field    | Value                                                                                                                                                                                                                                                                                                                                                                                           |
-  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `schema` | `"se.operator/1"`                                                                                                                                                                                                                                                                                                                                                                               |
-  | `type`   | `"resize"`                                                                                                                                                                                                                                                                                                                                                                                      |
-  | `height` | the least height the Wrapper's content needs at its current width and text size, `H_min = ceil(B) + S`: the bar's reserved height, measured and rounded up, plus the stage's minimum (provisionally 270 CSS pixels); never the viewport's height or the `<body>`'s box; an integer from 1 to 16384; a larger value is sent as 16384 (the bound is provisional, decided 2026-10-18, RFC-001 Q15) |
+  | Field    | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `schema` | `"se.operator/1"`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+  | `type`   | `"resize"`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+  | `height` | the least height the Wrapper's content needs at its current width and text size, `H_min = ceil(B') + S`: the band the bar takes under the game's view, measured and rounded up (the docked bar; where the bar floats, RFC-005, the bar and its gaps, which depend on the game's `inset` capability, [W-57](./the-single-screen.md#the-height)), plus the stage's minimum (provisionally 270 CSS pixels); never the viewport's height or the `<body>`'s box; an integer from 1 to 16384; a larger value is sent as 16384 (the bound is provisional, decided 2026-10-18, RFC-001 Q15) |
   - The Wrapper fills its iframe's viewport
     ([W-57](./the-single-screen.md#the-height)), so the `<body>`'s box would
     only echo the iframe's height, and could loop with a page that sets the
@@ -235,11 +235,13 @@ and deposit anchors (`operator-links.ts`). ADR-006 is accepted.
   - Sent only after `welcome`, only to the fixed operator origin, with no reply;
     the operator page MAY ignore it.
   - Sent once right after `welcome`, then whenever that minimum changes (a width
-    or text-size change, observed with `ResizeObserver` on the bar and the
-    stage), at most once per animation frame, and never with the same value
-    twice in a row; never when only the iframe's height changes. It may be sent
-    in every state after `welcome`, error states included, and in no state
-    before it; it does not change with the state.
+    or text-size change, observed with `ResizeObserver` on the bar, the stage,
+    and the game frame's host; and once after the game's `hello`, since `H_min`
+    depends on its `inset` capability, RFC-005), at most once per animation
+    frame, and never with the same value twice in a row; never when only the
+    iframe's height changes. It may be sent in every state after `welcome`,
+    error states included, and in no state before it; it does not change with
+    the state.
   - No width: the operator page lays out the width, and the Wrapper's layout
     follows it (W-47's 200 % zoom rule).
   - It is the only message the Wrapper sends on its own. No game message and no
@@ -299,7 +301,7 @@ and deposit anchors (`operator-links.ts`). ADR-006 is accepted.
   | Wrapper state                                                                                                                                                   | Lobby                                   | Deposit |
   | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------- |
   | before `welcome` (framed), loading, the configuration-error state                                                                                               | no                                      | no      |
-  | a start or cash-out call in flight, in any state (decided 2026-10-19)                                                                                           | no                                      | no      |
+  | a start or cash-out call in flight, in any state (decided 2026-10-19), and a run of autoplay from its start to its stop (W-61)                                  | no                                      | no      |
   | `idle`, and a typed error or the generic error shown at `idle`, `INSUFFICIENT_FUNDS` included (W-42)                                                            | yes                                     | yes     |
   | `starting`, `active`, `resolving`, or any state with a signed action not yet seen applied (W-15)                                                                | no                                      | no      |
   | `won`, `lost`, `canceled` (the round id and verify link shown, W-39), and a typed error shown beside them (`INSUFFICIENT_FUNDS` on the next start, for example) | yes                                     | yes     |
@@ -316,7 +318,14 @@ and deposit anchors (`operator-links.ts`). ADR-006 is accepted.
   rows (decided 2026-10-19). **A call in flight**: from the player's start or
   cash-out until its answer is shown, neither control is offered, since leaving
   would end the session before the answer (decided 2026-10-19); "check again", a
-  read only, hides nothing.
+  read only, hides nothing. **A run of autoplay** (W-61) counts as a call in
+  flight as a whole, between its rounds too: no lobby and no deposit until it
+  stops.
+
+  **Where they show** (RFC-005 section 8): in the bar's menu, each exactly when
+  this table offers it, beside the session summary; in the session-ended state
+  the lobby, labelled as the way to relaunch, is a visible control in the bar,
+  in the start control's place, not an item of the menu.
 
   During a round the controls are hidden because leaving ends the session and
   the round then runs to its expiry rule (OQ-1); the operator's own page may
