@@ -146,8 +146,12 @@ describe("the chip in the bar (T-30)", () => {
       "poll",
     );
     const chip = ui.host.querySelector(".se-chip");
-    expect(chip?.textContent).toBe(m["chip.checked"]);
-    expect(chip?.getAttribute("aria-label")).toContain(m["chip.checked"]);
+    const roundId = String(snapshotVector("coinflip-won").roundId);
+    // Ended: the shortened round id shows; the name says it in full.
+    expect(chip?.textContent).toBe(`…${roundId.slice(-8)}`);
+    expect(chip?.getAttribute("aria-label")).toBe(
+      `${m["chip.checked"]}, ${m["receipt.round"]} ${roundId}: ${m["receipt.openEnded"]}`,
+    );
     expect(chip?.getAttribute("aria-expanded")).toBe("false");
   });
 
@@ -157,7 +161,9 @@ describe("the chip in the bar (T-30)", () => {
       { kind: "snapshot", snapshot: snapshotVector("coinflip-idle") },
       "poll",
     );
-    expect(ui.host.querySelector(".se-chip")?.textContent).toBe(m["chip.how"]);
+    expect(ui.host.querySelector(".se-chip")?.textContent).toBe(
+      m["receipt.fairness"],
+    );
     ui.app.accept(
       {
         kind: "snapshot",
@@ -166,7 +172,12 @@ describe("the chip in the bar (T-30)", () => {
       },
       "poll",
     );
-    expect(ui.host.querySelector(".se-chip")?.textContent).toBe(m["chip.dev"]);
+    expect(
+      ui.host.querySelector(".se-chip")?.getAttribute("aria-label"),
+    ).toContain(m["chip.dev"]);
+    expect(
+      ui.host.querySelector(".se-chip")?.getAttribute("aria-label"),
+    ).not.toContain(m["chip.checked"]);
     expect(ui.host.querySelector(".se-notice--chain")?.textContent).toContain(
       m["notice.chainNotIndependent"],
     );

@@ -1,9 +1,10 @@
 // T-27 and T-34 (W-57 "Overflow stays in the bar", RFC-005): the status slot
-// is a tab stop while its text overflows, with no change of the bar's height,
-// in the real layout of every browser project. The state overflows for sure: a
-// loss's status line and round line (the round id, its copy control, and the
-// verify link) with a typed error beside them, in a box of 320 CSS pixels, the
-// narrowest the Wrapper supports, where each of those takes a row of its own.
+// is a tab stop exactly while its text overflows, with no change of the bar's
+// height, in the real layout of every browser project. In a box of 320 CSS
+// pixels, the narrowest the Wrapper supports, a loss's one-row result (its
+// heading and the round receipt) fits: no tab stop. At three times the text
+// size the receipt alone (a chip that never wraps) is wider than the slot, so
+// it overflows for sure: a tab stop, kept when a typed error joins it.
 
 import type { Frame } from "@playwright/test";
 
@@ -17,6 +18,11 @@ import {
 } from "./harness/round-play.ts";
 import { pickCheck, ROUND_PINS } from "./harness/round-vector.ts";
 import { TEXT, WRAPPER_PAGE } from "./harness/wrapper-page.ts";
+
+/** Three times the text size, through the CSSOM (the page's CSP allows it). */
+const tripleText = (): void => {
+  document.documentElement.style.setProperty("font-size", "300%");
+};
 
 /** Whether the status slot's text overflows it, in one synchronous read. */
 const overflows = (slot: Element): boolean =>
@@ -53,9 +59,17 @@ test("the status slot takes its tab stop while it overflows, and the bar's heigh
     .getByRole("button", { name: "Tails" })
     .click();
   await expect(heading(frame)).toHaveText(TEXT.lost);
+  const slot = frame.locator(".se-status-slot");
+  // The one-row result fits: no tab stop.
+  expect(await slot.evaluate(overflows)).toBe(false);
+  await expect(slot).not.toHaveAttribute("tabindex");
+  // Three times the text size: the receipt is wider than the slot.
+  await frame.evaluate(tripleText);
+  await expect(slot).toHaveAttribute("tabindex", "0");
+  expect(await slot.evaluate(overflows)).toBe(true);
   const bar = frame.locator(".se-bar");
   const before = await bar.boundingBox();
-  // The next start is refused: the error joins the loss's round line.
+  // The next start is refused: the error joins the result.
   fakePlayApi.answer("startRound", {
     kind: "problem",
     vector: "problem-insufficient-funds",
@@ -64,7 +78,6 @@ test("the status slot takes its tab stop while it overflows, and the bar's heigh
   await expect(frame.locator(".se-alert")).toContainText(
     "Your balance is too low for this bet.",
   );
-  const slot = frame.locator(".se-status-slot");
   expect(await slot.evaluate(overflows)).toBe(true);
   await expect(slot).toHaveAttribute("tabindex", "0");
   expect((await bar.boundingBox())?.height).toBe(before?.height);

@@ -40,14 +40,17 @@ out of sync, for example).
 
 The control bar is one dark line: a menu (the lobby, the deposit, and this
 session's time and rounds), the balance, a bet stepper over the Snapshot's own
-options, the status with a chip that says what the browser checked for the round
-(never "verified"), and one start control. On a wide screen it floats over the
-bottom of the stage: a game that declares the `inset` capability in its `hello`
-draws its scene under the bar and is told the band the bar covers (`layout`);
-any other game keeps its frame above a neutral band. Autoplay of book rounds is
-offered only when the environment configuration's `autoplay` field turns it on;
-it stops on any error, a connection problem, a changed round, a balance below
-the bet, or when the page is hidden, and keeps nothing past the page.
+options, the status (a result is one row: "You won €1.94") ending with a round
+receipt that says what the browser checked for the round (never "verified") and,
+once the round has ended, shows its shortened id and opens the full id, a copy
+control, and the verify link, and one start control. On a wide screen it floats
+over the bottom of the stage: a game that declares the `inset` capability in its
+`hello` draws its scene under the bar and is told the band the bar covers
+(`layout`); any other game keeps its frame above a neutral band. Autoplay of
+book rounds is offered only when the environment configuration's `autoplay`
+field turns it on; it stops on any error, a connection problem, a changed round,
+a balance below the bet, or when the page is hidden, and keeps nothing past the
+page.
 
 ## What it guarantees
 

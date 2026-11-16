@@ -174,3 +174,23 @@ export const linkNamed = (
   [...host.querySelectorAll("a")].find(link => text(link).startsWith(name));
 
 export const allText = (host: HTMLElement): string => text(host);
+
+/**
+ * Opens the round receipt's popover (W-59, W-39), when it is closed, as a
+ * player's click does; answers its panel. The round id, its copy control, and
+ * the verify link are in it once the round has ended.
+ */
+export const openReceipt = (host: HTMLElement): HTMLElement | null => {
+  const chip = host.querySelector<HTMLButtonElement>(".se-receipt");
+  if (chip?.getAttribute("aria-expanded") === "false") chip.click();
+  return host.querySelector<HTMLElement>(".se-chip-anchor .se-popover");
+};
+
+/** The full round id the receipt names, opening it (`undefined`: none). */
+export const receiptRoundId = (host: HTMLElement): string | undefined => {
+  openReceipt(host);
+  return (
+    host.querySelector(".se-chip-anchor .se-receipt__id")?.textContent ??
+    undefined
+  );
+};

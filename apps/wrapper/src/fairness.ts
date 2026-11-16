@@ -1,4 +1,4 @@
-// The fairness chip (W-59, RFC-005 section 3): what the shell has checked for
+// The round receipt (W-59, RFC-005 section 3): what the shell has checked for
 // the round the bar shows, in plain words. It reads the shell's verdicts only
 // and claims nothing the shell did not check: never "Verified". It keys on
 // the round's kind, not on the verdict alone, since a book round's verdict is
@@ -51,7 +51,10 @@ const failed = (verdict: Verdict): boolean =>
   verdict.verdict === "chain-unverified" ||
   verdict.failure !== undefined;
 
-/** The round the chip speaks of: the shown round's, else the ended round's. */
+/**
+ * The round the chip speaks of: the ended round's while it is kept (W-40), else
+ * the shown round's.
+ */
 const roundOf = (
   state: WrapperState,
 ):
@@ -61,18 +64,22 @@ const roundOf = (
     }
   | undefined => {
   const { snapshot, check, endedRound } = state;
-  if (snapshot?.roundId !== undefined) {
-    const over = roundEnded(snapshot, check?.cancel);
-    const kept =
-      endedRound?.roundId === snapshot.roundId ? endedRound.verdict : undefined;
+  // The ended round's receipt stays until the round the player started from
+  // it shows (W-40): no other Snapshot replaces it before that.
+  if (endedRound !== undefined) {
+    const own = snapshot?.roundId === endedRound.roundId ? check : undefined;
     return {
-      verdict: check ?? kept,
-      ...(over ? { endedRoundId: snapshot.roundId } : {}),
+      verdict: own ?? endedRound.verdict,
+      endedRoundId: endedRound.roundId,
     };
   }
-  return endedRound === undefined
-    ? undefined
-    : { verdict: endedRound.verdict, endedRoundId: endedRound.roundId };
+  if (snapshot?.roundId === undefined) return undefined;
+  return {
+    verdict: check,
+    ...(roundEnded(snapshot, check?.cancel)
+      ? { endedRoundId: snapshot.roundId }
+      : {}),
+  };
 };
 
 /** The chip for the state, or `undefined` where the bar shows none. */
@@ -87,7 +94,8 @@ export const chipOf = (state: WrapperState): ChipPlan | undefined => {
       ? {}
       : { endedRoundId: round.endedRoundId };
   const verdict = round?.verdict;
-  if (verdict === undefined) return { kind: "how", game };
+  // A round the shell does not hold: no claim, but its receipt (W-39).
+  if (verdict === undefined) return { kind: "how", game, ...ended };
   if (failed(verdict)) {
     return {
       kind: "not-verified",
@@ -105,10 +113,9 @@ export const chipOf = (state: WrapperState): ChipPlan | undefined => {
   if (game === "book") return { kind: "recorded", game, ...ended };
   // A round that ended before its verdict was decided claims nothing.
   if (verdict.verdict === "checking") {
-    return {
-      kind: round?.endedRoundId === undefined ? "checking" : "how",
-      game,
-    };
+    return round?.endedRoundId === undefined
+      ? { kind: "checking", game }
+      : { kind: "how", game, ...ended };
   }
   return {
     kind: state.chainNotIndependent ? "dev" : "checked",

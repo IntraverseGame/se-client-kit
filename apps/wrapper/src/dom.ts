@@ -120,7 +120,7 @@ const ROUND_ID_SHOWN = 8;
  * characters (a UUIDv7's first ones are its timestamp, the same for rounds
  * close in time); an id that short or shorter is shown whole.
  */
-const shortRoundId = (roundId: string): string =>
+export const shortRoundId = (roundId: string): string =>
   roundId.length <= ROUND_ID_SHOWN
     ? roundId
     : `…${roundId.slice(-ROUND_ID_SHOWN)}`;

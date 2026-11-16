@@ -1,11 +1,15 @@
-// The fairness chip's view (W-59, RFC-005 section 3): a button at the start of
-// the status slot, with a 44 px hit area, whose popover lists what the shell
-// checked (fairness.ts decides which). The popover is not a dialog and traps no
-// focus; Escape closes it and returns the focus to the chip (popover.ts). The
-// chip's text change is not announced (the status line is, W-46). The round
-// id, its copy control, and the verify link show in it only once the round has
-// ended (W-39). Colour never carries the chip's meaning alone (W-47): its
-// words do.
+// The round receipt (W-59, W-39, RFC-005; decided by the human, 2026-11-13):
+// one compact chip at the end of the status line, after the status heading,
+// with a 44 px hit area and a chevron, whose popover lists what the shell
+// checked (fairness.ts decides which) and, once the round has ended, the full
+// round id, its copy control, and the verify link. Its visible label is short
+// ("Fairness", "Checking…", "Checked", "Not verified", "Recorded", and the
+// shortened round id once the round has ended); its accessible name says it
+// in full, with Q1's words ("Checked before play", ...). The popover opens in
+// the top layer (popover.ts), is not a dialog, and traps no focus; Escape
+// closes it and returns the focus to the chip. The chip's text change is not
+// announced (the status line is, W-46). Colour never carries its meaning
+// alone (W-47): its words do.
 
 import type { BarMessageKey } from "./bar-messages.ts";
 import type { Builder, Child } from "./dom.ts";
@@ -13,18 +17,72 @@ import type { ChipKind, ChipPlan } from "./fairness.ts";
 import { glyph, type GlyphName } from "./icons.ts";
 import type { Messages } from "./messages.ts";
 import { type Popover, popover } from "./popover.ts";
-import { roundIdAndVerify } from "./round-id-view.ts";
+import { receiptFoot, shortRoundId } from "./round-id-view.ts";
 import type { ViewOptions } from "./view-options.ts";
 
-const CHIP: Readonly<
-  Record<ChipKind, { readonly text: BarMessageKey; readonly glyph: GlyphName }>
-> = {
-  how: { text: "chip.how", glyph: "shield" },
-  checking: { text: "chip.checking", glyph: "shield" },
-  checked: { text: "chip.checked", glyph: "shield-ok" },
-  dev: { text: "chip.dev", glyph: "shield-ok" },
-  "not-verified": { text: "chip.notVerified", glyph: "shield-off" },
-  recorded: { text: "chip.recorded", glyph: "shield" },
+type ChipWords = {
+  /** Q1's words: the accessible name's and the popover heading's. */
+  readonly text: BarMessageKey;
+  /** The short visible label, before the round has ended. */
+  readonly label: BarMessageKey;
+  readonly glyph: GlyphName;
+  /** Whether the label stays beside the round id once the round has ended. */
+  readonly keeps: boolean;
+};
+
+const CHIP: Readonly<Record<ChipKind, ChipWords>> = {
+  how: {
+    text: "chip.how",
+    label: "receipt.fairness",
+    glyph: "shield",
+    keeps: false,
+  },
+  checking: {
+    text: "chip.checking",
+    label: "receipt.checking",
+    glyph: "shield",
+    keeps: false,
+  },
+  checked: {
+    text: "chip.checked",
+    label: "receipt.checked",
+    glyph: "shield-ok",
+    keeps: false,
+  },
+  dev: {
+    text: "chip.dev",
+    label: "chip.dev",
+    glyph: "shield-ok",
+    keeps: false,
+  },
+  "not-verified": {
+    text: "chip.notVerified",
+    label: "chip.notVerified",
+    glyph: "warning",
+    keeps: true,
+  },
+  recorded: {
+    text: "chip.recorded",
+    label: "chip.recorded",
+    glyph: "shield",
+    keeps: false,
+  },
+};
+
+/** The chip's visible label: short words, and the round id once ended. */
+export const receiptLabel = (m: Messages, plan: ChipPlan): string => {
+  const words = CHIP[plan.kind];
+  if (plan.endedRoundId === undefined) return m[words.label];
+  const id = shortRoundId(plan.endedRoundId);
+  return words.keeps ? `${m[words.label]} ${id}` : id;
+};
+
+/** The chip's accessible name: the full meaning (Q1's words). */
+export const receiptName = (m: Messages, plan: ChipPlan): string => {
+  const words = m[CHIP[plan.kind].text];
+  return plan.endedRoundId === undefined
+    ? `${words}: ${m["chip.openLabel"]}`
+    : `${words}, ${m["receipt.round"]} ${plan.endedRoundId}: ${m["receipt.openEnded"]}`;
 };
 
 /** Checks 1 to 4 of W-26 in full, then check 5 and the tip check (W-26b). */
@@ -93,25 +151,25 @@ export const chipContent = (
   const foot =
     plan.endedRoundId === undefined
       ? []
-      : [
-          el(
-            "div",
-            { class: "se-popover__foot" },
-            roundIdAndVerify(el, m, plan.endedRoundId, options, announce),
-          ),
-        ];
+      : [receiptFoot(el, m, plan.endedRoundId, options, announce)];
   const title = (key: BarMessageKey): HTMLElement =>
     el("h2", { class: "se-popover__title" }, [m[key]]);
   const para = (key: BarMessageKey): HTMLElement => el("p", {}, [m[key]]);
   switch (plan.kind) {
     case "how": {
       return plan.game === "book"
-        ? [title("pop.how"), para("pop.howBook"), para("pop.howBookVerify")]
+        ? [
+            title("pop.how"),
+            para("pop.howBook"),
+            para("pop.howBookVerify"),
+            ...foot,
+          ]
         : [
             title("pop.how"),
             para("pop.howConfig"),
             list(el, [...CONFIG_CHECKS.map(key => m[key]), m["pop.checkTip"]]),
             para("pop.howKey"),
+            ...foot,
           ];
     }
     case "checking":
@@ -167,7 +225,7 @@ export const createChipView = (el: Builder, doc: Document): ChipView => {
   let signature = "";
   const button = el("button", {
     type: "button",
-    class: "se-chip",
+    class: "se-chip se-receipt",
     "data-focus-key": "chip",
   });
   const pop: Popover = popover(el, doc, {
@@ -195,13 +253,12 @@ export const createChipView = (el: Builder, doc: Document): ChipView => {
       const { m } = context;
       const chip = CHIP[plan.kind];
       button.dataset["kind"] = plan.kind;
-      button.setAttribute(
-        "aria-label",
-        `${m[chip.text]}: ${m["chip.openLabel"]}`,
-      );
+      button.dataset["ended"] = String(plan.endedRoundId !== undefined);
+      button.setAttribute("aria-label", receiptName(m, plan));
       button.replaceChildren(
         glyph(doc, chip.glyph),
-        el("span", {}, [m[chip.text]]),
+        el("span", { class: "se-receipt__label" }, [receiptLabel(m, plan)]),
+        glyph(doc, "chevron"),
       );
       pop.refresh();
     },

@@ -5,8 +5,10 @@
 // place when the shell offers it, with the Snapshot's `cashOutValue` as
 // `formatted` beside it when the Snapshot carries one, else the multiplier
 // (round-amounts.ts says which), the pick prompt while the first pick is owed,
-// and the round line (the payout and `closeReason`'s line). The balance is the
-// bar's own slot. An `active` round is shown as ready only once the shell's
+// and, in the status line too, the payout as `formatted` after the heading and
+// `closeReason`'s line; the round id, its copy control, and the verify link are
+// the round receipt's (W-59, fairness-view.ts). The balance is the bar's own
+// slot. An `active` round is shown as ready only once the shell's
 // checks passed (W-26); until then it reads as being prepared, under the
 // stage's scrim. After the shell's own cancel (W-25, W-33), `ended` is a
 // neutral "round ended" with no result claim, and a `canceled` result is the
@@ -167,7 +169,16 @@ const ownOf = (
     case "canceled": {
       const payout = shownPayout(snapshot);
       if (payout !== undefined) {
-        own.round.push(field(el, m["label.payout"], payout.formatted));
+        // "✓ You won €1.94": the amount after the heading, its label read,
+        // not shown (decided by the human, 2026-11-13).
+        own.multiplier.push(
+          el("p", { class: "se-amount" }, [
+            el("span", { class: "se-visually-hidden" }, [
+              `${m["label.payout"]} `,
+            ]),
+            payout.formatted,
+          ]),
+        );
       }
       return { ...own, detail: resultDetail(m, snapshot, check) };
     }
@@ -203,7 +214,8 @@ export const roundView = (
     );
     return {
       ...ended,
-      status: statusLine(el, ended.heading, detail),
+      status: [...statusLine(el, ended.heading, detail), ...ended.round],
+      round: [],
     };
   }
   // An `active` round the shell has not passed is not shown as ready (W-26):
@@ -251,15 +263,19 @@ export const roundView = (
       ? nextBet(el, doc, m, snapshot, intents, bar)
       : undefined;
   const shownDetail = detail ?? own.detail;
+  // The return to player and the `expired` line stay in the status line
+  // (RFC-005): a result is one row, its round id on the receipt (W-59).
   return {
     status: [
       title,
       ...own.multiplier,
       shownDetail !== undefined &&
         el("p", { class: "se-detail" }, [shownDetail]),
+      ...round,
+      ...(next?.round ?? []),
     ],
     bet: next?.bet ?? [],
     controls: [...own.controls, ...(next?.controls ?? [])],
-    round: [...round, ...(next?.round ?? [])],
+    round: [],
   };
 };

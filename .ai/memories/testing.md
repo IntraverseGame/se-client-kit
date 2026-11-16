@@ -683,7 +683,14 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   and `t27-status-slot-tab-stop.spec.ts` (a loss and a typed error at 320
   pixels, which surely overflows). T-27's layout helpers moved to
   `harness/box-layout.ts`. None of these e2e rows has run yet: they were
-  written on Windows, where the suite cannot run.
+  written on Windows, where the suite cannot run. **The round receipt**
+  (W-59, decided 2026-11-13) holds the ended round's id, copy control, and
+  verify link in a popover built only while open: component tests open it
+  with `fixtures/app.ts`'s `openReceipt` (or read the id with
+  `receiptRoundId`), e2e with `harness/wrapper-page.ts`'s `openReceipt`; a
+  result's payout is `.se-status .se-amount` (its "Payout" label visually
+  hidden), not a round-line field. `receipt.test.ts` and
+  `t30-receipt.spec.ts` are its rows.
 - The cash-out value on the bar's control (W-31, W-57) is
   `apps/wrapper/src/cash-out-value.test.ts`: the vendored Cash or Crash
   cash-out round's `active` step-1 Snapshot given the amount its `won`

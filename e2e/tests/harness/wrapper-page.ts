@@ -3,7 +3,7 @@
 // heading, alert, and live region. The texts are the Wrapper's English
 // catalogue, the session language of every vector.
 
-import type { Page } from "@playwright/test";
+import type { Frame, Page } from "@playwright/test";
 
 import type { FakePlayApi } from "./fake-play-types.ts";
 import { WRAPPER_ORIGIN } from "./origins.ts";
@@ -56,6 +56,18 @@ export const TEXT = {
   notHeld: "This round can't be played here",
   waitingMove: "Waiting for your move to be confirmed.",
 } as const;
+
+/**
+ * Opens the round receipt's popover (W-59, W-39; decided by the human,
+ * 2026-11-13), as the player's click does, when it is closed: the round id, its
+ * copy control, and the verify link are in it once the round has ended.
+ */
+export const openReceipt = async (page: Page | Frame): Promise<void> => {
+  const chip = page.locator(".se-receipt");
+  if ((await chip.getAttribute("aria-expanded")) !== "true") {
+    await chip.click();
+  }
+};
 
 /**
  * Opens the Wrapper with the fake's launch URL. When `scan` is given, the

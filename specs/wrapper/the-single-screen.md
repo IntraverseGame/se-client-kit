@@ -68,11 +68,16 @@ Q8).
        while the bar shows the round; its slot keeps a minimum width, so a
        longer balance does not move the bet;
      - the **bet**: W-31's stepper, beside the next bet only;
-     - the **status slot**: the **fairness chip** (W-59), then the **status
-       line**: the state's heading (a heading element, focusable by script only,
-       `tabindex="-1"`, announced politely), the multiplier of an `active` round
-       (which, with the heading, never truncates; only the detail may), and at
-       most one line of detail;
+     - the **status slot**: the **status line**: the state's heading (a heading
+       element, focusable by script only, `tabindex="-1"`, announced politely),
+       the multiplier of an `active` round or a result's payout as `formatted`
+       (which, with the heading, never truncates; only the detail may), at most
+       one line of detail, a book round's return to player (W-56), and the
+       `expired` line (W-33); then, ending the status line, the **round
+       receipt** (W-59). **A result is one row** (decided by the human,
+       2026-11-13): the heading with its icon and the payout's `formatted` ("✓
+       You won €1.94", the "Payout" label read, not shown), then the receipt,
+       whose label is the shortened round id;
      - the **alert line**: the `role="alert"` region for an error that does not
        stop the round (a typed error, the generic error, a connection problem),
        except when a cover state owns the region ("One `role="alert"` region at
@@ -92,14 +97,15 @@ Q8).
        line takes at most half the slot and the alert the rest; where the row is
        too narrow for the whole first line, it wraps inside the box and its end
        scrolls with the rest;
-     - the **round line**, in the status slot after the status line: the payout
-       on a result, a book round's return to player (W-56), the `expired` line
-       (W-33), and the round id with its copy control and the verify link (W-39)
-       when shown. The round id is **shown shortened**: "…" and its last eight
-       characters (`…7a8b9c0d`; a UUIDv7's first characters are its timestamp,
-       the same for rounds close in time); its title, and the text an assistive
-       technology reads (visually hidden), are the full id, the copy control
-       copies the full id, and the verify link is unchanged (W-39);
+     - the **round line**, in the status slot after the alert line, only in a
+       state on the cover that gives it (out of sync; a cancel left to check
+       later; a move not confirmed): the round id with its copy control and the
+       verify link (W-39). There the round id is **shown shortened**: "…" and
+       its last eight characters (`…7a8b9c0d`; a UUIDv7's first characters are
+       its timestamp, the same for rounds close in time); its title, and the
+       text an assistive technology reads (visually hidden), are the full id.
+       After a round ends, the round id, its copy control, and the verify link
+       are the round receipt's (W-59, W-39);
      - the **start control** (RFC-005 section 5): one primary button of one
        width in every state and label (11rem on a wide screen), its label
        centred, no icon at rest, and a spinner at its right edge, out of the
@@ -129,12 +135,16 @@ Q8).
      then the system UI face, with amounts in the same face and tabular figures;
      the balance at 1.3125rem, the bet at 1.0625rem, the status at 0.9375rem,
      the start control at 1rem, labels at 0.75rem. Every size is in `rem`. The
-     bar's popovers (the menu, the chip, the autoplay counts) are not dialogs
-     and trap no focus; Escape closes one and returns the focus to its button; a
-     click outside closes it; opening one leaves the focus on its button (W-46).
-     A floating bar's surface is at least 0.86 opaque (0.9 today), so its text
-     keeps 4.5:1 over a white game and a black one, and a game drawing under it
-     cannot make its own text read as the bar's (RFC-005 section 9).
+     bar's popovers (the menu, the round receipt, the autoplay counts) are not
+     dialogs and trap no focus; Escape closes one and returns the focus to its
+     button; a click outside closes it; opening one leaves the focus on its
+     button (W-46). A floating bar's surface is translucent (`--se-glass`, 0.45
+     opaque) over a backdrop dimmed to at most 0.4 of its brightness and blurred
+     by at least 1.25rem (1.5rem today); its labels take a lighter tone there
+     (`--se-muted-glass`) and its controls are translucent. Its text and labels
+     keep 4.5:1 over a dimmed white game and a dimmed black one, and the blur is
+     the anti-spoofing bound: a game drawing under it cannot make its own text
+     read as the bar's (RFC-005 section 9).
 
   **The overlay** is a panel over the stage, at the stage's size, so it spans
   the whole frame, under a floating bar too (RFC-005), for a state in which the
@@ -255,8 +265,8 @@ common one), so the stage's ratio follows it.
     rest of the width), and the start control, 5.5rem tall (88 CSS pixels), a
     radius of 0.75rem;
   - from 35rem to 66rem: **two rows**: the status slot on a row of its own
-    (5.5rem, room for a result's two rows), then the menu, the balance, the bet,
-    and the start control (as wide as on one line);
+    (3.375rem; a result is one row), then the menu, the balance, the bet, and
+    the start control (as wide as on one line);
   - under 35rem: **three rows**: the status slot (two rows of 3.375rem), the
     balance and the bet, then the menu and a full-width start control; MIN and
     MAX are hidden. No control shrinks below 2.75rem by 2.75rem.
@@ -268,8 +278,9 @@ common one), so the stage's ratio follows it.
   anything the game needs to show, and the game extends behind it). From 66rem
   the stylesheet lets the bar float: it sits over the bottom of the stage, inset
   by 0.875rem from its sides and bottom, on a translucent surface with a
-  backdrop blur (the solid bar where the browser has no backdrop filter), at
-  least 0.86 opaque. Then:
+  backdrop blur (the solid bar where the browser has no backdrop filter): a
+  surface 0.45 opaque over a backdrop dimmed to at most 0.4 and blurred by at
+  least 1.25rem (The look, above). Then:
   - a game whose accepted `hello` declared the `inset` capability (W-38) gets a
     frame the size of the whole stage, bar included, and draws only scenery
     under the bar: the Wrapper sends it the band the bar covers, `insetBottom`,
@@ -437,15 +448,40 @@ second action is signed at the sequence.
 - Focus: a pick that the shell refuses does not move focus (the game shows the
   reject); a pick's error keeps the focus in the frame (W-46).
 
-## The fairness chip
+## The round receipt
 
-- **W-59.** At the start of the status slot a chip shows what the shell has
-  checked for the round the bar shows, in plain words, and opens a popover that
-  lists it (RFC-005 section 3; the words are Q1's recommendation, pending the
-  human's decision). It reads the shell's verdicts only and claims nothing the
-  shell did not check: never "Verified" or "Provably fair". It keys on the
-  round's kind (the session's presentation, W-53), not on the verdict alone: a
-  book round's verdict is `ready` too and never reads as a config round's.
+- **W-59.** At the end of the status line, after the status heading, one **round
+  receipt** (decided by the human, 2026-11-13: it replaces the fairness chip and
+  the round line's round id, copy control, and verify link) shows what the shell
+  has checked for the round the bar shows, in plain words, and opens a popover
+  that lists it (RFC-005 section 3; Q1's words are its recommendation, pending
+  the human's decision).
+  - **Its visible label** is short, beside an icon, and keeps a chevron (▾) in
+    every state: "Fairness" (a shield) before any round; "Checking…" while W-26
+    runs; "Checked" (a shield with a check) on a config round in play whose last
+    verdict is `ready`, "Checked (dev)" under W-26a's degraded check; "Recorded"
+    on a book round in play; "Not verified" (a warning icon) after a failed
+    check. Once the round has ended, the label is the shortened round id
+    ("…7a8b9c0d") beside the same icon, and "Not verified …7a8b9c0d" after a
+    failure (a failure wins and stays).
+  - **Its accessible name** says it in full with Q1's words, the words of the
+    table below and the popover's heading: "Checked before play, round
+    01927c5e-…: show the checks, copy the round ID, or verify" once the round
+    has ended, and "Checked before play: show what was checked" before.
+  - **Its popover** (in the top layer, so the status slot cannot clip it and the
+    game cannot cover it) holds the content of the table below, and, once the
+    round has ended, the full round id (monospace, selectable), the **Copy round
+    ID** control, and the **Verify this round** link (W-39: a new browsing
+    context, `rel="noopener noreferrer"`, the verify URL as before). It is not a
+    dialog and traps no focus; Escape closes it and returns the focus to the
+    chip; a click outside it, the page losing the focus (a click in the game's
+    frame never reaches the page), a scroll, and a resize close it.
+  - **W-40 holds for the receipt**: the ended round's receipt stays until the
+    round the player started from it shows; another round's Snapshot before that
+    does not replace it. It reads the shell's verdicts only and claims nothing
+    the shell did not check: never "Verified" or "Provably fair". It keys on the
+    round's kind (the session's presentation, W-53), not on the verdict alone: a
+    book round's verdict is `ready` too and never reads as a config round's.
 
   | Round, state                                                                                                                                                                                       | Chip                  | Popover                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
   | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -466,14 +502,13 @@ second action is signed at the sequence.
     (`EndedRound.verdict`) for this.
   - **The round id, its copy control, and the verify link** show in the popover
     only once the round has ended (W-39); during a round the popover lists the
-    checks only. The popover's content is built while it is open only, so the
-    page never holds the round id twice for no reason.
+    checks only. The popover's content is built while it is open only.
   - **W-26a's badge stays** in the bar for the whole session, apart from the
     chip.
-  - The chip is a button with a 44 px hit area and an accessible name of its
-    words and "show what was checked"; its popover is not a dialog (W-57). The
-    chip's text change is not announced (the status line already is, W-46). Its
-    colour never carries its meaning alone (W-47): its words do.
+  - The receipt is a button with a 44 px hit area and the accessible name above;
+    its popover is not a dialog (W-57). The chip's text change is not announced
+    (the status line already is, W-46). Its colour never carries its meaning
+    alone (W-47): its words do.
   - There is no chip while loading, in a final state, or before a Snapshot.
 
 ## The state edge
@@ -543,9 +578,9 @@ second action is signed at the sequence.
     exception after a book result and W-46's player rules do not fire on them.
   - **Operator links.** The whole run counts as a call in flight for W-49f: no
     lobby and no deposit until it stops.
-  - **The round line.** Under autoplay the player's start of the run is the act
-    for every round of it, so each round's id and link replace the last one's
-    without a new act (W-40).
+  - **The round receipt.** Under autoplay the player's start of the run is the
+    act for every round of it, so each round's receipt (its id, copy control,
+    and link) replaces the last one's without a new act (W-40).
   - **Nothing is stored.** The run and its count live in memory and are gone on
     reload; a reload never resumes a run. Nothing is logged or sent but the
     starts.

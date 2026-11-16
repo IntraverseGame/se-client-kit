@@ -42,6 +42,8 @@ export type GlyphName =
   | "shield"
   | "shield-ok"
   | "shield-off"
+  | "warning"
+  | "chevron"
   | "menu"
   | "minus"
   | "plus"
@@ -59,6 +61,8 @@ const GLYPHS: Readonly<Record<GlyphName, string>> = {
   plus: "M12 5v14M5 12h14",
   stop: "M8 8h8v8H8z",
   up: "M12 19V5M6 11l6-6 6 6",
+  warning: "M12 4l9 16H3zM12 10v4M12 17v.5",
+  chevron: "M7 10l5 5 5-5",
 };
 
 /** A glyph hidden from assistive technology: the text beside it says it. */

@@ -242,10 +242,11 @@ body {
 }
 
 /*
- * The status slot: the fairness chip, the status line, after it on the same
- * row the alert line, which takes the detail's place when it shows (W-57),
- * then the round line. What does not fit wraps and scrolls inside the slot,
- * which never grows; `safe` keeps the first line in reach.
+ * The status slot: the status line (a result's is one row: "✓ You won
+ * €1.94"), the round receipt at its end (W-59), then on the same row the
+ * alert line, which takes the detail's place when it shows (W-57), and a
+ * cover state's round line. What does not fit wraps and scrolls inside the
+ * slot, which never grows; `safe` keeps the first line in reach.
  */
 .se-status-slot {
   display: flex;
@@ -285,6 +286,15 @@ body {
   display: none;
 }
 
+/* A result's amount, after its heading: one row with it. */
+.se-amount {
+  margin: 0;
+  color: var(--se-strong);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* 35rem and up: the status slot over one line of controls. */
 @media (width >= 35rem) {
   .se-bar {
@@ -303,7 +313,7 @@ body {
   }
 
   .se-status-slot {
-    height: 5.5rem;
+    height: 3.375rem;
   }
 
   .se-balance {
@@ -860,7 +870,11 @@ h2.se-heading {
   font-weight: 600;
 }
 
-/* The fairness chip (W-59): a 44 px hit area around a small pill. */
+/*
+ * The round receipt (W-59, W-39): a compact chip at the end of the status
+ * line, a 44 px hit area around a small pill, with a chevron; its label is
+ * short words, or the shortened round id once the round has ended.
+ */
 .se-chip {
   position: relative;
   display: inline-flex;
@@ -894,6 +908,36 @@ h2.se-heading {
 .se-chip[data-kind="not-verified"] {
   border-color: var(--se-problem);
   color: var(--se-problem);
+}
+
+.se-receipt__label {
+  white-space: nowrap;
+}
+
+.se-chip[data-ended="true"] .se-receipt__label {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.se-glyph--chevron {
+  width: 0.75rem;
+  height: 0.75rem;
+  opacity: 0.8;
+}
+
+/* The receipt's full round id: monospace, selectable. */
+.se-receipt__round {
+  flex-direction: column;
+  align-items: start;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.se-receipt__id {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+  user-select: all;
 }
 
 /* Popovers: not dialogs, near-opaque, above the bar. */
@@ -1197,162 +1241,5 @@ h2.se-heading {
   .se-bar[data-edge="sweep"] .se-edge__mark {
     width: 100%;
     opacity: 0.6;
-  }
-}
-
-/*
- * A result (RFC-005): the status slot as two rows of 2.75rem that never
- * scroll. Row 1: the chip, the heading, and the payout (or the return to
- * player, or the expired line); row 2: the round id, its copy control, and the
- * verify link, as quiet text controls that keep their 2.75rem height. When an
- * error shows beside a result, the slot keeps its usual wrapping layout.
- */
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty]) {
-  display: grid;
-  grid-template-columns: repeat(3, max-content) minmax(0, 1fr);
-  grid-template-rows: repeat(2, 2.75rem);
-  align-items: center;
-  align-content: center;
-  gap: 0 0.75rem;
-  padding-block: 0;
-  overflow-y: auto;
-}
-
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  > .se-round,
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  .se-actions {
-  display: contents;
-}
-
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  > .se-chip-anchor {
-  grid-area: 1 / 1;
-}
-
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  > .se-status {
-  grid-area: 1 / 2;
-}
-
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  .se-round
-  > .se-field {
-  flex-wrap: nowrap;
-  align-items: center;
-  grid-row: 1;
-  white-space: nowrap;
-}
-
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  .se-round
-  > .se-field:has(.se-round-id) {
-  grid-area: 2 / 1;
-}
-
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  .se-round
-  [data-focus-key="copy-round-id"] {
-  grid-area: 2 / 2;
-}
-
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  .se-round
-  [data-focus-key="verify"] {
-  grid-area: 2 / 3;
-}
-
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  .se-round
-  .se-field__value {
-  font-weight: 600;
-  overflow-wrap: normal;
-}
-
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  .se-round
-  .se-button--quiet,
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  .se-round
-  .se-link {
-  min-width: 0;
-  padding: 0 0.25rem;
-  border-color: transparent;
-  background: transparent;
-  font-size: 0.8125rem;
-  text-decoration: underline;
-  text-decoration-color: var(--se-line);
-  text-underline-offset: 0.2em;
-}
-
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  .se-round
-  .se-button--quiet {
-  color: var(--se-muted);
-}
-
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  .se-round
-  .se-button--quiet:hover,
-.se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-  .se-round
-  .se-link:hover {
-  color: var(--se-strong);
-  text-decoration-color: currentcolor;
-}
-
-/*
- * A result on a phone: two rows that each lay out on their own (a line break
- * between them, not shared columns), with the payout's and the round id's
- * labels read, not shown, so both rows fit a 20rem slot.
- */
-@media (width < 35rem) {
-  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty]) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    align-content: center;
-    gap: 0 0.5rem;
-  }
-
-  .se-status-slot:has(> .se-round:not(:empty)):has(
-      > .se-alert[data-empty]
-    )::before {
-    content: "";
-    flex-basis: 100%;
-    order: 2;
-  }
-
-  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-    > :is(.se-chip-anchor, .se-status),
-  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-    .se-round
-    > .se-field:not(:has(.se-round-id)) {
-    order: 1;
-    min-height: 2.75rem;
-  }
-
-  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-    .se-round
-    > .se-field:has(.se-round-id),
-  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-    .se-round
-    [data-focus-key="copy-round-id"],
-  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-    .se-round
-    [data-focus-key="verify"] {
-    order: 3;
-  }
-
-  .se-status-slot:has(> .se-round:not(:empty)):has(> .se-alert[data-empty])
-    .se-round
-    > .se-field
-    .se-field__label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
   }
 }

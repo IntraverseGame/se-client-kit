@@ -3,11 +3,9 @@
 // focus moves to the result or error heading only after the player's own
 // action, never after a poll (except the one poll that brings the result of
 // the book round the player just started, W-55; book-result-focus.test.ts);
-// win, loss, and error carry text and an icon with
-// a text alternative beside the colour; every control has a text label in the
-// session's language, with the fallback; the stylesheet honours reduced
-// motion and reflows at 200 % zoom. The axe scan of every state, keyboard-only
-// play, and the real zoom run in the browser suite (T-14, T-14a).
+// win, loss, and error carry text and an icon with a text alternative beside
+// the colour; every control is labelled in the session's language, with the
+// fallback; the stylesheet honours reduced motion and 200 % zoom (T-14a's).
 
 import { readFileSync } from "node:fs";
 
@@ -18,6 +16,7 @@ import {
   buttonNamed,
   liveText,
   mount,
+  openReceipt,
   statusHeading,
 } from "./fixtures/app.ts";
 import {
@@ -122,6 +121,7 @@ describe("focus (W-46)", () => {
     const won = snapshotVector("coinflip-won");
     const ui = mount();
     ui.app.accept({ kind: "snapshot", snapshot: won }, "poll");
+    openReceipt(ui.host);
     buttonNamed(ui.host, m["action.copyRoundId"])?.focus();
     // A new round started elsewhere: the ended round's panel stays (W-40).
     ui.app.accept(

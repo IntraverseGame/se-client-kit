@@ -10,6 +10,7 @@ import { callTails, expect, test, toReady } from "./harness/round-play.ts";
 import { pickCheck, ROUND } from "./harness/round-vector.ts";
 import {
   alertPanel,
+  openReceipt,
   servedFor,
   statusHeading,
   TEXT,
@@ -37,6 +38,7 @@ test.describe("T-11: a loss", () => {
     await expect(
       statusHeading(page).getByRole("img", { name: "Loss" }),
     ).toHaveCount(1);
+    await openReceipt(page);
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
     // The next bet is offered beside the result (W-31, W-40).
@@ -77,6 +79,7 @@ test.describe("T-11: a loss", () => {
     const starts = servedFor(fakePlayApi, "startRound");
     expect(starts).toHaveLength(2);
     expect(betOf(starts[1]?.body)).toMatchObject({ value: "500", unit: "EUR" });
+    await openReceipt(page);
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toBeVisible();
     expect(await auditAccessibility(page)).toEqual([]);

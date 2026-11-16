@@ -390,12 +390,16 @@ Part of the [Wrapper spec](../wrapper.md), section
     it.
 
 - **W-39.** After a round ends (`won`, `lost`, or `canceled`) the Wrapper MUST
-  show the **round id** (the Snapshot's `roundId`, UUIDv7 text) with a control
-  to copy it (the round line shows it shortened, with the full id as its title
-  and its text for assistive technology, and the control copies the full id;
-  [W-57](./the-single-screen.md#the-screen)), and a **link to the verify page**
-  for that round. The verify page is the kit's
-  ([verify-page.md](../verify-page.md); decided by the backend's TPO,
+  offer the **round id** (the Snapshot's `roundId`, UUIDv7 text) with a control
+  to copy it, and a link to the verify page. Changed by the human, 2026-11-13
+  (RFC-005): the bar shows the shortened round id on the round receipt
+  ([W-59](./the-single-screen.md#the-round-receipt)), and the full id, the copy
+  control, and the verify link sit one click away in its popover, offered
+  whenever they were before. The copy control copies the full id (a cover
+  state's round line shows it shortened, with the full id as its title and its
+  text for assistive technology; [W-57](./the-single-screen.md#the-screen)), and
+  the **link to the verify page** is for that round. The verify page is the
+  kit's ([verify-page.md](../verify-page.md); decided by the backend's TPO,
   2026-10-18), and the link is `<verifyBaseUrl>/rounds/{roundId}`: the
   environment configuration's `verifyBaseUrl` with one trailing `/` removed if
   present, then `/rounds/`, then the round id in its canonical text form (it is
@@ -403,11 +407,13 @@ Part of the [Wrapper spec](../wrapper.md), section
   with `rel="noopener noreferrer"`; `verifyUrlFor` in `apps/wrapper` builds it.
   The page's content, and what it shows from the verify API's response, are the
   verify page spec's.
-- **W-40.** The round id and the link MUST stay visible until the player starts
-  another round, and a new round MUST NOT replace them before the player acts.
-  The next bet is offered beside them (W-31). They go once the Snapshot of the
-  round the player started from them is shown; a start that is refused (a typed
-  error) or not answered yet keeps them, and so does a Snapshot of another round
-  that the player did not start from them. Under autoplay (W-61) the player's
-  start of the run is that act for every round of the run: each round's id and
-  link replace the last one's without a new act (RFC-005 section 7).
+- **W-40.** The round id and the link MUST stay offered until the player starts
+  another round, and a new round MUST NOT replace them before the player acts:
+  the round receipt and its popover keep the ended round's (decided by the
+  human, 2026-11-13). The next bet is offered beside them (W-31). They go once
+  the Snapshot of the round the player started from them is shown; a start that
+  is refused (a typed error) or not answered yet keeps them, and so does a
+  Snapshot of another round that the player did not start from them. Under
+  autoplay (W-61) the player's start of the run is that act for every round of
+  the run: each round's id and link replace the last one's without a new act
+  (RFC-005 section 7).

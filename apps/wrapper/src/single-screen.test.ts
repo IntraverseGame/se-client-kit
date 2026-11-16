@@ -11,6 +11,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { openReceipt } from "./fixtures/app.ts";
 import { HELD, readOf, screenAfter, shownOf } from "./fixtures/screen.ts";
 import { problemVector } from "./fixtures/vectors.ts";
 import { messagesFor } from "./messages.ts";
@@ -72,8 +73,12 @@ describe("the single screen, a round's rows (T-25)", () => {
     const slot = screen.host.querySelector(".se-bar > .se-status-slot");
     const status = slot?.querySelector(":scope > .se-status");
     const alert = slot?.querySelector(':scope > .se-alert[role="alert"]');
-    // The slot is there, empty alert included, before any error shows.
-    expect(status?.nextElementSibling).toBe(alert);
+    // The slot is there, empty alert included, before any error shows; the
+    // round receipt ends the status line (W-59), the alert follows it.
+    expect(
+      status?.nextElementSibling?.classList.contains("se-chip-anchor"),
+    ).toBe(true);
+    expect(status?.nextElementSibling?.nextElementSibling).toBe(alert);
     expect(screen.host.querySelector(".se-bar > .se-alert")).toBeNull();
     screen.app.accept(
       { kind: "problem", problem: problemVector("problem-insufficient-funds") },
@@ -187,7 +192,8 @@ describe("the single screen, a round's rows (T-25)", () => {
   ] as const)(
     "%s: the frame inert (view only), the result, the round id, and Play again",
     (name, heading) => {
-      const shown = shownOf(screenAfter(readOf(name, HELD)));
+      const screen = screenAfter(readOf(name, HELD));
+      const shown = shownOf(screen);
       expect(shown).toMatchObject({
         frameShown: true,
         playable: false,
@@ -195,9 +201,14 @@ describe("the single screen, a round's rows (T-25)", () => {
         status: m[heading],
       });
       expect(shown.controls).toContain(m["action.playAgain"]);
-      expect(shown.controls).toContain(m["action.copyRoundId"]);
       expect(shown.controls).not.toContain(m["action.placeBet"]);
-      expect(shown.roundLine).toContain(m["label.roundId"]);
+      // The round id, its copy control, and the verify link: one click away,
+      // in the round receipt (W-39, decided by the human, 2026-11-13).
+      expect(shown.controls).not.toContain(m["action.copyRoundId"]);
+      const panel = openReceipt(screen.host);
+      expect(panel?.textContent).toContain(m["label.roundId"]);
+      expect(panel?.textContent).toContain(m["action.copyRoundId"]);
+      expect(panel?.textContent).toContain(m["action.verify"]);
     },
   );
 

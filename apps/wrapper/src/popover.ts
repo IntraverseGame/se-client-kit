@@ -1,8 +1,10 @@
-// A popover of the bar (RFC-005: the menu, the fairness chip, the autoplay
+// A popover of the bar (RFC-005: the menu, the round receipt, the autoplay
 // counts): a panel a button opens and closes. It is not a dialog and traps no
 // focus (W-45, W-46); the button says whether it is open (`aria-expanded`) and
 // which panel it controls; Escape closes it and returns the focus to the
-// button; a click outside it closes it. It never moves the focus on its own:
+// button; a click outside it closes it, and so does the page losing the focus
+// (a click in the game's frame never reaches the page), a scroll (the panel
+// would drift from its button), and a resize. It never moves the focus on its own:
 // opening leaves the focus on the button the player pressed.
 
 import type { Builder, Child } from "./dom.ts";
@@ -90,15 +92,21 @@ export const popover = (
   const onViewport = (): void => {
     close();
   };
+  const listen = (on: boolean): void => {
+    const method = on ? "addEventListener" : "removeEventListener";
+    view?.[method]("resize", onViewport);
+    view?.[method]("blur", onViewport);
+    doc[method]("scroll", onViewport, true);
+    doc[method]("pointerdown", outside, true);
+  };
 
   const close = (): void => {
     if (panel.hidden) return;
     if (topLayer && panel.matches(":popover-open")) panel.hidePopover();
-    view?.removeEventListener("resize", onViewport);
+    listen(false);
     panel.hidden = true;
     if (options.prefill !== true) panel.replaceChildren();
     button.setAttribute("aria-expanded", "false");
-    doc.removeEventListener("pointerdown", outside, true);
   };
 
   const fill = (): void => {
@@ -118,10 +126,9 @@ export const popover = (
     if (topLayer) {
       panel.showPopover();
       place();
-      view?.addEventListener("resize", onViewport);
     }
     button.setAttribute("aria-expanded", "true");
-    doc.addEventListener("pointerdown", outside, true);
+    listen(true);
   };
 
   button.addEventListener("click", () => {

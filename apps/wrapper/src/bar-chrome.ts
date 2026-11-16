@@ -2,7 +2,7 @@
 // its own for the whole session; the menu (bar-menu.ts) with the lobby and
 // the deposit as W-49f offers them, and the session summary; the lobby as a
 // visible control in the session-ended state, where it is the only way out
-// (W-49f: "Relaunch from the lobby"); and the fairness chip (W-59). A run of
+// (W-49f: "Relaunch from the lobby"); and the round receipt (W-59). A run of
 // autoplay counts as a call in flight for W-49f: no lobby and no deposit
 // until it stops.
 

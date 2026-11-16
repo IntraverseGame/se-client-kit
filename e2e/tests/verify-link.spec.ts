@@ -35,7 +35,12 @@ import {
   VERIFY_PAGE_NOT_BUILT,
 } from "./harness/verify-page.ts";
 import { matchingRound } from "./harness/verify-rounds.ts";
-import { launch, statusHeading, TEXT } from "./harness/wrapper-page.ts";
+import {
+  launch,
+  openReceipt,
+  statusHeading,
+  TEXT,
+} from "./harness/wrapper-page.ts";
 
 test.beforeAll(() => {
   if (!verifyPageBuilt()) throw new Error(VERIFY_PAGE_NOT_BUILT);
@@ -71,6 +76,7 @@ test.describe("VT-6: the Wrapper's verify link", () => {
     await callTails(page);
     await expect(statusHeading(page)).toHaveText(TEXT.won);
 
+    await openReceipt(page);
     const link = page.getByRole("link", { name: TEXT.verify });
     await expect(link).toHaveAttribute("href", verifyUrl(ROUND.roundId));
     const opened = context.waitForEvent("page");
@@ -130,6 +136,7 @@ test.describe("VT-6: the Wrapper's verify link", () => {
     await page.getByRole("button", { name: TEXT.placeBet }).click();
     await advanceUntil(page, shows(statusHeading(page), TEXT.won));
 
+    await openReceipt(page);
     const link = page.getByRole("link", { name: TEXT.verify });
     await expect(link).toHaveAttribute("href", verifyUrl(BOOK_ROUND_ID));
     const opened = context.waitForEvent("page");

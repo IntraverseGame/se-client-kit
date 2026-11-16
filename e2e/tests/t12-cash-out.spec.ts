@@ -44,6 +44,7 @@ import {
 import { amountOf } from "./harness/vectors.ts";
 import {
   launchAndStart,
+  openReceipt,
   servedFor,
   statusHeading,
   TEXT,
@@ -105,10 +106,11 @@ test.describe("T-12: a cash-out and a last-row win", () => {
 
     await expect(statusHeading(page)).toHaveText(TEXT.won);
     expect(CASH_OUT_PAYOUT).toEqual(QUOTE);
-    await expect(page.locator(".se-round")).toContainText(
+    await expect(page.locator(".se-status")).toContainText(
       `${TEXT.payout} ${CASH_OUT_PAYOUT.formatted}`,
     );
     await expect(page.getByText(CASH_OR_CRASH_ROUND_ID)).toBeVisible();
+    await openReceipt(page);
     await expect(page.getByRole("link", { name: TEXT.verify })).toHaveAttribute(
       "rel",
       "noopener noreferrer",
@@ -164,10 +166,11 @@ test.describe("T-12: a cash-out and a last-row win", () => {
     // The payout is the Snapshot's own, never one computed from a multiplier.
     const payout = amountOf(LAST_ROW.won, "payout");
     expect(payout).toEqual({ value: "289", formatted: "€2.89" });
-    await expect(page.locator(".se-round")).toContainText(
+    await expect(page.locator(".se-status")).toContainText(
       `${TEXT.payout} ${payout.formatted}`,
     );
     await expect(page.getByText(LAST_ROW_ROUND_ID)).toBeVisible();
+    await openReceipt(page);
     await expect(page.getByRole("link", { name: TEXT.verify })).toHaveAttribute(
       "rel",
       "noopener noreferrer",

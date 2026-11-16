@@ -10,7 +10,12 @@ import { auditAccessibility } from "./harness/accessibility.ts";
 import { callTails, expect, test, toReady } from "./harness/round-play.ts";
 import { pickCheck, ROUND } from "./harness/round-vector.ts";
 import { validVector } from "./harness/vectors.ts";
-import { servedFor, statusHeading, TEXT } from "./harness/wrapper-page.ts";
+import {
+  openReceipt,
+  servedFor,
+  statusHeading,
+  TEXT,
+} from "./harness/wrapper-page.ts";
 
 /** The won answer, with its `payout`. */
 const WON = "coinflip-won-payout";
@@ -44,9 +49,10 @@ test.describe("T-10: a win", () => {
     });
     await callTails(page);
     await expect(statusHeading(page)).toHaveText(TEXT.won);
-    await expect(page.locator(".se-round")).toContainText(
+    await expect(page.locator(".se-status")).toContainText(
       `${TEXT.payout} ${payoutFormatted()}`,
     );
+    await openReceipt(page);
     await expect(page.getByText(ROUND.roundId)).toBeVisible();
     await expect(page.getByRole("link", { name: TEXT.verify })).toHaveAttribute(
       "rel",

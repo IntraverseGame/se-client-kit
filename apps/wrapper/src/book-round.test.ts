@@ -4,10 +4,8 @@
 // string operations, polling only while `starting`, the game frame at `won`
 // and `lost` until the next start and hidden otherwise, the notice in its
 // place when the `playback` copy failed closed, and the final changed-session
-// state with its lobby row (W-49f). The Snapshots are the vendored
-// `book-playback-won-rtp` vector and the same round's earlier statuses built
-// from it: these tests keep their own fixture round, apart from the vendored
-// book round of `book-lifecycle-*` that T-24 plays.
+// state with its lobby row (W-49f), on `book-playback-won-rtp` and statuses
+// built from it, apart from T-24's `book-lifecycle-*` round.
 
 import { describe, expect, it } from "vitest";
 
@@ -17,6 +15,7 @@ import {
   coverHeading,
   linkNamed,
   mount,
+  openReceipt,
   statusHeading,
 } from "./fixtures/app.ts";
 import { snapshotVector } from "./fixtures/vectors.ts";
@@ -130,6 +129,7 @@ describe("what a book round shows (W-54)", () => {
     // game's display, so the Wrapper never shows it.
     expect(allText(ui.host)).not.toContain("1.94×");
     expect(allText(ui.host)).not.toContain("×1.94");
+    openReceipt(ui.host);
     expect(allText(ui.host)).toContain(ROUND_ID);
     expect(linkNamed(ui.host, m["action.verify"])).toBeDefined();
   });
@@ -246,6 +246,7 @@ describe("the game frame on a book round (W-55)", () => {
     // The Wrapper's own view stays: the result, the payout, the round id.
     expect(statusHeading(ui.host)).toBe(m["status.won"]);
     expect(allText(ui.host)).toContain("€1.94");
+    openReceipt(ui.host);
     expect(allText(ui.host)).toContain(ROUND_ID);
     ui.app.gameCopied(true);
     expect(noticeShown(ui)).toBe(false);

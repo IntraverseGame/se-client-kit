@@ -51,6 +51,18 @@ const must = <T>(value: T | null | undefined): T => {
   return value;
 };
 
+/** A Space held down: the key repeats. */
+const heldSpace = (target: HTMLElement): void => {
+  target.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: " ",
+      repeat: true,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+};
+
 const space = (target: HTMLElement): void => {
   target.dispatchEvent(
     new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }),
@@ -62,6 +74,15 @@ describe("the Space shortcut (Q5)", () => {
     const ui = barAfter("coinflip-idle");
     ui.bar.focus();
     expect(document.activeElement).toBe(ui.bar);
+    space(ui.bar);
+    expect(ui.started).toHaveLength(1);
+  });
+
+  it("starts nothing on a held-down Space (a repeated key)", () => {
+    const ui = barAfter("coinflip-idle");
+    ui.bar.focus();
+    heldSpace(ui.bar);
+    expect(ui.started).toEqual([]);
     space(ui.bar);
     expect(ui.started).toHaveLength(1);
   });
@@ -175,7 +196,7 @@ describe("the round line under autoplay (W-40, W-61)", () => {
   it("replaces each round's id with the next one's, with no new act", () => {
     const ui = barAfter("book-lifecycle-won", HELD);
     const first = must(snapshotVector("book-lifecycle-won").roundId);
-    expect(ui.host.querySelector(".se-round")?.textContent).toContain(
+    expect(ui.host.querySelector(".se-receipt")?.textContent).toContain(
       first.slice(-8),
     );
     ui.app.autoplayRun({ left: 3 });

@@ -1,5 +1,5 @@
 // The UI state's smaller transitions: keeping a round that ended as the ended
-// round (W-40, with its last verdict for the fairness chip, W-59), leaving it
+// round (W-40, with its last verdict for the round receipt, W-59), leaving it
 // once another round shows (W-40), clearing a typed error when the player tries again (W-42), and
 // whether the game's latest copy was built (W-38, W-55). wrapper-state.ts
 // re-exports them with the rest of the state's transitions.

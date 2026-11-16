@@ -3,9 +3,10 @@
 // link opens with `noopener noreferrer`, and the next bet is offered beside
 // them from that Snapshot's own `bet` (W-31: no separate "new round" step).
 // They stay while later Snapshots arrive and through a refused start, and go
-// once the round the player started from them shows. The round line shows the
-// round id shortened to "…" and its last eight characters, with the full id
-// as its title and as the text an assistive technology reads (W-57).
+// once the round the player started from them shows. They are the round
+// receipt's (W-59; decided by the human, 2026-11-13): its chip shows the round
+// id shortened to "…" and its last eight characters, its accessible name the
+// full id, and its popover the full id, the copy control, and the verify link.
 
 import { describe, expect, it } from "vitest";
 
@@ -13,6 +14,8 @@ import {
   buttonNamed,
   linkNamed,
   mount,
+  openReceipt,
+  receiptRoundId,
   statusHeading,
 } from "./fixtures/app.ts";
 import { snapshotVector, withFields } from "./fixtures/vectors.ts";
@@ -21,21 +24,8 @@ import type { SnapshotInput } from "./round-input.ts";
 
 const m = messagesFor("en").messages;
 
-/** The full round id the round line names (its title; W-57 shortens the view). */
-const fullRoundId = (host: ParentNode): string | null | undefined =>
-  host.querySelector(".se-round-id")?.getAttribute("title");
-
-/** The text an assistive technology reads: what is not `aria-hidden`. */
-const spokenText = (element: Element): string =>
-  [...element.childNodes]
-    .map(node =>
-      node instanceof Element
-        ? node.getAttribute("aria-hidden") === "true"
-          ? ""
-          : spokenText(node)
-        : (node.textContent ?? ""),
-    )
-    .join("");
+/** The full round id the receipt's popover names (W-39). */
+const fullRoundId = receiptRoundId;
 
 const rendered = (snapshot: SnapshotInput) => {
   const ui = mount();
@@ -62,6 +52,7 @@ describe("the round id and the verify link (W-39, W-40)", () => {
       const snapshot = snapshotVector(name);
       const ui = rendered(snapshot);
       expect(fullRoundId(ui.host)).toBe(snapshot.roundId);
+      // One click away: in the receipt's popover (W-39, 2026-11-13).
       const link = linkNamed(ui.host, m["action.verify"]);
       expect(link?.getAttribute("href")).toBe(
         `https://verify.example/rounds/${snapshot.roundId}`,
@@ -74,20 +65,22 @@ describe("the round id and the verify link (W-39, W-40)", () => {
     },
   );
 
-  it("shows the round id shortened, names it in full, and copies it in full (W-57)", async () => {
+  it("shows the round id shortened on the receipt, names it in full, and copies it in full (W-57, W-59)", async () => {
     const snapshot = snapshotVector("coinflip-won");
     const roundId = String(snapshot.roundId);
     expect(roundId.length).toBeGreaterThan(8);
     const ui = rendered(snapshot);
-    const id = ui.host.querySelector(".se-round .se-round-id") as Element;
-    expect(id).not.toBeNull();
+    const chip = ui.host.querySelector(".se-receipt") as Element;
+    expect(chip).not.toBeNull();
     // Shown: "…" and the last eight characters.
-    const shown = id.querySelector('[aria-hidden="true"]');
-    expect(shown?.textContent).toBe(`…${roundId.slice(-8)}`);
-    // Read by an assistive technology, and its title: the full id.
-    expect(spokenText(id)).toBe(roundId);
-    expect(id.querySelector(".se-visually-hidden")?.textContent).toBe(roundId);
-    expect(id.getAttribute("title")).toBe(roundId);
+    expect(chip.textContent).toBe(`…${roundId.slice(-8)}`);
+    // Read by an assistive technology: the full id, in the accessible name.
+    expect(chip.getAttribute("aria-label")).toContain(roundId);
+    // Its popover: the full id, monospace and selectable.
+    openReceipt(ui.host);
+    expect(
+      ui.host.querySelector(".se-chip-anchor .se-receipt__id")?.textContent,
+    ).toBe(roundId);
     // Copied: the full id.
     buttonNamed(ui.host, m["action.copyRoundId"])?.click();
     await ui.settle();
@@ -98,7 +91,10 @@ describe("the round id and the verify link (W-39, W-40)", () => {
     "%s shows no round id panel before a round ended",
     name => {
       const ui = rendered(snapshotVector(name));
-      expect(ui.host.querySelector(".se-round .se-round-id")).toBeNull();
+      openReceipt(ui.host);
+      expect(ui.host.querySelector(".se-receipt__id")).toBeNull();
+      expect(linkNamed(ui.host, m["action.verify"])).toBeUndefined();
+      expect(buttonNamed(ui.host, m["action.copyRoundId"])).toBeUndefined();
     },
   );
 
@@ -150,7 +146,7 @@ describe("the round id and the verify link (W-39, W-40)", () => {
       roundId: "01927c5e-8b3a-7f21-9c4d-000000000002",
     });
     ui.app.accept({ kind: "snapshot", snapshot: next }, "player");
-    expect(ui.host.querySelector(".se-round-id")).toBeNull();
+    expect(fullRoundId(ui.host)).toBeUndefined();
     expect(statusHeading(ui.host)).toBe(m["status.starting"]);
   });
 

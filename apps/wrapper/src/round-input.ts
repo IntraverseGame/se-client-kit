@@ -190,7 +190,7 @@ export type RoundCheck = {
     | "chain-unverified";
   /**
    * When the verdict failed: which check refused the round, a machine code the
-   * fairness chip labels (W-48, W-59), and why the tip check failed.
+   * round receipt labels (W-48, W-59), and why the tip check failed.
    */
   readonly failure?: RoundFailure;
   readonly tipFailure?: RoundTipFailure;

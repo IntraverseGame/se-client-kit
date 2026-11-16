@@ -1,5 +1,5 @@
 // The texts of the control bar, version 2 (RFC-005, W-48): the stepper, the
-// start control and autoplay, the fairness chip and its popover, the menu and
+// start control and autoplay, the round receipt and its popover, the menu and
 // the session summary. Per language, like messages.ts, whose catalogue they
 // join. The chip's words claim only what the shell checked (W-59): never
 // "Verified" or "Provably fair".
@@ -36,6 +36,11 @@ export type BarMessageKey =
   | "chip.notVerified"
   | "chip.recorded"
   | "chip.openLabel"
+  | "receipt.fairness"
+  | "receipt.checking"
+  | "receipt.checked"
+  | "receipt.round"
+  | "receipt.openEnded"
   | "pop.how"
   | "pop.howConfig"
   | "pop.howKey"
@@ -120,6 +125,11 @@ export const EN_BAR: BarMessages = {
   "chip.notVerified": "Not verified",
   "chip.recorded": "Recorded",
   "chip.openLabel": "show what was checked",
+  "receipt.fairness": "Fairness",
+  "receipt.checking": "Checking…",
+  "receipt.checked": "Checked",
+  "receipt.round": "round",
+  "receipt.openEnded": "show the checks, copy the round ID, or verify",
   "pop.how": "How it's checked",
   "pop.howConfig":
     "Each round is checked here, in your browser, before you can play it: the checks below, against values this page was set up with.",

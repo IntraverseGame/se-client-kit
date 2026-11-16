@@ -46,7 +46,7 @@ export type EndedRound = {
    */
   readonly status: Extract<RoundStatus, "won" | "lost" | "canceled"> | "ended";
   /**
-   * The shell's last verdict of the round when it ended, for the fairness chip
+   * The shell's last verdict of the round when it ended, for the round receipt
    * (W-59): a failure stays a failure after the round ends.
    */
   readonly verdict?: Pick<RoundCheck, "verdict" | "failure" | "tipFailure">;

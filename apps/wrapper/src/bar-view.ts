@@ -1,11 +1,11 @@
 // The control bar (W-57, RFC-005), which changes in place: one line of
 // controls in the visual and tab order of the menu, the balance, the bet
 // stepper, the status slot, and the start control, over a 2 px state edge
-// (W-60). The status slot holds the fairness chip (W-59), the status line (its
-// heading, the multiplier, and at most one line of detail), after it on the
-// same row the alert line (an error that does not stop the round), and then
-// the round line (the payout, and the round id with its copy control and the
-// verify link once a round has ended, W-39). W-26a's badge sits in a row of
+// (W-60). The status slot holds the status line (its heading, the multiplier
+// or a result's payout, and at most one line of detail), the round receipt at
+// its end (W-59: the round id, its copy control, and the verify link once a
+// round has ended, W-39), after them on the same row the alert line (an error
+// that does not stop the round), and a cover state's round line. W-26a's badge sits in a row of
 // its own above, for the whole session. A slot with nothing to show stays
 // empty, its space kept; no control shows disabled for a state that does not
 // offer it. When a cover state owns the page's alert region, the bar's error
@@ -32,7 +32,6 @@ import {
   alertContent,
   alertView,
   blockingView,
-  roundIdAndVerify,
 } from "./state-views.ts";
 import type { ViewOptions } from "./view-options.ts";
 import { isFinal, type WrapperState } from "./wrapper-state.ts";
@@ -76,10 +75,11 @@ export const createBarView = (
   const alert = el("div", { class: "se-alert", role: "alert" });
   const roundLine = el("div", { class: "se-round" });
   // The alert line overlays the status (W-57): it sits in the status slot,
-  // after the status heading on the same row; the round line follows.
+  // after the status line on the same row. The round receipt ends the status
+  // line (W-59); a state on the cover may give a round line after them.
   const statusSlot = el("div", { class: "se-status-slot" }, [
-    chrome.chip,
     status,
+    chrome.chip,
     alert,
     roundLine,
   ]);
@@ -129,22 +129,15 @@ export const createBarView = (
             detail,
           )
         : blockingView(el, doc, m, state, options, announce);
-    const ended = isFinal(state) ? undefined : state.endedRound;
+    // The ended round's id, its copy control, and the verify link (W-39,
+    // W-40) are the round receipt's (bar-chrome.ts); a state on the cover
+    // gives its own round line.
     return {
       ...shown,
       status:
         !showsRound && detail !== undefined && shown.status.length > 0
           ? [...shown.status, el("p", { class: "se-detail" }, [detail])]
           : shown.status,
-      // The ended round's id and verify link (W-39, W-40), beside its result;
-      // a blocking state's bar gives its own round line.
-      round:
-        ended === undefined || !showsRound
-          ? shown.round
-          : [
-              ...shown.round,
-              ...roundIdAndVerify(el, m, ended.roundId, options, announce),
-            ],
     };
   };
 
