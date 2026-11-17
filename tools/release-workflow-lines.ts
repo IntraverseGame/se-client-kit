@@ -1,5 +1,6 @@
-// The release workflow (.github/workflows/release.yml) and the production
-// deploy it calls (.github/workflows/pages-prod.yml), read with the
+// The release workflow (.github/workflows/release.yml), the production
+// configuration check (.github/workflows/pages-prod-check.yml) and the
+// production deploy (.github/workflows/pages-prod.yml) it calls, read with the
 // block-style reader of tools/workflow-text.ts, and the helpers their tests
 // share (tools/release-workflow.test.ts, tools/release-workflow-split.test.ts,
 // tools/release-mode.test.ts, tools/release-assets-guard.test.ts,
@@ -30,6 +31,7 @@ export const workflow = (name: string): Line[] =>
 
 export const release = workflow("release.yml");
 export const prod = workflow("pages-prod.yml");
+export const prodCheck = workflow("pages-prod-check.yml");
 
 export const only = <T>(values: readonly T[], what: string): T => {
   const [value] = values;

@@ -38,7 +38,10 @@ import {
 // the releases step creates releases, and the assets job only uploads and edits
 // the notes.
 
-const STEPPED_JOBS = jobNames(release).filter(job => job !== "production");
+// Every job but the two that call a reusable workflow (no steps of their own).
+const STEPPED_JOBS = jobNames(release).filter(
+  job => job !== "production" && job !== "prod-check",
+);
 
 /** The `ls-remote` lines of job `job`'s scripts. */
 const lookups = (job: string): string[] =>

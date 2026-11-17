@@ -1,10 +1,16 @@
 // The environment configuration documents of the two Pages sites (ADR-008;
 // specs/client-kit.md, The Pages sites' configuration): built from the
-// `pages-stage` environment's values and validated with the Wrapper's own
-// validator (apps/wrapper/src/environment-config.ts, the schema of
-// specs/wrapper.md, Configuration), each for its own site's origin. Pure: the
-// CLI (apps/wrapper/pages-config-cli.ts) reads the environment and writes the
+// configuration environment's values (`pages-stage`, or `pages-prod-config`
+// for production) and validated with the Wrapper's own validator
+// (apps/wrapper/src/environment-config.ts, the schema of specs/wrapper.md,
+// Configuration), each for its own site's origin. Pure: the CLI
+// (apps/wrapper/pages-config-cli.ts) reads the environment and writes the
 // files.
+//
+// Beyond the validator (pages-config-rules.ts; ADR-009, amendment note of
+// 2026-11-17): in both modes, every origin the deploy's headers step reads must
+// be one that step accepts; production mode (`production: true`) also requires
+// `environment` to be `production`, so W-26a's quorum rule applies.
 //
 // The two documents differ only where the site differs:
 // - `playApiBaseUrl`: the Wrapper's origin plus `/play/v1` in both (the
@@ -24,6 +30,7 @@
 // An issue names an input or a field and a code, never a value: the values are
 // hostnames kept out of the logs.
 
+import { headersOriginIssues, productionIssues } from "./pages-config-rules.ts";
 import { earlierPinIssues } from "./pages-earlier-pins.ts";
 import {
   ENVIRONMENT_CONFIG_FIELDS,
@@ -61,6 +68,15 @@ export const CHAIN_PIN_FIELDS: readonly string[] = Object.freeze([
   "minRpcQuorum",
   "tipLagMargin",
 ]);
+
+export type PagesConfigOptions = {
+  /**
+   * Production's own rule too (`environment` must be `production`,
+   * pages-config-rules.ts): the release's check and the production deploy set
+   * it; staging's job does not.
+   */
+  readonly production?: boolean;
+};
 
 export type PagesConfigs = {
   /** The Wrapper site's `environment-config.json`. */
@@ -140,6 +156,7 @@ const ordered = (document: Document): string =>
 /** Builds and validates both documents, or names every problem. */
 export const buildPagesConfigs = (
   inputs: PagesConfigInputs,
+  { production = false }: PagesConfigOptions = {},
 ): PagesConfigResult => {
   const issues: string[] = [];
   const wrapperOrigin = readSiteOrigin(inputs.PAGES_WRAPPER_ORIGIN);
@@ -194,6 +211,8 @@ export const buildPagesConfigs = (
     verifyBaseUrl: `${verifierOrigin}/verify`,
   };
   issues.push(
+    ...(production ? productionIssues(shared) : []),
+    ...headersOriginIssues(shared),
     ...earlierPinIssues(
       earlierPins,
       { ...shared, verifyApiBaseUrl: `${wrapperOrigin}/verify/v1` },
