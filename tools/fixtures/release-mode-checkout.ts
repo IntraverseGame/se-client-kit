@@ -4,8 +4,9 @@
 // six publishable manifests and `.changeset/`, with a stub `gh` that applies
 // the step's `--jq` filter to the pull requests with jq, as
 // `gh api --paginate --jq` does (or a test's own `gh`), and a stub `git` that
-// answers `ls-remote` from a list of refs, matching the pattern's tail as git
-// does.
+// answers `ls-remote` from a list of refs, matching the patterns' tails as git
+// does: a ref is listed when `/<ref>` ends with `/<pattern>` for one of the
+// patterns, so a peeled `<ref>^{}` line only when `<ref>^{}` is asked for.
 
 import {
   chmodSync,
@@ -47,10 +48,14 @@ const GIT = `#!/bin/sh
 set -eu
 echo "git $*" >> "$STUB_DIR/calls"
 if [ -e "$STUB_DIR/git-error" ]; then echo "fatal: unable to access" >&2; exit 128; fi
-for last; do :; done
+while [ "$1" != --tags ]; do shift; done
+shift 2
 touch "$STUB_DIR/refs"
-awk -v p="$last" '{ n = length($2); m = length(p)
-  if (substr($2, n - m + 1) == p || substr($2, n - m - 2) == p "^{}") print }' "$STUB_DIR/refs"
+awk -v patterns="$*" 'BEGIN { n = split(patterns, p, " ") }
+  n == 0 { print; next }
+  { r = "/" $2
+    for (i = 1; i <= n; i++) { t = "/" p[i]
+      if (length(r) >= length(t) && substr(r, length(r) - length(t) + 1) == t) { print; next } } }' "$STUB_DIR/refs"
 `;
 
 export type Pull = {
