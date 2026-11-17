@@ -17,37 +17,43 @@ The kit's tests are the executable half of
 **CI jobs** (GitHub Actions, one required aggregate job `ci-ok`): `lint` and
 `format`; `typecheck`; `unit` (`pnpm test`); `allow-list` (the dependency
 allow-list); `contracts` (the hash check, the regenerated-types diff, and the
-import check that the test-only entry is imported only by tests);
-`contracts-drift` ([rule 3](./how-the-kit-gets-its-contracts.md), when a source
-is published); `build` (the bundle, its manifest, a size budget, a check that
-the same bundle is what e2e runs and what is released (no test or
-per-environment build), and a check that no vector reaches any bundle or release
-output); `e2e-fake` (Playwright against the in-repo fake Play API, which answers
-from the contract's vectors, one job per browser project: Chromium, Firefox, and
-WebKit); `audit` (`pnpm audit --prod`, failing on high and critical advisories
-only); `dependency-review` (pull requests only); `release-dry-run` (the release
-dry run: changesets applied on a scratch copy, the five tarballs packed and
-checked and imported as a consumer would, the Wrapper artifact built twice with
-one digest, and held to the size budget; no token, no network). The release
-itself is a separate workflow, `release` (changesets/action on every push to
-`main`, provenance: `changesets-mode` decides, `version` opens the bump pull
-request, `publish` (in the protected `release` environment) publishes and tags,
-and `wrapper-build`, `attest`, `wrapper-assets`, and `production` attest the
+import check that the test-only entry is imported only by tests); `build` (the
+bundle, its manifest, a size budget, a check that the same bundle is what e2e
+runs and what is released (no test or per-environment build), and a check that
+no vector reaches any bundle or release output); `e2e-fake` (Playwright against
+the in-repo fake Play API, which answers from the contract's vectors, one job
+per browser project: Chromium, Firefox, and WebKit); `audit`
+(`pnpm audit --prod`, failing on high and critical advisories only);
+`dependency-review` (pull requests only); `release-dry-run` (the release dry
+run: changesets applied on a scratch copy, the five tarballs packed and checked
+and imported as a consumer would, the Wrapper artifact built twice with one
+digest, and held to the size budget; no token, no network). The release itself
+is a separate workflow, `release` (changesets/action on every push to `main`,
+provenance: `changesets-mode` decides, `version` opens the bump pull request,
+`publish` (in the protected `release` environment) publishes and tags, and
+`wrapper-build`, `attest`, `wrapper-assets`, and `production` attest the
 Wrapper, attach it to its release, and deploy it;
-[release runbook](../../runbook/client-kit-release.md#release)).
+[release runbook](../../runbook/client-kit-release.md#release)). The contracts
+drift check is a separate workflow too, `contracts-drift` (once a day and on
+demand, never on a pull request, not part of `ci-ok`): it compares
+`contracts.lock.json` with the manifest each environment serves, and fails on a
+changed vector, on an environment it could not check (a network error or timeout
+after its retry, a 4xx or 5xx, a body over its limit, or a manifest it cannot
+read), and when neither origin is set
+([The contracts drift job](./the-contracts-drift-job.md)).
 
 Today `contracts` runs the test-only-entry import check, the hash check against
 `contracts.lock.json`, and the generated-files diff (the Snapshot types, the
-Play API document's types, and the vector catalog). `contracts-drift` is not
-defined yet. `build` builds every workspace (the Wrapper's build writes and
-checks its manifest), and the job also runs `pnpm check:build-output` (the
-no-vector content check, now over the vendored vectors),
-`pnpm check:package-files`, and `pnpm check:size-budget` (below). `e2e-fake` is
-a matrix of three jobs side by side, one per Playwright project (`chromium`,
-`firefox`, `webkit`; their checks are named `e2e-fake (chromium)` and so on),
-all aggregated by `ci-ok` (the `main` ruleset requires no status check, so
-`ci-ok` is the one check to keep green before merging); each installs only its
-own browser (`playwright install --with-deps <project>`, at the
+Play API document's types, and the vector catalog). `contracts-drift` is
+specified and not built yet (#138). `build` builds every workspace (the
+Wrapper's build writes and checks its manifest), and the job also runs
+`pnpm check:build-output` (the no-vector content check, now over the vendored
+vectors), `pnpm check:package-files`, and `pnpm check:size-budget` (below).
+`e2e-fake` is a matrix of three jobs side by side, one per Playwright project
+(`chromium`, `firefox`, `webkit`; their checks are named `e2e-fake (chromium)`
+and so on), all aggregated by `ci-ok` (the `main` ruleset requires no status
+check, so `ci-ok` is the one check to keep green before merging); each installs
+only its own browser (`playwright install --with-deps <project>`, at the
 `@playwright/test` version the lockfile pins; before it, apt is set to time out
 a stalled download after 30 seconds and retry it three times, and to wait up to
 a minute for the package lock, because the download has hung until the job's

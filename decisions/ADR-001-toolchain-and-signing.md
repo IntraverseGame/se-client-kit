@@ -12,7 +12,8 @@
   publishing from the `release` environment; amended 2026-10-28 (#143): `wireit`
   upgraded to 0.15.0; amended 2026-11-11: the generator's `undici` override
   raised from 6.29.0 to 6.29.1 for four advisories; amended 2026-11-16: the
-  `wireit@0.15.0` release-age waiver removed)
+  `wireit@0.15.0` release-age waiver removed; amended 2026-11-17 (#138):
+  decision 5, the backend's publication does not replace vendoring)
 
 Amendment note (2026-10-16, toolchain pull request): decision 3 and the
 dependency table named `prettier` for Markdown and YAML because `oxfmt` did not
@@ -130,6 +131,19 @@ above) is removed from `pnpm-workspace.yaml`, since 0.15.0 is past the seven-day
 window; the release age now has no exception. The trust exception for
 `chokidar@4.0.3` stays until wireit moves off `chokidar` 4. No dependency or
 version changes.
+
+Amendment note (2026-11-17, decided by the human, #138): decision 5 said that
+when the backend publishes its contracts, the `contracts` package is replaced by
+that dependency. The backend publishes the files the kit vendors at public
+locations, with a manifest of their SHA-256, and not as a package. That
+publication does not replace vendoring: the kit keeps copying each file from a
+pinned commit, reviewed in a pull request and recorded in the lock, and a
+scheduled `contracts-drift` job compares the lock with the manifest each
+environment serves
+([The contracts drift job](../specs/client-kit/the-contracts-drift-job.md)).
+Replacing `contracts` with a published package (option B of
+[wrapper.md OQ-6](../specs/wrapper.md#decided-questions)) stays possible and
+would need its own ADR. No dependency changes.
 
 ## Context
 

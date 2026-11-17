@@ -66,6 +66,8 @@ the specs' headings.
     `SigningError`, the transcript helper, the vectors
   - [How the kit gets its contracts](./client-kit/how-the-kit-gets-its-contracts.md)
     — vendoring, the lock file, verification, drift
+  - [The contracts drift job](./client-kit/the-contracts-drift-job.md) — the
+    scheduled comparison of the lock with what each environment serves
   - [Versioning and compatibility](./client-kit.md#versioning-and-compatibility)
   - [Supply chain](./client-kit/supply-chain.md) — install policy, the
     dependency allow-list, provenance, the reproducible build
