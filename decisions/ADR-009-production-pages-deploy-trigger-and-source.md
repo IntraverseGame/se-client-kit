@@ -6,7 +6,9 @@
 - Date: 2026-10-28 (proposed and decided by the human the same day; implemented
   with #133 in `.github/workflows/release.yml` and
   `.github/workflows/pages-prod.yml`, whose implementation choices the human
-  accepted on 2026-10-28)
+  accepted on 2026-10-28; amended 2026-11-17: a failed production deploy, the
+  window case included, is recovered by a dispatch from `main` with the tag, not
+  by a re-run)
 - Deciders: the human maintainer (the release flow, the deploy source, the
   production environment), the infrastructure owner (the production projects,
   the `pages-prod` environments, the token), the org owners (the GitHub and npm
@@ -336,6 +338,21 @@ pending job per group). If that happens, use "re-run failed jobs" on M's run
 within 30 days; after that, redeploy by M's tag. Staging is unchanged: every
 push to `main` still deploys `main`'s own build.
 
+Amendment note (2026-11-17, production deploy recovery): the window case above,
+and any failed production deploy of a release run, is recovered by dispatching
+`pages-prod.yml` with M's tag, not by re-running M's run. "Re-run failed jobs"
+re-runs only the failed jobs and those after them, and GitHub keeps the outputs
+of the jobs it does not re-run, so when `deploy-prod` failed it downloads the
+worker and the two configuration documents that `prod-worker` and `config-prod`
+uploaded with a one-day retention, and fails at the download once they are gone.
+"Re-run all jobs" runs `changesets-mode` again, which finds every version tagged
+and ends with "nothing to release", so `publish` and every job after it
+(`production` included) are skipped and the run ends green with nothing
+deployed. The dispatch must be from `main`: from another branch `release-check`
+(`if: github.ref == 'refs/heads/main'`) and every job after it are skipped, and
+the run also ends green with nothing deployed. The decision is unchanged; the
+procedure is in the runbook (Deploy to Cloudflare Pages, Production).
+
 The caller's `production` job grants the most the called jobs may ask for
 (`contents: read`, `attestations: read`, `actions: read`); each job of
 `pages-prod.yml` asks for its own, smaller set.
@@ -479,7 +496,8 @@ Kept:
   it fails visibly, with no wrong bytes, tags, or deploys.
 - **A redeploy can race a release's deploy** in the window described in decision
   3; "re-run failed jobs" on M's run within 30 days, or redeploy by M's tag
-  after that.
+  after that (amended 2026-11-17: redeploy by M's tag, never a re-run; see the
+  amendment note in decision 3).
 - **The 30-day re-run limit.** A release run that published nothing because
   publishing was off, or published without tags, is recovered only by re-running
   M's run within 30 days; the runbook rule (above) keeps that from being needed.
@@ -502,7 +520,8 @@ Kept:
   the releases. A failed `attest` or `wrapper-assets` leaves the Wrapper's
   release without assets and production unchanged; it is fixed by re-running
   those jobs, never by attesting from elsewhere. A failed deploy is re-run, or
-  redeployed by tag.
+  redeployed by tag (amended 2026-11-17: redeploy by M's tag, never a re-run;
+  see the amendment note in decision 3).
 - **Rollback** is a Pages rollback of each production project, or a redeploy of
   an earlier release by its tag, verified the same way. A pending release
   approval, or even a short "nothing to release" run, blocks redeploy-by-tag

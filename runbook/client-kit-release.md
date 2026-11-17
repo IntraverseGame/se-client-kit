@@ -83,6 +83,10 @@ org owners apply the settings; ask them for each.
    (Release, step 3). `changesets-mode` and `publish` read the tags before
    releasing, so a run never tries to overwrite one. The `version` and `publish`
    jobs run repository tooling and hold `contents: write` (accepted by ADR-009).
+   Keep **immutable releases** off (off as of 2026-11-17;
+   `gh api 'repos/{owner}/{repo}/immutable-releases'` reads it): `publish`
+   creates each release published, and `wrapper-assets` attaches the Wrapper's
+   tar afterwards with `gh release upload`, which an immutable release refuses.
 3. **Secret scanning and push protection** on (they are). Dependabot alerts and
    security updates on. **Private vulnerability reporting** on, so a reporter
    can open a private advisory from the Security tab
@@ -809,16 +813,31 @@ until the publish path is on (#154).
 **Redeploy, roll back, or roll forward by tag.** Run the "Pages production"
 workflow by hand from `main` with the tag
 `@intraverse/se-client-wrapper@<version>` of a released Wrapper: it goes through
-the same checks. **The release always wins**: the dispatch refuses while a run
-of the release workflow is requested, queued, pending, waiting for its
-reviewers, or in progress (even a short "nothing to release" run), so it never
-replaces a release's pending deploy; run it again once that run has finished. A
-window remains (the check and the deploy are not atomic): if a release run that
-started after the check has its pending `deploy-prod` replaced by the
-dispatch's, use "re-run failed jobs" on that release run within 30 days, or
-redeploy its tag after that. A **Pages rollback** of each production project
+the same checks. Choose `main` in "Use workflow from"
+(`gh workflow run pages-prod.yml --ref main -f tag=<tag>`): from any other
+branch `release-check` is skipped, every job after it skips, and the run ends
+green with nothing deployed. **The release always wins**: the dispatch refuses
+while a run of the release workflow is requested, queued, pending, waiting for
+its reviewers, or in progress (even a short "nothing to release" run), so it
+never replaces a release's pending deploy; run it again once that run has
+finished. A window remains (the check and the deploy are not atomic): if a
+release run that started after the check has its pending `deploy-prod` replaced
+by the dispatch's, redeploy that release's tag the same way. A **Pages
+rollback** of each production project
 ([Roll back or deprecate](#roll-back-or-deprecate)) is never blocked by a
 release run.
+
+**A failed production deploy is redeployed by tag, never by re-running the
+release run.** "Re-run failed jobs" re-runs only the failed jobs and those after
+them, and GitHub keeps the outputs of the jobs it does not re-run, so when
+`deploy-prod` failed it downloads `_worker.js` and the two configuration
+documents from the earlier attempt, which `prod-worker` and `config-prod` keep
+one day: after a day it fails at the download. "Re-run all jobs" runs
+`changesets-mode` again, which finds every version tagged and ends with "nothing
+to release", so `publish` and every job after it (`production` included) are
+skipped and the run ends green with nothing deployed. Fix the cause (a missing
+`pages-prod` secret, a configuration value, the Pages project), then dispatch
+"Pages production" from `main` with the release's tag, as above.
 <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). The production projects and hostnames, the secrets of the `pages-prod` and configuration environments, the operator and game origins, the RPC providers, and `tipLagMargin`; shared out of band, never written in this repository. -->
 
 **After the first deploy** (the real test: zone-wide settings can still answer
@@ -890,10 +909,12 @@ revokes the old token. Record the date (the secret name and date only).
 - **A bad Wrapper deploy:** roll the Pages projects back to the previous
   deployment ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages),
   Rollback), or, for production, redeploy an earlier release by its tag (the
-  "Pages production" workflow, which a running release run blocks; a Pages
-  rollback is never blocked). Then fix forward here: a changeset, a patch
-  release, and a new digest. Nothing in this repository is rolled back; a
-  released artifact is never rebuilt in place.
+  "Pages production" workflow, dispatched from `main`, which a running release
+  run blocks; a Pages rollback is never blocked). Check that the dispatch's
+  `deploy-prod` ran: a dispatch from another branch ends green with nothing
+  deployed. Then fix forward here: a changeset, a patch release, and a new
+  digest. Nothing in this repository is rolled back; a released artifact is
+  never rebuilt in place.
 - **A bad npm version:** do not unpublish a version others may depend on. An org
   owner, signed in to npm with two-factor (never from CI, never with a token in
   a file), runs
@@ -1024,11 +1045,25 @@ token:
   [Verify before and after](#verify-before-and-after), with the release's
   commit, to the notes by hand (`gh release edit <tag> --notes-file <file>`,
   keeping the changelog text).
-- **The `production` jobs failed.** Nothing was deployed, or the deploy failed
-  part-way. Re-run the failed jobs of the same run, or redeploy the release by
-  its tag ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages)). A
-  `prod-verify` failure (the `.sha256` or the attestation) is an incident
-  (Escalation): never deploy around it.
+- **The production deploy failed after the release** (a `production` job of the
+  release run failed). The packages, tags, and the Wrapper's release with its
+  tar are done; nothing was deployed, or the deploy failed part-way. Do not
+  re-run the release run: when `deploy-prod` failed, "Re-run failed jobs" fails
+  at the download once the one-day artifacts of `prod-worker` and `config-prod`
+  are gone, and "Re-run all jobs" finds every version tagged ("nothing to
+  release"), skips `publish` and every job after it, and ends green with nothing
+  deployed. Fix the cause, then dispatch "Pages production" from `main` with the
+  release's tag ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages),
+  Production). A `prod-verify` failure (the `.sha256` or the attestation) is an
+  incident (Escalation): never deploy around it.
+- **A dispatch or re-run ended green but nothing deployed.** Open the run: if
+  `deploy-prod` (or, on a release run, `publish` and `production`) shows as
+  skipped, nothing reached Pages. A "Pages production" dispatch from a branch
+  other than `main` skips `release-check` and every job after it: dispatch again
+  from `main`. A full re-run of a release run runs `changesets-mode` again,
+  which finds every version tagged and ends with "nothing to release", so
+  `publish` and every job after it (`production` included) are skipped: dispatch
+  "Pages production" from `main` with that release's tag instead.
 - **A redeploy by tag says "A release run is ...".** The release always wins:
   wait for that run to finish, then dispatch again. To restore production at
   once, use a Pages rollback, which is never blocked.
