@@ -81,21 +81,47 @@ const returnToPage = async (page: Page): Promise<void> => {
 const recordPageCalls = (page: Page): Promise<void> =>
   page.evaluate(() => {
     const calls: PageCall[] = [];
+    const read: number[] = [];
     const send = globalThis.fetch.bind(globalThis);
+    const markRead = async (answer: Promise<Response>, index: number) => {
+      await (await answer).clone().text();
+      await new Promise(resolve => {
+        const { port1, port2 } = new MessageChannel();
+        port1.addEventListener("message", resolve, { once: true });
+        port1.start();
+        port2.postMessage(index);
+      });
+      read.push(index);
+    };
     Reflect.set(globalThis, "pageCalls", calls);
+    Reflect.set(globalThis, "pageAnswersRead", read);
     Reflect.set(
       globalThis,
       "fetch",
       (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
         const url = input instanceof Request ? input.url : input;
-        calls.push({
-          path: new URL(url, location.href).pathname,
-          at: Date.now(),
-        });
-        return send(input, init);
+        const path = new URL(url, location.href).pathname;
+        const index = calls.push({ path, at: Date.now() }) - 1;
+        const answer = send(input, init);
+        markRead(answer, index).catch(() => null);
+        return answer;
       },
     );
   });
+
+const untilEveryAnswerRead = async (page: Page): Promise<void> => {
+  const everyAnswerRead = (): Promise<boolean> =>
+    page.evaluate(() => {
+      const calls: unknown = Reflect.get(globalThis, "pageCalls");
+      const read: unknown = Reflect.get(globalThis, "pageAnswersRead");
+      return (
+        Array.isArray(calls) &&
+        Array.isArray(read) &&
+        read.length === calls.length
+      );
+    });
+  await expect.poll(everyAnswerRead).toBe(true);
+};
 
 const isPageCall = (value: unknown): value is PageCall =>
   typeof value === "object" &&
@@ -168,10 +194,11 @@ test.describe("T-36: the play token's lifecycle", () => {
       authorized: true,
       tokenIndex: 0,
     });
+    await untilEveryAnswerRead(page);
 
     const secondAt = refreshPoint(firstAt, SHORT_LIFETIME_MS);
     const returnedAt = firstAt + (secondAt - firstAt) / 2;
-    await stepTo(page, returnedAt);
+    await jumpTo(page, returnedAt);
     await returnToPage(page);
     await expect
       .poll(() => operations(fakePlayApi))
@@ -180,9 +207,10 @@ test.describe("T-36: the play token's lifecycle", () => {
       authorized: true,
       tokenIndex: 1,
     });
+    await untilEveryAnswerRead(page);
 
     fakePlayApi.advanceServerTime(secondAt - firstAt);
-    await stepTo(page, secondAt);
+    await jumpTo(page, secondAt);
     expect(await pageCalls(page)).toEqual([
       { path: REFRESH, at: firstAt },
       { path: READ, at: returnedAt + RETURN_DEBOUNCE_MS },
@@ -200,6 +228,7 @@ test.describe("T-36: the play token's lifecycle", () => {
       authorized: true,
       tokenIndex: 1,
     });
+    await untilEveryAnswerRead(page);
     await expect(statusHeading(page)).toHaveText(TEXT.idle);
     await expect(coverHeading(page)).toHaveCount(0);
   });

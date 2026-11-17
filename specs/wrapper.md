@@ -817,10 +817,11 @@ time (T-14's keyboard play, T-27's typed error and its resize), so the round
 rows keep it running. T-36 audits nothing and asserts when a call is sent, so it
 pauses the clock at the session's open before the page loads, and the session
 opens to `idle` on it with the redeem's answer at a known page time; the test
-alone then moves the clock, in one run where no call is in flight and in 2 s
-steps where an answer must arrive first, and reads each Play API call's page
-time from a record the page keeps (a pass-through `fetch` it installs once the
-session is open). The round rows run with tracing off (the key's bytes are an
+alone then moves the clock, in one run where no call is in flight, only once the
+page has read the answer it waits on, and in 2 s steps where failures must time
+out, and reads each Play API call's page time from a record the page keeps (a
+pass-through `fetch` it installs once the session is open, which also marks each
+answer read). The round rows run with tracing off (the key's bytes are an
 init-script argument, which a trace would write to a file). The vendored round
 is one round with one bet and one move, so a session plays it once; a multi-step
 game or a re-issue needs another issued round. T-9a runs in the Chromium,

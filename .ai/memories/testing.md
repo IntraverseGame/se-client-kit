@@ -755,10 +755,19 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   and their page times (a pass-through `fetch` the test installs once at
   `idle`), never from `fakePlayApi.served` right after a `runFor`: the fake
   records a request a round trip later, and that check let a refresh 60 ms
-  early pass. Move the clock in one `runFor` only
-  while no call is in flight; while one is (a refresh just answered, retryable
-  failures), step 2 s at a time so the answer lands before the transport's
-  15 s timeout. A refreshed token's processing time is unknown, so the next
+  early pass. Move the clock in one `runFor` only while no call is in flight.
+  Where an answer must be consumed before the clock moves on (the refresh that
+  succeeds, the read after it), wait for the recorder's mark
+  (`untilEveryAnswerRead`: the `fetch` reads each answer's body through a
+  clone and marks it a `MessageChannel` task later, since the paused clock
+  holds page timers). `fakePlayApi.served` is no such signal: the fake records
+  a request before it answers it, so stepping on as soon as it shows can let
+  the transport's 15 s timeout abort an answer still on its way (#230's
+  review; a 500 ms real-time delay before the fake's refresh, or Snapshot,
+  answer made the earlier test retry and fail, and the waiting test pass).
+  Where failures are the point (no answer, retryable `UNAVAILABLE`), step 2 s
+  at a time and let timeouts fire. A refreshed token's processing time is
+  unknown, so the next
   refresh is asserted on a token short enough (2 minutes) that the 60 s margin
   sets its point, not the fraction. The fake's server time is fixed until a
   test moves it with the page's (`advanceServerTime`, before the refresh it

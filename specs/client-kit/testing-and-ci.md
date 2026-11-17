@@ -485,21 +485,27 @@ development-only, so it may import the test-only entry of `contracts`.
   page loads, the page's clock is installed and paused at the session's open,
   the session opens to `idle` on it (the fake records only the redeem and one
   read, and each test asserts the fake's full record), and only the test moves
-  it, in one run where no call is in flight and in 2 s steps where an answer
-  must arrive first; the page keeps its own record of each Play API call and the
-  page time it was made, through a pass-through `fetch` the test installs once
-  the session is open, so "nothing before the refresh point" and "nothing after
-  the end" are read exactly, not from the fake's later record). The rows that
-  need a round W-26 passes (T-10, T-11, T-14, T-15's signed action and its
-  resend of a move lost offline, T-16's round errors, T-19) run on the vendored
-  Coin Flip round, and T-12 on the vendored Cash or Crash `[3,3,4]` rounds
-  (`valid/cashorcrash-cash-out-*` for the cash-out and
-  `valid/cashorcrash-last-row-*` for the last surviving move, each issued for
-  the same action key, signer, domain, entropy source, entropy chain id, and
-  randomness block, which the harness checks when it loads), and T-24 on the
-  vendored book round of one session (`valid/book-lifecycle-*`: `idle`, the
-  start answered `starting` with no `proofs`, a read `starting` bound, and a
-  read `won`, or in a second run `lost`, and a start answered 401
+  it, in one run where no call is in flight and in 2 s steps where failures must
+  time out; the page keeps its own record of each Play API call and the page
+  time it was made, through a pass-through `fetch` the test installs once the
+  session is open, so "nothing before the refresh point" and "nothing after the
+  end" are read exactly, not from the fake's later record. The same `fetch`
+  marks a call answered once its answer's body has been read through a clone,
+  one real task later (a `MessageChannel` message, which the paused clock does
+  not hold), so the Wrapper's own read of that answer is done by then; the fake
+  records a request before it answers it, so where a test waits on an answer, as
+  in the refresh that succeeds and the read after it, it waits for that mark
+  before it moves the clock again, or the transport's 15 s timeout could abort
+  an answer still on its way). The rows that need a round W-26 passes (T-10,
+  T-11, T-14, T-15's signed action and its resend of a move lost offline, T-16's
+  round errors, T-19) run on the vendored Coin Flip round, and T-12 on the
+  vendored Cash or Crash `[3,3,4]` rounds (`valid/cashorcrash-cash-out-*` for
+  the cash-out and `valid/cashorcrash-last-row-*` for the last surviving move,
+  each issued for the same action key, signer, domain, entropy source, entropy
+  chain id, and randomness block, which the harness checks when it loads), and
+  T-24 on the vendored book round of one session (`valid/book-lifecycle-*`:
+  `idle`, the start answered `starting` with no `proofs`, a read `starting`
+  bound, and a read `won`, or in a second run `lost`, and a start answered 401
   `SESSION_REVOKED`; a book round carries no `CreateRoundAuth`, and the start's
   `actionKey` is the same scripted key, its bet the idle Snapshot's default)
   (`harness/round-play.ts`, `harness/round-vector.ts`): the seeded random source
