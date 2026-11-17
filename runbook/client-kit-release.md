@@ -172,15 +172,16 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
    `kernel-vectors-shuffle-draw`, `kernel-vectors-steps-derive`,
    `kernel-vectors-derive`, `kernel-vectors-round-secret-hash`,
    `kernel-vectors-coin-flip-payout`, `kernel-vectors-weighted-draw`,
-   `kernel-vectors-book-draw` (`tools/contracts-groups.ts` is the list). Each
-   has `name` (the repository, recorded in the lock), `repo` (your local
-   checkout), `ref` (for example the default branch on `origin`) and `path` (the
-   file or directory in that repository). The lock records only public names, so
-   the paths are not in this repository: the source's own documentation names
-   them, or ask its owners. Keep your sources file for the next sync. Copy only
-   the Play and verify OpenAPI documents, the Snapshot schema and vectors, the
-   signing vectors, and the fairness kernel's public sets
-   (`kernel/public/v1/*`); never another surface's document.
+   `kernel-vectors-book-draw`, `kernel-vectors-book-table-commitment`
+   (`tools/contracts-groups.ts` is the list). Each has `name` (the repository,
+   recorded in the lock), `repo` (your local checkout), `ref` (for example the
+   default branch on `origin`) and `path` (the file or directory in that
+   repository). The lock records only public names, so the paths are not in this
+   repository: the source's own documentation names them, or ask its owners.
+   Keep your sources file for the next sync. Copy only the Play and verify
+   OpenAPI documents, the Snapshot schema and vectors, the signing vectors, and
+   the fairness kernel's public sets (`kernel/public/v1/*`); never another
+   surface's document.
 3. Run `pnpm exec tsx tools/sync-contracts.ts --sources <file>`. It copies the
    files and rewrites `packages/contracts/contracts.lock.json` together. It
    refuses to change or remove a vector that is already locked; pass
@@ -193,6 +194,11 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
    catch an import from non-test code or a vector in an output.
 5. Open a pull request. In the description, say what changed and why; the
    reviewers check every copied file against the never-public checklist.
+
+Before the first production release (decided by the human, 2026-11-17): the
+contracts were synced from the backend's `main` ahead of the release; sync them
+again, the same way, from the backend's release commit before cutover, so the
+lock names what production serves.
 
 ### Release
 

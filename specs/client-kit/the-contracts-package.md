@@ -18,17 +18,18 @@ logic packages read it and never write to it.
   SuperEngine fairness kernel, kernelVersion 1 (`kernel/public/v1/seed`,
   `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`,
   `kernel/public/v1/derive`, `kernel/public/v1/round-secret-hash`,
-  `kernel/public/v1/coin-flip-payout`, `kernel/public/v1/weighted-draw`, and
-  `kernel/public/v1/book-draw`; data for the verify page's tests, with no kernel
-  logic here), the types generated from the documents and the schema
-  (`openapi-typescript` for the OpenAPI documents, with `exportType` so every
-  object is a `type` alias, and `emptyObjectsUnknown` so an object schema
-  without properties is a record of `unknown` values; a leftover
-  `export interface` fails the generation; `openapi-typescript` is pinned at
-  6.7.6, which has no TypeScript dependency, reads the document from a `file:`
-  URL, and is given a `fetch` that refuses, so a reference outside the document
-  fails the generation; every `$ref` in the vendored documents is local, which a
-  test checks ([ADR-004](../../decisions/ADR-004-openapi-typescript-6.md));
+  `kernel/public/v1/coin-flip-payout`, `kernel/public/v1/weighted-draw`,
+  `kernel/public/v1/book-draw`, and `kernel/public/v1/book-table-commitment`;
+  data for the verify page's tests, with no kernel logic here), the types
+  generated from the documents and the schema (`openapi-typescript` for the
+  OpenAPI documents, with `exportType` so every object is a `type` alias, and
+  `emptyObjectsUnknown` so an object schema without properties is a record of
+  `unknown` values; a leftover `export interface` fails the generation;
+  `openapi-typescript` is pinned at 6.7.6, which has no TypeScript dependency,
+  reads the document from a `file:` URL, and is given a `fetch` that refuses, so
+  a reference outside the document fails the generation; every `$ref` in the
+  vendored documents is local, which a test checks
+  ([ADR-004](../../decisions/ADR-004-openapi-typescript-6.md));
   `json-schema-to-typescript` for the Snapshot schema, which gives the
   structural types only: the conditional blindness rules stay with the validator
   in `snapshot`; its `export interface` declarations are rewritten as
@@ -55,25 +56,26 @@ logic packages read it and never write to it.
   `vectors/snapshot/typed-data/`, and `vectors/snapshot/signed-action/`; and
   `vectors/kernel/v1/`, the fairness kernel's `seed.json`, `shuffle-draw.json`,
   `steps-derive.json`, `derive.json`, `round-secret-hash.json`,
-  `coin-flip-payout.json`, `weighted-draw.json`, and `book-draw.json`, recorded
-  in the lock under their set ids), and any module that only the test-only entry
-  uses. Nothing else belongs in `src/`. A module that both entries import is a
-  runtime module by definition, so it lives under `schemas/` or `generated/` and
-  holds no vector data. (`test/vectors/...` is the path in the backend's
-  contracts repository, which is already public by name; `contracts.lock.json`
-  records each artifact's public name and the path in this package, never a path
-  inside a private repository.) Today the runtime modules are
-  `schemas/snapshot.ts` (the schema as data of unknown shape),
-  `generated/snapshot.ts` (its structural types), and `generated/play.ts` and
-  `generated/verify.ts` (the Play API and verify API documents' types; the
-  documents themselves, `schemas/play.v1.openapi.yaml` and
+  `coin-flip-payout.json`, `weighted-draw.json`, `book-draw.json`, and
+  `book-table-commitment.json`, recorded in the lock under their set ids), and
+  any module that only the test-only entry uses. Nothing else belongs in `src/`.
+  A module that both entries import is a runtime module by definition, so it
+  lives under `schemas/` or `generated/` and holds no vector data.
+  (`test/vectors/...` is the path in the backend's contracts repository, which
+  is already public by name; `contracts.lock.json` records each artifact's
+  public name and the path in this package, never a path inside a private
+  repository.) Today the runtime modules are `schemas/snapshot.ts` (the schema
+  as data of unknown shape), `generated/snapshot.ts` (its structural types), and
+  `generated/play.ts` and `generated/verify.ts` (the Play API and verify API
+  documents' types; the documents themselves, `schemas/play.v1.openapi.yaml` and
   `schemas/verify.v1.openapi.yaml`, are not imported by any module, only read by
   the generator); the test-only module is `vectors/catalog.ts`, generated, which
   imports every vector and exports `signingVectors`, `snapshotVectors` (`valid`,
   `invalid`, `signature`, `typedData` from `typed-data/`, and `signedAction`
   from `signed-action/`), and `kernelVectors` (`v1` from `kernel/v1/`, keyed by
   file name: `seed`, `shuffle-draw`, `steps-derive`, `derive`,
-  `round-secret-hash`, `coin-flip-payout`, `weighted-draw`, and `book-draw`).
+  `round-secret-hash`, `coin-flip-payout`, `weighted-draw`, `book-draw`, and
+  `book-table-commitment`).
 
 - **Tarball.** What is published is the allow-list of check 3 below. The
   manifest still exports `./testing` for the kit's own tests; the published
@@ -107,7 +109,11 @@ logic packages read it and never write to it.
   `Kernel` carries the round's kernel `version`, and its errors are
   `application/problem+json`. It was synced from se-backend `main` at `17d2099`;
   the lock records `af3aab4`, the last commit that touched the file; the lock
-  records its public name, `verify/v1 OpenAPI document`.
+  records its public name, `verify/v1 OpenAPI document`. Later syncs are listed
+  in [How the kit gets its contracts](./how-the-kit-gets-its-contracts.md) (rule
+  4); since the 2026-11-17 sync its `BookVerification` carries the mode's rows
+  as the optional `table` (`BookTableRow`: `id`, `weight`, `multiplierMilli`),
+  in `VerifyApiComponents` with no public type name added.
 - **Display numbers are not amounts.** The generated Snapshot types carry two
   JSON numbers from the contract: `Amount.normalized` and `Multiplier`, both
   display-only by the contract's own definition. They are never an input to

@@ -174,6 +174,7 @@ test.describe("the canned rounds", () => {
       "kernel/public/v1/coin-flip-payout",
       "kernel/public/v1/weighted-draw",
       "kernel/public/v1/book-draw",
+      "kernel/public/v1/book-table-commitment",
     ]);
     expect(unknownKernelRound()["kernel"]).toMatchObject({ version: 2 });
     expect(changedPaths(matchingRound(), unsupportedShapeRound())).toEqual([
