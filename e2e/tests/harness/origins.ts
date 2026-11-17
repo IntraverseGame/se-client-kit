@@ -51,5 +51,8 @@ export const OPERATOR_PAGES = fileURLToPath(
   new URL("../operator/", import.meta.url),
 );
 
-/** The fixed server time of the fake Play API. */
+/**
+ * The fake Play API's server time at the start; a test may move it
+ * (`advanceServerTime`).
+ */
 export const FAKE_NOW = new Date("2026-10-16T12:00:00.000Z");

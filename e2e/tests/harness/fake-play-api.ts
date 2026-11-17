@@ -26,6 +26,7 @@
 import type { Route } from "@playwright/test";
 
 import { responder } from "./fake-play-responses.ts";
+import { createServerTime } from "./fake-play-time.ts";
 import type {
   FakePlayApi,
   FakePlayApiOptions,
@@ -37,6 +38,7 @@ import {
   checkAnswer,
   decodeBody,
   hex32,
+  issueIndex,
   opaque,
   ownProblem,
   routeOf,
@@ -68,9 +70,6 @@ export const playApiPrefix = (playApiBaseUrl: string): string => {
   return new URL(playApiBaseUrl).pathname.slice(0, -API_SUFFIX.length);
 };
 
-const TOKEN_LIFETIME_MS = 15 * 60 * 1000;
-const SESSION_LIFETIME_MS = 2 * 60 * 60 * 1000;
-
 const never = (): void => {};
 
 export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
@@ -83,6 +82,7 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
   // The real API redeems a code once; `redeemAgain` adds one for T-17.
   let redeemsLeft = 1;
   let isCut = false;
+  const time = createServerTime(now);
   const served: Served[] = [];
   const unexpected: string[] = [];
   const queues = new Map<PlayOperationId, Answer[]>();
@@ -95,10 +95,7 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
     return token;
   };
 
-  const deadline = (offsetMs: number): string =>
-    new Date(now.getTime() + offsetMs).toISOString();
-
-  const { json, problem } = responder(now);
+  const { json, problem } = responder(time.now);
 
   /**
    * A problem the fake writes itself, only with a status the document lists for
@@ -166,8 +163,8 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
     const response: PlaySuccessBody<"redeemLaunchCode"> = {
       sessionId,
       playToken: issueToken(),
-      tokenExpiresAt: deadline(TOKEN_LIFETIME_MS),
-      sessionExpiresAt: deadline(SESSION_LIFETIME_MS),
+      tokenExpiresAt: time.tokenExpiresAt(),
+      sessionExpiresAt: time.sessionExpiresAt(),
       ...REDEEM_GAME,
     };
     await json(route, 200, response);
@@ -180,7 +177,7 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
     }
     const response: PlaySuccessBody<"refreshPlayToken"> = {
       playToken: issueToken(),
-      tokenExpiresAt: deadline(TOKEN_LIFETIME_MS),
+      tokenExpiresAt: time.tokenExpiresAt(),
     };
     await json(route, 200, response);
   };
@@ -201,6 +198,7 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
       method,
       url: `${url.origin}${url.pathname}`,
       authorized: token !== undefined && valid.has(token),
+      tokenIndex: issueIndex(issued, token),
       body,
     });
     if (isCut) {
@@ -290,6 +288,7 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
     restore: () => {
       isCut = false;
     },
+    ...time.controls,
     secrets: ownSecrets,
     unexpected: () => redactAll(unexpected),
     takeUnexpected: () => redactAll(unexpected.splice(0)),
