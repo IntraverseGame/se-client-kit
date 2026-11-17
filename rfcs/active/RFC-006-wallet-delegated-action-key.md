@@ -629,9 +629,11 @@ cross-origin iframe inside an operator page.
 - **Telemetry**: none.
 - **Tests expected** (no real wallet and no real network; the wallet is a stub
   provider):
-  - S3: the type hash and domain separator; digest and recovery against S2's
-    vectors; `v` and `s` normalization of the wallet's signature, and every
-    other signature refused, as today, when it is not canonical.
+  - S3: the type hash and domain separator; digest and recovery against the
+    backend's published `key-delegation/v1 vectors`, held as provisional
+    constants until S2 replaces them with the vendored vectors; `v` and `s`
+    normalization of the wallet's signature, and every other signature refused,
+    as today, when it is not canonical.
   - S4: `keyDelegation` on a start; the three 422 codes and the 409 mapped; the
     fake Play API answers them.
   - S5: the delegation's states; `se.delegation/1`'s source and origin checks
@@ -681,7 +683,9 @@ this RFC's tests number from T-37 once it is merged.
   documents that carry the new fields and codes. Waits for se-backend#88's
   contract.
 - **S3.** `signing`: the `KeyDelegation` typed data, recovery, and normalization
-  of the wallet's signature only.
+  of the wallet's signature only. It lands before S2, on provisional constants
+  copied from the backend's published vectors; S2 replaces them with the
+  vendored vectors.
 - **S4.** `play-client`: `StartRoundRequest.keyDelegation`, and the new codes
   mapped in the Wrapper's errors.
 - **S5.** The shell's delegation use case; the delegation check beside the tip
@@ -831,3 +835,9 @@ Answered by the code owner the same day, on this draft's open questions:
   domain from the Wrapper's, by W-37's comparison (ADR-007), for site isolation
   where the browser has it, with the same-origin policy as the guarantee
   everywhere (section 5, ADR-012).
+
+Decided by the code owner the same day, while S3 was built:
+
+- **S3's order and the expiry's form.** S3 lands before S2, on provisional
+  constants that S2 replaces with the vendored vectors; the typed data writes
+  `expiry` as a decimal string (code owner, 2026-11-17).

@@ -4,7 +4,8 @@
 // `PlayerCancel`, also the independent signer's `signed-action/` Snapshot
 // vector. A type is added here only with the vector that pins it.
 // `PayoutTerms` reaches the player only as `newRound.payoutTermsHash`, so
-// there is no player-side type to encode.
+// there is no player-side type to encode. `KeyDelegation` and its chainless
+// domain are pinned by the backend's `key-delegation/v1` values (RFC-006).
 
 import type { StructType } from "./eip712.ts";
 
@@ -39,6 +40,28 @@ export const PLAYER_CASH_OUT: StructType = {
 export const PLAYER_CANCEL: StructType = {
   name: "PlayerCancel",
   fields: PLAYER_FIELDS,
+};
+
+/**
+ * `EIP712Domain(string name,string version)`: no `chainId`, so the player's
+ * wallet signs on any network.
+ */
+export const KEY_DELEGATION_DOMAIN: StructType = {
+  name: "EIP712Domain",
+  fields: [
+    { name: "name", type: "string" },
+    { name: "version", type: "string" },
+  ],
+};
+
+export const KEY_DELEGATION: StructType = {
+  name: "KeyDelegation",
+  fields: [
+    { name: "notice", type: "string" },
+    { name: "actionKey", type: "address" },
+    { name: "sessionId", type: "bytes32" },
+    { name: "expiry", type: "uint64" },
+  ],
 };
 
 export const CREATE_ROUND_AUTH: StructType = {

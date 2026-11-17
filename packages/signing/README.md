@@ -65,6 +65,18 @@ signer.destroy(); // at the end of the session
   - `createSigner`: generates a key and signs digests; the key is never returned
     or serialized.
   - `recoverAddress`: the signer's address (EIP-55) of a canonical signature.
+  - `KeyDelegation`, a wallet's statement that an action key acts for it in one
+    session, signed under the chainless domain
+    `{ name: "SuperEngine KeyDelegation", version: "1" }`:
+    `keyDelegationTypedData` (the exact `eth_signTypedData_v4` typed data, the
+    notice as text), `recoverKeyDelegation` (the wallet a signature recovers to,
+    over the digest computed from the notice's hash, and the canonical
+    signature), `noticeHash` (Keccak-256 of a notice's exact UTF-8 bytes), and
+    `sessionIdBytes32` (a `ses_` session id as `bytes32`); with the types
+    `KeyDelegation`, `KeyDelegationMessage`, `KeyDelegationTypedData`, and
+    `RecoveredKeyDelegation`.
+  - `sameHex`: whether two hex values hold the same bytes, in either case (an
+    EIP-55 address and its lowercase spelling match).
   - `keccak256`: Ethereum's Keccak-256 of raw bytes (a `Uint8Array` in, 32 new
     bytes out), for a caller that encodes its own input.
   - `createTranscript`: the `previous` chain and sequence numbers of one round,
@@ -84,6 +96,13 @@ signer.destroy(); // at the end of the session
 - Signatures are 65 bytes, `r || s || v`, with `v` in `{27, 28}` and a low `s`;
   recovery refuses any other length, `v`, a high `s`, an `r` or `s` out of
   range, and the zero address.
+- The only signature made canonical before recovery is a wallet's
+  `KeyDelegation` signature, in `recoverKeyDelegation`: `v` 0 or 1 becomes 27 or
+  28, and a high `s` becomes `n - s` with `v` flipped. `recoverAddress` never
+  normalizes.
+- A `KeyDelegation`'s expiry is unix seconds, an integer from 1 to 2^53 - 1; its
+  session id is `ses_` and 32 lowercase hex digits, mapped to its 16 bytes,
+  left-aligned in 32. Anything else is refused.
 - Signing is deterministic (RFC 6979): the same input gives the same bytes.
 - A key is drawn from the platform's cryptographic random source (32 bytes,
   redrawn while zero or not below the curve order). It never appears in an

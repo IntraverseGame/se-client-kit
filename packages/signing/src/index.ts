@@ -7,8 +7,18 @@ export {
   actionGrammar,
   type GrammarAction,
 } from "./grammar.ts";
-export type { Address, Bytes32, Hex } from "./hex.ts";
+export { type Address, type Bytes32, type Hex, sameHex } from "./hex.ts";
 export { keccak256 } from "./keccak.ts";
+export {
+  type KeyDelegation,
+  type KeyDelegationMessage,
+  type KeyDelegationTypedData,
+  keyDelegationTypedData,
+  noticeHash,
+  type RecoveredKeyDelegation,
+  recoverKeyDelegation,
+  sessionIdBytes32,
+} from "./key-delegation.ts";
 export {
   type CloseRoundAuth,
   type CreateRoundAuth,
