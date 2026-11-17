@@ -5,12 +5,12 @@
 Procedures for this repository, `se-client-kit`
 ([specs/client-kit.md](../specs/client-kit.md),
 [ADR-001](../decisions/ADR-001-toolchain-and-signing.md)): scaffolding the
-toolchain, syncing a contract, releasing the packages and the Wrapper bundle,
-checking a release, deploying `main` to Cloudflare Pages, and rolling back or
-deprecating one. They hold **procedures only**: this repository is public, so no
-credential, token, hostname, or account identifier appears here, and none may be
-added. Where a value is needed, this runbook says which secret or setting holds
-it, by name.
+toolchain, syncing a contract and setting up its drift job, releasing the
+packages and the Wrapper bundle, checking a release, deploying `main` to
+Cloudflare Pages, and rolling back or deprecating one. They hold **procedures
+only**: this repository is public, so no credential, token, hostname, or account
+identifier appears here, and none may be added. Where a value is needed, this
+runbook says which secret or setting holds it, by name.
 
 Repository settings are the org owners' to apply. GitHub's own settings are the
 source of truth for what is configured.
@@ -158,7 +158,7 @@ org owners apply the settings; ask them for each.
 ### Sync a contract into the kit
 
 Run by a person with access, whenever a contract the kit pins changed at its
-source (the drift check says so):
+source (the `contracts-drift` job says so, or the backend asks):
 
 A sync touches **one package**, `contracts` (`packages/contracts/`).
 
@@ -193,6 +193,32 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
    catch an import from non-test code or a vector in an output.
 5. Open a pull request. In the description, say what changed and why; the
    reviewers check every copied file against the never-public checklist.
+
+### Set up the contracts drift job
+
+Once, by an org owner, when the backend has handed over the locations of its
+published contracts (#138). The job is specified in
+[The contracts drift job](../specs/client-kit/the-contracts-drift-job.md).
+
+1. Create the GitHub environment **`contracts-drift`**: deployments restricted
+   to `main`, no required reviewer (it deploys nothing). Create it before the
+   workflow first runs: GitHub creates an environment that a running job names,
+   and that does not exist yet, without any protection.
+2. Set its two secrets, each the public origin of an environment's API
+   (`https://`, the host, and an optional port; no path and no trailing `/`,
+   which the job refuses): `CONTRACTS_ORIGIN_STAGING` and
+   `CONTRACTS_ORIGIN_PRODUCTION`. They are not credentials; they are secrets so
+   that no hostname is written in this repository or shown in a public run log.
+   The backend maintainers give the origins out of band; never write them in a
+   file, an issue, or a pull request. Leave production's unset until production
+   serves the files: the job skips an unset origin with a notice.
+   <!-- TODO(contracts, #138): the two origins, from the backend maintainers, and the date production serves the files. -->
+3. Run the workflow once by hand (Actions, `contracts-drift`, Run workflow, on
+   `main`) and read its summary: every backend entry in sync, or each finding
+   explained (below). From then on it runs once a day.
+
+The job holds `contents: read` only and no credential. To turn it off, disable
+the workflow in the Actions tab; deleting a secret only skips that environment.
 
 ### Release
 
@@ -1070,7 +1096,24 @@ token:
   dry run's, something in the environment moved the store (`PNPM_HOME`, a
   `store-dir` setting); the dry run keeps `PNPM_HOME` and names the store
   explicitly for that reason.
-- **The drift check reports a difference.** Run the contract sync.
+- **The drift check reports a difference.** Read the run's summary; the findings
+  are in
+  [The contracts drift job](../specs/client-kit/the-contracts-drift-job.md#what-it-compares).
+  A changed document or a file not vendored: run the contract sync, unless the
+  kit synced first and the environment has not deployed that change yet (the
+  lock's `sourceCommit` is newer than what the environment runs; ask the
+  backend). A file not served: the same, or a file the backend removed, which
+  needs a word with the backend maintainers before any sync. A changed vector
+  fails the run: a vector is append-only, so ask the backend maintainers which
+  side is wrong before syncing; after the first release the kit never edits a
+  vector it released.
+- **The drift job could not check an environment.** The summary names the
+  environment and the status code or kind of error, never the origin. A timeout,
+  a 5xx, or a network error that persists across runs: tell the backend
+  maintainers. A 4xx or a manifest it cannot read: the location or the
+  manifest's format changed (check the backend's handover, and update the job's
+  reader for a new `manifestVersion`). A wrong origin: fix the secret in the
+  `contracts-drift` environment.
 
 ## Escalation
 
