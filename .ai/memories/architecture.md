@@ -316,18 +316,15 @@ structure below.
   (#41) and by the signing vectors of contracts release 1.0.0 (`types` and the
   `player-cancel` round of `closes`); the shell uses it directly (no injected cancel encoding). Draw-registry types are
   encoded internally for the vector
-  replay only. `KeyDelegation` (RFC-006, proposed, slice S3) has its own
-  chainless 2-field domain beside the registry's; its struct hash and digest
-  are computed from `noticeHash`, never the text; its `expiry` is a safe
-  integer (`number`, 1 to 2^53 − 1), written as `uint64` from a `bigint`, so the
-  encoder's "no `number` above 40 bits" rule holds. `keyDelegationTypedData`
-  writes `expiry` as a decimal string, the form MetaMask and Rabby were seen to
-  sign (code owner, 2026-11-17); do not switch it to a JSON number. `recoverKeyDelegation` is
-  the only place a signature is normalized (`v` 0/1, high `s`) before
-  `recoverAddress`, which stays strict for everything else: never add
-  normalization to `recoverAddress`. `sameHex` compares hex by bytes (EIP-55 vs
-  the backend's lowercase echo) for the shell's delegation check and the verify
-  page.
+  replay only. `KeyDelegation` (RFC-006, proposed, slice S3): its struct types
+  sit in `types.ts` beside the registry's, its functions in
+  `key-delegation.ts`, under its own chainless domain. `recoverKeyDelegation`
+  is the one place a wallet's signature is normalized before the strict
+  `recoverAddress`, and `sameHex` serves the shell's delegation check and the
+  verify page. The typed data's decimal-string `expiry` is decided; do not
+  match the backend's JSON number. Its rules (the expiry's bounds and
+  typed-data form, and the normalization) are in
+  [the cryptography spec](../../specs/client-kit/the-cryptography.md).
 
 ## Contracts and vectors
 
