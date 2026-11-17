@@ -13,7 +13,11 @@ and [AGENTS.md](../../AGENTS.md). **Block** on:
 - package boundaries: an import against the dependency direction
   (`contracts` is a data-only leaf; `snapshot` and `play-client` depend on it;
   `signing` has no kit dependency at run time; `shell` depends on `signing`,
-  `snapshot`, and `play-client`; the `wrapper` app depends on `shell`), a cycle,
+  `snapshot`, and `play-client`, and, from RFC-006's slice S5 on, the
+  key-delegation notices, and nothing else, from `contracts`' runtime entry
+  (proposed, RFC-006); the `wrapper` app depends on `shell`; the `signing-page`
+  app depends on nothing but `signing` and `contracts`' runtime entry, never on
+  `shell`, and nothing imports it (proposed, ADR-012)), a cycle,
   logic added to `contracts`, an import of its test-only entry from non-test
   code, a vector reaching a bundle, an import of another
   package's internals instead of its public entry point, a package importing an

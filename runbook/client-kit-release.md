@@ -179,8 +179,9 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
    the paths are not in this repository: the source's own documentation names
    them, or ask its owners. Keep your sources file for the next sync. Copy only
    the Play and verify OpenAPI documents, the Snapshot schema and vectors, the
-   signing vectors, and the fairness kernel's public sets
-   (`kernel/public/v1/*`); never another surface's document.
+   signing vectors, the fairness kernel's public sets (`kernel/public/v1/*`),
+   and `key-delegation/v1`'s notices and vectors (proposed, RFC-006; from its
+   slice S2); never another surface's document.
 3. Run `pnpm exec tsx tools/sync-contracts.ts --sources <file>`. It copies the
    files and rewrites `packages/contracts/contracts.lock.json` together. It
    refuses to change or remove a vector that is already locked; pass

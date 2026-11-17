@@ -18,12 +18,13 @@ spec, and a behavior change updates its spec in the same pull request
 - A spec describes accepted behavior, not wishes; proposals live in
   [`rfcs/`](../rfcs/). Unknowns are `<!-- TODO -->` markers, never invented.
 - Contracts owned by the backend (the Play API at `/play/v1`, the Snapshot
-  schema bundle, the signed-action specification, the signing vectors) are
-  referred to by name. The Play API document, the Snapshot schema bundle, the
-  signing vectors, and the public vector bundle of the SuperEngine fairness
-  kernel are used as copies pinned in a lock file; the signed-action
-  specification is not copied, and its vectors are. They are not redefined here,
-  and no private source is linked.
+  schema bundle, the signed-action specification, the signing vectors, the
+  key-delegation contract `key-delegation/v1`) are referred to by name. The Play
+  API document, the Snapshot schema bundle, the signing vectors, the public
+  vector bundle of the SuperEngine fairness kernel, and `key-delegation/v1`'s
+  notices and their vectors (proposed, RFC-006) are used as copies pinned in a
+  lock file; the signed-action specification is not copied, and its vectors are.
+  They are not redefined here, and no private source is linked.
 - Public: no secrets, internal hostnames, or personal data.
 
 ## Index
@@ -95,7 +96,7 @@ the specs' headings.
   - [Session open and the play token](./wrapper/session-open-and-the-play-token.md)
     — W-1 to W-8
   - [The action key and what may be stored](./wrapper/the-action-key-and-what-may-be-stored.md)
-    — W-9 to W-13
+    — W-9 to W-13 (with a wallet's delegation to the key, proposed, RFC-006)
   - [Two tabs](./wrapper.md#two-tabs) — W-14
   - [The transcript](./wrapper.md#the-transcript) — W-15 to W-19
   - [Signing start, move, cash-out, and cancel](./wrapper/signing-start-move-cash-out-and-cancel.md)
@@ -115,9 +116,10 @@ the specs' headings.
   - [Error and degraded states](./wrapper.md#error-and-degraded-states) — W-41
     to W-44
   - [Accessibility](./wrapper.md#accessibility) — W-45 to W-48
-  - [Operator embedding](./wrapper/operator-embedding.md) — W-49 to W-49f: the
+  - [Operator embedding](./wrapper/operator-embedding.md) — W-49 to W-49g: the
     framing check, the `se.operator/1` handshake, `resize`, the lobby and
-    deposit navigations, the operator guidance, and T-9a's test plan
+    deposit navigations, the embedding page's opener policy (W-49g, proposed,
+    RFC-006), the operator guidance, and T-9a's test plan
   - [Configuration](./wrapper.md#configuration)
 - [Errors and edge cases](./wrapper.md#errors-and-edge-cases) ·
   [Security](./wrapper.md#security) ·
