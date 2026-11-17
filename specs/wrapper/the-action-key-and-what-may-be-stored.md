@@ -46,8 +46,10 @@ Part of the [Wrapper spec](../wrapper.md), section
     yet). The shell holds the delegation, the wallet's address, and the
     signature in memory for the session, and nothing stores them; the player
     signs again in each session. The Wrapper's origin never holds a wallet
-    connection: the signing page, on its own origin, connects and then revokes
-    (proposed,
+    connection: the signing page, on its own origin, connects and then tries to
+    revoke the connection, best effort; where the wallet refuses or does not
+    support `wallet_revokePermissions`, the grant to the signing page's origin
+    can remain (proposed,
     [ADR-012](../../decisions/ADR-012-the-signing-page-on-its-own-origin.md)).
 - **W-12.** What the Wrapper MAY keep after a page is gone: nothing. In
   particular no key, token, launch code, `CreateRoundAuth`, or signed action, no

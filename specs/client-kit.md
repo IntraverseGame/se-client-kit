@@ -565,12 +565,13 @@ request, workflow log, agent output, or release note:
   resource names;
 - unpublished backend internals: only the player-facing contracts (the Play API
   document, the Snapshot schema bundle, the signed-action specification, the
-  signing vectors, and the key-delegation contract `key-delegation/v1`, its
-  notices and their vectors, proposed in RFC-006) are shared, and only as
-  copies; no operator, wallet, or admin API document, no internal module names
-  or designs. That "wallet" names a backend API document; `key-delegation/v1` is
-  not one: it is the player-facing contract a player's own browser wallet signs
-  (proposed, RFC-006), and it may be copied;
+  signing vectors, the public vector bundle of the SuperEngine fairness kernel,
+  kernelVersion 1 (its sets `kernel/public/v1/*`), and the key-delegation
+  contract `key-delegation/v1`, its notices and their vectors, proposed in
+  RFC-006) are shared, and only as copies; no operator, wallet, or admin API
+  document, no internal module names or designs. That "wallet" names a backend
+  API document; `key-delegation/v1` is not one: it is the player-facing contract
+  a player's own browser wallet signs (proposed, RFC-006), and it may be copied;
 - anything about an operator's credentials or contracts, or a player's data;
 - unreleased security findings (they go through `SECURITY.md`).
 
