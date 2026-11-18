@@ -488,7 +488,17 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   The tests that run a workflow step's script use
   `tools/fixtures/workflow-step.ts`, which runs it as Actions runs
   `shell: bash` (`bash --noprofile --norc -eo pipefail`): a test without `-e`
-  once missed a step that failed in Actions.
+  once missed a step that failed in Actions. Their stub executables come from
+  `tools/fixtures/stub-bin.ts` (`installStub`, and `removeStubs` in
+  `afterAll`): each distinct stub body is written once per test file and
+  hard-linked into each test's directory, read-only (0o555) so no test can
+  write through a link into the shared file, its data in files beside it or in
+  its environment (`STUB_DIR`, `NPM_STUB_VERSION`), never in a new body per
+  test. macOS assesses every new executable file on its first exec (140 to
+  240 ms idle, seconds under `pnpm check`'s load, one system daemon for all
+  processes), so a fresh stub per test made these files time out at Vitest's
+  5 s (#192). The first exec of each stub body in a file still pays that
+  check; after it, a test takes 10 to 100 ms.
   `tools/release-assets-guard.test.ts` runs the wrapper-assets job's release
   guard with a stub `gh` serving pages of releases through jq (exactly one
   release with the tag and neither file goes on; files already attached, no
