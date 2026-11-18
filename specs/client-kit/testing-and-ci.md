@@ -548,7 +548,7 @@ development-only, so it may import the test-only entry of `contracts`.
   body, or an abort (errors with the document's `Problem` body); canned rounds
   in the verify API document's shape, built at run time from the vendored round
   (matching, one tampered field per check, not ended, unknown kernel, a shape of
-  three options; each lists the kernel's eight public vector sets as
+  three options; each lists the kernel's nine public vector sets as
   `kernel.vectorSets`, in the document's order), the vendored book round `won`
   and `lost` with a tampered copy per check 5 to 8 (`verify-book-rounds.ts`,
   #156), and two rounds the backend recorded (`recorded-rounds/`, a `won` and a

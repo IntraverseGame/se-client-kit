@@ -30,6 +30,7 @@ const committedPackage = join(
 /** The fairness kernel's public sets, by file name, in lock (path) order. */
 const KERNEL_SETS = [
   "book-draw",
+  "book-table-commitment",
   "coin-flip-payout",
   "derive",
   "round-secret-hash",

@@ -7,9 +7,10 @@
 // placeholder that no secret hashes to, so `commitment.roundSecretHash` is
 // `SHA-256(roundSecret)`, and `reveal.seed` is
 // `SHA-256(blockValue || roundSecret)` over the block hash the test's chain
-// gives. The table's fields (`merkleRoot`, `entryCount`, `totalWeight`) and
-// `cost` are made-up values of the right shape: no vector carries them, and
-// the page shows them without checking them.
+// gives. The table's fields (`merkleRoot`, `entryCount`, `totalWeight`, and
+// the rows of `table`) and `cost` are made-up values of the right shape: no
+// vector carries them, and the page shows them without checking them (the
+// rows it validates and does not show).
 
 import { snapshotVectors } from "@intraverse/se-client-contracts/testing";
 
@@ -20,12 +21,21 @@ type Json = Record<string, unknown>;
 
 export type BookEnding = "book-lifecycle-won" | "book-lifecycle-lost";
 
-/** The book table's made-up values (no vector carries them). */
+/**
+ * The book table's made-up values (no vector carries them): three rows whose
+ * weights add up to `totalWeight`, row 0 paying nothing (the lost ending's
+ * draw) and row 2 paying 2x (the won ending's).
+ */
 export const BOOK_TABLE = {
   cost: "1",
   merkleRoot: `0x${"5a".repeat(32)}`,
   entryCount: 3,
   totalWeight: "1000000",
+  table: [
+    { id: "1", weight: "680000", multiplierMilli: "0" },
+    { id: "2", weight: "300000", multiplierMilli: "500" },
+    { id: "3", weight: "20000", multiplierMilli: "2000" },
+  ],
 } as const;
 
 const ENTROPY_CHAIN_ID = 1;
