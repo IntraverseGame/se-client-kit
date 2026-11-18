@@ -7,9 +7,10 @@
 // answers `ls-remote` from a list of refs, matching the patterns' tails as git
 // does: a ref is listed when `/<ref>` ends with `/<pattern>` for one of the
 // patterns, so a peeled `<ref>^{}` line only when `<ref>^{}` is asked for.
+// The stubs are hard links to one file each (tools/fixtures/stub-bin.ts): a
+// test file using this checkout runs `removeStubs` in `afterAll`.
 
 import {
-  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -19,6 +20,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import { installStub } from "./stub-bin.ts";
 import { runStep } from "./workflow-step.ts";
 
 export const REPOSITORY = "owner/repository";
@@ -126,8 +128,7 @@ export const run = (script: string, setup: Setup = {}): Outcome => {
     ["gh", setup.gh ?? GH],
     ["git", GIT],
   ] as const) {
-    writeFileSync(join(stubs, name), body);
-    chmodSync(join(stubs, name), 0o755);
+    installStub(stubs, name, body);
   }
   put(checkout, ".changeset/README.md", "readme\n");
   put(checkout, ".changeset/config.json", "{}\n");

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import {
   BUMP,
@@ -13,6 +13,7 @@ import {
   WRAPPER_1,
   WRAPPER_TAG,
 } from "./fixtures/release-mode-checkout.ts";
+import { removeStubs } from "./fixtures/stub-bin.ts";
 import { stepRun } from "./release-workflow-lines.ts";
 
 // The release workflow's `changesets-mode` decision
@@ -25,6 +26,7 @@ import { stepRun } from "./release-workflow-lines.ts";
 const MODE = stepRun("changesets-mode", "Decide what this push releases");
 
 afterEach(cleanup);
+afterAll(removeStubs);
 
 const decide = (setup: Setup): Outcome => run(MODE, { env: ENABLED, ...setup });
 

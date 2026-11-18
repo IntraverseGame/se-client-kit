@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import {
-  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -10,8 +9,9 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
+import { installStub, removeStubs } from "./fixtures/stub-bin.ts";
 import { runStep } from "./fixtures/workflow-step.ts";
 import { prod, stepRun } from "./release-workflow-lines.ts";
 
@@ -29,16 +29,12 @@ const TAR = "se-client-wrapper-1.0.0.tar";
 const REF = `refs/tags/${TAG}`;
 
 const directories: string[] = [];
+afterAll(removeStubs);
 afterEach(() => {
   for (const directory of directories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
   }
 });
-
-const stub = (directory: string, name: string, body: string): void => {
-  writeFileSync(join(directory, name), body);
-  chmodSync(join(directory, name), 0o755);
-};
 
 type Outcome = {
   readonly status: number | null;
@@ -59,7 +55,9 @@ const runWith = (
   const temp = join(directory, "runner");
   mkdirSync(bin);
   mkdirSync(temp);
-  for (const [name, body] of Object.entries(stubs)) stub(bin, name, body);
+  for (const [name, body] of Object.entries(stubs)) {
+    installStub(bin, name, body);
+  }
   for (const [name, content] of Object.entries(files)) {
     writeFileSync(join(bin, name), content);
   }
