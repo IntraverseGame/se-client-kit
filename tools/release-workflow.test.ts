@@ -138,6 +138,14 @@ describe("the release workflow", () => {
     expect(valuesOf(release, "continue-on-error")).toEqual([]);
   });
 
+  // A failed prod-check skips publish, and so every job after it, unless a
+  // job's or a step's `if:` (on any line of it) calls a status function.
+  it("runs nothing past a failed or skipped job or step: no always(), cancelled(), or failure() in any condition", () => {
+    const statusCall = /\b(?:always|cancelled|failure)\s*\(/u;
+    const lines = release.filter(line => !line.text.startsWith("#"));
+    expect(lines.filter(line => statusCall.test(line.text))).toEqual([]);
+  });
+
   it("gives each job exactly its permissions, and no token at the top", () => {
     expect(
       scalarAt(release, keyLine(release, 0, release.length, 0, "permissions")),
