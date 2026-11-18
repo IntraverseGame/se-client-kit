@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import {
   createOf,
@@ -15,6 +15,7 @@ import {
   WRAPPER_CHANGELOG,
 } from "./fixtures/github-releases-step.ts";
 import { cleanup, run, SHA } from "./fixtures/release-mode-checkout.ts";
+import { removeStubs } from "./fixtures/stub-bin.ts";
 import {
   jobKey,
   release as workflowLines,
@@ -45,6 +46,7 @@ import {
 const STEP = stepRun("publish", "Create the GitHub releases");
 
 afterEach(cleanup);
+afterAll(removeStubs);
 
 describe("publish's GitHub releases step", () => {
   it("comes right after the action, which creates no release, as publish's last step, and keys the Wrapper's jobs", () => {

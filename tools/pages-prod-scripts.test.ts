@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import {
-  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -10,8 +9,9 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
+import { installStub, removeStubs } from "./fixtures/stub-bin.ts";
 import { runStep } from "./fixtures/workflow-step.ts";
 import { prod, stepRun } from "./release-workflow-lines.ts";
 
@@ -29,16 +29,12 @@ const TAR = "se-client-wrapper-1.0.0.tar";
 const REF = `refs/tags/${TAG}`;
 
 const directories: string[] = [];
+afterAll(removeStubs);
 afterEach(() => {
   for (const directory of directories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
   }
 });
-
-const stub = (directory: string, name: string, body: string): void => {
-  writeFileSync(join(directory, name), body);
-  chmodSync(join(directory, name), 0o755);
-};
 
 type Outcome = {
   readonly status: number | null;
@@ -59,7 +55,9 @@ const runWith = (
   const temp = join(directory, "runner");
   mkdirSync(bin);
   mkdirSync(temp);
-  for (const [name, body] of Object.entries(stubs)) stub(bin, name, body);
+  for (const [name, body] of Object.entries(stubs)) {
+    installStub(bin, name, body);
+  }
   for (const [name, content] of Object.entries(files)) {
     writeFileSync(join(bin, name), content);
   }
@@ -110,11 +108,20 @@ esac
 status="\${2#*status=}"; status="\${status%%&*}"
 if [ -e "$STUB_DIR/runs-$status" ]; then cat "$STUB_DIR/runs-$status"; else echo 0; fi
 `;
+  // `git ls-remote --tags <url> <pattern>...`: the lines of the file `refs`
+  // whose `/<ref>` ends with `/<pattern>` for one of the patterns, as git
+  // matches them, so a peeled `<ref>^{}` line only when `<ref>^{}` is asked for.
   const GIT = `#!/bin/sh
 set -eu
 echo "git $*" >> "$STUB_DIR/calls"
+while [ "$1" != --tags ]; do shift; done
+shift 2
 touch "$STUB_DIR/refs"
-cat "$STUB_DIR/refs"
+awk -v patterns="$*" 'BEGIN { n = split(patterns, p, " ") }
+  n == 0 { print; next }
+  { r = "/" $2
+    for (i = 1; i <= n; i++) { t = "/" p[i]
+      if (length(r) >= length(t) && substr(r, length(r) - length(t) + 1) == t) { print; next } } }' "$STUB_DIR/refs"
 `;
 
   const check = (

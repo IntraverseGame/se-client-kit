@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import {
   cleanup,
@@ -6,6 +6,7 @@ import {
   WRAPPER_1,
   WRAPPER_TAG,
 } from "./fixtures/release-mode-checkout.ts";
+import { removeStubs } from "./fixtures/stub-bin.ts";
 import { stepRun } from "./release-workflow-lines.ts";
 
 // The release workflow's `publish` job's tag re-check
@@ -18,6 +19,7 @@ import { stepRun } from "./release-workflow-lines.ts";
 const RECHECK = stepRun("publish", "Check that a version is still untagged");
 
 afterEach(cleanup);
+afterAll(removeStubs);
 
 describe("publish's tag re-check", () => {
   it("goes on while a version is untagged", () => {

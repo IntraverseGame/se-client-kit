@@ -492,7 +492,17 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   The tests that run a workflow step's script use
   `tools/fixtures/workflow-step.ts`, which runs it as Actions runs
   `shell: bash` (`bash --noprofile --norc -eo pipefail`): a test without `-e`
-  once missed a step that failed in Actions.
+  once missed a step that failed in Actions. Their stub executables come from
+  `tools/fixtures/stub-bin.ts` (`installStub`, and `removeStubs` in
+  `afterAll`): each distinct stub body is written once per test file and
+  hard-linked into each test's directory, read-only (0o555) so no test can
+  write through a link into the shared file, its data in files beside it or in
+  its environment (`STUB_DIR`, `NPM_STUB_VERSION`), never in a new body per
+  test. macOS assesses every new executable file on its first exec (140 to
+  240 ms idle, seconds under `pnpm check`'s load, one system daemon for all
+  processes), so a fresh stub per test made these files time out at Vitest's
+  5 s (#192). The first exec of each stub body in a file still pays that
+  check; after it, a test takes 10 to 100 ms.
   `tools/release-assets-guard.test.ts` runs the wrapper-assets job's release
   guard with a stub `gh` serving pages of releases through jq (exactly one
   release with the tag and neither file goes on; files already attached, no
@@ -508,6 +518,14 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   peeled commit; the call path's commit check) and `prod-verify` (the
   `.sha256` name and bytes, `gh attestation verify` arguments, a failed
   verification) with stubs.
+  `tools/release-tag-peel.test.ts` runs real git against a local bare
+  repository (`file://`, no user or system git configuration): `ls-remote`
+  lists an annotated tag's `^{}` line only when the `<ref>^{}` pattern is
+  passed (so the peeling scripts pass both patterns), and `release-check`
+  resolves an annotated and a lightweight tag to the commit. The stub `git` of
+  `tools/pages-prod-scripts.test.ts` and
+  `tools/fixtures/release-mode-checkout.ts` answers per pattern the same way;
+  a stub that listed `^{}` for the bare ref once hid an unpeeled annotated tag.
   `tools/actions-allow-list.test.ts` holds every `uses:` under `.github/` to
   the Actions allow-list table in `specs/client-kit/supply-chain.md`. `tools/pages-workflow.test.ts` checks
   `pages.yml` (gates, permissions, the `pages-stage` environment, the project
