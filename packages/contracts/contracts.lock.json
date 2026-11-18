@@ -19,8 +19,8 @@
       "path": "src/schemas/verify.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "verify/v1 OpenAPI document",
-      "sourceCommit": "98af04753c9a754e5751067453cf402b37ed67bf",
-      "sha256": "cf5bee92433bb4e8bea31edd8664167cde2551eeb47f764dfa2e785a4684b227"
+      "sourceCommit": "bfe7dcde80386a7635816c9160bca9de214f948c",
+      "sha256": "48ef8e8dead8891ef43b20e5302660f2a599e56a5d17ccfa76f26f0fbd5f3f09"
     },
     {
       "path": "src/vectors/kernel/v1/book-draw.json",
@@ -28,6 +28,13 @@
       "sourceName": "kernel/public/v1/book-draw",
       "sourceCommit": "bc4f4adf356a7e5b5146e5f80bfb4f62c1e87556",
       "sha256": "0051a0581033655839bda06c79dacd96e31c20cfaa4ab906fcddac9feccfea12"
+    },
+    {
+      "path": "src/vectors/kernel/v1/book-table-commitment.json",
+      "source": "se-backend",
+      "sourceName": "kernel/public/v1/book-table-commitment",
+      "sourceCommit": "bfe7dcde80386a7635816c9160bca9de214f948c",
+      "sha256": "066c3db933fc9f6739b9c80e1430c1b3ac9ea9f7d389cdb9868fe95c0a096291"
     },
     {
       "path": "src/vectors/kernel/v1/coin-flip-payout.json",
