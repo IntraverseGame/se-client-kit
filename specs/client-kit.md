@@ -419,7 +419,10 @@ a list entry by its index) with the code, never a value.
 - `PAGES_CHAIN_PINS` holds the chain pins only (`environment`, `runtimeSigner`,
   `registryDomain`, `entropyChainId`, `minRpcQuorum`, `tipLagMargin`, and the
   optional `earlierPins`); `PAGES_RPC_ORIGINS` must list exactly the origins of
-  `PAGES_RPC_ENDPOINTS`' URLs.
+  `PAGES_RPC_ENDPOINTS`' URLs. Proposed in
+  [RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md) (section
+  1): `PAGES_CHAIN_PINS` also holds `entropyChainKind`, and production mode
+  refuses a `solana` source that is not mainnet-beta (`not-mainnet`).
 - `earlierPins`, a list of `{ registryDomain, runtimeSigner }` pairs
   ([verify page](./verify-page.md), V-3b), goes into the verifier's document
   only, as its last field, since the Wrapper's validator refuses it. An absent

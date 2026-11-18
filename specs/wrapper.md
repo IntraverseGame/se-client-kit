@@ -506,9 +506,10 @@ only public values; the Wrapper refuses to start on an invalid document.
 | `runtimeSigner`    | the pinned address that signs `CreateRoundAuth` (W-26, OQ-7)                                                                                                                                                                                                                                                                                                                                |
 | `registryDomain`   | the pinned `chainId` and `verifyingContract` (W-26, OQ-7)                                                                                                                                                                                                                                                                                                                                   |
 | `rpcEndpoints`     | per entropy source: the public endpoints, each with its provider; the source's chain is pinned in `entropyChainId`                                                                                                                                                                                                                                                                          |
-| `entropyChainId`   | per entropy source, required: its pinned chain id; W-26 (check 3) and W-26b                                                                                                                                                                                                                                                                                                                 |
+| `entropyChainKind` | (proposed, RFC-007) per entropy source, required: `evm` or `solana`, cross-checked with `entropyChainId` (a `solana` source is cluster 101, 102, or 103, and an `evm` source never one of them; ADR-013, proposed); refused until RFC-007's slice 1 (the field list is closed), and added only by its Q12 migration                                                                         |
+| `entropyChainId`   | per entropy source, required: its pinned chain id; W-26 (check 3) and W-26b; for a Solana source, its cluster number (proposed, RFC-007)                                                                                                                                                                                                                                                    |
 | `minRpcQuorum`     | W-26a, default 2                                                                                                                                                                                                                                                                                                                                                                            |
-| `tipLagMargin`     | per entropy source, blocks; W-26b                                                                                                                                                                                                                                                                                                                                                           |
+| `tipLagMargin`     | per entropy source, blocks; W-26b; slots for a Solana source (proposed, RFC-007)                                                                                                                                                                                                                                                                                                            |
 | `gameOrigins`      | the allow-list of game origins D                                                                                                                                                                                                                                                                                                                                                            |
 | `operatorOrigins`  | the allow-list of operator page origins A                                                                                                                                                                                                                                                                                                                                                   |
 | `autoplay`         | optional: autoplay of book rounds for the deployment, its counts and its least interval (W-61; RFC-005, Q2's recommendation: per deployment, pending the human's decision); without it there is no autoplay                                                                                                                                                                                 |
@@ -528,6 +529,24 @@ the browser before INC1 anchoring. Production MUST set
 `environment: "production"` with `minRpcQuorum` of at least 2 (W-26a's boot rule
 refuses less). The staging documents are written by the Pages deploy
 ([client-kit.md](./client-kit.md#the-pages-sites-configuration)).
+
+**Production's entropy source is Solana mainnet-beta** (decided by the human
+owner, 2026-11-18, #235), which the kit does not read yet. Proposed in
+[RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md): the
+`entropyChainKind` field above, the source keyed `solana` with `entropyChainId`
+101, its `tipLagMargin` 64 slots (provisional, until the backend's measurement,
+se-backend#471), and the browser's RPC endpoints held to RFC-007's provider
+requirements (section 6: CORS, a key in the URL path or an Origin allowlist,
+never a query-string key, the methods, history back to at least the operator's
+dispute window and never less than 90 days, and independence from the engine's
+own provider: two independent providers the engine does not use, chosen in
+se-backend#375). Before production, staging runs a Solana devnet (cluster 103)
+source, so the Solana path runs end to end (RFC-007, Q11; a dependency on the
+backend and the infrastructure owner), and its document keeps the Somnia source
+(`anvil`, kind `evm`) beside `solana`, so rounds from before the switch still
+verify: a document may list sources of both kinds at once, each round is read by
+its own source's kind, and every rule above holds per source (RFC-007, section
+1).
 
 The schema, as the Wrapper validates it at boot (`apps/wrapper`,
 `validateEnvironmentConfig`; the chain fields through the shell's
