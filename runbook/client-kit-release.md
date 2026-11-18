@@ -1099,14 +1099,19 @@ token:
 - **The drift check reports a difference.** Read the run's summary; the findings
   are in
   [The contracts drift job](../specs/client-kit/the-contracts-drift-job.md#what-it-compares).
-  A changed document or a file not vendored: run the contract sync, unless the
-  kit synced first and the environment has not deployed that change yet (the
-  lock's `sourceCommit` is newer than what the environment runs; ask the
-  backend). A file not served: the same, or a file the backend removed, which
-  needs a word with the backend maintainers before any sync. A changed vector
-  fails the run: a vector is append-only, so ask the backend maintainers which
-  side is wrong before syncing; after the first release the kit never edits a
-  vector it released.
+  When the summary says its list is incomplete, the run log lists every finding.
+  A changed document: run the contract sync, unless the kit synced first and the
+  environment has not deployed that change yet (the lock's `sourceCommit` is
+  newer than what the environment runs; ask the backend). A file not vendored:
+  for a new vector or kernel set the kit needs, run the contract sync. A new
+  version of a contract (a new name, such as a second Snapshot schema version)
+  is not ordinary drift: moving to it is a decision of its own, taken first
+  ([the spec](../specs/client-kit/the-contracts-drift-job.md#errors-and-edge-cases));
+  then sync only the documents the kit needs. A file not served: the same as a
+  changed document, or a file the backend removed, which needs a word with the
+  backend maintainers before any sync. A changed vector fails the run: a vector
+  is append-only, so ask the backend maintainers which side is wrong before
+  syncing; after the first release the kit never edits a vector it released.
 - **The drift job could not check an environment.** The summary names the
   environment and the status code or kind of error, never the origin. A timeout,
   a 5xx, or a network error that persists across runs: tell the backend

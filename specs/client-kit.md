@@ -607,10 +607,13 @@ vulnerability reporting, the publishing environment), are in the
 
 ## Errors and edge cases
 
-- **A contract file in the kit is stale.** The drift check flags it
-  ([The contracts drift job](./client-kit/the-contracts-drift-job.md)); the fix
-  is a sync pull request here. Until then the kit works against the contract it
-  pinned.
+- **A contract file in the kit is stale.** The fix is a sync pull request here.
+  Until then the kit works against the contract it pinned. The drift job
+  ([The contracts drift job](./client-kit/the-contracts-drift-job.md)) is
+  specified and not built yet (#138), and it does not cover the signing vectors.
+  Until it lands, drift is detected from the backend side and by the person who
+  runs the sync, as before, and nobody relies on the job. After it lands, the
+  signing vectors stay that person's check.
 - **A breaking contract change lands first.** It needs a new surface prefix, so
   the old kit keeps working through the deprecation window.
 - **A dependency of the kit is compromised.** The lockfile and the allow-list

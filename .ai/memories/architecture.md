@@ -320,8 +320,13 @@ structure below.
   lives in the `contracts` package and is pinned in its lock file with
   its source commit and a SHA-256. A contract sync touches that one package.
 - CI recomputes the hashes offline and fails on a mismatch. It holds no
-  credential for any private repository; drift is detected from the backend
-  side, which reads this repository's public lock file.
+  credential for any private repository. Drift is detected from the backend
+  side, which reads this repository's public lock file, and by the person who
+  runs the sync. The scheduled `contracts-drift` job, which compares the lock
+  with the manifest each environment serves, is specified
+  ([the spec](../../specs/client-kit/the-contracts-drift-job.md)) and not built
+  yet (#138); it never covers the signing vectors, which stay a by-hand check at
+  the sync.
 - Vectors are **append-only**: a released version's vector files are never
   edited; new cases are new files or a new version. A vendored vector file
   records the commit it came from.
