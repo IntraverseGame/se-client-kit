@@ -174,7 +174,9 @@ transcript helper, the action grammar, and the vectors. See
 Vendor now, publish later: which backend documents are copied into `contracts`,
 the lock file, and the rules to vendor, verify offline, detect drift, sync
 additive changes, and review before publish. See
-[`client-kit/how-the-kit-gets-its-contracts.md`](./client-kit/how-the-kit-gets-its-contracts.md).
+[`client-kit/how-the-kit-gets-its-contracts.md`](./client-kit/how-the-kit-gets-its-contracts.md),
+and for the scheduled comparison with what each environment serves,
+[`client-kit/the-contracts-drift-job.md`](./client-kit/the-contracts-drift-job.md).
 
 ### Versioning and compatibility
 
@@ -605,9 +607,13 @@ vulnerability reporting, the publishing environment), are in the
 
 ## Errors and edge cases
 
-- **A contract file in the kit is stale.** The drift check flags it; the fix is
-  a sync pull request here. Until then the kit works against the contract it
-  pinned.
+- **A contract file in the kit is stale.** The fix is a sync pull request here.
+  Until then the kit works against the contract it pinned. The drift job
+  ([The contracts drift job](./client-kit/the-contracts-drift-job.md)) is
+  specified and not built yet (#138), and it does not cover the signing vectors.
+  Until it lands, drift is detected from the backend side and by the person who
+  runs the sync, as before, and nobody relies on the job. After it lands, the
+  signing vectors stay that person's check.
 - **A breaking contract change lands first.** It needs a new surface prefix, so
   the old kit keeps working through the deprecation window.
 - **A dependency of the kit is compromised.** The lockfile and the allow-list
@@ -637,7 +643,7 @@ workflow's logs are public and hold no secret.
 | Turning the publish path on (#154): the npm trusted publishers, an org owner's confirmation of the OIDC precondition and of a `github-actions[bot]` approval not satisfying the `main` ruleset's code-owner review, and `RELEASE_PUBLISH_ENABLED` (only once the production environments hold their secrets, which #133 sets). The release workflow itself is built (#134) | org owners, with the TPO                            | <!-- TODO(release, #154): org-owner settings (runbook, Bootstrap steps 4 and 6 to 8) -->                                                                                                            |
 | The first-publish rehearsal (#208): once, after the first publish, the npm deprecation and dist-tag steps on the first published version and a Pages rollback                                                                                                                                                                                                              | org owners, with the TPO                            | <!-- TODO(release, #208): the first-publish rehearsal, after the first publish (runbook, Roll back or deprecate) -->                                                                                |
 | Hosting of the released Wrapper and its deploy credentials (decided for staging: ADR-008's push to Cloudflare Pages; the account, projects, token, and DNS stay the infrastructure owner's)                                                                                                                                                                                | infrastructure owner                                | <!-- TODO(hosting, #133): deferred to #133; production hosting and the production environments' secrets, `frame-ancestors` source. Reason: staging only; production is to come. -->                 |
-| Publication of the backend's contracts and vectors (later step; not a blocker, OQ-6 decided)                                                                                                                                                                                                                                                                               | backend maintainers                                 | <!-- TODO(contract publication, #138): deferred until go-live; where and when -->                                                                                                                   |
+| The published locations of the backend's contracts and the `contracts-drift` job (#138; OQ-6 decided; [the job](./client-kit/the-contracts-drift-job.md) is specified, and lands once the locations are handed over)                                                                                                                                                       | backend maintainers                                 | <!-- TODO(contracts, #138): the backend hands over the locations (planned by 2026-11-27) and the environments' origins; then the job is built and its environment set up. -->                       |
 | The preview-stack pin and job                                                                                                                                                                                                                                                                                                                                              | backend repository                                  | the kit's side is the preview mode of the e2e suite ([testing-and-ci.md](./client-kit/testing-and-ci.md), [runbook](../runbook/preview-e2e.md)); the pin and the job live in the backend repository |
 | Type-aware lint (`oxlint-tsgolint`, for rules such as `no-floating-promises`)                                                                                                                                                                                                                                                                                              | follow-up pull request (needs an ADR-001 amendment) | <!-- TODO(follow-up): add `oxlint-tsgolint` to the allow-list and enable the type-aware rules -->                                                                                                   |
 

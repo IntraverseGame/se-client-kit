@@ -372,6 +372,11 @@ Several agents and people work in one clone at once. Rules:
   `tools/generate-contracts.ts --write`. The vendored JSON and YAML are exempt
   from oxfmt on purpose (the lock pins their bytes); the generated files are exempt from oxfmt
   and oxlint (the generator's output is what `check:contracts` compares).
+- Contracts drift job (#138; specified, not built yet): once built, an org owner
+  sets up its `contracts-drift` environment and two origin secrets
+  ([runbook](../../runbook/client-kit-release.md#set-up-the-contracts-drift-job));
+  a drift report is handled by the runbook's troubleshooting entry, and a new
+  contract version needs its own decision before any sync.
 - `json-schema-to-typescript` is imported by a computed specifier in
   `tools/generate-contracts.ts`: its declarations do not compile under the strict
   compiler options. Do not "fix" it into a static import. Its output is

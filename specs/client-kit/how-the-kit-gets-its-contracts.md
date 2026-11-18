@@ -9,10 +9,16 @@ into the `contracts` package (`packages/contracts/`) and pinned in its
 source commit, and the SHA-256 of the content. **Decided (TPO, 2026-10-15;
 [OQ-6](../wrapper.md#decided-questions)): vendor now, publish later.** The
 sources are private today, so the kit vendors copies and does not wait for the
-backend to publish; no git submodule is used. When the backend publishes its
-contracts (the Snapshot bundle, the OpenAPI documents, the vectors), the
-`contracts` package is replaced by that dependency (option B) without touching a
-logic package.
+backend to publish; no git submodule is used. The backend publishes the files
+the kit vendors from it at public locations, with a manifest of their hashes
+(rule 3). That publication does not replace the copies: the kit keeps vendoring
+them from a pinned commit, reviewed in a pull request, and the `contracts-drift`
+job compares the copies with what each environment serves. If the backend
+publishes its contracts as a package (option B), the `contracts` package can be
+replaced by that dependency without touching a logic package; that is a decision
+of its own, with an ADR (decided by the human, 2026-11-17, #138: the
+[ADR-001](../../decisions/ADR-001-toolchain-and-signing.md) amendment note on
+decision 5).
 
 | Contract (by name and version)                                                         | Used by                | Form in the kit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | -------------------------------------------------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -64,13 +70,20 @@ Rules:
 2. **Verify offline.** The `contracts` job recomputes each copied file's SHA-256
    and fails when it differs from the lock, and fails when the generated types
    in `contracts` differ from a regeneration of the committed documents.
-3. **Detect drift.** Until the backend publishes its contracts, drift is
-   detected from the backend side, which reads this repository's public lock
-   file (no credential needed), and by the person who runs the sync. Once a
-   published source exists, a `contracts-drift` job compares each lock entry
-   with it and reports a difference as a warning for an additive change and a
-   failure for a breaking one.
-   <!-- TODO(contract publication, #138): deferred to #138 until go-live (owner: backend maintainers). The published locations; then the drift job and its severity. Reason: there is no public location before the first release; until then the kit vendors each document byte for byte from a pinned commit, with the source commit and a SHA-256 per file in the lock. -->
+3. **Detect drift.** The backend publishes the files the kit vendors from it,
+   with a manifest of their SHA-256, on each environment's public origin. The
+   `contracts-drift` job reads that manifest once a day and compares each lock
+   entry with it by name and hash: a changed document, a file not served, or a
+   file not vendored is a warning, and a changed vector (vectors are
+   append-only) or an environment it could not check fails the run. It holds no
+   credential, changes nothing, and never blocks a merge or a release; the fix
+   is a sync. **The job is specified and not built yet (#138):** until it lands,
+   drift is detected from the backend side and by the person who runs the sync.
+   The backend also reads this repository's public lock file (no credential
+   needed). The signing vectors are not published by the backend, so their drift
+   is still checked by the person who runs the sync. The job, its inputs, and
+   its report: [The contracts drift job](./the-contracts-drift-job.md).
+   <!-- TODO(contracts, #138): the published locations, handed over by the backend (planned by 2026-11-27); then the job lands. Until it does, drift is detected from the backend side and by the person who runs the sync. -->
 4. **Additive changes are synced.** Within `/play/v1` and `se.snapshot/1`
    changes are additive. Clients are tolerant readers only within what the
    schema they were built against allows (absent optional fields, members of the
@@ -484,6 +497,6 @@ Rules:
    components were reworded at the source and copied again under the one-time
    pre-release exception (rule 4).
 
-   Issue #4's drift requirement is met, until the published locations exist, by
-   the `contracts` job verifying the lock against the committed copies; the
-   `contracts-drift` comparison job follows with them.
+   Issue #4's drift requirement is met by the `contracts` job verifying the lock
+   against the committed copies and by the `contracts-drift` job comparing the
+   lock with what each environment serves (#138).
