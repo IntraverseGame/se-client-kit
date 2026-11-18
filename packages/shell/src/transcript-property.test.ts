@@ -12,6 +12,7 @@ import {
   brokenLinks,
   forkedSequences,
   simulate,
+  type SimulationLog,
 } from "./fixtures/simulation.ts";
 import { workedInitial } from "./fixtures/vectors.ts";
 
@@ -19,12 +20,25 @@ const SEEDS = Array.from({ length: 150 }, (_, i) => i + 1);
 const STEPS = 60;
 
 describe("one tab", () => {
+  // A seed's run is deterministic, so it is made once and shared: the
+  // refusals test reads the logs the per-seed tests made instead of running
+  // the 150 sessions again (alone 0.46 s, it timed out at 5 s in a busy CI job;
+  // #192). Run on its own, it makes every log itself.
+  const logs = new Map<number, Promise<SimulationLog>>();
+  const oneTab = (seed: number): Promise<SimulationLog> => {
+    const log =
+      logs.get(seed) ??
+      openTestSession().then(session =>
+        simulate(seed, STEPS, [{ session, round: openWorkedRound(session) }]),
+      );
+    logs.set(seed, log);
+    return log;
+  };
+
   it.each(SEEDS)(
     "seed %i: never two signatures at one sequence",
     async seed => {
-      const session = await openTestSession();
-      const round = openWorkedRound(session);
-      const log = simulate(seed, STEPS, [{ session, round }]);
+      const log = await oneTab(seed);
       expect(forkedSequences(log.signed)).toEqual([]);
       expect(brokenLinks(log.signed, workedInitial)).toEqual([]);
     },
@@ -34,10 +48,7 @@ describe("one tab", () => {
     const codes = new Set<string>();
     for (const seed of SEEDS) {
       // oxlint-disable-next-line no-await-in-loop -- one session per seed, in order
-      const session = await openTestSession();
-      const log = simulate(seed, STEPS, [
-        { session, round: openWorkedRound(session) },
-      ]);
+      const log = await oneTab(seed);
       for (const code of log.refusals.keys()) codes.add(code);
     }
     expect([...codes].toSorted()).toEqual(["equivocation", "round-stopped"]);

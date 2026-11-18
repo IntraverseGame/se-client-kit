@@ -259,7 +259,7 @@ describe("the release workflow's jobs", () => {
     expect(lookups("changesets-mode")).toEqual([found]);
     expect(lookups("publish")).toEqual([
       found,
-      `refs="$(${SAFE_GIT} ls-remote --tags "\${GITHUB_SERVER_URL}/\${GITHUB_REPOSITORY}.git" "$ref")"`,
+      `refs="$(${SAFE_GIT} ls-remote --tags "\${GITHUB_SERVER_URL}/\${GITHUB_REPOSITORY}.git" "$ref" "$ref^{}")"`,
     ]);
   });
 

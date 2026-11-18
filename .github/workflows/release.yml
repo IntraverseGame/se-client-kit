@@ -390,8 +390,10 @@ jobs:
               required=1
             fi
             ref="refs/tags/${tag}"
+            # Both patterns: with only "$ref", git lists no "$ref^{}" line, so an
+            # annotated tag would resolve to its tag object, not its commit.
             refs="$(git -c core.hooksPath=/dev/null -c core.fsmonitor=false ls-remote --tags \
-              "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "$ref")"
+              "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "$ref" "$ref^{}")"
             commit="$(awk -v ref="$ref" '$2 == ref "^{}" { print $1 }' <<< "$refs")"
             if [ -z "$commit" ]; then
               commit="$(awk -v ref="$ref" '$2 == ref { print $1 }' <<< "$refs")"

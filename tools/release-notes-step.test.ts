@@ -1,5 +1,4 @@
 import {
-  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -9,8 +8,9 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
+import { installStub, removeStubs } from "./fixtures/stub-bin.ts";
 import { runStep } from "./fixtures/workflow-step.ts";
 import { release, stepEnv, stepRun } from "./release-workflow-lines.ts";
 import { jobRange, keyLines, scalarAt, stepRanges } from "./workflow-text.ts";
@@ -62,6 +62,7 @@ esac
 `;
 
 const directories: string[] = [];
+afterAll(removeStubs);
 afterEach(() => {
   for (const directory of directories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
@@ -90,8 +91,7 @@ const run = (
   const temp = join(directory, "runner");
   mkdirSync(join(bin, "notes", "@intraverse"), { recursive: true });
   mkdirSync(temp);
-  writeFileSync(join(bin, "gh"), GH);
-  chmodSync(join(bin, "gh"), 0o755);
+  installStub(bin, "gh", GH);
   for (const [tag, body] of Object.entries(
     options.notes ?? { [TAG]: CHANGELOG },
   )) {
