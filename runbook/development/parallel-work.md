@@ -8,6 +8,8 @@ this clone at the same time. Code is separated by git worktrees.
 ## Prerequisites
 
 - A clone of the repository with `origin` configured.
+- `pnpm hooks` run once in that clone (it installs the `commit-msg` hook; see
+  step 2).
 
 ## Steps
 
@@ -38,6 +40,14 @@ clean another worktree.
 `node_modules` and the wireit cache (`.wireit`) are per worktree. Run
 `pnpm install --frozen-lockfile` once in each new worktree before `pnpm check`;
 pnpm's content-addressable store is shared, so it is fast.
+
+The git hooks are set once per clone, not per worktree: `pnpm hooks` sets
+`core.hooksPath` to `.githooks` in the clone's shared git config, and every
+worktree then runs the `commit-msg` hook of its own checkout. If you have not
+run it in this clone yet, run it once. Never bypass the hook (`--no-verify`) to
+get an AI attribution into a commit message. `core.hooksPath` is relative, so a
+worktree on a branch cut before the hook was added has no `.githooks/` and runs
+no hook, with no warning; base new branches on a current `origin/main`.
 
 ### 3. Finish a task
 

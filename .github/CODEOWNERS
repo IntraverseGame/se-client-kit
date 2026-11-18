@@ -15,6 +15,7 @@
 /.claude/                 @mimshins
 /.opencode/               @mimshins
 /.agents/                 @mimshins
+/.githooks/               @mimshins
 /AGENTS.md                @mimshins
 /CLAUDE.md                @mimshins
 /package.json             @mimshins
