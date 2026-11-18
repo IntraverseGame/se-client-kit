@@ -51,14 +51,16 @@ Rules:
    in a file named by `--sources`, kept outside this repository. Vectors are
    append-only: the script refuses to change or remove a locked vector unless it
    is given `--allow-vector-change`, which is legitimate only before the first
-   release. It was used six times: for the pre-release exception of rule 4, for
-   the signing vectors of contracts release 1.0.0 (their `_comment` changed),
-   for the kernel's `kernel/public/v1/seed` set at se-backend `9294d22` (its
-   reference vector's description now names the `shuffle-draw` set; its inputs
-   and expected values are unchanged), for a book round's status flow at
-   se-backend `dee6000` and its follow-up at `65f9086`, and for the invalid
-   vectors' own-rule sync at se-backend `80ac5b8` (rule 4). Generated files are
-   rewritten by `tools/generate-contracts.ts --write`.
+   release. The flag was used six times: for the pre-release exception of rule
+   4, for the signing vectors of contracts release 1.0.0 (their `_comment`
+   changed), for the kernel's `kernel/public/v1/seed` set at se-backend
+   `9294d22` (its reference vector's description now names the `shuffle-draw`
+   set; its inputs and expected values are unchanged), for a book round's status
+   flow at se-backend `dee6000` and its follow-up at `65f9086`, and for the
+   invalid vectors' own-rule sync at se-backend `80ac5b8` (rule 4). A sync that
+   changes no locked vector needs no flag and is not counted here, the one of
+   2026-11-17 among them (rule 4). Generated files are rewritten by
+   `tools/generate-contracts.ts --write`.
 2. **Verify offline.** The `contracts` job recomputes each copied file's SHA-256
    and fails when it differs from the lock, and fails when the generated types
    in `contracts` differ from a regeneration of the committed documents.
