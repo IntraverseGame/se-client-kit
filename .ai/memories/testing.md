@@ -789,4 +789,8 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - CI jobs (`.github/workflows/ci.yml`): `lint`, `format`, `typecheck`, `unit`,
   `allow-list`, `contracts`, `build`, `e2e-fake` (a matrix, so its checks are
   `e2e-fake (chromium)`, `e2e-fake (firefox)`, `e2e-fake (webkit)`), `audit` (fails only on high and critical advisories; the weekly `audit.yml` reports every severity), `dependency-review` (pull requests only),
-  and the aggregate `ci-ok`. `contracts-drift` and `release` are not defined yet.
+  and the aggregate `ci-ok`. `release` is its own workflow (`release.yml`).
+  `contracts-drift` is specified
+  ([the spec](../../specs/client-kit/the-contracts-drift-job.md)) and not built
+  yet (#138): its own workflow (schedule and on demand), never in `ci-ok` or
+  `pnpm check`; its pure functions get hermetic unit tests.
