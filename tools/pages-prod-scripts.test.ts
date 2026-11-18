@@ -108,11 +108,20 @@ esac
 status="\${2#*status=}"; status="\${status%%&*}"
 if [ -e "$STUB_DIR/runs-$status" ]; then cat "$STUB_DIR/runs-$status"; else echo 0; fi
 `;
+  // `git ls-remote --tags <url> <pattern>...`: the lines of the file `refs`
+  // whose `/<ref>` ends with `/<pattern>` for one of the patterns, as git
+  // matches them, so a peeled `<ref>^{}` line only when `<ref>^{}` is asked for.
   const GIT = `#!/bin/sh
 set -eu
 echo "git $*" >> "$STUB_DIR/calls"
+while [ "$1" != --tags ]; do shift; done
+shift 2
 touch "$STUB_DIR/refs"
-cat "$STUB_DIR/refs"
+awk -v patterns="$*" 'BEGIN { n = split(patterns, p, " ") }
+  n == 0 { print; next }
+  { r = "/" $2
+    for (i = 1; i <= n; i++) { t = "/" p[i]
+      if (length(r) >= length(t) && substr(r, length(r) - length(t) + 1) == t) { print; next } } }' "$STUB_DIR/refs"
 `;
 
   const check = (

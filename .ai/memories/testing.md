@@ -514,6 +514,14 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   peeled commit; the call path's commit check) and `prod-verify` (the
   `.sha256` name and bytes, `gh attestation verify` arguments, a failed
   verification) with stubs.
+  `tools/release-tag-peel.test.ts` runs real git against a local bare
+  repository (`file://`, no user or system git configuration): `ls-remote`
+  lists an annotated tag's `^{}` line only when the `<ref>^{}` pattern is
+  passed (so the peeling scripts pass both patterns), and `release-check`
+  resolves an annotated and a lightweight tag to the commit. The stub `git` of
+  `tools/pages-prod-scripts.test.ts` and
+  `tools/fixtures/release-mode-checkout.ts` answers per pattern the same way;
+  a stub that listed `^{}` for the bare ref once hid an unpeeled annotated tag.
   `tools/actions-allow-list.test.ts` holds every `uses:` under `.github/` to
   the Actions allow-list table in `specs/client-kit/supply-chain.md`. `tools/pages-workflow.test.ts` checks
   `pages.yml` (gates, permissions, the `pages-stage` environment, the project
