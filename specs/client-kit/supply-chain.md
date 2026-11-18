@@ -290,7 +290,15 @@ the attack surface a player cannot see. The rules:
   deploys the Wrapper's and the verifier's sites. Only `deploy-prod` is in the
   concurrency group `pages-prod`. The production project names, token, and
   account id are secrets of `pages-prod`, the configuration values secrets of
-  `pages-prod-config`; none is written in the repository.
+  `pages-prod-config`; none is written in the repository. A dispatch from a
+  branch other than `main` skips `release-check` and every job after it, so it
+  deploys nothing. A failed production deploy is recovered by that dispatch from
+  `main` with the release's tag, never by re-running the release run:
+  `prod-worker` and `config-prod` keep their artifacts one day, so when
+  `deploy-prod` failed, re-running the failed jobs fails at the download after
+  that, and a full re-run runs `changesets-mode` again, which finds every
+  version tagged and ends with "nothing to release", so `publish` and every job
+  after it (`production` included) are skipped.
 - **Bundling.** A package's own source is the only thing in its `dist/`; nothing
   from `node_modules` is ever bundled (`deps` in `tsdown.base.ts`). A kit
   package stays an import (`neverBundle` for the `@intraverse/` scope), a
