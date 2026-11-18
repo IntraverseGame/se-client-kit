@@ -6,5 +6,10 @@
       "Bash(git push *)",
       "Bash(gh pr create *)"
     ]
+  },
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
   }
 }

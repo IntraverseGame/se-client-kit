@@ -83,9 +83,8 @@ description: Use when reviewing a pull request on GitHub, following up on a revi
   for the human.
 - A reply goes to the thread's **first** comment; GitHub does not accept a
   reply to a reply.
-- The review summary and the author-side summary comment end with the
-  disclosure line (ADR-003):
-  `Drafted with pr-shepherd, reviewed by @<login>.`
+- Nothing posted carries an agent footer or any other attribution to an AI
+  model or agent (ADR-003, amendment note of 2026-11-18).
 - Nothing posted contains a command to a bot (`@dependabot rebase` and the
   like) unless the human wrote it.
 - Lists are paginated: pass `--paginate` (the thread query takes `$endCursor`
@@ -156,7 +155,7 @@ for a summary-only review):
 {
   "commit_id": "<head-sha>",
   "event": "REQUEST_CHANGES",
-  "body": "<summary>\n\n<disclosure line>",
+  "body": "<summary>",
   "comments": [
     {
       "path": "<path>",

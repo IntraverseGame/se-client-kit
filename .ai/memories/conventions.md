@@ -1,6 +1,6 @@
 ---
 description: TypeScript, error, money, secret, logging, and naming conventions. Read before writing code.
-last-verified: 2026-11-16 (the `wireit@0.15.0` release-age waiver removed, once 0.15.0 was past the window; one exact-version exception left, `chokidar@4.0.3`; 2026-11-03, #193: `unicorn/require-module-specifiers` is on; 2026-10-28, #143: the two exact-version supply-chain exceptions; 2026-10-16, toolchain pull request; the TypeScript rules are accepted in ADR-001 and enforced by oxlint, and stylelint for CSS)
+last-verified: 2026-11-18 (commits carry no AI or agent attribution, refused by the `commit-msg` hook that `pnpm hooks` installs, ADR-003 amendment note; 2026-11-16, the `wireit@0.15.0` release-age waiver removed, once 0.15.0 was past the window; one exact-version exception left, `chokidar@4.0.3`; 2026-11-03, #193: `unicorn/require-module-specifiers` is on; 2026-10-28, #143: the two exact-version supply-chain exceptions; 2026-10-16, toolchain pull request; the TypeScript rules are accepted in ADR-001 and enforced by oxlint, and stylelint for CSS)
 ---
 
 # Conventions
@@ -102,6 +102,8 @@ This note records the patterns behind them.
 - **Generated files** (typed clients, generated types) are never edited by hand;
   regenerate and commit the output. CI regenerates and fails on a diff.
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/),
-  one logical change per PR.
+  one logical change per PR, with no AI or agent attribution (no co-author
+  trailer, no "Generated with" line); the `commit-msg` hook installed by
+  `pnpm hooks` refuses one (ADR-003).
 - **Public repository:** commits, issues, and logs are world-readable. No
   secrets, internal hostnames, account identifiers, or personal data.
