@@ -18,15 +18,25 @@ name: Release
 #     (tools/release-version.sh), then the "chore: bump versions" pull request
 #     from `changeset-release/main`. Made with the job token, that pull request
 #     starts no workflow run (accepted: CI runs on `main` after the merge).
+#   - `prod-check` (on the same condition as `publish`; `contents: read`)
+#     calls .github/workflows/pages-prod-check.yml (ADR-009, amendment note of
+#     2026-11-17): `config-check`, in environment `pages-prod-config` (no
+#     deploy credential) at this commit, builds and validates production's
+#     configuration documents in production mode and runs the deploy's headers
+#     step on them; `deploy-check`, in environment `pages-prod`, with no
+#     checkout and no repository code, requires the deploy credential and the
+#     project names. `publish` needs it, so a missing or refused production
+#     value stops the release before npm publishes.
 #   - `publish` (only on a release candidate and with the repository variable
-#     RELEASE_PUBLISH_ENABLED `true`; environment `release`, whose required
-#     reviewers approve it; `contents: write` and `id-token: write`; no
-#     `pull-requests`) checks again that a version is still untagged, runs
-#     `pnpm check` and the release dry run, then changesets/action in publish
-#     mode: tools/release-publish.ts publishes with npm trusted publishing (no
-#     npm token anywhere) and tags every released package; the action pushes
-#     the tags (and creates no release); the job's last step checks that every
-#     tag is on this commit and only then creates a GitHub release for each.
+#     RELEASE_PUBLISH_ENABLED `true`, after `prod-check`; environment
+#     `release`, whose required reviewers approve it; `contents: write` and
+#     `id-token: write`; no `pull-requests`) checks again that a version is
+#     still untagged, runs `pnpm check` and the release dry run, then
+#     changesets/action in publish mode: tools/release-publish.ts publishes
+#     with npm trusted publishing (no npm token anywhere) and tags every
+#     released package; the action pushes the tags (and creates no release);
+#     the job's last step checks that every tag is on this commit and only
+#     then creates a GitHub release for each.
 #   - `wrapper-build` (`contents: read`), `attest` (environment `attest`), and
 #     `wrapper-assets` (`contents: write`, no repository code) run only while
 #     the Wrapper's release has no tar attached: they build the Wrapper artifact twice (one digest),
@@ -187,11 +197,27 @@ jobs:
           commit-message: "chore: bump versions"
           pr-title: "chore: bump versions"
 
+  # Production's settings, checked before anything is published (ADR-009,
+  # amendment note of 2026-11-17): on the release's own condition, so a run
+  # that publishes nothing never names a production environment. Its jobs,
+  # their environments, and their secrets are in pages-prod-check.yml; the
+  # permissions here are the most those jobs may ask for.
+  prod-check:
+    name: prod-check
+    needs: changesets-mode
+    if: >-
+      needs.changesets-mode.outputs.release-candidate == 'true' &&
+      vars.RELEASE_PUBLISH_ENABLED == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/pages-prod-check.yml
+
   # The release. Only for the bump merge with an untagged version, only with
-  # publishing on, and only after a required reviewer of `release` approves.
+  # publishing on, only once production's settings passed `prod-check`,
+  # and only after a required reviewer of `release` approves.
   publish:
     name: publish
-    needs: changesets-mode
+    needs: [changesets-mode, prod-check]
     if: >-
       needs.changesets-mode.outputs.release-candidate == 'true' &&
       vars.RELEASE_PUBLISH_ENABLED == 'true'

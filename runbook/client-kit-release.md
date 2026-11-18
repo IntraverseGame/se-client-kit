@@ -151,10 +151,12 @@ org owners apply the settings; ask them for each.
    - before it is set, the production environments `pages-prod` and
      `pages-prod-config` exist, protected, and hold their secrets, set under
      #133 ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages),
-     Production): the first release deploys production in the same run, and a
-     missing secret fails the production jobs after npm has already published
-     (an unset `PAGES_OPERATOR_ORIGINS` instead deploys with no page allowed to
-     embed the Wrapper);
+     Production): the first release deploys production in the same run. A
+     missing or refused value in either environment fails the release's
+     `prod-check` job before anything is published (Release); an unset
+     `PAGES_OPERATOR_ORIGINS` still deploys with no page allowed to embed the
+     Wrapper, and a deploy token that is set but expired or lacks the Pages
+     permission still fails the deploy after npm has published;
    - after the first real publish, the one-time rehearsal in
      [Roll back or deprecate](#roll-back-or-deprecate) (#208).
    <!-- TODO(org owners, #154): RELEASE_PUBLISH_ENABLED, once steps 5 to 7 are done, the trusted publishers exist, and the production environments hold their secrets (#133). -->
@@ -242,15 +244,16 @@ The workflow starts with `permissions: {}` and has **no concurrency group**:
 each push's run is independent and checks out its own commit, so a later push
 never cancels the bump merge's run. Its jobs:
 
-| Job               | Runs                                                        | Permissions                                                     | Environment | Repository tooling                                            |
-| ----------------- | ----------------------------------------------------------- | --------------------------------------------------------------- | ----------- | ------------------------------------------------------------- |
-| `changesets-mode` | every push to `main`                                        | `contents: read`, `pull-requests: read`                         | none        | no (shell, git, gh, jq)                                       |
-| `version`         | changesets pending                                          | `contents: write`, `pull-requests: write`                       | none        | yes (`changeset version`, the version-file guard)             |
-| `publish`         | a release candidate and `RELEASE_PUBLISH_ENABLED` `true`    | `contents: write`, `id-token: write`                            | `release`   | yes (`pnpm check`, the dry run, the publish command)          |
-| `wrapper-build`   | the Wrapper's release has no tar yet                        | `contents: read`                                                | none        | yes (the dry run)                                             |
-| `attest`          | after `wrapper-build`                                       | `contents: read`, `id-token: write`, `attestations: write`      | `attest`    | no (`attest-build-provenance` only)                           |
-| `wrapper-assets`  | after `attest`                                              | `contents: write`                                               | none        | no (`gh release upload`)                                      |
-| `production`      | after `wrapper-assets` (`.github/workflows/pages-prod.yml`) | at most `contents: read`, `attestations: read`, `actions: read` | its jobs'   | see [Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages) |
+| Job               | Runs                                                                         | Permissions                                                     | Environment                                                         | Repository tooling                                                                                                                                           |
+| ----------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `changesets-mode` | every push to `main`                                                         | `contents: read`, `pull-requests: read`                         | none                                                                | no (shell, git, gh, jq)                                                                                                                                      |
+| `version`         | changesets pending                                                           | `contents: write`, `pull-requests: write`                       | none                                                                | yes (`changeset version`, the version-file guard)                                                                                                            |
+| `prod-check`      | as `publish` (`.github/workflows/pages-prod-check.yml`)                      | `contents: read` (`deploy-check`: none)                         | `pages-prod-config` (`config-check`), `pages-prod` (`deploy-check`) | `config-check` yes (the shell and Wrapper builds, the configuration builder in production mode, the deploy's headers script); `deploy-check` no (shell only) |
+| `publish`         | a release candidate and `RELEASE_PUBLISH_ENABLED` `true`, after `prod-check` | `contents: write`, `id-token: write`                            | `release`                                                           | yes (`pnpm check`, the dry run, the publish command)                                                                                                         |
+| `wrapper-build`   | the Wrapper's release has no tar yet                                         | `contents: read`                                                | none                                                                | yes (the dry run)                                                                                                                                            |
+| `attest`          | after `wrapper-build`                                                        | `contents: read`, `id-token: write`, `attestations: write`      | `attest`                                                            | no (`attest-build-provenance` only)                                                                                                                          |
+| `wrapper-assets`  | after `attest`                                                               | `contents: write`                                               | none                                                                | no (`gh release upload`)                                                                                                                                     |
+| `production`      | after `wrapper-assets` (`.github/workflows/pages-prod.yml`)                  | at most `contents: read`, `attestations: read`, `actions: read` | its jobs'                                                           | see [Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages)                                                                                                |
 
 `changesets-mode` decides, read-only. A changeset is pending when `.changeset/`
 holds a `*.md` file other than its `README.md`: then `version` runs. With none
@@ -314,8 +317,30 @@ past both.
    `main` regenerates it); fix a note in its changeset on `main`.
 
 3. **Publish.** Merge the bump pull request (squash). Its push is the bump
-   merge; when a version is untagged, the run is a release candidate and
-   `publish` waits for a required reviewer of `release`. On approval:
+   merge; when a version is untagged, the run is a release candidate. First,
+   **`prod-check`** checks production's settings
+   (`.github/workflows/pages-prod-check.yml`;
+   [Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages), Production;
+   ADR-009, amendment note of 2026-11-17), in two jobs:
+   - `config-check`, in `pages-prod-config` (no deploy credential) at the merge
+     commit, builds and validates the two production configuration documents
+     from that environment's seven secrets in production mode, with the
+     production deploy's own `config-prod` steps, then builds the Wrapper and
+     runs the deploy's own headers step on the documents;
+   - `deploy-check`, in `pages-prod`, with no checkout and no repository code,
+     runs the deploy's own "Require the Pages settings" step: the token, the
+     account id, and both project names set, the names Pages project names, and
+     different.
+
+   Its failure means a production value is missing or would be refused at deploy
+   time (`environment` not `production`, a quorum below 2, an origin the headers
+   step refuses, a `_headers` line over 2,000 characters, a missing or malformed
+   deploy setting, or any of the validator's issues): **nothing was published**,
+   `publish` did not start, and no approval was asked. Fix the value (the errors
+   name the input or setting, the field or header, and a code, never a value)
+   and use "Re-run failed jobs" on the run within 30 days. Neither environment
+   has a required reviewer, so this asks for no approval. Only when it passes
+   does `publish` wait for a required reviewer of `release`. On approval:
    - it checks again, with `git ls-remote --tags`, that a version is still
      untagged (the job may have waited); if every one is tagged by now, it ends
      with an "already released" notice and runs nothing else;
@@ -565,9 +590,10 @@ Three jobs:
   (`tsc`), with a read-only token and no secret.
 - `config-stage`: the two sites' configuration documents, built from the
   `pages-stage` configuration secrets and validated with the Wrapper's own
-  validator (`apps/wrapper/pages-config-cli.ts`). It references only those
-  secrets, never the token, but it runs in the same environment: an accepted
-  risk for staging only (ADR-008, Risks accepted).
+  validator (`apps/wrapper/pages-config-cli.ts`), which also refuses an origin
+  the headers step would (Production, below). It references only those secrets,
+  never the token, but it runs in the same environment: an accepted risk for
+  staging only (ADR-008, Risks accepted).
 - `deploy-stage`: checks every download against its digest, lays out the three
   sites, writes the Wrapper's and the verifier's `_routes.json` and every site's
   `_headers` (the CSP lists and the Wrapper's origin read from the configuration
@@ -724,14 +750,15 @@ enter this repository, an issue, or a log):
        (`field earlierPins is not a chain pin`).
      - **In production, the config job runs at the deployed tag's commit**
        (`config-prod` in `pages-prod.yml`), so the document and the page always
-       come from one release. A release without support for the field fails that
-       job with the same issue and deploys nothing, and the sites stay as they
-       are. Set the field in `pages-prod-config` no earlier than when the
-       release that first carries it is about to deploy. After that, a dispatch
-       to an earlier tag fails the same way until the field is removed from the
-       secret, and that release then fails earlier rounds' check 3 again. A
-       rollback in Pages runs no config job and restores that deployment's own
-       document.
+       come from one release; the release's own `prod-check` check runs the same
+       build at the same commit before it publishes. A release without support
+       for the field fails that job with the same issue and deploys nothing, and
+       the sites stay as they are. Set the field in `pages-prod-config` no
+       earlier than when the release that first carries it is about to deploy.
+       After that, a dispatch to an earlier tag fails the same way until the
+       field is removed from the secret, and that release then fails earlier
+       rounds' check 3 again. A rollback in Pages runs no config job and
+       restores that deployment's own document.
      - Only the verifier's `environment-config.json` carries the list, and only
        when it has an entry; the Wrapper's never does, and the Wrapper still
        binds and checks only under the current pins. A verify page opened on the
@@ -826,8 +853,36 @@ no reference game, and frames the real game origins. Its jobs:
 | `release-check` | `actions: read`                        | none                | checks the tag's shape, refuses a dispatch while a release run is not completed, and resolves the tag's commit (`git ls-remote`; when the release calls it, the release's own commit)                                                                         |
 | `prod-verify`   | `contents: read`, `attestations: read` | none                | downloads the tar and its `.sha256` from the Wrapper's release by tag, checks that the `.sha256` names the tar and matches it, and runs `gh attestation verify` ([Verify before and after](#verify-before-and-after)) with `--source-digest` the tag's commit |
 | `prod-worker`   | `contents: read`                       | none                | after `prod-verify` (the attestation proves the commit before its code runs), builds the proxy worker with `tsc` at the tag's commit, with staging's own script (not attested)                                                                                |
-| `config-prod`   | `contents: read`                       | `pages-prod-config` | after `prod-verify`, builds and validates the two configuration documents from that environment's secrets (the same seven names as staging's) at the tag's commit; that environment holds no deploy credential                                                |
+| `config-prod`   | `contents: read`                       | `pages-prod-config` | after `prod-verify`, builds and validates the two configuration documents from that environment's secrets (the same seven names as staging's) at the tag's commit, in production mode (`--production`); that environment holds no deploy credential           |
 | `deploy-prod`   | `contents: read`                       | `pages-prod`        | runs no repository code: downloads the tar again by tag, refuses any download whose SHA-256 is not its producing job's digest, lays out the two sites, writes their `_headers` with staging's own script, and runs `wrangler pages deploy`                    |
+
+**The configuration tool's own rules** (specs/client-kit.md, The Pages sites'
+configuration), on staging and production alike: every origin the deploy's
+headers step reads (each RPC endpoint URL's origin, each game and operator
+origin, the Wrapper's origin) must be `https` with a lowercase host of letters,
+digits, `-`, and `.` and an optional port, exactly what that step accepts: no
+uppercase letter, no `_`, no IPv6 literal, no `http`. **Production mode**
+(`--production`) also requires `PAGES_CHAIN_PINS`' `environment` to be
+`production` (so `minRpcQuorum` is at least 2, and each RPC source has at least
+two endpoints); staging's `config-stage` runs as `preview`, without it.
+
+**The same checks run before the release publishes**: the release workflow's
+`prod-check` job (`.github/workflows/pages-prod-check.yml`; Release, step 3)
+runs `config-prod`'s steps in `pages-prod-config` at the release commit, then
+the deploy's own headers step on the documents (so a `_headers` line over the
+Pages limit of 2,000 characters, which grows with the number of origins, fails
+here, naming the site and the header), and `deploy-prod`'s own "Require the
+Pages settings" step in `pages-prod`, with no checkout and no repository code;
+`publish` needs it. So a missing or refused value in either environment stops
+the release before npm publishes; `config-prod` and `deploy-prod` check the
+values again at deploy time. The token is only required to be set, not verified
+with Cloudflare (ADR-009, amendment note), so an expired token still fails
+`deploy-prod`: rotate it (Rotate the Pages token, below), then dispatch "Pages
+production" from `main` with the release's tag. After changing a production
+secret, the next release checks it before it publishes; a redeploy by tag checks
+it in `config-prod` and `deploy-prod` before it deploys. A project name must be
+a Pages project name (lowercase letters, digits, and inner dashes, at most 63
+characters), and the two must differ.
 
 Only `deploy-prod` is in the concurrency group `pages-prod`
 (`cancel-in-progress: false`), so production deploys never overlap and a staging
@@ -1017,12 +1072,34 @@ token:
   release workflow. Deprecate it and republish from the workflow.
 - **The publish job waits.** It needs an approval from a required reviewer of
   the `release` environment.
+- **The `prod-check` job failed.** A production value is missing, or production
+  would refuse it. Nothing was published, and `publish` never asked for its
+  approval. Which job failed says where:
+  - `config-check`: a value in `pages-prod-config`. The errors name the input
+    and the field with the validator's code or the tool's (`not-production` at
+    `environment`: the pins are not production's; `production-quorum` at
+    `minRpcQuorum`: a quorum below 2; `not-https-origin`: an origin the deploy's
+    headers step refuses, such as a host with an uppercase letter or an `_`), or
+    the headers step's error ("The wrapper site's _headers line for
+    Content-Security-Policy is over the Pages limit": too many or too long
+    origins for one policy; shorten the lists).
+  - `deploy-check`: a setting of `pages-prod` is missing, a project name is not
+    a Pages project name, or both name the same project; the error names the
+    setting, never its value.
+
+  Fix the secret (`gh secret set <name> --env <environment>`; the value never
+  goes into an issue or a log), then "Re-run failed jobs" on the bump merge's
+  run within 30 days. A run that names a missing environment creates it,
+  unprotected and empty, and fails the same way: protect it and restrict it to
+  `main` (Bootstrap step 8) before setting its secrets.
+
 - **The publish path is skipped.** `publish` and the jobs after it run only on a
   release candidate (the bump merge, no changeset pending, a version above 0.0.0
   without its tag) and with the variable `RELEASE_PUBLISH_ENABLED` set to `true`
-  (Bootstrap step 8). `changesets-mode`'s notice says which: "nothing to
-  release" or "publishing was off". For the latter, re-run the bump merge's run
-  by hand once the variable is `true`, within 30 days (Release).
+  (Bootstrap step 8), and only once `prod-check` has passed. `changesets-mode`'s
+  notice says which: "nothing to release" or "publishing was off". For the
+  latter, re-run the bump merge's run by hand once the variable is `true`,
+  within 30 days (Release).
 - **The `publish` job says "Already released".** Every publishable version was
   tagged by the time the job ran (a re-run after a release, or a duplicate):
   nothing ran, nothing to do.
@@ -1086,8 +1163,11 @@ token:
   release"), skips `publish` and every job after it, and ends green with nothing
   deployed. Fix the cause, then dispatch "Pages production" from `main` with the
   release's tag ([Deploy to Cloudflare Pages](#deploy-to-cloudflare-pages),
-  Production). A `prod-verify` failure (the `.sha256` or the attestation) is an
-  incident (Escalation): never deploy around it.
+  Production). A `config-prod` or "Require the Pages settings" failure after
+  `prod-check` passed means a value changed in between: fix it as for
+  `prod-check`, then dispatch the same way. A `prod-verify` failure (the
+  `.sha256` or the attestation) is an incident (Escalation): never deploy around
+  it.
 - **A dispatch or re-run ended green but nothing deployed.** Open the run: if
   `deploy-prod` (or, on a release run, `publish` and `production`) shows as
   skipped, nothing reached Pages. A "Pages production" dispatch from a branch

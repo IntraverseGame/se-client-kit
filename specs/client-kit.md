@@ -263,11 +263,21 @@ another origin.
    tar by tag, checks its digest, and runs `gh attestation verify` against the
    tag's commit; the proxy worker is built with `tsc` at the tag's commit; the
    configuration is built in the environment `pages-prod-config`, which holds no
-   deploy credential; and the deploy job (`pages-prod`, no required reviewer,
-   alone in the concurrency group `pages-prod`) refuses any other digest. A
-   person can redeploy a released tag by dispatching the same workflow, which
-   refuses while a release run is not completed. Production cannot deploy before
-   the publish path is on (#154). Staging:
+   deploy credential, in production mode (below); and the deploy job
+   (`pages-prod`, no required reviewer, alone in the concurrency group
+   `pages-prod`) refuses any other digest. **Before it publishes**, the release
+   checks production's settings (`.github/workflows/pages-prod-check.yml`, which
+   the `publish` job needs; ADR-009, amendment note of 2026-11-17): the same
+   production configuration build in the same environment at the release commit,
+   followed by the deploy's own headers step on the documents (which also
+   refuses a `_headers` line over the Pages limit of 2,000 characters), and, in
+   `pages-prod` with no repository code, the deploy's own settings step (the
+   token, the account id, and the two project names set, the names Pages project
+   names, and different). A missing or refused production value stops the
+   release before anything reaches npm. A person can redeploy a released tag by
+   dispatching the same workflow, which refuses while a release run is not
+   completed. Production cannot deploy before the publish path is on (#154).
+   Staging:
    - A build job with a read-only token and no secret builds the Wrapper
      artifact twice (the release dry run) and requires one digest, makes the
      reference game's artifact from the dry run's two builds and requires one
@@ -377,6 +387,34 @@ artifact's bytes and digest are unchanged. The config job builds both from the
 each with the Wrapper's own validator for its site's origin (the verifier's
 without `earlierPins`, below); any issue fails the job, naming an input or a
 field, never a value.
+
+**The tool's own rules** (`apps/wrapper/pages-config-rules.ts`; ADR-009,
+amendment note of 2026-11-17), beyond the validator's, so that a configuration
+job refuses what its deploy would refuse later:
+
+- **In both modes**, every origin the deploy's headers step reads from the
+  Wrapper's document must match that step's `origin` pattern (code
+  `not-https-origin`): `https`, lowercase dot-separated labels of letters,
+  digits, and inner `-`, and an optional port of up to five digits. It holds for
+  the origin of each RPC endpoint URL (its scheme and authority, as the step
+  takes it), each game and operator origin, and the Wrapper's origin. The
+  validator accepts some origins the step refuses (a host with an uppercase
+  letter in an RPC URL, an `_`, a bracketed IPv6 host, `http` on a loopback
+  host); the tool refuses them all, on staging as in production. The pattern is
+  the step's, character for character, and a test runs the step's own script on
+  the same values to hold the two to one verdict
+  (`tools/pages-config-origins.test.ts`).
+- **In production mode** (`pages-config-cli.ts --production`, from the
+  `pages-prod-config` secrets, the same seven names), `environment` must also be
+  `production` (code `not-production`, at `PAGES_CHAIN_PINS`' `environment`), so
+  W-26a's boot rule applies to the documents: `minRpcQuorum` at least 2, its
+  default when unset (the validator's `production-quorum`), so every RPC source
+  needs at least two endpoints (W-26b). A staging-like `preview` or `local`
+  document, or a quorum of 1, never reaches production. Staging runs as
+  `preview`, without the flag.
+
+An issue names the input and the field (an RPC endpoint by its source and index,
+a list entry by its index) with the code, never a value.
 
 - `PAGES_CHAIN_PINS` holds the chain pins only (`environment`, `runtimeSigner`,
   `registryDomain`, `entropyChainId`, `minRpcQuorum`, `tipLagMargin`, and the

@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-11-17 (a failed production deploy is recovered by a dispatch from `main`, never a re-run; immutable releases off; 2026-11-16, the `wireit@0.15.0` release-age waiver removed, once 0.15.0 was past the window; one exact-version exception left, `chokidar@4.0.3`; 2026-11-11, the generator's `undici` override raised from 6.29.0 to 6.29.1 for four advisories in 6.29.0, no supply-chain exception; the first-publish rehearsal moved from #154 to #208; 2026-11-04, #154's release settings checked: the `attest`, `pages-prod`, and `pages-prod-config` environments, the tag ruleset, and the Actions setting exist, the production environments hold no secret yet, and #133 sets those secrets as a precondition of `RELEASE_PUBLISH_ENABLED`; 2026-11-03, `earlierPins` in `PAGES_CHAIN_PINS`: the config tool writes it to the verifier's document only, each entry validated by the Wrapper's validator in the current pair's place; 2026-10-30, staging's `PAGES_OPERATOR_ORIGINS` holds the staging operators' origins, no longer a placeholder; 2026-10-28, #133: ADR-009 built, the changesets/action release flow and pages-prod.yml; staging's entropy chain moves to Somnia's public testnet, 50312, tipLagMargin 100, the switch procedure; #135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
+last-verified: 2026-11-17 (production's settings checked before publish: release.yml's `prod-check` calls pages-prod-check.yml, `publish` needs it; ADR-009 amendment note; a failed production deploy is recovered by a dispatch from `main`, never a re-run; immutable releases off; 2026-11-16, the `wireit@0.15.0` release-age waiver removed, once 0.15.0 was past the window; one exact-version exception left, `chokidar@4.0.3`; 2026-11-11, the generator's `undici` override raised from 6.29.0 to 6.29.1 for four advisories in 6.29.0, no supply-chain exception; the first-publish rehearsal moved from #154 to #208; 2026-11-04, #154's release settings checked: the `attest`, `pages-prod`, and `pages-prod-config` environments, the tag ruleset, and the Actions setting exist, the production environments hold no secret yet, and #133 sets those secrets as a precondition of `RELEASE_PUBLISH_ENABLED`; 2026-11-03, `earlierPins` in `PAGES_CHAIN_PINS`: the config tool writes it to the verifier's document only, each entry validated by the Wrapper's validator in the current pair's place; 2026-10-30, staging's `PAGES_OPERATOR_ORIGINS` holds the staging operators' origins, no longer a placeholder; 2026-10-28, #133: ADR-009 built, the changesets/action release flow and pages-prod.yml; staging's entropy chain moves to Somnia's public testnet, 50312, tipLagMargin 100, the switch procedure; #135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
 ---
 
 # Development workflow
@@ -72,9 +72,27 @@ Several agents and people work in one clone at once. Rules:
   `package.json`, `A`/`M` of a `CHANGELOG.md`, neither in `.changeset/` nor
   `.github/`, and `D` of a `.changeset/<name>.md` (not README), mode 100644,
   paths in `[A-Za-z0-9._/@-]`, git without hooks or fsmonitor, and unstages
-  after). `publish` (release candidate and `vars.RELEASE_PUBLISH_ENABLED ==
-  'true'`; environment `release`; `contents: write`, `id-token: write`; no
-  `pull-requests`) checks out with tags, re-checks the tags (else "already
+  after). `prod-check` (same `if:` as `publish`; `contents: read`; ADR-009
+  amendment note 2026-11-17, accepted by the human) calls
+  `.github/workflows/pages-prod-check.yml` (workflow_call only, no input), two
+  jobs: `config-check` (`pages-prod-config`, `contents: read`, default checkout
+  = the run's commit, no output or upload) runs `config-prod`'s "Build the
+  shell" and "Build and validate the configuration documents" steps verbatim
+  (`pages-config-cli.ts --production`), builds the Wrapper, lays out the two
+  sites, and runs the deploy's "Write the Pages headers files" verbatim (so the
+  2000-character `_headers` line limit fails before publish);
+  `deploy-check` (`pages-prod`, `permissions: {}`, no checkout or repository
+  code, no network) runs `deploy-prod`'s "Require the Pages settings"
+  verbatim (four settings set, project names `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`
+  and different). Tests hold the copies equal. A reusable workflow so
+  release.yml itself still reads no `secrets.`; neither environment has a
+  required reviewer (checked 2026-11-17). The token is not verified with
+  Cloudflare (decided not to; ADR-009 note). The config tool's origin rule
+  applies to staging too; only `environment: production` is production-only.
+  `publish` (`needs: [changesets-mode, prod-check]`; release candidate and
+  `vars.RELEASE_PUBLISH_ENABLED == 'true'`; environment `release`;
+  `contents: write`, `id-token: write`; no `pull-requests`) checks out with
+  tags, re-checks the tags (else "already
   released", nothing else runs), `pnpm check`, npm 11.5.1+, the dry run, then
   the action in publish mode with
   `tools/release-publish.ts --publish --out ... --expect-wrapper-digest ...`
@@ -211,9 +229,10 @@ Several agents and people work in one clone at once. Rules:
   `attestations: read`, no checkout) `gh release download`s the tar and
   `.sha256`, checks them, runs `gh attestation verify` with ADR-005's flags and
   `--source-digest` the commit; `prod-worker` and `config-prod`
-  (`pages-prod-config`, no deploy credential), both `needs: [release-check,
-  prod-verify]` so the attestation proves the commit before its code runs, at
-  the tag's commit;
+  (`pages-prod-config`, no deploy credential; `--production`), both
+  `needs: [release-check, prod-verify]` so the attestation proves the commit
+  before its code runs, at the tag's commit (the release's `prod-check` ran
+  the same build unattested at its own commit before publish: the amendment);
   `deploy-prod` (`pages-prod`, the only job in concurrency group `pages-prod`)
   downloads the tar again, checks every digest, lays out the Wrapper's and the
   verifier's sites (no game), runs staging's headers script verbatim (its game

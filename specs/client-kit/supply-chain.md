@@ -68,9 +68,10 @@ the attack surface a player cannot see. The rules:
   40-character commit SHA, is pinned to another SHA than the list's, or carries
   another version in its trailing comment, and when the list names an Action no
   workflow uses. Local Actions (`./.github/actions/...`) and the repository's
-  own reusable workflows (`./.github/workflows/<name>.yml`, called from a job:
-  the production deploy, ADR-009) are exempt. Adding an Action needs a recorded
-  decision; a Dependabot bump changes the table in the same pull request.
+  own reusable workflows (`./.github/workflows/<name>.yml`, called from a job of
+  `release.yml`: the production deploy and the production configuration check,
+  ADR-009) are exempt. Adding an Action needs a recorded decision; a Dependabot
+  bump changes the table in the same pull request.
 
   | Action                             | Version | Commit SHA                                 | Decided in |
   | ---------------------------------- | ------- | ------------------------------------------ | ---------- |
@@ -126,13 +127,37 @@ the attack surface a player cannot see. The rules:
     `changeset-release/main` through the API and opens or updates the pull
     request "chore: bump versions", which, made with the job token, gets no CI
     (accepted).
+  - `prod-check` (on `publish`'s own condition; `contents: read`; ADR-009,
+    amendment note of 2026-11-17, accepted by the human) calls
+    `.github/workflows/pages-prod-check.yml`, and `publish` needs it, so a
+    missing or refused production value stops the release before anything
+    reaches npm, instead of failing the deploy after. A run that publishes
+    nothing (no release candidate, or publishing off) never names a production
+    environment. Neither environment has a required reviewer. Its two jobs:
+    - `config-check` (the environment `pages-prod-config`, which holds no deploy
+      credential; `contents: read`; no output, no upload), at the run's own
+      commit, runs the production deploy's `config-prod` steps word for word
+      (the shell built, production's two configuration documents built and
+      validated in production mode, `pages-config-cli.ts --production`, from
+      that environment's seven secrets), then builds the Wrapper for its
+      `headers.json` and runs the deploy's own headers step on the two sites,
+      which also refuses a `_headers` line over the Pages limit of 2,000
+      characters. The commit is not attested first, unlike the deploy's: it is
+      the release run's own, and `publish` runs its code next with more
+      privilege (accepted by the human, 2026-11-17).
+    - `deploy-check` (the environment `pages-prod`; `permissions: {}`; no
+      checkout, no repository code, no network call) runs `deploy-prod`'s
+      "Require the Pages settings" step word for word: the token, the account
+      id, and the two project names set, the names Pages project names
+      (lowercase letters, digits, and inner dashes, at most 63 characters), and
+      different. It prints no value, and never uses the token.
   - `publish` (only on a release candidate and with `RELEASE_PUBLISH_ENABLED`
-    `true`; the protected `release` environment; `contents: write`,
-    `id-token: write`; no `pull-requests`) checks out with the tags, checks
-    again that a version is still untagged (otherwise it ends with "already
-    released" and runs nothing else), runs `pnpm check`, requires npm 11.5.1 or
-    later, runs the release dry run, then the action in publish mode
-    (`create-github-releases: false`) with the publish command
+    `true`, after `prod-check`; the protected `release` environment;
+    `contents: write`, `id-token: write`; no `pull-requests`) checks out with
+    the tags, checks again that a version is still untagged (otherwise it ends
+    with "already released" and runs nothing else), runs `pnpm check`, requires
+    npm 11.5.1 or later, runs the release dry run, then the action in publish
+    mode (`create-github-releases: false`) with the publish command
     `tools/release-publish.ts --publish`: it builds without the task cache,
     packs and checks the five libraries, refuses what is not ready (the publish
     gate, `tools/release-readiness.ts`: pending changesets, a `private` or 0.0.0
@@ -180,6 +205,10 @@ the attack surface a player cannot see. The rules:
     durable home (ADR-005) and production's source.
   - `production` calls `.github/workflows/pages-prod.yml` with the tag (see The
     Pages deploy, below).
+
+  `release.yml` reads no secret itself: production's values are read in
+  `pages-prod-check.yml` and `pages-prod.yml`, by the jobs that name their
+  environment.
 
   No job holds both the pull-request write and the OIDC token: `version` has no
   environment and no `id-token`, so the code it runs can never publish or
@@ -251,14 +280,16 @@ the attack surface a player cannot see. The rules:
   `gh attestation verify` with ADR-005's flags and `--source-digest` the tag's
   commit; only after it, so the attestation proves the commit before any of its
   code runs, `prod-worker` (`contents: read`) builds the worker at that commit
-  and `config-prod` builds the configuration in the environment
-  `pages-prod-config`, which holds no deploy credential, closing the staging
-  risk above for production; and `deploy-prod` (environment `pages-prod`, no
-  required reviewer; `contents: read`) runs no repository code, refuses any
-  download whose SHA-256 is not its producing job's digest, and deploys the
-  Wrapper's and the verifier's sites. Only `deploy-prod` is in the concurrency
-  group `pages-prod`. The production project names, token, and account id are
-  secrets of `pages-prod`, the configuration values secrets of
+  and `config-prod` builds the configuration in production mode in the
+  environment `pages-prod-config`, which holds no deploy credential, closing the
+  staging risk above for production (the release ran the same build in
+  `prod-check` before it published); and `deploy-prod` (environment
+  `pages-prod`, no required reviewer; `contents: read`) first requires its
+  settings (the step `prod-check` ran before publish), runs no repository code,
+  refuses any download whose SHA-256 is not its producing job's digest, and
+  deploys the Wrapper's and the verifier's sites. Only `deploy-prod` is in the
+  concurrency group `pages-prod`. The production project names, token, and
+  account id are secrets of `pages-prod`, the configuration values secrets of
   `pages-prod-config`; none is written in the repository. A dispatch from a
   branch other than `main` skips `release-check` and every job after it, so it
   deploys nothing. A failed production deploy is recovered by that dispatch from

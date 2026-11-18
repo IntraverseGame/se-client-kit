@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { prod, release } from "./release-workflow-lines.ts";
+import { prod, prodCheck, release } from "./release-workflow-lines.ts";
 import {
   jobNames,
   jobRange,
@@ -11,8 +11,9 @@ import {
   stepRanges,
 } from "./workflow-text.ts";
 
-// Every `run:` step of the release workflow and the production deploy
-// (.github/workflows/release.yml and pages-prod.yml) names `shell: bash`, so
+// Every `run:` step of the release workflow, the production configuration
+// check, and the production deploy (.github/workflows/release.yml,
+// pages-prod-check.yml, and pages-prod.yml) names `shell: bash`, so
 // Actions runs it as `bash --noprofile --norc -eo pipefail {0}` (the default
 // shell has no pipefail), the way tools/fixtures/workflow-step.ts runs their
 // scripts in the tests; and a script of more than one line starts with
@@ -30,9 +31,9 @@ type ScriptStep = {
   readonly script: string;
 };
 
-/** Every step of both workflows that has a `run:` script. */
+/** Every step of the three workflows that has a `run:` script. */
 const scriptSteps = (): ScriptStep[] =>
-  [release, prod].flatMap(lines =>
+  [release, prodCheck, prod].flatMap(lines =>
     jobNames(lines)
       .filter(job => hasSteps(lines, job))
       .flatMap(job =>
