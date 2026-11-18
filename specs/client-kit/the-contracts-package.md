@@ -37,7 +37,8 @@ logic packages read it and never write to it.
   comments; an interface that extends another, or a note in another shape, fails
   the generation), the **lock file** `contracts.lock.json` (source, source
   commit, and SHA-256 per artifact), and the input of the drift-check job (the
-  lock file itself and the list of published sources). Generated files are
+  lock file itself, compared with the manifest each environment serves:
+  [The contracts drift job](./the-contracts-drift-job.md)). Generated files are
   committed and never edited by hand.
 - **Two entry points** (`package.json` `exports`):
   - the **runtime entry** (`.`) exports the schemas and the generated types. It
@@ -280,9 +281,14 @@ logic packages read it and never write to it.
   `shell`; the Wrapper's component tests; the verify page's unit tests (the
   fairness kernel's vectors); and the e2e suite's fake Play API. It never
   reaches a published tarball or a browser bundle (the three checks above).
-- **Replaceable by design.** If the backend later publishes its contracts as a
-  package (OQ-6 decided: publish later, option B), `contracts` is the one
-  package that is replaced by that dependency (or becomes a thin re-export of
-  it). No logic package changes, because none holds a copy or an import path of
-  its own.
+- **Replaceable by design.** The backend publishes the files the kit vendors at
+  public locations with a manifest of their hashes, not as a package; that
+  publication does not replace the copies (ADR-001 amendment note of 2026-11-17,
+  #138): the kit keeps vendoring them, and the `contracts-drift` job compares
+  the lock with what each environment serves
+  ([The contracts drift job](./the-contracts-drift-job.md)). If the backend ever
+  publishes its contracts as a package (OQ-6's option B, which would need its
+  own ADR), `contracts` is the one package that is replaced by that dependency
+  (or becomes a thin re-export of it). No logic package changes, because none
+  holds a copy or an import path of its own.
 - **The lock file lives here.** A contract sync touches one package.
