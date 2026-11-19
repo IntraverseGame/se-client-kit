@@ -146,7 +146,7 @@ Part of the [Client kit spec](../client-kit.md), section
   - **Vectors.** Until the backend's `key-delegation/v1 vectors` are vendored
     (S2), the tests pin its published values, held as provisional test constants
     (`src/fixtures/provisional-key-delegation.ts`). They are copied from
-    se-backend `486969a8` (se-backend#88), its published
+    se-backend `486969a8` (the backend's key-delegation contract), its published
     `key-delegation/v1 vectors` (the accepted case), and independently
     re-derived here. Only tests import that file. S2 (#220's vendoring task)
     deletes it and moves these tests to the lock-pinned vendored vectors on
