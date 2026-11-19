@@ -537,15 +537,17 @@ development-only, so it may import the test-only entry of `contracts`.
   it, in one run where no call is in flight and in 2 s steps where failures must
   time out; the page keeps its own record of each Play API call and the page
   time it was made, through a pass-through `fetch` the test installs once the
-  session is open, so "nothing before the refresh point" and "nothing after the
-  end" are read exactly, not from the fake's later record. The same `fetch`
-  marks a call answered once its answer's body has been read through a clone,
-  one real task later (a `MessageChannel` message, which the paused clock does
-  not hold), so the Wrapper's own read of that answer is done by then; the fake
-  records a request before it answers it, so where a test waits on an answer, as
-  in the refresh that succeeds and the read after it, it waits for that mark
-  before it moves the clock again, or the transport's 15 s timeout could abort
-  an answer still on its way). The rows that need a round W-26 passes (T-10,
+  session is open (`harness/page-call-record.ts`), so "nothing before the
+  refresh point" and "nothing after the end" are read exactly, not from the
+  fake's later record. The same `fetch` marks a call answered once its answer's
+  body has been read through a clone, one real task later (a `MessageChannel`
+  message, which the paused clock does not hold), so the Wrapper's own read of
+  that answer is done by then; the fake records a request before it answers it,
+  so where a test waits on an answer, as in the refresh that succeeds and the
+  read after it, it waits for that mark before it moves the clock again, or the
+  transport's 15 s timeout could abort an answer still on its way; an answer
+  that cannot be read is recorded with its path and error, and that wait fails
+  on it at once with the cause). The rows that need a round W-26 passes (T-10,
   T-11, T-14, T-15's signed action and its resend of a move lost offline, T-16's
   round errors, T-19) run on the vendored Coin Flip round, and T-12 on the
   vendored Cash or Crash `[3,3,4]` rounds (`valid/cashorcrash-cash-out-*` for

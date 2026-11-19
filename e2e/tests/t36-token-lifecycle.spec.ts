@@ -6,6 +6,12 @@ import type { Answer } from "./harness/fake-play-wire.ts";
 import { expect, test } from "./harness/fixtures.ts";
 import { FAKE_NOW } from "./harness/origins.ts";
 import {
+  type PageCall,
+  pageCalls,
+  recordPageCalls,
+  untilEveryAnswerRead,
+} from "./harness/page-call-record.ts";
+import {
   PLAY_ROUTES,
   type PlayOperationId,
 } from "./harness/play-api-document.ts";
@@ -16,11 +22,6 @@ import {
   statusHeading,
   TEXT,
 } from "./harness/wrapper-page.ts";
-
-type PageCall = {
-  readonly path: string;
-  readonly at: number;
-};
 
 const REFRESH_FRACTION = 1 / 3;
 const REFRESH_MARGIN_MS = 60_000;
@@ -76,66 +77,6 @@ const returnToPage = async (page: Page): Promise<void> => {
     document.dispatchEvent(new Event("visibilitychange"));
   });
   await page.clock.runFor(RETURN_DEBOUNCE_MS);
-};
-
-const recordPageCalls = (page: Page): Promise<void> =>
-  page.evaluate(() => {
-    const calls: PageCall[] = [];
-    const read: number[] = [];
-    const send = globalThis.fetch.bind(globalThis);
-    const markRead = async (answer: Promise<Response>, index: number) => {
-      await (await answer).clone().text();
-      await new Promise(resolve => {
-        const { port1, port2 } = new MessageChannel();
-        port1.addEventListener("message", resolve, { once: true });
-        port1.start();
-        port2.postMessage(index);
-      });
-      read.push(index);
-    };
-    Reflect.set(globalThis, "pageCalls", calls);
-    Reflect.set(globalThis, "pageAnswersRead", read);
-    Reflect.set(
-      globalThis,
-      "fetch",
-      (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-        const url = input instanceof Request ? input.url : input;
-        const path = new URL(url, location.href).pathname;
-        const index = calls.push({ path, at: Date.now() }) - 1;
-        const answer = send(input, init);
-        markRead(answer, index).catch(() => null);
-        return answer;
-      },
-    );
-  });
-
-const untilEveryAnswerRead = async (page: Page): Promise<void> => {
-  const everyAnswerRead = (): Promise<boolean> =>
-    page.evaluate(() => {
-      const calls: unknown = Reflect.get(globalThis, "pageCalls");
-      const read: unknown = Reflect.get(globalThis, "pageAnswersRead");
-      return (
-        Array.isArray(calls) &&
-        Array.isArray(read) &&
-        read.length === calls.length
-      );
-    });
-  await expect.poll(everyAnswerRead).toBe(true);
-};
-
-const isPageCall = (value: unknown): value is PageCall =>
-  typeof value === "object" &&
-  value !== null &&
-  typeof Reflect.get(value, "path") === "string" &&
-  typeof Reflect.get(value, "at") === "number";
-
-const pageCalls = async (page: Page): Promise<readonly PageCall[]> => {
-  const calls: unknown = await page.evaluate(() =>
-    Reflect.get(globalThis, "pageCalls"),
-  );
-  return Array.isArray(calls)
-    ? calls.filter((call: unknown): call is PageCall => isPageCall(call))
-    : [];
 };
 
 const refreshes = (fake: FakePlayApi): readonly Served[] =>
