@@ -566,6 +566,18 @@ cross-origin iframe inside an operator page.
 - **The signing page's origin holds a grant** between the connection and the
   revoke, and longer if a wallet ignores the revoke. That origin serves only
   this page, whose code is public and attested.
+- **A compromised signing page is not bound by the wallet port.** The port
+  constrains the page's own code. Code that takes over the page can call the
+  injected provider directly and ask for any signature or transaction the wallet
+  supports; the wallet prompts the player for each and shows the signing page's
+  origin.
+- **Navigation can carry data out.** CSP does not limit navigations, so a
+  compromised signing page can navigate itself, or the Wrapper's frame while it
+  holds the opener, to another origin with what it holds in the URL: the action
+  key's address, the session id, the expiry, the wallet's address, and the
+  signature. None of them signs or spends (section 4), but together they link
+  the wallet to the session. `Referrer-Policy: no-referrer` removes only the
+  `Referer` header.
 - **The signing page can navigate the Wrapper's frame.** With no COOP and no
   `noopener`, a compromised signing page holds `window.opener`, the Wrapper's
   frame, and can navigate it (`window.opener.location`). That ends the session,

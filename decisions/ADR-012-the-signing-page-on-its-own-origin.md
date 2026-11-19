@@ -98,9 +98,10 @@
   so a compromised Wrapper could still ask the wallet for a connection of its
   own; the wallet's prompt would then show the Wrapper's origin. That residual
   risk is stated in RFC-006; this decision removes only the silent path.
-- **A small surface.** The signing page can ask the wallet for one thing: a
+- **A small surface.** The signing page's code asks the wallet for one thing: a
   `KeyDelegation` in one domain (RFC-006's wallet port), and it signs only
-  notice text from its own copy, never text the Wrapper sends.
+  notice text from its own copy, never text the Wrapper sends. The port binds
+  that code, not a compromised page (below).
 - **Another origin, and where the browser has it, another process.** The
   same-origin policy keeps the Wrapper's memory unreadable from the popup in
   every browser. In a browser with site isolation (desktop Chrome and Firefox),
@@ -109,9 +110,12 @@
   defense in depth; Safari is untested.
 - **Contained requests.** `frame-ancestors 'none'`: no page can frame it and lay
   a decoy over the wallet's buttons. `connect-src 'self'`, with no API on its
-  site: no request from the page's scripts can reach another origin. Navigations
-  are not limited by CSP. `Referrer-Policy: no-referrer`: no URL leaves with a
-  request.
+  site, and `default-src 'none'` for every other load (proposed, RFC-006 section
+  5): no fetch, image, or other subresource request from the page reaches
+  another origin. `Referrer-Policy: no-referrer`: the page's requests and
+  navigations send no `Referer` header, so its own URL is not passed on; it does
+  not stop data the page puts in a URL. Navigations are not limited by CSP
+  (below).
 - **No COOP, on purpose, and its cost.** A COOP header on the signing page would
   cut its opener, as the operator's does (W-49g), so it sends none, and the
   Wrapper opens it without `noopener`. The cost: the page holds `window.opener`,
@@ -121,11 +125,21 @@
   (RFC-006): the page revokes its wallet connection (best effort, at most about
   3 s), then posts `result` or `failed`, then sets `window.opener = null`, and
   the Wrapper closes the popup when the answer arrives.
+- **Navigation can carry data out.** Because CSP does not limit navigations, a
+  compromised signing page can navigate itself, or the Wrapper's frame while it
+  holds the opener, to another origin with what it holds in the URL: the action
+  key's address, the session id, the expiry, the wallet's address, and the
+  signature. None of them signs or spends (the private key, the play token, and
+  the launch code never reach the page, RFC-006 section 4), but together they
+  link the wallet to the session. The kit cannot block it; the page's code is
+  public and attested.
 - **Separate from the key.** A flaw in the signing page cannot read the action
   key or the play token: they are in another origin's memory, which the
   same-origin policy keeps unreadable, and, where the browser isolates sites, in
-  another process. The most it can do is ask the wallet to sign a delegation,
-  which the wallet shows the player, or navigate the Wrapper's frame, as above.
+  another process. It can still call the injected provider directly, around the
+  wallet port, and ask for any signature or transaction the wallet supports; the
+  wallet prompts the player for each and shows the signing page's origin. It can
+  also navigate, as above.
 
 ## Alternatives considered
 
