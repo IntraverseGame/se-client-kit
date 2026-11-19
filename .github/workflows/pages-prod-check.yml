@@ -1,0 +1,287 @@
+name: Pages production check
+
+# Production's settings, checked before a release publishes (ADR-009,
+# amendment note of 2026-11-17, accepted by the human;
+# runbook/client-kit-release.md, Release): the release workflow's `prod-check`
+# job calls it for a release candidate while publishing is on, and `publish`
+# needs that job, so a
+# missing or refused production value stops the release before anything
+# reaches npm. Without it, such a value would fail only the production deploy
+# (pages-prod.yml), after npm has published. It is called from release.yml
+# only, never dispatched. Two jobs, one per production environment:
+#
+#   - `config-check` (environment `pages-prod-config`, which holds no deploy
+#     credential, ADR-008, Risks accepted; `contents: read`; no output, no
+#     upload), at the run's own commit, the one `publish` tags: `config-prod`'s
+#     shell build and validation steps, word for word, so the two sites'
+#     configuration documents are built from that environment's seven secrets
+#     in production mode (`pages-config-cli.ts --production`: `environment`
+#     must be `production`, so W-26a's quorum rule applies, and every origin
+#     must be one the deploy's headers step accepts); then the Wrapper's build,
+#     for its `headers.json`, and the deploy's own headers step on the two
+#     sites, which refuses what the deploy would, among them a `_headers` line
+#     over the Pages limit. `config-prod` still builds the deployed documents
+#     at the tag's commit, after `prod-verify`.
+#   - `deploy-check` (environment `pages-prod`; `permissions: {}`; no
+#     checkout, no repository code, no network call): `deploy-prod`'s own
+#     "Require the Pages settings" step, word for word: the token, the account
+#     id, and the two project names are set, the names are Pages project names,
+#     and they differ. It prints no value.
+#
+# Nothing here is attested first, unlike `config-prod`: the commit is the
+# release run's own (`github.sha`, the default checkout), not one a tag names,
+# and `publish` runs its code next with more privilege than `config-check` has
+# (accepted by the human, 2026-11-17). Neither environment has a required
+# reviewer, so no approval is asked before `publish`'s.
+on:
+  workflow_call:
+
+# No job gets a token unless it asks for one below.
+permissions: {}
+
+env:
+  # No task cache (#53).
+  WIREIT_CACHE: none
+
+jobs:
+  config-check:
+    name: config-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: pages-prod-config
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache: "false"
+      # The validator imports the shell, through its built entry point.
+      - name: Build the shell
+        shell: bash
+        run: pnpm --filter @intraverse/se-client-shell run build
+      - name: Build and validate the configuration documents
+        id: config
+        env:
+          PAGES_WRAPPER_ORIGIN: ${{ secrets.PAGES_WRAPPER_ORIGIN }}
+          PAGES_VERIFIER_ORIGIN: ${{ secrets.PAGES_VERIFIER_ORIGIN }}
+          PAGES_CHAIN_PINS: ${{ secrets.PAGES_CHAIN_PINS }}
+          PAGES_RPC_ENDPOINTS: ${{ secrets.PAGES_RPC_ENDPOINTS }}
+          PAGES_RPC_ORIGINS: ${{ secrets.PAGES_RPC_ORIGINS }}
+          PAGES_GAME_ORIGINS: ${{ secrets.PAGES_GAME_ORIGINS }}
+          PAGES_OPERATOR_ORIGINS: ${{ secrets.PAGES_OPERATOR_ORIGINS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/pages-config"
+          pnpm exec tsx apps/wrapper/pages-config-cli.ts --production --out "$out"
+          for site in wrapper verifier; do
+            digest="sha256:$(sha256sum "$out/${site}-environment-config.json" | cut -d ' ' -f 1)"
+            echo "${site}-config-digest=${digest}" >> "$GITHUB_OUTPUT"
+            echo "${site} configuration document: ${digest}"
+          done
+      # The Wrapper's `headers.json`, from its build at this commit (the same
+      # build the release's tar is made of).
+      - name: Build the Wrapper
+        shell: bash
+        run: pnpm --filter @intraverse/se-client-wrapper run build
+      # The two sites as the deploy lays out what the headers step reads: the
+      # Wrapper's site with its `headers.json` and its configuration document,
+      # and the verifier's site.
+      - name: Lay out the sites
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/sites/wrapper" "$RUNNER_TEMP/sites/verifier"
+          cp apps/wrapper/dist/headers.json "$RUNNER_TEMP/sites/wrapper/headers.json"
+          cp "$RUNNER_TEMP/pages-config/wrapper-environment-config.json" \
+            "$RUNNER_TEMP/sites/wrapper/environment-config.json"
+      # The deploy's own headers script (pages.yml and pages-prod.yml, word for
+      # word; tools/pages-prod-check-workflow.test.ts), run on the documents
+      # above and the Wrapper's `headers.json`: it refuses what the deploy
+      # would, among them an origin it does not accept and a `_headers` line
+      # over the Pages limit of 2000 characters, naming the site and the
+      # header, never a value. The files it writes are thrown away.
+      - name: Write the Pages headers files
+        env:
+          SITES: ${{ runner.temp }}/sites
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -f
+          headers_json="$SITES/wrapper/headers.json"
+          config="$SITES/wrapper/environment-config.json"
+          if [ ! -f "$config" ]; then
+            echo "::error::The Wrapper's site has no environment-config.json."
+            exit 1
+          fi
+          if [ ! -f "$headers_json" ]; then
+            echo "::error::The Wrapper artifact has no headers.json."
+            exit 1
+          fi
+          if ! jq --exit-status '
+            type == "object"
+            and all(.[]; type == "object" and all(.[]; type == "string"))
+            and ([.. | strings, (objects | keys[])]
+              | all(test("[[:cntrl:]]") | not))
+            and has("/verify/*")
+            ' "$headers_json" > /dev/null; then
+            echo "::error::headers.json is not path patterns of one-line string headers with a /verify/* rule."
+            exit 1
+          fi
+          origin='^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:[0-9]{1,5})?$'
+          # $1: the list's name; $2: its entries; $3: what an empty list is.
+          source_list() {
+            local name="$1" entries="" entry
+            for entry in $2; do
+              if ! [[ $entry =~ $origin ]]; then
+                echo "::error::${name} holds an entry that is not an https origin." >&2
+                return 1
+              fi
+              entries="${entries}${entry}"$'\n'
+            done
+            if [ -z "$entries" ]; then
+              printf "%s" "$3"
+            else
+              printf "%s" "$entries" | LC_ALL=C sort -u | paste -s -d ' ' -
+            fi
+          }
+          # The origin of each endpoint URL: its scheme and authority.
+          rpc_origins="$(jq --raw-output '
+            [.rpcEndpoints[][].url | capture("^(?<o>[a-z]+://[^/?#]+)").o]
+            | join(" ")' "$config")"
+          game_origins="$(jq --raw-output '.gameOrigins | join(" ")' "$config")"
+          operator_origins="$(jq --raw-output '.operatorOrigins | join(" ")' "$config")"
+          # An empty `connect-src` list leaves `'self'` alone; an empty frame or
+          # ancestor list is `'none'`.
+          connect="$(source_list rpcEndpoints "$rpc_origins" "")"
+          game="$(source_list gameOrigins "$game_origins" "'none'")"
+          ancestors="$(source_list operatorOrigins "$operator_origins" "'none'")"
+          # The Wrapper's origin, for the game's `frame-ancestors`: the origin
+          # of the validated document's `playApiBaseUrl` (the Wrapper's origin
+          # plus `/play/v1`).
+          wrapper_origin="$(jq --raw-output '
+            (.playApiBaseUrl | strings | capture("^(?<o>[^/]+//[^/?#]+)/play/v1$").o)
+            // ""' "$config")"
+          if ! [[ $wrapper_origin =~ $origin ]]; then
+            echo "::error::The Wrapper's configuration document has no Wrapper origin."
+            exit 1
+          fi
+          # The game's ancestors: the Wrapper and, since `frame-ancestors`
+          # checks every ancestor (operator, Wrapper, game), the operator
+          # origins; the Wrapper alone when there are none (never `'none'`
+          # beside an origin).
+          if [ "$ancestors" = "'none'" ]; then
+            game_ancestors="$wrapper_origin"
+          else
+            game_ancestors="$wrapper_origin $ancestors"
+          fi
+          # The reference game's own `<meta>` policy, plus `frame-ancestors`.
+          game_csp="default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors ${game_ancestors}"
+          # $1: a jq filter from headers.json to the site's rules; $2: the file.
+          write_headers() {
+            local target="$2"
+            if [ -e "$target" ]; then
+              echo "::error::The site already has a _headers file."
+              exit 1
+            fi
+            jq --arg gameCsp "$game_csp" "$1" "$headers_json" | jq --raw-output \
+              --arg connect "$connect" --arg game "$game" --arg ancestors "$ancestors" '
+              def fill:
+                gsub(" ?\\{\\{connectOrigins\\}\\}"; if $connect == "" then "" else " " + $connect end)
+                | gsub(" ?\\{\\{verifyConnectOrigins\\}\\}"; if $connect == "" then "" else " " + $connect end)
+                | gsub("\\{\\{gameOrigins\\}\\}"; $game)
+                | gsub("\\{\\{operatorOrigins\\}\\}"; $ancestors);
+              to_entries as $rules
+              | range(0; $rules | length) as $i
+              | $rules[$i] as $rule
+              | $rule.key,
+                ([$rules[0:$i][]
+                  | select(.key | endswith("*"))
+                  | select(.key[0:-1] as $prefix | $rule.key | startswith($prefix))
+                  | .value | keys[]] | unique[] | "  ! \(.)"),
+                ($rule.value | to_entries[] | "  \(.key): \(.value | fill)")
+              ' > "$target"
+            if grep -q '{{' "$target"; then
+              echo "::error::headers.json has a placeholder this step does not fill."
+              exit 1
+            fi
+            if LC_ALL=C grep -qvE '^(/[^[:space:]]*|  ! [A-Za-z-]+|  [A-Za-z-]+: [^[:cntrl:]]+)$' "$target"; then
+              echo "::error::A _headers file has a line Pages would not read as intended."
+              exit 1
+            fi
+            # The first line over the limit, named by its header (or path);
+            # its value is never printed.
+            long="$(LC_ALL=C awk 'length($0) > 2000 { sub(/^ +/, ""); sub(/:.*/, ""); print; exit }' "$target")"
+            if [ -n "$long" ]; then
+              site="$(basename "$(dirname "$target")")"
+              echo "::error::The ${site} site's _headers line for ${long} is over the Pages limit of 2000 characters."
+              exit 1
+            fi
+            echo "Wrote $target: $(grep -c '^/' "$target") rules."
+          }
+          write_headers '.' "$SITES/wrapper/_headers"
+          write_headers '{"/*": .["/verify/*"]}' "$SITES/verifier/_headers"
+          # The game's site, where there is one (staging; production serves
+          # no game, and pages-prod.yml runs this same script). The game's
+          # `Permissions-Policy` is the Wrapper's own, from its `/*` rule, so
+          # the two cannot drift.
+          if [ -d "$SITES/game" ]; then
+            if ! jq --exit-status '.["/*"]["Permissions-Policy"] | type == "string"' \
+              "$headers_json" > /dev/null; then
+              echo "::error::headers.json has no Permissions-Policy in its /* rule."
+              exit 1
+            fi
+            write_headers '{"/*": {
+                "Content-Security-Policy": $gameCsp,
+                "Permissions-Policy": .["/*"]["Permissions-Policy"],
+                "Referrer-Policy": "no-referrer",
+                "X-Content-Type-Options": "nosniff"
+              }}' "$SITES/game/_headers"
+          fi
+
+  # The deploy's settings, checked before anything is published: the deploy
+  # credential and the project names of `pages-prod`, present and well formed.
+  # No checkout and no repository code: the runner's shell only. It makes no
+  # network call; the token is not used, only required to be set.
+  deploy-check:
+    name: deploy-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: pages-prod
+    permissions: {}
+    steps:
+      # `deploy-prod`'s own first step, word for word
+      # (tools/pages-prod-check-workflow.test.ts): it fails, by name, when a
+      # setting is missing or a project name is not one, and prints no value.
+      - name: Require the Pages settings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRAPPER_PROJECT: ${{ secrets.PAGES_WRAPPER_PROJECT }}
+          VERIFIER_PROJECT: ${{ secrets.PAGES_VERIFIER_PROJECT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID WRAPPER_PROJECT VERIFIER_PROJECT; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::The pages-prod environment has no ${name} (runbook/client-kit-release.md, Deploy to Cloudflare Pages)."
+              missing=1
+            fi
+          done
+          # A Pages project name is its `<name>.pages.dev` label: lowercase
+          # letters, digits, and inner dashes, 1 to 63 characters.
+          for name in WRAPPER_PROJECT VERIFIER_PROJECT; do
+            if [ -n "${!name:-}" ] && ! [[ ${!name} =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]]; then
+              echo "::error::The pages-prod environment's ${name} is not a Pages project name (lowercase letters, digits, and inner dashes, at most 63 characters)."
+              missing=1
+            fi
+          done
+          if [ -n "${WRAPPER_PROJECT:-}" ] && [ "$WRAPPER_PROJECT" = "${VERIFIER_PROJECT:-}" ]; then
+            echo "::error::The pages-prod environment's WRAPPER_PROJECT and VERIFIER_PROJECT name the same project."
+            missing=1
+          fi
+          exit "$missing"

@@ -121,6 +121,7 @@ export const rootRequirements = (
         ...tools,
         "vitest.config.ts",
         "tsdown.base.ts",
+        ".githooks/commit-msg",
         ".oxlintrc.json",
         "stylelint.config.mjs",
         ".gitignore",

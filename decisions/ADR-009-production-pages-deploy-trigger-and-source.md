@@ -6,7 +6,11 @@
 - Date: 2026-10-28 (proposed and decided by the human the same day; implemented
   with #133 in `.github/workflows/release.yml` and
   `.github/workflows/pages-prod.yml`, whose implementation choices the human
-  accepted on 2026-10-28)
+  accepted on 2026-10-28; amended 2026-11-17: production's configuration and
+  deploy settings are checked before `publish`, in a reusable workflow
+  `.github/workflows/pages-prod-check.yml`; and a failed production deploy, the
+  window case included, is recovered by a dispatch from `main` with the tag, not
+  by a re-run)
 - Deciders: the human maintainer (the release flow, the deploy source, the
   production environment), the infrastructure owner (the production projects,
   the `pages-prod` environments, the token), the org owners (the GitHub and npm
@@ -320,6 +324,99 @@ each other's pending jobs:
   staging, and runs `wrangler pages deploy` per production project. Production
   serves no reference game; it frames the real game origins.
 
+Amendment note (2026-11-17, production settings checked before publish; decided
+and accepted by the human, 2026-11-17): **production's settings are checked
+before anything is published.** A dry run and a review found that every
+production configuration failure surfaced only after `publish` had pushed to npm
+(in `config-prod`, in `deploy-prod`'s settings step, or in its headers step),
+and that `config-prod` accepted values production must refuse: a document whose
+`environment` is not `production` (W-26a's quorum rule applies only under
+`production`, so staging-like pins, `preview` with a quorum of 1, would deploy),
+and an RPC endpoint URL or an origin list entry that the headers step then
+refuses (a host with an uppercase letter or an `_`). So:
+
+- **The configuration tool's own rules**
+  ([specs/client-kit.md](../specs/client-kit.md#the-pages-sites-configuration);
+  `apps/wrapper/pages-config-rules.ts`). In both modes, staging's included,
+  every origin the headers step reads from the Wrapper's document (the RPC
+  endpoints' origins, the game and operator origins, the Wrapper's origin) must
+  match that step's `origin` pattern, so a configuration job refuses what its
+  deploy's headers step would. Production mode
+  (`pages-config-cli.ts --production`, used by `config-prod` and the check
+  below) also requires `environment` to be `production`, so W-26a's quorum rule
+  applies. An issue names an input and a field with a code, never a value.
+- **The check before publish.** `release.yml` gets a job **`prod-check`**, on
+  `publish`'s own condition (a release candidate with `RELEASE_PUBLISH_ENABLED`
+  `true`, so a run that publishes nothing never names a production environment),
+  with `contents: read`. It calls a reusable workflow,
+  `.github/workflows/pages-prod-check.yml`, with two jobs, and **`publish` needs
+  `prod-check`**: a missing or refused value fails the run before the `release`
+  approval is asked, and nothing is published. The recovery is to fix the value
+  and use "Re-run failed jobs" on the bump merge's run within 30 days (decision
+  1's rule).
+  - `config-check` (environment `pages-prod-config`; `contents: read`; no
+    output, no upload), at the run's own commit: `config-prod`'s shell build and
+    validation steps word for word, in production mode, from the same seven
+    secrets; then the Wrapper's build at that commit, for its `headers.json`,
+    and the deploy's own headers step (the script `pages.yml` and
+    `pages-prod.yml` share, word for word) on the two sites. So it also refuses
+    a `_headers` line over Cloudflare's limit of 2,000 characters, which depends
+    on how many origins are configured; that error names the site and the
+    header, never a value.
+  - `deploy-check` (environment `pages-prod`; `permissions: {}`; no checkout, no
+    repository code, no network call): `deploy-prod`'s own "Require the Pages
+    settings" step, word for word. It requires `CLOUDFLARE_API_TOKEN`,
+    `CLOUDFLARE_ACCOUNT_ID`, `PAGES_WRAPPER_PROJECT`, and
+    `PAGES_VERIFIER_PROJECT` to be set, each project name to be a Pages project
+    name (its `<name>.pages.dev` label: lowercase letters, digits, and inner
+    dashes, at most 63 characters), and the two names to differ, and prints no
+    value. **Why** (the human, 2026-11-17): a missing or malformed deploy
+    setting otherwise fails `deploy-prod` after the npm publish. This names
+    `pages-prod`, the environment that holds the deploy credential, before
+    `publish`; only this inline step runs there, and the token is only required
+    to be set, never used. The token is not verified against Cloudflare's API
+    (see below).
+- The check is a reusable workflow rather than jobs of `release.yml`, so
+  `release.yml` still reads no secret: production's values are read only in the
+  workflows whose jobs name `pages-prod-config` or `pages-prod`. It is called
+  from `release.yml` only, like `pages-prod.yml` (the Actions allow-list's
+  exemption for the repository's own reusable workflows). Neither environment
+  has a required reviewer (checked 2026-11-17: a branch policy only), so the
+  check asks for no approval before `publish`'s.
+- **What this amends in decision 3** (accepted by the human, 2026-11-17): there,
+  repository code runs in `pages-prod-config` only after `prod-verify` has
+  verified the attestation of the tag's commit. `config-check` runs before any
+  attestation exists, at the release run's own commit (`github.sha`, the default
+  checkout), not at a commit a tag names, with the seven `pages-prod-config`
+  secrets; `publish` runs that same code next (`pnpm check`, the dry run) with
+  the OIDC token. That is acceptable because the environment holds no deploy
+  credential (ADR-008, Risks accepted), and its values are public once deployed.
+  `config-prod` keeps its order and still builds the deployed documents at the
+  tag's commit after `prod-verify`; it reads the values again, so a value
+  changed between the two runs is checked again, and `deploy-prod` repeats the
+  settings step. `config-check` and `deploy-check` now reach the
+  `pages-prod-config` and `pages-prod` secrets before the run's `release`
+  approval, on any release-candidate push to `main` while publishing is on,
+  where before they were reached only after that approval or a person's
+  dispatch; the trust boundary is the same, since both environments allow `main`
+  only and `main` takes a code owner's review. Every such run also records a
+  GitHub deployment in both environments at the bump merge's commit, even when
+  `publish` is later refused or rejected, so an environment's "latest
+  deployment" on the Environments page can name a run that never reached Pages.
+- **Not done: verifying the token with Cloudflare.** One call to the
+  token-verify endpoint would also catch an expired or revoked token before
+  publish, but it would put the deploy credential on the network from the
+  release run, the endpoint differs for a user token and an account-owned token
+  (the repository does not record which this one is), it proves the token is
+  active, not that it may deploy these projects, and it makes Cloudflare's API a
+  dependency of publishing. A token that fails at deploy time leaves the
+  packages published and production unchanged, and is recovered by rotating the
+  token and dispatching "Pages production" from `main` with the release's tag
+  (this decision's manual entry point, below). Revisit if a token failure ever
+  reaches a release.
+- Both production environments must still exist, protected, before publishing is
+  turned on; a missing value now fails before npm instead of after.
+
 A manual entry point redeploys a given release by its tag through the same
 verification (a redeploy, or a roll back or forward to a released version): a
 `workflow_dispatch` of `pages-prod.yml` from `main` with the input `tag` (the
@@ -335,6 +432,21 @@ have its pending `deploy-prod` replaced by the dispatch's (GitHub keeps one
 pending job per group). If that happens, use "re-run failed jobs" on M's run
 within 30 days; after that, redeploy by M's tag. Staging is unchanged: every
 push to `main` still deploys `main`'s own build.
+
+Amendment note (2026-11-17, production deploy recovery): the window case above,
+and any failed production deploy of a release run, is recovered by dispatching
+`pages-prod.yml` with M's tag, not by re-running M's run. "Re-run failed jobs"
+re-runs only the failed jobs and those after them, and GitHub keeps the outputs
+of the jobs it does not re-run, so when `deploy-prod` failed it downloads the
+worker and the two configuration documents that `prod-worker` and `config-prod`
+uploaded with a one-day retention, and fails at the download once they are gone.
+"Re-run all jobs" runs `changesets-mode` again, which finds every version tagged
+and ends with "nothing to release", so `publish` and every job after it
+(`production` included) are skipped and the run ends green with nothing
+deployed. The dispatch must be from `main`: from another branch `release-check`
+(`if: github.ref == 'refs/heads/main'`) and every job after it are skipped, and
+the run also ends green with nothing deployed. The decision is unchanged; the
+procedure is in the runbook (Deploy to Cloudflare Pages, Production).
 
 The caller's `production` job grants the most the called jobs may ask for
 (`contents: read`, `attestations: read`, `actions: read`); each job of
@@ -479,7 +591,8 @@ Kept:
   it fails visibly, with no wrong bytes, tags, or deploys.
 - **A redeploy can race a release's deploy** in the window described in decision
   3; "re-run failed jobs" on M's run within 30 days, or redeploy by M's tag
-  after that.
+  after that (amended 2026-11-17: redeploy by M's tag, never a re-run; see the
+  amendment note in decision 3).
 - **The 30-day re-run limit.** A release run that published nothing because
   publishing was off, or published without tags, is recovered only by re-running
   M's run within 30 days; the runbook rule (above) keeps that from being needed.
@@ -502,7 +615,8 @@ Kept:
   the releases. A failed `attest` or `wrapper-assets` leaves the Wrapper's
   release without assets and production unchanged; it is fixed by re-running
   those jobs, never by attesting from elsewhere. A failed deploy is re-run, or
-  redeployed by tag.
+  redeployed by tag (amended 2026-11-17: redeploy by M's tag, never a re-run;
+  see the amendment note in decision 3).
 - **Rollback** is a Pages rollback of each production project, or a redeploy of
   an earlier release by its tag, verified the same way. A pending release
   approval, or even a short "nothing to release" run, blocks redeploy-by-tag

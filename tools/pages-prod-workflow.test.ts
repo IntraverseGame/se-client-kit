@@ -28,7 +28,9 @@ import {
 // 3; runbook, Deploy to Cloudflare Pages): its two entry points, jobs,
 // permissions, environments, and concurrency; that its deploy job runs no
 // repository script and shares staging's headers and worker scripts. Its
-// scripts run in tools/pages-prod-scripts.test.ts.
+// scripts run in tools/pages-prod-scripts.test.ts; the configuration check
+// the release runs before it publishes, in
+// tools/pages-prod-check-workflow.test.ts.
 
 const staging = workflow("pages.yml");
 
@@ -255,6 +257,20 @@ describe("the production deploy workflow", () => {
     for (const script of valuesOf(prod, "run")) {
       expect(script).not.toContain("${{");
     }
+  });
+
+  it("builds production's documents in production mode, and staging's not", () => {
+    const cli = "pnpm exec tsx apps/wrapper/pages-config-cli.ts";
+    const config = "Build and validate the configuration documents";
+    expect(stepRun("config-prod", config, prod)).toContain(
+      `${cli} --production --out "$out"`,
+    );
+    expect(stepRun("config-stage", config, staging)).toContain(
+      `${cli} --out "$out"`,
+    );
+    expect(stepRun("config-stage", config, staging)).not.toContain(
+      "--production",
+    );
   });
 });
 

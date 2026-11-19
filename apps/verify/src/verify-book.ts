@@ -8,6 +8,7 @@ import type { BookEvidence } from "./round-evidence.ts";
 import {
   AMOUNT_MAX_LENGTH,
   Bad,
+  BOOK_TABLE_MAX_ROWS,
   int,
   nested,
   optional,
@@ -20,7 +21,7 @@ import {
 /**
  * Base-10 text matching `pattern`, at most an amount's 78 digits: the
  * multiplier and the total weight are read as `bigint`, so no unbounded text
- * reaches `BigInt` (V-21).
+ * reaches `BigInt` (V-21); a table row's values have the same cap.
  */
 const digits =
   (pattern: RegExp) =>
@@ -41,11 +42,32 @@ export const drawnRow = nested(s => {
     : { index: BigInt(read.index), multiplierMilli: read.multiplierMilli };
 });
 
+/** A `BookTableRow` (V-21): three base-10 strings, each at most 78 digits. */
+const tableRow = nested(s =>
+  shape(s, {
+    id: digits(PATTERN.amount),
+    weight: digits(PATTERN.amount),
+    multiplierMilli: digits(PATTERN.amount),
+  }),
+);
+
+/**
+ * `book.table` (V-21): at most 250,000 rows, each a `BookTableRow`. Validated,
+ * so a malformed table fails the body (V-10), and never kept: no check reads
+ * the rows yet (redrawing the row and recomputing `merkleRoot` from them is a
+ * later increment).
+ */
+const isBookTable = (v: unknown): boolean =>
+  Array.isArray(v) &&
+  v.length <= BOOK_TABLE_MAX_ROWS &&
+  (v as readonly unknown[]).every(row => tableRow(row) !== Bad);
+
 /**
  * `BookVerification` (V-21): `mode` always; the drawn row and the table's
  * fields are optional on every status. Counts and weights are `bigint`.
  */
 export const book = nested(s => {
+  if (Object.hasOwn(s, "table") && !isBookTable(s["table"])) return Bad;
   const read = shape(s, {
     mode: v => text(v),
     drawn: v => optional(v, drawnRow),

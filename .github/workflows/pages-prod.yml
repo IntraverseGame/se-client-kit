@@ -33,7 +33,11 @@ name: Pages production
 #   - `config-prod` (environment `pages-prod-config`, which holds no deploy
 #     credential; `contents: read`), also only after `prod-verify`, builds and
 #     validates the two sites' configuration documents from that
-#     environment's values at the tag's commit;
+#     environment's values at the tag's commit, in production mode
+#     (`--production`: `environment` must be `production`, and every origin
+#     must be one `deploy-prod`'s headers step accepts). The release ran the
+#     same check before it published (pages-prod-check.yml, ADR-009's
+#     amendment note of 2026-11-17); this one builds the documents deployed;
 #   - `deploy-prod` (environment `pages-prod`, no required reviewer: the
 #     `release` approval of `publish` is the human gate; `contents: read`, for
 #     the lockfile that pins wrangler) runs no repository code: it refuses any
@@ -116,8 +120,10 @@ jobs:
             fi
           fi
           ref="refs/tags/${RELEASE_TAG}"
+          # Both patterns: with only "$ref", git lists no "$ref^{}" line, so an
+          # annotated tag would resolve to its tag object, not its commit.
           refs="$(git -c core.hooksPath=/dev/null -c core.fsmonitor=false ls-remote --tags \
-            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "$ref")"
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "$ref" "$ref^{}")"
           commit="$(awk -v ref="$ref" '$2 == ref "^{}" { print $1 }' <<< "$refs")"
           if [ -z "$commit" ]; then
             commit="$(awk -v ref="$ref" '$2 == ref { print $1 }' <<< "$refs")"
@@ -230,7 +236,9 @@ jobs:
 
   # Repository code (the Wrapper's validator, through tsx) in a configuration
   # environment that holds no deploy credential (ADR-008, Risks accepted). The
-  # two documents are public once deployed; the upload is kept one day.
+  # two documents are public once deployed; the upload is kept one day. Its
+  # shell build and validation steps are pages-prod-check.yml's, word for word
+  # (tools/pages-prod-check-workflow.test.ts).
   config-prod:
     name: config-prod
     # After prod-verify: the attestation proves the tag's commit before any
@@ -270,7 +278,7 @@ jobs:
         run: |
           set -euo pipefail
           out="$RUNNER_TEMP/pages-config"
-          pnpm exec tsx apps/wrapper/pages-config-cli.ts --out "$out"
+          pnpm exec tsx apps/wrapper/pages-config-cli.ts --production --out "$out"
           for site in wrapper verifier; do
             digest="sha256:$(sha256sum "$out/${site}-environment-config.json" | cut -d ' ' -f 1)"
             echo "${site}-config-digest=${digest}" >> "$GITHUB_OUTPUT"
@@ -304,8 +312,10 @@ jobs:
       # assets. Nothing else.
       contents: read
     steps:
-      # Fails at once, by name, when a setting is missing; prints no value.
-      # All are secrets, so the logs mask them.
+      # Fails at once, by name, when a setting is missing or a project name is
+      # not one; prints no value. All are secrets, so the logs mask them. The
+      # release ran this same step before it published (pages-prod-check.yml,
+      # `deploy-check`; tools/pages-prod-check-workflow.test.ts).
       - name: Require the Pages settings
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -322,6 +332,18 @@ jobs:
               missing=1
             fi
           done
+          # A Pages project name is its `<name>.pages.dev` label: lowercase
+          # letters, digits, and inner dashes, 1 to 63 characters.
+          for name in WRAPPER_PROJECT VERIFIER_PROJECT; do
+            if [ -n "${!name:-}" ] && ! [[ ${!name} =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]]; then
+              echo "::error::The pages-prod environment's ${name} is not a Pages project name (lowercase letters, digits, and inner dashes, at most 63 characters)."
+              missing=1
+            fi
+          done
+          if [ -n "${WRAPPER_PROJECT:-}" ] && [ "$WRAPPER_PROJECT" = "${VERIFIER_PROJECT:-}" ]; then
+            echo "::error::The pages-prod environment's WRAPPER_PROJECT and VERIFIER_PROJECT name the same project."
+            missing=1
+          fi
           exit "$missing"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -533,8 +555,12 @@ jobs:
               echo "::error::A _headers file has a line Pages would not read as intended."
               exit 1
             fi
-            if LC_ALL=C awk 'length($0) > 2000 { found = 1 } END { exit !found }' "$target"; then
-              echo "::error::A _headers line is over the Pages limit of 2000 characters."
+            # The first line over the limit, named by its header (or path);
+            # its value is never printed.
+            long="$(LC_ALL=C awk 'length($0) > 2000 { sub(/^ +/, ""); sub(/:.*/, ""); print; exit }' "$target")"
+            if [ -n "$long" ]; then
+              site="$(basename "$(dirname "$target")")"
+              echo "::error::The ${site} site's _headers line for ${long} is over the Pages limit of 2000 characters."
               exit 1
             fi
             echo "Wrote $target: $(grep -c '^/' "$target") rules."

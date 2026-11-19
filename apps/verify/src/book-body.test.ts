@@ -3,7 +3,8 @@
 // actions is an API error (`game.terms` has its own file, `book-terms.test.ts`);
 // each book field's validation, a present and malformed one failing the whole
 // body, an absent one not, an `int64` above 2^53 - 1 failing, and every index,
-// count, and weight a `bigint`.
+// count, and weight a `bigint` (`book.table` has its own file,
+// `book-table.test.ts`).
 
 import { describe, expect, it } from "vitest";
 
@@ -125,14 +126,18 @@ describe("the book fields (V-21)", () => {
     expect(parseEvidence(await withBook("mode", 1))).toBeUndefined();
   });
 
-  it.each(["drawn", "cost", "merkleRoot", "entryCount", "totalWeight"])(
-    "reads a body without `book.%s`, as not reported",
-    async key => {
-      const evidence = evidenceOf(await withoutBook(key));
-      expect(evidence.book).toBeDefined();
-      expect(evidence.book).not.toHaveProperty(key);
-    },
-  );
+  it.each([
+    "drawn",
+    "cost",
+    "merkleRoot",
+    "entryCount",
+    "totalWeight",
+    "table",
+  ])("reads a body without `book.%s`, as not reported", async key => {
+    const evidence = evidenceOf(await withoutBook(key));
+    expect(evidence.book).toBeDefined();
+    expect(evidence.book).not.toHaveProperty(key);
+  });
 
   it("reads a book round before its draw: `book` with its mode only", async () => {
     const body = await bookBody();

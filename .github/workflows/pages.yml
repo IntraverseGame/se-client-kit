@@ -509,8 +509,12 @@ jobs:
               echo "::error::A _headers file has a line Pages would not read as intended."
               exit 1
             fi
-            if LC_ALL=C awk 'length($0) > 2000 { found = 1 } END { exit !found }' "$target"; then
-              echo "::error::A _headers line is over the Pages limit of 2000 characters."
+            # The first line over the limit, named by its header (or path);
+            # its value is never printed.
+            long="$(LC_ALL=C awk 'length($0) > 2000 { sub(/^ +/, ""); sub(/:.*/, ""); print; exit }' "$target")"
+            if [ -n "$long" ]; then
+              site="$(basename "$(dirname "$target")")"
+              echo "::error::The ${site} site's _headers line for ${long} is over the Pages limit of 2000 characters."
               exit 1
             fi
             echo "Wrote $target: $(grep -c '^/' "$target") rules."

@@ -196,13 +196,16 @@ describe("the Pages headers step", () => {
     expect(result.output).toContain("with a /verify/* rule");
   });
 
-  it("refuses a line over the Pages limit", () => {
+  it("refuses a line over the Pages limit, naming the site and the header and never the value", () => {
     const result = run({
       "/*": { "X-Test": "a".repeat(2000) },
       "/verify/*": {},
     });
     expect(result.status).not.toBe(0);
-    expect(result.output).toContain("over the Pages limit");
+    expect(result.output).toContain(
+      "The wrapper site's _headers line for X-Test is over the Pages limit of 2000 characters.",
+    );
+    expect(result.output).not.toContain("aaaa");
   });
 
   it.each(["verifier", "game"] as const)(

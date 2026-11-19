@@ -2,9 +2,11 @@
 // a config round's (V-12): 1 (the round id), 5 (the round secret's commitment),
 // 6 (block N, by the quorum read), and 7 (the seed) are recomputed; 2 to 4 do
 // not apply (a book round has no signed creation authorization and no ready
-// evidence); 8 (the draw) is not checked, since the verify API does not carry
-// the mode's table (its rows and weights), which the kernel's weighted draw
-// (`kernel/public/v1/weighted-draw`) needs. The API's recorded row and its own
+// evidence); 8 (the draw) is not checked: the page does not yet redraw the row
+// from the mode's table (`book.table`, which it validates and does not keep)
+// with the kernel's weighted draw (`kernel/public/v1/weighted-draw`), a later
+// increment, and a table of more than 250,000 rows comes with its commitments
+// only. The API's recorded row and its own
 // redraw are compared with each other only: a disagreement fails check 8, an
 // agreement leaves it not checked.
 // Nothing here establishes a book round's result: an ended one is V-8's book
@@ -43,7 +45,7 @@ const NO_AUTH =
 
 /** Why check 8 is not checked (V-19). */
 export const DRAW_NOT_CHECKED =
-  "The verify API does not carry the mode's table (its rows and their weights), so this page cannot redraw the row.";
+  "This page does not redraw the row from the mode's table yet, so the drawn row is not recomputed.";
 
 const DRAW_AGREES =
   "The verify API's recorded and redrawn rows agree (not recomputed by this page).";
