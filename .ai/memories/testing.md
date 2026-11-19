@@ -781,46 +781,22 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   to `lost` (`book-lifecycle-won` and `-lost` are alternative endings of one
   `roundId`), plus a start answered 401 `SESSION_REVOKED`.
   `pending.spec.ts` lists nothing.
-- **T-36 times the play token in the browser** (`t36-token-lifecycle.spec.ts`,
-  the shared `test`, no round). It audits nothing, so unlike the round rows it
-  pauses `page.clock` before load (`install` a minute before the session's
-  open, then `pauseAt` the open: `pauseAt` the install time itself throws
-  "Cannot fast-forward to the past" once a millisecond of real time has
-  passed, seen once in 80 runs; what a paused clock does and does not stop is
-  in the round note above): the session opens to `idle` on it, with the redeem's answer at
-  a known page time, so every refresh point is exact. T-36 passes this way in
-  Chromium, WebKit, and Firefox (Firefox in the
-  `mcr.microsoft.com/playwright:v1.64.1-noble` container, 2026-11-17: the whole
-  `SE_E2E_PROJECT=firefox pnpm test:e2e`, and T-36 with the fake's own tests
-  repeated 3 times). On the paused clock the open sends exactly the redeem and
-  one read, and nothing more at `idle`; each test asserts the fake's full
-  record (`served`'s operation ids: those two, then its own calls), which
-  covers a call sent before the page record below exists. Read "nothing
-  before" and "nothing after" from the page's own record of its Play API calls
-  and their page times (a pass-through `fetch` the test installs once at
-  `idle`), never from `fakePlayApi.served` right after a `runFor`: the fake
-  records a request a round trip later, and that check let a refresh 60 ms
-  early pass. Move the clock in one `runFor` only while no call is in flight.
-  Where an answer must be consumed before the clock moves on (the refresh that
-  succeeds, the read after it), wait for the recorder's mark
-  (`untilEveryAnswerRead`: the `fetch` reads each answer's body through a
-  clone and marks it a `MessageChannel` task later, since the paused clock
-  holds page timers). `fakePlayApi.served` is no such signal: the fake records
-  a request before it answers it, so stepping on as soon as it shows can let
-  the transport's 15 s timeout abort an answer still on its way (#230's
-  review; a 500 ms real-time delay before the fake's refresh, or Snapshot,
-  answer made the earlier test retry and fail, and the waiting test pass).
-  Where failures are the point (no answer, retryable `UNAVAILABLE`), step 2 s
-  at a time and let timeouts fire. A refreshed token's processing time is
-  unknown, so the next
-  refresh is asserted on a token short enough (2 minutes) that the 60 s margin
-  sets its point, not the fraction. The fake's server time is fixed until a
-  test moves it with the page's (`advanceServerTime`, before the refresh it
-  answers); `setTokenLifetime` sets the lifetime of the tokens issued after;
-  `Served.tokenIndex` says which token a call presented. A page return is
-  `document.dispatchEvent(new Event("visibilitychange"))` then 1 s (the read's
-  debounce). Retry defaults are provisional: assert the refresh is still tried
-  in the second half of the old token's remaining life, not an attempt count.
+- **T-36 times the play token in the browser** (`t36-token-lifecycle.spec.ts`).
+  It audits nothing, so unlike the round rows it pauses `page.clock` before
+  load on purpose (`install` a minute before the session's open, then
+  `pauseAt` the open; `pauseAt` the install time itself throws "Cannot
+  fast-forward to the past" once real time has passed). Never read
+  `fakePlayApi.served` right after a `runFor`: the fake records a request a
+  round trip later (that check let a refresh 60 ms early pass) and before it
+  answers it, so read "nothing before" and "nothing after" from the page's own
+  record of its calls, and wait for the recorder's mark
+  (`untilEveryAnswerRead`) before the clock moves past an answer the test
+  needs. Retry defaults are provisional: assert the refresh is still tried in
+  the second half of the old token's remaining life, not an attempt count. The
+  fake's controls are `advanceServerTime` and `setTokenLifetime`
+  (`harness/fake-play-time.ts`) and `Served.tokenIndex`. The procedure is in
+  [Testing and CI](../../specs/client-kit/testing-and-ci.md#the-e2e-harness)
+  and T-36's row of [wrapper.md](../../specs/wrapper.md#test-plan).
 - A test never prints or snapshots a key or token.
 
 ## Commands and CI jobs
