@@ -36,7 +36,8 @@ export const encodeHex = (bytes: Uint8Array): Hex => `0x${bytesToHex(bytes)}`;
 /**
  * Whether two values are `0x` hex of the same bytes, in either case: an EIP-55
  * address and its lowercase echo are the same. False unless both hold at least
- * one byte of hex.
+ * one byte of hex. Not constant-time: for public values only (an address, a
+ * hash, a signature), never a secret.
  */
 export const sameHex = (a: unknown, b: unknown): boolean =>
   typeof a === "string" &&

@@ -136,7 +136,8 @@ Part of the [Client kit spec](../client-kit.md), section
     address matches the backend's lowercase echo. It serves the shell's
     delegation check, which compares `wallet`, `actionKey`, `noticeHash`,
     `signature`, and the session's `bytes32` by value (RFC-006 section 7), and
-    the verify page, which cannot take the shell.
+    the verify page, which cannot take the shell. It is not constant-time: it is
+    for public values only (an address, a hash, a signature), never a secret.
   - **Public API.** `keyDelegationTypedData`, `noticeHash`,
     `recoverKeyDelegation`, `sessionIdBytes32`, and `sameHex`, with the types
     `KeyDelegation` (the notice as `noticeHash`), `KeyDelegationMessage` (the

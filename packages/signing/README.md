@@ -76,7 +76,8 @@ signer.destroy(); // at the end of the session
     `KeyDelegation`, `KeyDelegationMessage`, `KeyDelegationTypedData`, and
     `RecoveredKeyDelegation`.
   - `sameHex`: whether two hex values hold the same bytes, in either case (an
-    EIP-55 address and its lowercase spelling match).
+    EIP-55 address and its lowercase spelling match); not constant-time, for
+    public values only, never a secret.
   - `keccak256`: Ethereum's Keccak-256 of raw bytes (a `Uint8Array` in, 32 new
     bytes out), for a caller that encodes its own input.
   - `createTranscript`: the `previous` chain and sequence numbers of one round,
