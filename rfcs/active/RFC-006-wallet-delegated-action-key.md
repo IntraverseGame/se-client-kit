@@ -3,8 +3,8 @@
 - Status: draft
 - Author: the documenter agent, for human review
 - Created: 2026-11-17
-- Relates to: se-client-kit#220 (the kit's part of se-backend#88); W-9, W-11,
-  and W-12 of
+- Relates to: se-client-kit#220 (the kit's part of the backend's key-delegation
+  contract); W-9, W-11, and W-12 of
   [the action key](../../specs/wrapper/the-action-key-and-what-may-be-stored.md);
   W-21, W-22, and W-26 of
   [signing](../../specs/wrapper/signing-start-move-cash-out-and-cancel.md); W-37
@@ -53,8 +53,9 @@ tests from T-37 once S1's T-36 is merged), and S6b into a new
 - The shell makes a fresh action key for every session (W-9), and nothing ties
   that key to the player. The backend now accepts, on a start, an optional
   statement signed by the player's wallet that the session's action key acts for
-  it (se-backend#88). The round's evidence then names the wallet
-  (`FairnessContext.keyDelegation`), and the verify page can check it.
+  it (the backend's key-delegation contract). The round's evidence then names
+  the wallet (`FairnessContext.keyDelegation`), and the verify page can check
+  it.
 - The kit has none of it: no `KeyDelegation` type, no wallet code, no consent
   screen. Until this change the Wrapper spec put wallet-delegated keys out of
   scope (its Scope and W-9).
@@ -139,7 +140,7 @@ This RFC cites its values; it does not redefine them.
   here: it may still change, and S2 vendors the bytes.
 - Production accepts only `approved` notices (the backend), so a production
   build offers delegation only once its copy holds one. The production wording
-  waits for se-backend#56.
+  waits for the backend's legal review of the notice.
 - The signing page signs only a notice it picks by `id` from its own copy, never
   text the Wrapper sends.
 
@@ -386,7 +387,7 @@ The Wrapper has no wallet code.
   - no round is open;
   - the game is not a book game (the latest Snapshot is not `playback`, the test
     autoplay's `not-book` uses): the backend refuses a book start with a
-    delegation until se-backend#73;
+    delegation until it supports delegation on book games;
   - `matchMedia("(pointer: fine)")` and `matchMedia("(hover: hover)")` match;
   - an accepted notice exists for the build: `approved`, or `pending` where the
     environment allows it (below).
@@ -398,7 +399,7 @@ The Wrapper has no wallet code.
 - **The consent dialog** explains, in the player's language (W-48), what the
   player signs and what it allows, and shows the exact English notice text that
   will be signed. While the notice is `pending` it is marked "pending legal
-  review" (se-backend#56 tracks the review).
+  review" (the backend owns that review).
 - **Pending notices.** A per-environment configuration flag lets the build offer
   a `pending` notice (its name is S6's). The Wrapper's configuration validator
   refuses it with `environment: "production"`.
@@ -406,8 +407,9 @@ The Wrapper has no wallet code.
   without it no entry is offered (fail closed). It is an origin on a different
   registrable domain from the Wrapper's (Q-e, section 5), which the validator
   checks as W-37 does, and never the verify page's origin (`verifyBaseUrl`'s
-  origin), as ADR-012's Decision 2 says; proposed: never an operator or game
-  origin either.
+  origin); proposed: never an entry of the configuration's `operatorOrigins` or
+  `gameOrigins` either, the only operator and game origins the validator knows.
+  ADR-012's Decision 2 lists both.
 - **The key (W-9).** The shell generates the action key at session open, once it
   holds the signer lock, or when the player chooses to delegate, so its address
   exists before the delegation is signed and before the first start.
@@ -591,13 +593,14 @@ cross-origin iframe inside an operator page.
     the contracts table in
     [how the kit gets its contracts](../../specs/client-kit/how-the-kit-gets-its-contracts.md);
     the specs' README;
-  - `AGENTS.md` (Q3): `key-delegation/v1` in its two lists of copied contracts
-    and in what the runtime entry holds, the `signing-page` app in its
-    dependency direction, and the shell's `contracts` runtime entry from S5,
-    each marked proposed;
-  - the other copies of the dependency direction: `CONTRIBUTING.md`, the
-    reviewer agent, and the add-a-package skill; the release runbook's "Copy
-    only" list;
+  - `AGENTS.md` (Q3): `key-delegation/v1` in its two lists of copied contracts,
+    marked proposed; and, in a bullet of their own beside the enforced
+    dependency direction, marked proposed and not enforced, what the runtime
+    entry will hold, the `signing-page` app, and the shell's `contracts` runtime
+    entry from S5;
+  - `CONTRIBUTING.md`'s dependency direction points to that bullet; the reviewer
+    agent and the add-a-package skill keep the enforced graph until the slices
+    change the lint; the release runbook's "Copy only" list;
   - the architecture and overview memories, and the RFC and ADR indexes.
 - **Specs, later**: S2 the contracts' sync; S3
   [the cryptography](../../specs/client-kit/the-cryptography.md); S4
@@ -653,7 +656,8 @@ cross-origin iframe inside an operator page.
     `wallet` sent and echoed in lowercase passes; nothing stored.
   - S6: the entry's four conditions; the dialog's text and pending mark; the
     validator refusing the pending flag in production and a `signingPageOrigin`
-    on the Wrapper's registrable domain; the 422 path (sign again, or continue
+    on the Wrapper's registrable domain, equal to the verify page's origin, or
+    on `operatorOrigins` or `gameOrigins`; the 422 path (sign again, or continue
     without); another refusal of a delegated start offering "continue without";
     a11y.
   - S6b: the port's zero-call test (section 6); EIP-6963 only, de-duplicated by
@@ -680,8 +684,8 @@ this RFC's tests number from T-37 once it is merged.
 
 - **S2.** Vendor `key-delegation/v1` (the notices on `contracts`' runtime entry,
   the vectors on its test-only entry), and the Play, Snapshot, and verify API
-  documents that carry the new fields and codes. Waits for se-backend#88's
-  contract.
+  documents that carry the new fields and codes. Waits for the backend's
+  published key-delegation contract.
 - **S3.** `signing`: the `KeyDelegation` typed data, recovery, and normalization
   of the wallet's signature only. It lands before S2, on provisional constants
   copied from the backend's published vectors; S2 replaces them with the

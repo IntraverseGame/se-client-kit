@@ -19,6 +19,7 @@
     "release-verify.ts",
     "pages-config.ts",
     "pages-earlier-pins.ts",
+    "pages-config-rules.ts",
     "pages-config-cli.ts"
   ]
 }

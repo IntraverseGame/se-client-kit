@@ -36,6 +36,8 @@ export const PATTERN = {
 };
 export const AMOUNT_MAX_LENGTH = 78;
 export const MAX_DECIMALS = 77;
+/** The most rows `book.table` may list (the document's `maxItems`, V-21). */
+export const BOOK_TABLE_MAX_ROWS = 250_000;
 
 // A reader returns the value, or `Bad` for a present value that is malformed;
 // an optional field that is absent reads as `undefined`.

@@ -168,13 +168,14 @@ import vector161 from "./snapshot/typed-data/pick-multi-path.json" with { type: 
 import vector162 from "./snapshot/signed-action/cashorcrash-cash-out.json" with { type: "json" };
 import vector163 from "./snapshot/signed-action/coinflip-cancel.json" with { type: "json" };
 import vector164 from "./kernel/v1/book-draw.json" with { type: "json" };
-import vector165 from "./kernel/v1/coin-flip-payout.json" with { type: "json" };
-import vector166 from "./kernel/v1/derive.json" with { type: "json" };
-import vector167 from "./kernel/v1/round-secret-hash.json" with { type: "json" };
-import vector168 from "./kernel/v1/seed.json" with { type: "json" };
-import vector169 from "./kernel/v1/shuffle-draw.json" with { type: "json" };
-import vector170 from "./kernel/v1/steps-derive.json" with { type: "json" };
-import vector171 from "./kernel/v1/weighted-draw.json" with { type: "json" };
+import vector165 from "./kernel/v1/book-table-commitment.json" with { type: "json" };
+import vector166 from "./kernel/v1/coin-flip-payout.json" with { type: "json" };
+import vector167 from "./kernel/v1/derive.json" with { type: "json" };
+import vector168 from "./kernel/v1/round-secret-hash.json" with { type: "json" };
+import vector169 from "./kernel/v1/seed.json" with { type: "json" };
+import vector170 from "./kernel/v1/shuffle-draw.json" with { type: "json" };
+import vector171 from "./kernel/v1/steps-derive.json" with { type: "json" };
+import vector172 from "./kernel/v1/weighted-draw.json" with { type: "json" };
 import signing from "./signing.json" with { type: "json" };
 
 /** Every vector is data of unknown shape: a consumer validates what it reads. */
@@ -381,12 +382,13 @@ export const snapshotVectors: SnapshotVectors = {
 export const kernelVectors: KernelVectors = {
   v1: {
     "book-draw": vector164,
-    "coin-flip-payout": vector165,
-    "derive": vector166,
-    "round-secret-hash": vector167,
-    "seed": vector168,
-    "shuffle-draw": vector169,
-    "steps-derive": vector170,
-    "weighted-draw": vector171,
+    "book-table-commitment": vector165,
+    "coin-flip-payout": vector166,
+    "derive": vector167,
+    "round-secret-hash": vector168,
+    "seed": vector169,
+    "shuffle-draw": vector170,
+    "steps-derive": vector171,
+    "weighted-draw": vector172,
   },
 };

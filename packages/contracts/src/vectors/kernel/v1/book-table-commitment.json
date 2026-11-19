@@ -1,0 +1,312 @@
+{
+  "set": "kernel/public/v1/book-table-commitment",
+  "kernelVersion": 1,
+  "spec": "SuperEngine fairness kernel, kernelVersion 1: book table commitment",
+  "description": "The commitment to a book table's rows, in row order. Each row is id, weight and payoutMultiplier, uint64 values as decimal strings; payoutMultiplier is in hundredths of the base bet. cumulativeStart is the sum of the weights before the row and index is its 0-based position. leaf = keccak256(abi.encode(uint256 index, uint64 id, uint256 cumulativeStart, uint64 weight, uint64 payoutMultiplier)), the hash of five 32-byte big-endian words. merkleRoot is the root of the complete binary tree in array form over n leaves: 2n - 1 nodes, leaf i at node 2n - 2 - i, and node i = keccak256(min(a, b) || max(a, b)) for a = node 2i + 1 and b = node 2i + 2, compared as 32-byte big-endian numbers, built from the last inner node down to node 0. One leaf is its own root. entryCount is the number of rows and totalWeight the sum of the weights. A table of no rows is table-empty",
+  "vectors": [
+    {
+      "vector": "kernel/public/v1/book-table-commitment/reference-base",
+      "description": "The reference six-row table, total weight 1000",
+      "input": {
+        "rows": [
+          {
+            "id": "1",
+            "weight": "680",
+            "payoutMultiplier": "0"
+          },
+          {
+            "id": "2",
+            "weight": "170",
+            "payoutMultiplier": "50"
+          },
+          {
+            "id": "3",
+            "weight": "100",
+            "payoutMultiplier": "200"
+          },
+          {
+            "id": "4",
+            "weight": "40",
+            "payoutMultiplier": "500"
+          },
+          {
+            "id": "5",
+            "weight": "9",
+            "payoutMultiplier": "2500"
+          },
+          {
+            "id": "6",
+            "weight": "1",
+            "payoutMultiplier": "25000"
+          }
+        ]
+      },
+      "expected": {
+        "leaves": [
+          "9e97e494cdbafcd346ae8543f809e53c16f472eb1bbb7cec9133741015f75336",
+          "f96c48cca97100fa1f10bbf51e90ea37a0cb57021f0db47a515e795061de8945",
+          "2afa4fa50be99424e7905010c0bf5439956fef850d49df574871d665c218a4e7",
+          "6db70648f0416bbb0f07b4eb85ddcd9813250ba74237c1e537e00314ea6c8554",
+          "6813c288c2ba1aec451ebe8c0f162f7bfd297eadda3f7b554296e8e20aa31c1f",
+          "97c756fe4c512734cbb67f476a6097b29b5af8219ead467af569ade97f002357"
+        ],
+        "merkleRoot": "5188623e2276bf76ef472958048794881669b4613e6369df24906d49b29aa15f",
+        "entryCount": 6,
+        "totalWeight": "1000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-table-commitment/reference-bonus",
+      "description": "The reference six-row table, total weight 10000",
+      "input": {
+        "rows": [
+          {
+            "id": "1",
+            "weight": "4000",
+            "payoutMultiplier": "2000"
+          },
+          {
+            "id": "2",
+            "weight": "3100",
+            "payoutMultiplier": "5000"
+          },
+          {
+            "id": "3",
+            "weight": "1700",
+            "payoutMultiplier": "10000"
+          },
+          {
+            "id": "4",
+            "weight": "900",
+            "payoutMultiplier": "25000"
+          },
+          {
+            "id": "5",
+            "weight": "280",
+            "payoutMultiplier": "100000"
+          },
+          {
+            "id": "6",
+            "weight": "20",
+            "payoutMultiplier": "250000"
+          }
+        ]
+      },
+      "expected": {
+        "leaves": [
+          "a574ac71260dbd94f105087baa24c0359d9612ba5b8deafec0dcf6a05f7be72b",
+          "4de3e3ecf225047d29a41fed1d1792411e9612f579279319c4fbe82064782093",
+          "d462b3b2168bc8b936707f02bcde070a27cd9373df9ead4e658710382d78013c",
+          "fdd2baf372b0535f1e0530407d29d3be0bf2afc64bd64c5abc82e1e10a278958",
+          "e6c4b76722f8b1f83288440ad3654a457af07c6703dee158edc91bac3605d683",
+          "e375b857c02442eeb37162bae86578445ca1bfecca1d7310fa04ba217ef839ac"
+        ],
+        "merkleRoot": "667abd7fe94c4c1cda234a6319db03936a456c7c44545b3f01585f7363ea4d4b",
+        "entryCount": 6,
+        "totalWeight": "10000"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-table-commitment/one-row",
+      "description": "One row: its leaf is the root",
+      "input": {
+        "rows": [
+          {
+            "id": "10",
+            "weight": "5",
+            "payoutMultiplier": "0"
+          }
+        ]
+      },
+      "expected": {
+        "leaves": [
+          "b31c5647673c056b4e6c74149dfc00f46564f20e28d082610792db853c6fed68"
+        ],
+        "merkleRoot": "b31c5647673c056b4e6c74149dfc00f46564f20e28d082610792db853c6fed68",
+        "entryCount": 1,
+        "totalWeight": "5"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-table-commitment/two-rows",
+      "description": "Two rows with ids that are not consecutive",
+      "input": {
+        "rows": [
+          {
+            "id": "10",
+            "weight": "5",
+            "payoutMultiplier": "0"
+          },
+          {
+            "id": "20",
+            "weight": "3",
+            "payoutMultiplier": "150"
+          }
+        ]
+      },
+      "expected": {
+        "leaves": [
+          "b31c5647673c056b4e6c74149dfc00f46564f20e28d082610792db853c6fed68",
+          "f221e9c39b4d33e62a64addf21af2fd37cdf0f8138b3dae3ebc198ac613f2529"
+        ],
+        "merkleRoot": "e4401a5ca8a0bb778fd9d697b836bc8cbd38f54fedd895a56aff956e822cc75c",
+        "entryCount": 2,
+        "totalWeight": "8"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-table-commitment/three-rows",
+      "description": "Three rows: an odd size, where the array layout decides the tree's shape",
+      "input": {
+        "rows": [
+          {
+            "id": "10",
+            "weight": "5",
+            "payoutMultiplier": "0"
+          },
+          {
+            "id": "20",
+            "weight": "3",
+            "payoutMultiplier": "150"
+          },
+          {
+            "id": "30",
+            "weight": "2",
+            "payoutMultiplier": "1150"
+          }
+        ]
+      },
+      "expected": {
+        "leaves": [
+          "b31c5647673c056b4e6c74149dfc00f46564f20e28d082610792db853c6fed68",
+          "f221e9c39b4d33e62a64addf21af2fd37cdf0f8138b3dae3ebc198ac613f2529",
+          "a7195cea58c5483405c0de2de268436bff49a49d128097fee1f4a6e07748c86c"
+        ],
+        "merkleRoot": "47ee01e748393d212ecc271f4d7d973376b5262106287ff49f9e03bb02b47fbc",
+        "entryCount": 3,
+        "totalWeight": "10"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-table-commitment/five-rows",
+      "description": "Five rows: an odd size over two levels",
+      "input": {
+        "rows": [
+          {
+            "id": "1",
+            "weight": "1",
+            "payoutMultiplier": "0"
+          },
+          {
+            "id": "2",
+            "weight": "2",
+            "payoutMultiplier": "100"
+          },
+          {
+            "id": "3",
+            "weight": "3",
+            "payoutMultiplier": "200"
+          },
+          {
+            "id": "4",
+            "weight": "4",
+            "payoutMultiplier": "300"
+          },
+          {
+            "id": "5",
+            "weight": "5",
+            "payoutMultiplier": "400"
+          }
+        ]
+      },
+      "expected": {
+        "leaves": [
+          "45f1ba7ac764fd08524f26f499b9ec8a7400c82f335d539b0f9a27acc00fe2df",
+          "7cf6b2868324b0ec5f3221eb7453b7a44090f346e184df182333e0c261d69ae2",
+          "86dcb411346e046573d8403763d955b3d222d366f6b19d559f90fccfa4649bf6",
+          "7a23414da37e1e869c0924a28eaeb5e2e1216d55f61fb7b66913961b689b0219",
+          "1456d5e7210016cfa528f114d48e00dc4e65daeffea75786ba2a6fff5343de21"
+        ],
+        "merkleRoot": "954d9475431ce009050c775bf178957754ed9cfc17d721332e5e7fb57aa01456",
+        "entryCount": 5,
+        "totalWeight": "15"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-table-commitment/zero-weight-row",
+      "description": "A row of weight 0 has a leaf and does not move cumulativeStart",
+      "input": {
+        "rows": [
+          {
+            "id": "1",
+            "weight": "7",
+            "payoutMultiplier": "100"
+          },
+          {
+            "id": "2",
+            "weight": "0",
+            "payoutMultiplier": "200"
+          },
+          {
+            "id": "3",
+            "weight": "9",
+            "payoutMultiplier": "300"
+          }
+        ]
+      },
+      "expected": {
+        "leaves": [
+          "b2cb65a8d4b3ee9ab0cf42390e7a403d07e768916f2466fcefb3cc079180e79f",
+          "7c7cd634fe0714c5bc045cca12480115ecc83eea782ec1f38c04c9fc3ef618bd",
+          "43c26e7cd2a02f6f2ce56391b6857ea17752b6765899fac99b9bd47ed86fcf32"
+        ],
+        "merkleRoot": "0bd094465687321904955d2fb824f1b365958099e1c0a50a1aa5b5d650604c26",
+        "entryCount": 3,
+        "totalWeight": "16"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-table-commitment/wide-values",
+      "description": "Every field at 2^64 - 1: cumulativeStart and the total need more than 64 bits",
+      "input": {
+        "rows": [
+          {
+            "id": "18446744073709551615",
+            "weight": "18446744073709551615",
+            "payoutMultiplier": "18446744073709551615"
+          },
+          {
+            "id": "18446744073709551615",
+            "weight": "18446744073709551615",
+            "payoutMultiplier": "18446744073709551615"
+          },
+          {
+            "id": "18446744073709551615",
+            "weight": "18446744073709551615",
+            "payoutMultiplier": "18446744073709551615"
+          }
+        ]
+      },
+      "expected": {
+        "leaves": [
+          "7fa84349cd525d6d117885a7c0e7d17924ce064d2e2e3f4aaa827441f0f60530",
+          "87443c9ff95cfcfbf0ab504627b90d093c790ed10a9adc37cff93e40ad8f2048",
+          "b501a615334da4c3b4b3a6088f40181a91a79611975897e4c670c4726ea83162"
+        ],
+        "merkleRoot": "790195d7649436b664a75af5d45a161b629ee5c96de62a21163e9336a3ce60cf",
+        "entryCount": 3,
+        "totalWeight": "55340232221128654845"
+      }
+    },
+    {
+      "vector": "kernel/public/v1/book-table-commitment/invalid-empty",
+      "description": "A table of no rows has no tree",
+      "input": {
+        "rows": []
+      },
+      "expected": {
+        "error": "table-empty"
+      }
+    }
+  ]
+}

@@ -1,9 +1,10 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
+import { installStub, removeStubs } from "./fixtures/stub-bin.ts";
 import { runStep } from "./fixtures/workflow-step.ts";
 import { stepRun } from "./release-workflow-lines.ts";
 
@@ -26,6 +27,7 @@ const TAR = "se-client-wrapper-1.0.0.tar";
 const script = stepRun("wrapper-assets", "Find the Wrapper release");
 
 const directories: string[] = [];
+afterAll(removeStubs);
 afterEach(() => {
   for (const directory of directories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
@@ -65,8 +67,7 @@ const releaseOf = (
 const run = (pages: readonly (readonly Release[])[], error = false) => {
   const directory = mkdtempSync(join(tmpdir(), "se-client-kit-gh-"));
   directories.push(directory);
-  writeFileSync(join(directory, "gh"), STUB);
-  chmodSync(join(directory, "gh"), 0o755);
+  installStub(directory, "gh", STUB);
   for (const [index, page] of pages.entries()) {
     writeFileSync(
       join(directory, `page-${String(index)}.json`),

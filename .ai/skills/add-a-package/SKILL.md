@@ -27,11 +27,8 @@ description: Use when adding a new package under packages/ (or an app under apps
    shell, never in a leaf or an app.
 1. **Place it in the graph.** Today: `contracts` (data only) is a leaf; `snapshot` and
    `play-client` depend on it; `signing` has no kit dependency at run time;
-   `shell` depends on `signing`, `snapshot`, and `play-client` (and, from
-   RFC-006's slice S5, on `contracts`' runtime entry for the key-delegation
-   notices; proposed); the `wrapper` app depends on `shell`; the `signing-page`
-   app (proposed, ADR-012) depends on nothing but `signing` and `contracts`'
-   runtime entry. Never put logic in `contracts`; data vendored from the
+   `shell` depends on `signing`, `snapshot`, and `play-client`; the `wrapper` app
+   depends on `shell`. Never put logic in `contracts`; data vendored from the
    backend goes there, and only tests import its test-only entry.
    State which packages the new one may import and which may import it; the
    graph stays acyclic, a package never imports an app. Record the placement in

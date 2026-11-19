@@ -87,6 +87,8 @@ scripts), changesets (with the GitHub changelog generator), and wireit for task
 orchestration and caching (ADR-001). Use these scripts and never an ad-hoc
 equivalent; Node and pnpm are pinned in `.node-version` and `packageManager`.
 
+- `pnpm hooks` (once per clone: points git at `.githooks/`, whose `commit-msg`
+  hook refuses AI attribution; every worktree of the clone shares the setting)
 - `pnpm install --frozen-lockfile` · `pnpm check` (format check, lint,
   typecheck, unit tests, the dependency allow-list, the contracts check, then a
   build, the build-output check, and the Wrapper's size budget)
@@ -124,23 +126,26 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   is one way: `contracts` (data only, no logic) is a leaf; `snapshot` and
   `play-client` depend on it; `signing` has no kit dependency at run time and
   reads vectors from `contracts` in tests only; `shell` depends on `signing`,
-  `snapshot`, and `play-client` (and, from slice S5, on `contracts`' runtime
-  entry for the key-delegation notices; proposed, RFC-006); the `wrapper` app
-  depends on `shell`; `reference-game` depends on nothing but the controller
-  protocol's types; the `verify` app depends on `signing` (and may take
-  `snapshot`, `play-client`, and `contracts`' runtime entry), never on `shell`;
-  the `signing-page` app (the wallet signing page, on its own origin; proposed,
-  ADR-012) depends on nothing but `signing` and `contracts`' runtime entry,
-  never on `shell`, and no package or app imports it; the `pages-proxy` app (the
+  `snapshot`, and `play-client`; the `wrapper` app depends on `shell`;
+  `reference-game` depends on nothing but the controller protocol's types; the
+  `verify` app depends on `signing` (and may take `snapshot`, `play-client`, and
+  `contracts`' runtime entry), never on `shell`; the `pages-proxy` app (the
   Pages sites' API proxy) imports nothing. No cycles; a package never imports an
-  app. `contracts` has a runtime entry (schemas and generated types and, from
-  S2, the key-delegation notices; proposed, RFC-006) and a test-only entry
-  (vectors): only tests may import the test-only entry (the consumers are the
-  tests of `signing`, `snapshot`, and `shell`, the Wrapper's component tests,
-  the verify page's unit tests, and the e2e fake Play API; all development
-  dependencies), and no vector may reach a bundle or a published tarball. A new
-  package must pass the checks in
+  app. `contracts` has a runtime entry (schemas and generated types) and a
+  test-only entry (vectors): only tests may import the test-only entry (the
+  consumers are the tests of `signing`, `snapshot`, and `shell`, the Wrapper's
+  component tests, the verify page's unit tests, and the e2e fake Play API; all
+  development dependencies), and no vector may reach a bundle or a published
+  tarball. A new package must pass the checks in
   [`add-a-package`](./.ai/skills/add-a-package/SKILL.md).
+- **Proposed, not enforced (RFC-006, ADR-012).** These edges are not rules yet:
+  no lint enforces them, and the rule above wins until ADR-012 is accepted and
+  the slice named lands with its lint change. From slice S2, `contracts`'
+  runtime entry holds the key-delegation notices; from S5, `shell` takes that
+  runtime entry for them (today's lint refuses the import); from S6b, a
+  `signing-page` app (the wallet signing page, on its own origin) depends on
+  nothing but `signing` and `contracts`' runtime entry, never on `shell`, and no
+  package or app imports it.
 - **The shell is the only code that touches a credential** (the action key and
   the play token). The UI receives use cases and read-only state, never a
   secret.
@@ -223,6 +228,12 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
 - The mandatory actions below run in every non-trivial PR.
 - No staging or committing without human + reviewer-agent approval (above).
 - One logical change per PR; no secrets; no new dependency without an ADR.
+- **No AI attribution.** Commits, pull requests, issues, review comments, code,
+  and docs name no AI model or agent as an author: no co-author trailer, no
+  "Generated with" line, no agent footer. The `commit-msg` hook refuses one in a
+  commit message; install it once per clone with `pnpm hooks`, and never bypass
+  it (`--no-verify`) to get an attribution through. Existing history is not
+  rewritten (ADR-003).
 
 ## Public repository
 
@@ -247,6 +258,8 @@ add, in any file, commit, issue, pull request, log, or agent output:
   vectors, proposed in RFC-006) are shared, and only as copies;
 - personal data, or the names, emails, or handles of people unless they are
   already public as maintainers or authors;
+- attribution to an AI model or agent (a co-author trailer, a "Generated with"
+  line, an agent footer; see [Non-Negotiables](#non-negotiables));
 - unreleased security findings (use [SECURITY.md](./SECURITY.md)).
 
 When unsure, leave it out and ask. Every file copied from a private source is
