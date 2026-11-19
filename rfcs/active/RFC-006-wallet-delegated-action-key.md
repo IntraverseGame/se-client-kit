@@ -688,8 +688,10 @@ this RFC's tests number from T-37 once it is merged.
   published key-delegation contract.
 - **S3.** `signing`: the `KeyDelegation` typed data, recovery, and normalization
   of the wallet's signature only. It lands before S2, on provisional constants
-  copied from the backend's published vectors; S2 replaces them with the
-  vendored vectors.
+  copied from the backend's published vectors (`signing`'s
+  `src/fixtures/provisional-key-delegation.ts`, imported by tests only); S2
+  deletes that file and moves S3's tests to the vendored vectors on `contracts`'
+  test-only entry.
 - **S4.** `play-client`: `StartRoundRequest.keyDelegation`, and the new codes
   mapped in the Wrapper's errors.
 - **S5.** The shell's delegation use case; the delegation check beside the tip

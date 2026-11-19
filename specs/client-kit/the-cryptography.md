@@ -147,16 +147,17 @@ Part of the [Client kit spec](../client-kit.md), section
     (`src/fixtures/provisional-key-delegation.ts`). They are copied from
     se-backend `486969a8` (se-backend#88), its published
     `key-delegation/v1 vectors` (the accepted case), and independently
-    re-derived here; S2 replaces that file with the lock-pinned vendored copy.
-    They are the type string and type hash, the domain string and separator, the
-    `en-draft-1` notice's hash, the struct hash and digest for one action key,
-    session, and expiry, and a wallet signature that recovers to a well-known
-    development account. No key is held for it, and the notice's text is not
-    copied (S2 vendors it). The typed data and `noticeHash` are tested with a
-    text of their own, and a round trip signs with the `player` test key; the
-    normalization cases are derived from the vector's signature; the
-    zero-address case replaces Keccak-256 in one test file, as for
-    `recoverAddress`. Rows T-37 and T-38 of the
+    re-derived here. Only tests import that file. S2 (#220's vendoring task)
+    deletes it and moves these tests to the lock-pinned vendored vectors on
+    `contracts`' test-only entry. They are the type string and type hash, the
+    domain string and separator, the `en-draft-1` notice's hash, the struct hash
+    and digest for one action key, session, and expiry, and a wallet signature
+    that recovers to a well-known development account. No key is held for it,
+    and the notice's text is not copied (S2 vendors it). The typed data and
+    `noticeHash` are tested with a text of their own, and a round trip signs
+    with the `player` test key; the normalization cases are derived from the
+    vector's signature; the zero-address case replaces Keccak-256 in one test
+    file, as for `recoverAddress`. Rows T-37 and T-38 of the
     [Wrapper test plan](../wrapper.md#test-plan).
   - **What it emits.** Nothing; an error carries its code's fixed message, never
     a signature, an address, or a session.
