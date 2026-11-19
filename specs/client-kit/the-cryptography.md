@@ -8,25 +8,27 @@ Part of the [Client kit spec](../client-kit.md), section
   follows the rules of the backend's Go verifier: signatures are 65 bytes
   `r ‖ s ‖ v`, `v` in `{27, 28}`, low `s`; recovery rejects any other length,
   `v`, a high `s`, and the zero address; signing is deterministic (RFC 6979) and
-  normalizes `s`.
+  normalizes `s`. The one signature made canonical before that recovery is a
+  wallet's `KeyDelegation` signature (its bullet below).
 - **What it encodes today.** The domain
   (`EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)`),
   `PlayerAction`, `PlayerCashOut`, and `PlayerCancel`
   (`(string action,uint8[] path,uint32 sequence,bytes32 round,bytes32 previous)`,
   where `round` is the round id), `CreateRoundAuth`, `MarkReadyAuth`, and
   `CloseRoundAuth`, each with its type hash, `hashStruct`, and the `0x1901`
-  digest. The field types are `string` (Keccak-256 of its UTF-8 bytes; a lone
-  surrogate is refused), `uint8[]` (Keccak-256 of the concatenated 32-byte
+  digest; and `KeyDelegation` under its own chainless domain (proposed, its
+  bullet below). The field types are `string` (Keccak-256 of its UTF-8 bytes; a
+  lone surrogate is refused), `uint8[]` (Keccak-256 of the concatenated 32-byte
   words), `bytes32`, `bool`, `address`, and `uintN` (big-endian 32-byte words,
-  range-checked). A value outside its type is refused, never truncated. A
-  `uint128` or `uint256` field (an amount, the chain id, an expiry) takes a
-  `bigint` or a canonical decimal string only; a `number` is accepted only for
-  the fields of 40 bits or fewer (a sequence, a window, a path step). The draw
-  registry's `CreateDrawRoundAuth` and `RecordDrawAuth` are in the vendored
-  vectors and are encoded and replayed by the tests through an internal module,
-  but are not public API: the Snapshot schema carries neither, and on a book
-  round the shell checks no authorization at all (W-52 replaces W-26's checks
-  with the round's consistency rule;
+  range-checked). A value outside its type is refused, never truncated. A field
+  wider than 40 bits (`uint64`, `uint128`, or `uint256`: an amount, the chain
+  id, an expiry) takes a `bigint` or a canonical decimal string only; a `number`
+  is accepted only for the fields of 40 bits or fewer (a sequence, a window, a
+  path step). The draw registry's `CreateDrawRoundAuth` and `RecordDrawAuth` are
+  in the vendored vectors and are encoded and replayed by the tests through an
+  internal module, but are not public API: the Snapshot schema carries neither,
+  and on a book round the shell checks no authorization at all (W-52 replaces
+  W-26's checks with the round's consistency rule;
   [Book playback](../wrapper/book-playback.md)).
 - **The round's `abi.encode` hashes (W-26).** Three tuples of static fields are
   hashed as `keccak256(abi.encode(...))`, their 32-byte words concatenated with
@@ -67,6 +69,99 @@ Part of the [Client kit spec](../client-kit.md), section
   check 7), so that app adds no hash dependency; the shell does not use it. Its
   tests check known answers and the seeds that the fairness kernel's public
   vectors name as `keccak256` of a text.
+- **`KeyDelegation`** (proposed,
+  [RFC-006](../../rfcs/active/RFC-006-wallet-delegated-action-key.md), its slice
+  S3). What a player's browser wallet signs, once per session, for the shell's
+  action key; the values are the backend's published `key-delegation/v1`.
+  `signing` builds the typed data and the digest and recovers the wallet's
+  signature; the shell (S5) and the signing page (S6b) use them.
+  - **Type and domain.**
+    `KeyDelegation(string notice,address actionKey,bytes32 sessionId,uint64 expiry)`,
+    type hash
+    `0x3f61f038833be2c4a751a98b54b11d874f7683ea8d0c052705a241abd33c0daf`, under
+    `EIP712Domain(string name,string version)` =
+    `{ name: "SuperEngine KeyDelegation", version: "1" }`, domain separator
+    `0xdf1a3469adcdcfcc9f3bbd698fd36df7cee6c4dddad538d44b80ab537d6fdabf`: no
+    `chainId` and no `verifyingContract`. This domain is for `KeyDelegation`
+    only; the registry domain and the types above are unchanged. The encoder
+    gains the `uint64` field type for `expiry`.
+  - **From the notice's hash.** EIP-712 encodes `notice` as the Keccak-256 of
+    its UTF-8 bytes, so the struct hash and the `0x1901` digest are computed
+    from `noticeHash` (`bytes32`), the hash the start sends and the notices list
+    publishes, without the text; a field not of the type is refused.
+    `noticeHash(text)` is the Keccak-256 of the text's exact UTF-8 bytes, with
+    no normalization (no Unicode normalization, no trimming, no line-ending
+    change); a lone surrogate is `invalid-input`.
+  - **The session.** `sessionIdBytes32` maps the redeem's `sessionId`
+    (`^ses_[0-9a-f]{32}$`, the Play API document) to `bytes32`: its 16 bytes,
+    left-aligned and zero-padded (`0x`, the 32 hex digits, then 32 zeros).
+    Anything else, uppercase hex and the Snapshot's wider `context.sessionId`
+    form included, is `invalid-input`.
+  - **The expiry** is a `number`, a safe integer from 1 to 2^53 − 1 (unix
+    seconds, `floor(sessionExpiresAt)`, the backend's accepted range); anything
+    else is `invalid-input`. A `number`, not a `bigint`: it is a time, never an
+    amount; every value the backend accepts is a safe integer, so it is held
+    exactly; the shell derives it from the redeem's date-time; and
+    `se.delegation/1` carries it as a JSON number, which a `bigint` cannot be.
+    The encoder writes the `uint64` word from a `bigint`, so its rule that a
+    `number` is accepted only for fields of 40 bits or fewer still holds.
+  - **The typed data.** `keyDelegationTypedData` builds the
+    `eth_signTypedData_v4` object: `types` with exactly `EIP712Domain` (its two
+    fields) and `KeyDelegation` (its four), `primaryType` `KeyDelegation`, the
+    chainless domain, and the message with `notice` as text, `actionKey` in
+    EIP-55, `sessionId` in lowercase hex, and `expiry` as a decimal string (for
+    example `"1795000000"`), in that order. The decimal string is the form the
+    spike sent, which MetaMask 13.57 and Rabby signed with signatures that
+    verified; a JSON number is untested with real wallets (decided by the code
+    owner, 2026-11-17). Only the output is a string: the input `expiry` stays a
+    `number`, and the string encodes to the same `uint64` word, so the struct
+    hash is the same either way. It checks its four fields as the digest does
+    (the notice for a lone surrogate), copies no other field, and returns new
+    objects on every call; the same input gives the same JSON.
+  - **The wallet's signature.** `recoverKeyDelegation(delegation, signature)`
+    takes the 65-byte signature the wallet returned, in either hex case, and
+    normalizes it, and only it: `v` 0 or 1 becomes 27 or 28, and an `s` above
+    half the curve order becomes `n − s` with `v` flipped. It then recovers
+    through `recoverAddress`, unchanged, which refuses the zero address, and
+    returns the wallet (EIP-55) and the canonical signature (lowercase hex), the
+    one the start sends (RFC-006). Text that is not `0x` hex is `invalid-input`,
+    any length but 65 bytes `invalid-signature-length`, any other `v`
+    `invalid-signature-v`, and an `r` or `s` that is zero or not below the order
+    is left to the strict check (`invalid-signature`). Comparing the recovered
+    wallet with the one the signing page names is the caller's. `recoverAddress`
+    stays strict for every other signature (W-21, W-26, and the verify page's
+    V-12 check 3): `v` 0 or 1 and a high `s` are refused there as before.
+  - **Comparing by bytes.** `sameHex(a, b)` is true only when both are `0x` hex
+    of at least one byte and encode the same bytes, in either case, so an EIP-55
+    address matches the backend's lowercase echo. It serves the shell's
+    delegation check, which compares `wallet`, `actionKey`, `noticeHash`,
+    `signature`, and the session's `bytes32` by value (RFC-006 section 7), and
+    the verify page, which cannot take the shell. It is not constant-time: it is
+    for public values only (an address, a hash, a signature), never a secret.
+  - **Public API.** `keyDelegationTypedData`, `noticeHash`,
+    `recoverKeyDelegation`, `sessionIdBytes32`, and `sameHex`, with the types
+    `KeyDelegation` (the notice as `noticeHash`), `KeyDelegationMessage` (the
+    notice as text), `KeyDelegationTypedData`, and `RecoveredKeyDelegation`. The
+    struct hash, the domain separator, and the digest are internal and tested.
+  - **Vectors.** Until the backend's `key-delegation/v1 vectors` are vendored
+    (S2), the tests pin its published values, held as provisional test constants
+    (`src/fixtures/provisional-key-delegation.ts`). They are copied from
+    se-backend `486969a8` (the backend's key-delegation contract), its published
+    `key-delegation/v1 vectors` (the accepted case), and independently
+    re-derived here. Only tests import that file. S2 (#220's vendoring task)
+    deletes it and moves these tests to the lock-pinned vendored vectors on
+    `contracts`' test-only entry. They are the type string and type hash, the
+    domain string and separator, the `en-draft-1` notice's hash, the struct hash
+    and digest for one action key, session, and expiry, and a wallet signature
+    that recovers to a well-known development account. No key is held for it,
+    and the notice's text is not copied (S2 vendors it). The typed data and
+    `noticeHash` are tested with a text of their own, and a round trip signs
+    with the `player` test key; the normalization cases are derived from the
+    vector's signature; the zero-address case replaces Keccak-256 in one test
+    file, as for `recoverAddress`. Rows T-37 and T-38 of the
+    [Wrapper test plan](../wrapper.md#test-plan).
+  - **What it emits.** Nothing; an error carries its code's fixed message, never
+    a signature, an address, or a session.
 - **Keys.** `createSigner` draws 32 bytes from the platform's cryptographic
   random source (`crypto.getRandomValues`, through `@noble/hashes`; a test
   injects its own source), redraws a value that is zero or not below the curve

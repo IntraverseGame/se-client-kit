@@ -10,12 +10,18 @@ import { SigningError } from "./errors.ts";
 import { type Bytes32, decodeHex, encodeHex } from "./hex.ts";
 
 /**
- * A wide unsigned integer field (`uint128`, `uint256`): a `bigint` or a
- * canonical decimal string (no sign, no leading zero), never a `number`.
+ * A wide unsigned integer field (`uint64`, `uint128`, `uint256`): a `bigint` or
+ * a canonical decimal string (no sign, no leading zero), never a `number`.
  */
 export type UintValue = bigint | string;
 
-type UintType = "uint8" | "uint32" | "uint40" | "uint128" | "uint256";
+type UintType =
+  | "uint8"
+  | "uint32"
+  | "uint40"
+  | "uint64"
+  | "uint128"
+  | "uint256";
 
 export type FieldType =
   | "string"
@@ -42,6 +48,7 @@ const BITS: Readonly<Record<UintType, number>> = {
   uint8: 8,
   uint32: 32,
   uint40: 40,
+  uint64: 64,
   uint128: 128,
   uint256: 256,
 };
@@ -78,7 +85,8 @@ const uintWord = (value: unknown, bits: number): Uint8Array => {
   return word;
 };
 
-const stringBytes = (value: unknown): Uint8Array => {
+/** The UTF-8 bytes of a `string` field; a lone surrogate is refused. */
+export const stringBytes = (value: unknown): Uint8Array => {
   if (typeof value !== "string" || LONE_SURROGATE.test(value)) throw invalid();
   return utf8ToBytes(value);
 };
@@ -119,7 +127,7 @@ const encodeField = (type: FieldType, value: unknown): Uint8Array => {
  * One 32-byte word per field, in the type's order. Every field of the type must
  * be present in `values`; a field not of the type is refused.
  */
-const encodeData = (
+export const encodeData = (
   struct: StructType,
   values: Readonly<Record<string, unknown>>,
 ): Uint8Array[] => {

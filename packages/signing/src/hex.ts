@@ -16,6 +16,7 @@ export type Bytes32 = Hex;
 export type Address = Hex;
 
 const HEX_BODY = /^[0-9a-fA-F]*$/u;
+const HEX_BYTES = /^0x(?:[0-9a-fA-F]{2})+$/u;
 
 /** Decode `0x`-prefixed hex of exactly `length` bytes, or throw `invalid-input`. */
 export const decodeHex = (value: unknown, length: number): Uint8Array => {
@@ -31,6 +32,19 @@ export const decodeHex = (value: unknown, length: number): Uint8Array => {
 };
 
 export const encodeHex = (bytes: Uint8Array): Hex => `0x${bytesToHex(bytes)}`;
+
+/**
+ * Whether two values are `0x` hex of the same bytes, in either case: an EIP-55
+ * address and its lowercase echo are the same. False unless both hold at least
+ * one byte of hex. Not constant-time: for public values only (an address, a
+ * hash, a signature), never a secret.
+ */
+export const sameHex = (a: unknown, b: unknown): boolean =>
+  typeof a === "string" &&
+  typeof b === "string" &&
+  HEX_BYTES.test(a) &&
+  HEX_BYTES.test(b) &&
+  a.toLowerCase() === b.toLowerCase();
 
 /** EIP-55 mixed-case checksum spelling of a 20-byte address. */
 export const checksumAddress = (address: Uint8Array): Address => {
