@@ -478,11 +478,16 @@ script of its own, so an origin that serves user content or could take injected
 HTML must not be listed. On that iframe set no `sandbox` attribute, no
 `referrerpolicy` of `no-referrer` or `same-origin` (some browsers then hide your
 origin from the Wrapper, which refuses), and no `allow` feature the Wrapper's
-`Permissions-Policy` turns off. Do not send
-`Cross-Origin-Opener-Policy: same-origin` from that page;
-`same-origin-allow-popups`, or no such header, is fine. With `same-origin`, the
-window a player opens to link a wallet to the game is cut off from the Wrapper,
-and the player cannot link one (W-49g; proposed, RFC-006; not built yet).
+`Permissions-Policy` turns off.
+
+**A future feature: linking a wallet (proposed, RFC-006; not built yet).** This
+concerns a feature that is still a draft proposal: it may change or not ship,
+and nothing the Wrapper does today depends on it. If it ships, the Wrapper will
+open a window in which a player links a wallet to the game, and your page must
+then not send `Cross-Origin-Opener-Policy: same-origin`;
+`same-origin-allow-popups`, or no such header, is fine. With `same-origin`, that
+window is cut off from the Wrapper, and the player plays on without linking one
+(W-49g).
 
 **Say hello (recommended; required where the browser cannot tell the Wrapper
 your origin).** When your page embeds the Wrapper directly, from a listed
