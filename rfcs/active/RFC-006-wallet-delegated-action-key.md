@@ -591,13 +591,14 @@ cross-origin iframe inside an operator page.
     the contracts table in
     [how the kit gets its contracts](../../specs/client-kit/how-the-kit-gets-its-contracts.md);
     the specs' README;
-  - `AGENTS.md` (Q3): `key-delegation/v1` in its two lists of copied contracts
-    and in what the runtime entry holds, the `signing-page` app in its
-    dependency direction, and the shell's `contracts` runtime entry from S5,
-    each marked proposed;
-  - the other copies of the dependency direction: `CONTRIBUTING.md`, the
-    reviewer agent, and the add-a-package skill; the release runbook's "Copy
-    only" list;
+  - `AGENTS.md` (Q3): `key-delegation/v1` in its two lists of copied contracts,
+    marked proposed; and, in a bullet of their own beside the enforced
+    dependency direction, marked proposed and not enforced, what the runtime
+    entry will hold, the `signing-page` app, and the shell's `contracts` runtime
+    entry from S5;
+  - `CONTRIBUTING.md`'s dependency direction points to that bullet; the reviewer
+    agent and the add-a-package skill keep the enforced graph until the slices
+    change the lint; the release runbook's "Copy only" list;
   - the architecture and overview memories, and the RFC and ADR indexes.
 - **Specs, later**: S2 the contracts' sync; S3
   [the cryptography](../../specs/client-kit/the-cryptography.md); S4

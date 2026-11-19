@@ -126,23 +126,26 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   is one way: `contracts` (data only, no logic) is a leaf; `snapshot` and
   `play-client` depend on it; `signing` has no kit dependency at run time and
   reads vectors from `contracts` in tests only; `shell` depends on `signing`,
-  `snapshot`, and `play-client` (and, from slice S5, on `contracts`' runtime
-  entry for the key-delegation notices; proposed, RFC-006); the `wrapper` app
-  depends on `shell`; `reference-game` depends on nothing but the controller
-  protocol's types; the `verify` app depends on `signing` (and may take
-  `snapshot`, `play-client`, and `contracts`' runtime entry), never on `shell`;
-  the `signing-page` app (the wallet signing page, on its own origin; proposed,
-  ADR-012) depends on nothing but `signing` and `contracts`' runtime entry,
-  never on `shell`, and no package or app imports it; the `pages-proxy` app (the
+  `snapshot`, and `play-client`; the `wrapper` app depends on `shell`;
+  `reference-game` depends on nothing but the controller protocol's types; the
+  `verify` app depends on `signing` (and may take `snapshot`, `play-client`, and
+  `contracts`' runtime entry), never on `shell`; the `pages-proxy` app (the
   Pages sites' API proxy) imports nothing. No cycles; a package never imports an
-  app. `contracts` has a runtime entry (schemas and generated types and, from
-  S2, the key-delegation notices; proposed, RFC-006) and a test-only entry
-  (vectors): only tests may import the test-only entry (the consumers are the
-  tests of `signing`, `snapshot`, and `shell`, the Wrapper's component tests,
-  the verify page's unit tests, and the e2e fake Play API; all development
-  dependencies), and no vector may reach a bundle or a published tarball. A new
-  package must pass the checks in
+  app. `contracts` has a runtime entry (schemas and generated types) and a
+  test-only entry (vectors): only tests may import the test-only entry (the
+  consumers are the tests of `signing`, `snapshot`, and `shell`, the Wrapper's
+  component tests, the verify page's unit tests, and the e2e fake Play API; all
+  development dependencies), and no vector may reach a bundle or a published
+  tarball. A new package must pass the checks in
   [`add-a-package`](./.ai/skills/add-a-package/SKILL.md).
+- **Proposed, not enforced (RFC-006, ADR-012).** These edges are not rules yet:
+  no lint enforces them, and the rule above wins until ADR-012 is accepted and
+  the slice named lands with its lint change. From slice S2, `contracts`'
+  runtime entry holds the key-delegation notices; from S5, `shell` takes that
+  runtime entry for them (today's lint refuses the import); from S6b, a
+  `signing-page` app (the wallet signing page, on its own origin) depends on
+  nothing but `signing` and `contracts`' runtime entry, never on `shell`, and no
+  package or app imports it.
 - **The shell is the only code that touches a credential** (the action key and
   the play token). The UI receives use cases and read-only state, never a
   secret.

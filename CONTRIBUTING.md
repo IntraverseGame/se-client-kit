@@ -110,15 +110,14 @@ runbook/     how to develop, release, and operate
 
 Dependency direction between packages is one way: `contracts` (data only) is a
 leaf; `snapshot` and `play-client` depend on it; `signing` has no kit dependency
-at run time; `shell` depends on `signing`, `snapshot`, and `play-client` (and,
-from slice S5, on `contracts`' runtime entry for the key-delegation notices;
-proposed, RFC-006); the `wrapper` app depends on `shell`; `reference-game`
-depends on nothing but the controller protocol's types; the `verify` app depends
-on `signing` (and may take `snapshot`, `play-client`, and `contracts`' runtime
-entry), never on `shell`; the `signing-page` app (proposed, ADR-012) depends on
-nothing but `signing` and `contracts`' runtime entry, never on `shell`, and
-nothing imports it; the `pages-proxy` app imports nothing. See
-[`.ai/memories/architecture.md`](./.ai/memories/architecture.md).
+at run time; `shell` depends on `signing`, `snapshot`, and `play-client`; the
+`wrapper` app depends on `shell`; `reference-game` depends on nothing but the
+controller protocol's types; the `verify` app depends on `signing` (and may take
+`snapshot`, `play-client`, and `contracts`' runtime entry), never on `shell`;
+the `pages-proxy` app imports nothing. See
+[`.ai/memories/architecture.md`](./.ai/memories/architecture.md). The edges that
+RFC-006 and ADR-012 propose (a `signing-page` app, and `shell` on `contracts`'
+runtime entry) are not rules yet; `AGENTS.md` lists them apart.
 
 ## Development flow
 
