@@ -140,6 +140,15 @@ export const bearerOf = (
 ): string | undefined =>
   authorization === undefined ? undefined : BEARER.exec(authorization)?.[1];
 
+/** Which of `issued` `token` is, by issue order, or `undefined` if none. */
+export const issueIndex = (
+  issued: readonly string[],
+  token: string | undefined,
+): number | undefined => {
+  const index = token === undefined ? -1 : issued.indexOf(token);
+  return index === -1 ? undefined : index;
+};
+
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 

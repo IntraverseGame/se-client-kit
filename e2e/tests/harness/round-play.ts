@@ -21,10 +21,11 @@
 // Every round test installs `page.clock` before the page loads. It is not
 // paused: the Wrapper's timers also run in real time, and a test moves them
 // forward with `advanceUntil` or `page.clock.runFor`, so a poll or a retry comes
-// at once instead of after its real delay. Pausing it (`pauseAt`) before load
-// stops the Wrapper's boot, whose own timers must run, and pausing after load
-// would race those timers against the network, so it stays unpaused; no round
-// assertion depends on a timer not firing in real time.
+// at once instead of after its real delay. A clock paused before load does not
+// stop the Wrapper (the session opens and a round plays to its result on it),
+// but the accessibility audit, and the waits these tests leave to real time,
+// would then never end. No round assertion depends on a timer not firing in
+// real time.
 
 import type {
   Clock,
