@@ -28,6 +28,7 @@ does. Dependency lifecycle scripts are off, and pnpm refuses a version published
 less than seven days ago (`pnpm-workspace.yaml`).
 
 ```sh
+pnpm hooks                       # once per clone: install the commit-msg hook (shared by every worktree)
 pnpm install --frozen-lockfile   # install exactly what the lockfile says
 pnpm check                       # format check, lint, typecheck, unit tests, allow-list, contracts check, build, build-output, package files, size budget, and README checks
 pnpm test                        # unit and component tests
@@ -114,7 +115,9 @@ at run time; `shell` depends on `signing`, `snapshot`, and `play-client`; the
 controller protocol's types; the `verify` app depends on `signing` (and may take
 `snapshot`, `play-client`, and `contracts`' runtime entry), never on `shell`;
 the `pages-proxy` app imports nothing. See
-[`.ai/memories/architecture.md`](./.ai/memories/architecture.md).
+[`.ai/memories/architecture.md`](./.ai/memories/architecture.md). The edges that
+RFC-006 and ADR-012 propose (a `signing-page` app, and `shell` on `contracts`'
+runtime entry) are not rules yet; `AGENTS.md` lists them apart.
 
 ## Development flow
 
@@ -229,7 +232,8 @@ Once the change is a pull request, the **pr-shepherd** works the conversation on
 GitHub when asked: it reviews another person's pull request with inline comments
 and follows up after new pushes, or answers the review comments on your own. It
 posts under the account your `gh` CLI is logged in as, only after you confirm
-the exact draft, and it never approves. A fix it makes for a review comment goes
+the exact draft, and it never approves. What it posts carries no agent footer:
+once you confirm it, it is your text. A fix it makes for a review comment goes
 through steps 3 to 5 again. Its review is not the step 4 gate.
 
 **Where knowledge lives.**
@@ -265,6 +269,11 @@ the main checkout stays on `main`. Procedure:
    `chore/<slug>`, `docs/<slug>`, `refactor/<slug>`.
 2. Commit with [Conventional Commits](https://www.conventionalcommits.org/):
    `feat(signing): recover the signer`, `fix(shell): clear the token on expiry`.
+   **No AI attribution:** commits, pull requests, issues, review comments, code,
+   and docs name no AI model or agent as an author (no co-author trailer, no
+   "Generated with" line, no agent footer). The `commit-msg` hook that
+   `pnpm hooks` installs refuses one in a commit message; never bypass it with
+   `--no-verify`.
 3. One logical change per PR. Keep generated code in its own commit where
    practical.
 4. Run `pnpm check` before opening a PR; CI runs the same gates once it lands.

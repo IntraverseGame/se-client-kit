@@ -15,6 +15,7 @@ export type CallResult = {
   readonly status: number;
   readonly contentType: string;
   readonly cacheControl: string;
+  readonly date: string;
   readonly body: unknown;
 };
 
@@ -44,6 +45,7 @@ export const call = (
         status: response.status,
         contentType: response.headers.get("content-type") ?? "",
         cacheControl: response.headers.get("cache-control") ?? "",
+        date: response.headers.get("date") ?? "",
         body: (await response.json()) as unknown,
       };
     },

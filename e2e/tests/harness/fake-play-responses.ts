@@ -1,5 +1,5 @@
 // How the fake Play API writes a response: JSON or problem+json, always
-// `Cache-Control: no-store`, and `Date` from the fake's fixed server time.
+// `Cache-Control: no-store`, and `Date` from the fake's server time.
 
 import type { Route } from "@playwright/test";
 
@@ -14,11 +14,11 @@ export type Responder = {
   ) => Promise<void>;
 };
 
-export const responder = (now: Date): Responder => {
+export const responder = (now: () => Date): Responder => {
   const headers = (contentType: string): Record<string, string> => ({
     "content-type": contentType,
     "cache-control": "no-store",
-    date: now.toUTCString(),
+    date: now().toUTCString(),
   });
   return {
     json: (route, status, body) =>

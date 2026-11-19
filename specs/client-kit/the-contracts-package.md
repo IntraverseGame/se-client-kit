@@ -281,12 +281,14 @@ logic packages read it and never write to it.
      and the output canary pass over every packed file; and the packed packages
      import in Node while `./testing` does not resolve.
 - **Dependencies.** `contracts` depends on no other kit package and has no
-  runtime dependency. `snapshot` and `play-client` depend on its runtime entry;
-  the test-only entry has these consumers, **all of them tests and all of them
-  development dependencies**: the unit tests of `signing`, `snapshot`, and
-  `shell`; the Wrapper's component tests; the verify page's unit tests (the
-  fairness kernel's vectors); and the e2e suite's fake Play API. It never
-  reaches a published tarball or a browser bundle (the three checks above).
+  runtime dependency. `snapshot` and `play-client` depend on its runtime entry
+  (and, proposed in RFC-006, `shell` from slice S5 and the `signing-page` app,
+  for the key-delegation notices); the test-only entry has these consumers,
+  **all of them tests and all of them development dependencies**: the unit tests
+  of `signing`, `snapshot`, and `shell`; the Wrapper's component tests; the
+  verify page's unit tests (the fairness kernel's vectors); and the e2e suite's
+  fake Play API. It never reaches a published tarball or a browser bundle (the
+  three checks above).
 - **Replaceable by design.** The backend publishes the files the kit vendors at
   public locations with a manifest of their hashes, not as a package; that
   publication does not replace the copies (ADR-001 amendment note of 2026-11-17,

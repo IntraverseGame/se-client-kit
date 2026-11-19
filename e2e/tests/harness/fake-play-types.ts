@@ -13,6 +13,11 @@ export type Served = {
   readonly method: string;
   readonly url: string;
   readonly authorized: boolean;
+  /**
+   * Which of the fake's play tokens the call presented, by issue order (0 is
+   * the redeem's), or `undefined` when it presented none of them.
+   */
+  readonly tokenIndex: number | undefined;
   /** The decoded JSON body, or `undefined` when none was sent. */
   readonly body: unknown;
 };
@@ -28,7 +33,10 @@ export type FakePlayApiOptions = {
   readonly playApiBaseUrl: string;
   /** Seeds the launch code, the session id, and the play tokens. */
   readonly seed: string;
-  /** The server's time for every response (`Date`, token deadlines). */
+  /**
+   * The server's time at the start, for every response (`Date`, token
+   * deadlines) until `advanceServerTime` moves it on.
+   */
   readonly now: Date;
   /** More secrets to redact from `unexpected`, besides the fake's own. */
   readonly secretSources?: readonly SecretSource[];
@@ -66,6 +74,18 @@ export type FakePlayApi = {
    */
   readonly redeemAgain: () => void;
   readonly restore: () => void;
+  /**
+   * Moves the server's time on by `ms` (0 or more), as the server's clock moves
+   * with the page's (T-36): the `Date` header and the deadlines of every later
+   * answer follow it.
+   */
+  readonly advanceServerTime: (ms: number) => void;
+  /**
+   * The lifetime of every play token issued from now on, a positive number of
+   * milliseconds: its `tokenExpiresAt` is the server's time plus `ms`.
+   * `FAKE_TOKEN_LIFETIME_MS` until set.
+   */
+  readonly setTokenLifetime: (ms: number) => void;
   /** The launch code and every play token issued so far. */
   readonly secrets: () => readonly FakeSecret[];
   /**

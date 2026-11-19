@@ -43,6 +43,13 @@ the attack surface a player cannot see. The rules:
   entry goes when wireit moves off `chokidar` 4. The one-time waiver of the
   release age for `wireit@0.15.0`, accepted with it, was removed on 2026-11-16,
   once 0.15.0 was past the window.
+- **Git hooks.** The repository has one git hook, `.githooks/commit-msg`, which
+  refuses AI attribution in a commit message
+  ([testing and CI](./testing-and-ci.md), The commit-msg hook). It runs on a
+  contributor's machine, so it is kept small: a short Bash script with no
+  dependency and no network access, on a code-owner path (`/.githooks/` in
+  `.github/CODEOWNERS`). It runs only in a clone where someone ran `pnpm hooks`;
+  no install or lifecycle script sets `core.hooksPath`.
 - **Runtime dependencies are an allow-list**: `@noble/curves` and
   `@noble/hashes`, and nothing else
   ([ADR-001](../../decisions/ADR-001-toolchain-and-signing.md)). Anything else

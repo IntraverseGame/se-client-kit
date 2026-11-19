@@ -1,5 +1,6 @@
 // The fake Play API's own tests, part one: the session (redeem, refresh, the
-// play token rule), strict request bodies, and bodies from the Snapshot
+// play token rule, the token a call presented, the server time and token
+// lifetime a test moves), strict request bodies, and bodies from the Snapshot
 // vectors. The calls are made by a page with `fetch`, as the Wrapper makes
 // them. Part two (scripted failures and refusals) is fake-play-script.spec.ts.
 
@@ -182,5 +183,56 @@ test.describe("the fake Play API", () => {
       "play token 1",
       "play token 2",
     ]);
+  });
+
+  test("records which of its tokens a call presented, by issue order", async ({
+    page,
+    fakePlayApi,
+  }) => {
+    const first = await openSession(page, fakePlayApi);
+    const second = tokenOf(
+      await call(page, "/play/v1/sessions:refresh", { token: first }),
+    );
+    fakePlayApi.answerEvery("getSnapshot", {
+      kind: "snapshot",
+      vector: "coinflip-idle",
+    });
+    await call(page, "/play/v1/snapshot", { method: "GET", token: second });
+    await call(page, "/play/v1/snapshot", {
+      method: "GET",
+      token: `pt_${"x".repeat(43)}`,
+    });
+    expect(fakePlayApi.served.map(entry => entry.tokenIndex)).toEqual([
+      undefined,
+      0,
+      1,
+      undefined,
+    ]);
+  });
+
+  test("moves its server time and the lifetime of the tokens it issues", async ({
+    page,
+    fakePlayApi,
+  }) => {
+    const redeemed = await call(page, "/play/v1/sessions:redeem", {
+      body: { launchCode: fakePlayApi.launchCode },
+    });
+    expect(redeemed.date).toBe("Fri, 16 Oct 2026 12:00:00 GMT");
+    fakePlayApi.advanceServerTime(10 * 60 * 1000);
+    fakePlayApi.setTokenLifetime(2 * 60 * 1000);
+    const refreshed = await call(page, "/play/v1/sessions:refresh", {
+      token: tokenOf(redeemed),
+    });
+    expect(refreshed.date).toBe("Fri, 16 Oct 2026 12:10:00 GMT");
+    expect(refreshed.body).toEqual({
+      playToken: expect.stringMatching(/^pt_[\w-]{43}$/u),
+      tokenExpiresAt: "2026-10-16T12:12:00.000Z",
+    });
+    expect(() => {
+      fakePlayApi.advanceServerTime(-1);
+    }).toThrow(RangeError);
+    expect(() => {
+      fakePlayApi.setTokenLifetime(0);
+    }).toThrow(RangeError);
   });
 });
