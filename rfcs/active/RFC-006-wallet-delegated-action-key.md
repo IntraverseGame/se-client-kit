@@ -3,8 +3,8 @@
 - Status: draft
 - Author: the documenter agent, for human review
 - Created: 2026-11-17
-- Relates to: se-client-kit#220 (the kit's part of se-backend#88); W-9, W-11,
-  and W-12 of
+- Relates to: se-client-kit#220 (the kit's part of the backend's key-delegation
+  contract); W-9, W-11, and W-12 of
   [the action key](../../specs/wrapper/the-action-key-and-what-may-be-stored.md);
   W-21, W-22, and W-26 of
   [signing](../../specs/wrapper/signing-start-move-cash-out-and-cancel.md); W-37
@@ -53,8 +53,9 @@ tests from T-37 once S1's T-36 is merged), and S6b into a new
 - The shell makes a fresh action key for every session (W-9), and nothing ties
   that key to the player. The backend now accepts, on a start, an optional
   statement signed by the player's wallet that the session's action key acts for
-  it (se-backend#88). The round's evidence then names the wallet
-  (`FairnessContext.keyDelegation`), and the verify page can check it.
+  it (the backend's key-delegation contract). The round's evidence then names
+  the wallet (`FairnessContext.keyDelegation`), and the verify page can check
+  it.
 - The kit has none of it: no `KeyDelegation` type, no wallet code, no consent
   screen. Until this change the Wrapper spec put wallet-delegated keys out of
   scope (its Scope and W-9).
@@ -139,7 +140,7 @@ This RFC cites its values; it does not redefine them.
   here: it may still change, and S2 vendors the bytes.
 - Production accepts only `approved` notices (the backend), so a production
   build offers delegation only once its copy holds one. The production wording
-  waits for se-backend#56.
+  waits for the backend's legal review of the notice.
 - The signing page signs only a notice it picks by `id` from its own copy, never
   text the Wrapper sends.
 
@@ -386,7 +387,7 @@ The Wrapper has no wallet code.
   - no round is open;
   - the game is not a book game (the latest Snapshot is not `playback`, the test
     autoplay's `not-book` uses): the backend refuses a book start with a
-    delegation until se-backend#73;
+    delegation until it supports delegation on book games;
   - `matchMedia("(pointer: fine)")` and `matchMedia("(hover: hover)")` match;
   - an accepted notice exists for the build: `approved`, or `pending` where the
     environment allows it (below).
@@ -398,7 +399,7 @@ The Wrapper has no wallet code.
 - **The consent dialog** explains, in the player's language (W-48), what the
   player signs and what it allows, and shows the exact English notice text that
   will be signed. While the notice is `pending` it is marked "pending legal
-  review" (se-backend#56 tracks the review).
+  review" (the backend owns that review).
 - **Pending notices.** A per-environment configuration flag lets the build offer
   a `pending` notice (its name is S6's). The Wrapper's configuration validator
   refuses it with `environment: "production"`.
@@ -679,8 +680,8 @@ this RFC's tests number from T-37 once it is merged.
 
 - **S2.** Vendor `key-delegation/v1` (the notices on `contracts`' runtime entry,
   the vectors on its test-only entry), and the Play, Snapshot, and verify API
-  documents that carry the new fields and codes. Waits for se-backend#88's
-  contract.
+  documents that carry the new fields and codes. Waits for the backend's
+  published key-delegation contract.
 - **S3.** `signing`: the `KeyDelegation` typed data, recovery, and normalization
   of the wallet's signature only.
 - **S4.** `play-client`: `StartRoundRequest.keyDelegation`, and the new codes
