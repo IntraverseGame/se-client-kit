@@ -1,6 +1,6 @@
 ---
 description: What se-client-kit is, why it is public, the package map, and its boundary to the backend. Read first on any task.
-last-verified: 2026-11-03 (#193: the package map, with `pages-proxy`, and the current state: the packages and apps are built; 2026-10-27, #3: CODEOWNERS names the org owners, the npm org `intraverse` is claimed, trusted publishing; open-marker deferrals: hosting is #133; verify page states pull request: `verify` takes `contracts`' runtime entry and holds its checks, states, and view; verify kernel pull request: the `verify` app; the signed-action specification is used by name, not copied; fairness kernel vectors pull request: the public kernel vector bundle joins the shared contracts; play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
+last-verified: 2026-11-17 (RFC-006, proposed: `key-delegation/v1` on the list of copied contracts, to be vendored in S2; earlier: 2026-11-03, #193: the package map, with `pages-proxy`, and the current state: the packages and apps are built; 2026-10-27, #3: CODEOWNERS names the org owners, the npm org `intraverse` is claimed, trusted publishing; open-marker deferrals: hosting is #133; verify page states pull request: `verify` takes `contracts`' runtime entry and holds its checks, states, and view; verify kernel pull request: the `verify` app; the signed-action specification is used by name, not copied; fairness kernel vectors pull request: the public kernel vector bundle joins the shared contracts; play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
 ---
 
 # Overview
@@ -45,13 +45,15 @@ Details: [architecture.md](./architecture.md).
 
 The player-facing contracts are defined by a separate, private backend
 repository and are **copied** here as documents: the Play API document, the
-Snapshot schema and vectors, the signing vectors, and the public vector bundle
-of the SuperEngine fairness kernel, kernelVersion 1 (its sets
-`kernel/public/v1/*`). The signed-action specification is not copied: the kit
-refers to it by name and implements it, and its vectors are copied (the signing
-vectors and the `signed-action/` Snapshot vector). Neither side imports the
-other's code. Refer to those contracts by name only; never paste private text or
-link to private repositories.
+Snapshot schema and vectors, the signing vectors, the public vector bundle of
+the SuperEngine fairness kernel, kernelVersion 1 (its sets
+`kernel/public/v1/*`), and the key-delegation contract `key-delegation/v1` (its
+notices and their vectors; proposed, RFC-006, to be vendored in slice S2). The
+signed-action specification is not copied: the kit refers to it by name and
+implements it, and its vectors are copied (the signing vectors and the
+`signed-action/` Snapshot vector). Neither side imports the other's code. Refer
+to those contracts by name only; never paste private text or link to private
+repositories.
 
 ## Current state
 

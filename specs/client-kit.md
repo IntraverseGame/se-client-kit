@@ -51,6 +51,9 @@ The kit is a repository of packages and apps. These are its ownership lines.
   - the Play API contract (an OpenAPI document per surface) and its versioning;
   - the Snapshot schema `se.snapshot/1` and its golden vectors;
   - the signed-action spec and its vectors;
+  - the key-delegation contract `key-delegation/v1`: its notices and their
+    vectors (proposed,
+    [RFC-006](../rfcs/active/RFC-006-wallet-delegated-action-key.md));
   - every rule of what the backend accepts, and its error codes;
   - the preview stack the end-to-end tests run against, and the deploy of a
     released Wrapper to the SuperEngine origin.
@@ -78,6 +81,7 @@ se-client-kit/
     reference-game/ a minimal sandboxed game for tests and as a sample
     verify/         the verify page (Vite)
     pages-proxy/    the Pages sites' same-origin API proxy (one worker module)
+    signing-page/   the wallet signing page, its own origin (proposed, RFC-006)
   e2e/              Playwright suite and the fake Play API
   tools/            repository checks and their tests (allow-list, test-only entry)
   .changeset/       pending release notes
@@ -601,8 +605,13 @@ request, workflow log, agent output, or release note:
   resource names;
 - unpublished backend internals: only the player-facing contracts (the Play API
   document, the Snapshot schema bundle, the signed-action specification, the
-  signing vectors) are shared, and only as copies; no operator, wallet, or admin
-  API document, no internal module names or designs;
+  signing vectors, the public vector bundle of the SuperEngine fairness kernel,
+  kernelVersion 1 (its sets `kernel/public/v1/*`), and the key-delegation
+  contract `key-delegation/v1`, its notices and their vectors, proposed in
+  RFC-006) are shared, and only as copies; no operator, wallet, or admin API
+  document, no internal module names or designs. That "wallet" names a backend
+  API document; `key-delegation/v1` is not one: it is the player-facing contract
+  a player's own browser wallet signs (proposed, RFC-006), and it may be copied;
 - anything about an operator's credentials or contracts, or a player's data;
 - unreleased security findings (they go through `SECURITY.md`).
 
@@ -692,4 +701,5 @@ workflow's logs are public and hold no secret.
   [runbook/client-kit-release.md](../runbook/client-kit-release.md).
 - Backend-owned contracts, by name and version: the Play API `/play/v1`; the
   Snapshot schema `se.snapshot/1` and its bundle; the signed-action spec; the
-  signing vectors.
+  signing vectors; the key-delegation contract `key-delegation/v1`, its notices
+  and their vectors (proposed, RFC-006).

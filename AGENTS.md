@@ -138,6 +138,14 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   development dependencies), and no vector may reach a bundle or a published
   tarball. A new package must pass the checks in
   [`add-a-package`](./.ai/skills/add-a-package/SKILL.md).
+- **Proposed, not enforced (RFC-006, ADR-012).** These edges are not rules yet:
+  no lint enforces them, and the rule above wins until ADR-012 is accepted and
+  the slice named lands with its lint change. From slice S2, `contracts`'
+  runtime entry holds the key-delegation notices; from S5, `shell` takes that
+  runtime entry for them (today's lint refuses the import); from S6b, a
+  `signing-page` app (the wallet signing page, on its own origin) depends on
+  nothing but `signing` and `contracts`' runtime entry, never on `shell`, and no
+  package or app imports it.
 - **The shell is the only code that touches a credential** (the action key and
   the play token). The UI receives use cases and read-only state, never a
   secret.
@@ -193,11 +201,12 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   tool needs a recorded decision too. Dependency lifecycle scripts are off by
   default; only an explicit allow-list may run one.
 - **Contracts are documents, never code.** The Play API document, the Snapshot
-  schema and vectors, the signing vectors, and the public vector bundle of the
-  SuperEngine fairness kernel, kernelVersion 1 (its sets `kernel/public/v1/*`)
-  are copied into the `contracts` package, not imported from another repository.
-  Each copy is pinned in a lock file with its source commit and a content hash.
-  No git submodules.
+  schema and vectors, the signing vectors, the public vector bundle of the
+  SuperEngine fairness kernel, kernelVersion 1 (its sets `kernel/public/v1/*`),
+  and the key-delegation contract `key-delegation/v1` (its notices and their
+  vectors; proposed, RFC-006) are copied into the `contracts` package, not
+  imported from another repository. Each copy is pinned in a lock file with its
+  source commit and a content hash. No git submodules.
 - **Vectors are append-only.** A released version's vector files are never
   edited; a vendored vector file records the source commit it came from.
 - Never write to `localStorage`, cookies, or any persistent storage from the
@@ -243,9 +252,10 @@ add, in any file, commit, issue, pull request, log, or agent output:
   identifiers;
 - unpublished backend internals: only the player-facing contracts (the Play API
   document at `/play/v1`, the Snapshot schema bundle, the signed-action
-  specification, the signing vectors, and the public vector bundle of the
-  SuperEngine fairness kernel, kernelVersion 1, its sets `kernel/public/v1/*`)
-  are shared, and only as copies;
+  specification, the signing vectors, the public vector bundle of the
+  SuperEngine fairness kernel, kernelVersion 1, its sets `kernel/public/v1/*`,
+  and the key-delegation contract `key-delegation/v1`, its notices and their
+  vectors, proposed in RFC-006) are shared, and only as copies;
 - personal data, or the names, emails, or handles of people unless they are
   already public as maintainers or authors;
 - attribution to an AI model or agent (a co-author trailer, a "Generated with"
