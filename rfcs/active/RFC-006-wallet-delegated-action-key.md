@@ -407,8 +407,9 @@ The Wrapper has no wallet code.
   without it no entry is offered (fail closed). It is an origin on a different
   registrable domain from the Wrapper's (Q-e, section 5), which the validator
   checks as W-37 does, and never the verify page's origin (`verifyBaseUrl`'s
-  origin), as ADR-012's Decision 2 says; proposed: never an operator or game
-  origin either.
+  origin); proposed: never an entry of the configuration's `operatorOrigins` or
+  `gameOrigins` either, the only operator and game origins the validator knows.
+  ADR-012's Decision 2 lists both.
 - **The key (W-9).** The shell generates the action key at session open, once it
   holds the signer lock, or when the player chooses to delegate, so its address
   exists before the delegation is signed and before the first start.
@@ -653,7 +654,8 @@ cross-origin iframe inside an operator page.
     `wallet` sent and echoed in lowercase passes; nothing stored.
   - S6: the entry's four conditions; the dialog's text and pending mark; the
     validator refusing the pending flag in production and a `signingPageOrigin`
-    on the Wrapper's registrable domain; the 422 path (sign again, or continue
+    on the Wrapper's registrable domain, equal to the verify page's origin, or
+    on `operatorOrigins` or `gameOrigins`; the 422 path (sign again, or continue
     without); another refusal of a delegated start offering "continue without";
     a11y.
   - S6b: the port's zero-call test (section 6); EIP-6963 only, de-duplicated by

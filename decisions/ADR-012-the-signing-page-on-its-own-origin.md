@@ -49,7 +49,10 @@
    holds everywhere is the same-origin policy: another origin's memory is not
    readable. The separate process is defense in depth; Safari is untested. The
    Wrapper's validator also refuses a `signingPageOrigin` equal to the verify
-   page's origin (`verifyBaseUrl`'s origin).
+   page's origin (`verifyBaseUrl`'s origin) and, proposed in RFC-006, one equal
+   to an entry of `operatorOrigins` or `gameOrigins`: those two lists of the
+   same configuration are the only operator and game origins the validator
+   knows.
 3. **Configuration from one input.** The Wrapper's environment configuration
    names the page (`signingPageOrigin`). The signing page's own configuration
    document holds `environment`, the Wrapper origins it serves, and the same
