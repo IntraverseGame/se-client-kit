@@ -540,13 +540,20 @@ requirements (section 6: CORS, a key in the URL path or an Origin allowlist,
 never a query-string key, the methods, history back to at least the operator's
 dispute window and never less than 90 days, and independence from the engine's
 own provider: two independent providers the engine does not use, chosen in
-se-backend#375). Before production, staging runs a Solana devnet (cluster 103)
-source, so the Solana path runs end to end (RFC-007, Q11; a dependency on the
-backend and the infrastructure owner), and its document keeps the Somnia source
-(`anvil`, kind `evm`) beside `solana`, so rounds from before the switch still
-verify: a document may list sources of both kinds at once, each round is read by
-its own source's kind, and every rule above holds per source (RFC-007, section
-1).
+se-backend#375). Before production, staging runs a Solana mainnet-beta
+(cluster 101) source, the same chain as production, with staging keys on two
+independent providers that staging's own engine does not read (an environment's
+browser endpoints never include the provider its own engine reads),
+Origin-locked to staging's origins, so the Solana path runs end to end (RFC-007,
+Q11; a dependency on the backend, se-backend#548, and the infrastructure owner).
+During the switch its document lists the Somnia source (`anvil`, kind `evm`)
+beside `solana` at `minRpcQuorum` 1: a document may list sources of both kinds
+at once, each round is read by its own source's kind, and every rule above holds
+per source (RFC-007, section 1). After the engine's switch and drain, `anvil` is
+dropped and staging sets `minRpcQuorum` 2, like production (RFC-007, Q16); then
+a canary of at least 100 config rounds over at least 24 hours, each passing the
+tip check and then matching on the verify page, gates production's first
+document.
 
 The schema, as the Wrapper validates it at boot (`apps/wrapper`,
 `validateEnvironmentConfig`; the chain fields through the shell's

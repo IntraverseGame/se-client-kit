@@ -39,7 +39,10 @@ Wrapper, is hard to take out.
    default. Both validators (the shell's and the verify page's) refuse a
    `solana` source whose `entropyChainId` is not 101, 102, or 103, an `evm`
    source with one of those, and a source whose key and kind disagree about
-   `solana` (RFC-007 Q7, decided by the code owner on 2026-11-18).
+   `solana` (RFC-007 Q7, decided by the code owner on 2026-11-18). In a
+   `production` document, both also refuse a `solana` source that is not cluster
+   101 (`production-cluster`), at boot as in the Pages tool's production mode,
+   so a test cluster's entropy never reaches production (RFC-007 Q10).
    `entropyChainId` and `tipLagMargin` keep their names; for a Solana source
    they hold the cluster number and a count of slots.
 2. **A Solana cluster's identity is its genesis hash, pinned in code.** The kit
@@ -82,8 +85,9 @@ Wrapper, is hard to take out.
 
 - Every environment's document, and staging's `PAGES_CHAIN_PINS`, gains the
   field in one migration (RFC-007, Migration considerations).
-- A test cluster whose genesis changes needs a kit release; production uses
-  mainnet-beta only.
+- A test cluster whose genesis changes needs a kit release; production and
+  staging both use mainnet-beta, and the testnet and devnet pins stay for local
+  or test use.
 - Two copies of a three-row table, held together by a test.
 - The readers and the decoder are the kit's to maintain and to test; RFC-007
   specifies them and pins the decoder with vectors.

@@ -33,9 +33,10 @@ the backend's specs, cited by name: **the backend's Solana entropy spec** (its
 block selection and reorg policy, Solana section), **its Shell bind check**, and
 **its verify API document**, as confirmed by the backend's TPO on 2026-11-10 and
 answered again from se-backend `4a49ab9d` on 2026-11-18. The code owner decided
-every question this draft asked on 2026-11-18 ([Decisions](#decisions)); the one
-item still open (ADR-013's acceptance) and what is pending from the backend and
-the infrastructure owner are in [Unresolved questions](#unresolved-questions).
+every question this draft asked on 2026-11-18, and two more on the review of
+2026-11-19 ([Decisions](#decisions)); the one item still open (ADR-013's
+acceptance) and what is pending from the backend and the infrastructure owner
+are in [Unresolved questions](#unresolved-questions).
 
 ## Problem
 
@@ -140,15 +141,24 @@ the configuration, never a constant of the kit.
 - **Several sources at once, of either kind.** A document may list any number of
   sources, each keyed by its Snapshot `source` name, each with its own kind,
   `entropyChainId`, endpoints, and `tipLagMargin`, and it may mix `evm` and
-  `solana` sources. Staging will (section 9, step 8): its Somnia source stays
-  beside the new `solana` one, so rounds bound before the switch still verify:
+  `solana` sources. Staging does so for a while (section 9, step 8): during its
+  switch, its Somnia source stays beside the new `solana` one, which is
+  mainnet-beta (cluster 101), the same chain as production:
 
   ```text
   "entropyChainKind": { "anvil": "evm",  "solana": "solana" }
-  "entropyChainId":   { "anvil": 50312,  "solana": 103 }
-  "tipLagMargin":     { "anvil": 100,    "solana": <slots> }
+  "entropyChainId":   { "anvil": 50312,  "solana": 101 }
+  "tipLagMargin":     { "anvil": 100,    "solana": 64 }
   "minRpcQuorum":     1
   ```
+
+  After the backend's switch and drain, `anvil` is dropped and `minRpcQuorum`
+  raised to 2 (Q16), leaving `solana` alone, as in production. Staging's
+  `solana` margin is the provisional 64 slots (Q1), and its `solana` endpoints
+  are staging keys on two independent providers that staging's own engine does
+  not read, Origin-locked to staging's origins (P-3, P-6). The rule is per
+  environment: an environment's browser endpoints never include the provider its
+  own engine reads, so staging's pair may differ from production's.
 
   - **The reader is the round's.** The tip check and the verify page look up the
     round's own `source` (the Snapshot's `proofs.randomnessProof.source`, the
@@ -168,14 +178,20 @@ the configuration, never a constant of the kit.
     as many `evm` sources as it has keys.
   - **`minRpcQuorum` is one number for the whole document**: a document with a
     one-endpoint source must set it to 1, and is then `degraded` (W-26a) for
-    every source, a Solana one included; only `local` and `preview` may. Staging
-    stays at 1 while its Somnia source has one endpoint (step 8).
+    every source, a Solana one included; only `local` and `preview` may. There
+    is no quorum per source. So staging, whose `anvil` source has one endpoint,
+    is at `minRpcQuorum` 1 and degraded for both of its sources while it lists
+    both, between steps 2 and 4 of section 9's step 8; once `anvil` is dropped
+    it sets 2 (Q16).
   - **The production rules hold for the document and for each source**:
     `environment` is `production` and `minRpcQuorum` at least 2, so every source
-    has at least two independent endpoints, and every `solana` source is cluster
-    101 (`not-mainnet`: the Pages tool's production mode, below; the Wrapper's
-    validator does not check it). Production's first document lists one source,
-    `solana`.
+    has at least two independent endpoints, and every `solana` source is
+    cluster 101. Both validators refuse a `production` document with a `solana`
+    source on another cluster (`production-cluster`, at
+    `entropyChainId.<source>`), as they refuse its quorum below 2
+    (`production-quorum`): the rule runs in the player's browser at boot, so a
+    document written outside the Pages tool cannot boot on a test cluster's
+    entropy. Production's first document lists one source, `solana`.
   - **The policies take every source's endpoints**: `PAGES_RPC_ENDPOINTS` holds
     each source's list under its key, `PAGES_RPC_ORIGINS` lists exactly the
     origins of all of them, and both sites' `connect-src` takes them all, as
@@ -201,12 +217,14 @@ the configuration, never a constant of the kit.
     The key in an endpoint's path never reaches the CSP, which takes origins
     only.
   - In production mode (`pages-config-cli.ts --production`, run by
-    `.github/workflows/pages-prod-check.yml` before npm publishes), one more
-    rule (Q10): a `solana` source must be cluster 101, mainnet-beta (code
-    `not-mainnet`, at `PAGES_CHAIN_PINS`' `entropyChainId.<source>`), so a test
-    cluster's entropy never reaches production. Every other production rule
-    (`not-production`, the quorum of 2) holds as it is. Staging's devnet source
-    (Q11) is in a `preview` document, which production mode never checks.
+    `.github/workflows/pages-prod-check.yml` before npm publishes), no new rule:
+    the mode already requires `environment` `production` (`not-production`), and
+    its validator pass then refuses a `solana` source on another cluster
+    (`production-cluster`, Q10), as it refuses a quorum below 2. So a test
+    cluster's entropy is refused before npm publishes and again at boot, under
+    one rule and one code. Staging's `solana` source is cluster 101 as well, in
+    a `preview` document (Q11): nothing in the kit treats 101 as
+    production-only, and nothing requires another cluster on staging.
 - **Present state until the slice lands**: no document carries the field, and
   every source is read as EVM.
 
@@ -257,7 +275,8 @@ returns as a base58 string.
   `apps/verify/src/solana-clusters.ts`), and a tools test holds both to this
   table, as `config-parity` holds the two validators to one verdict.
 - **A reset of a test cluster** with a new genesis needs a kit release (and the
-  engine's equivalent check). Production uses 101 only.
+  engine's equivalent check). Production and staging both use 101; the testnet
+  and devnet pins stay in the table for local or test use.
 - **The engine has no cluster check of its own RPC today**; the backend endorses
   this one and will add the same genesis-hash check on its side.
 
@@ -395,9 +414,11 @@ For a Solana source:
        is folded into **`ledger-gap`** too.
 
      The value is `M`'s `blockhash`, and the record notes that it came from slot
-     `M` because `N` was skipped. The skip path is sequential: an endpoint may
-     take up to three 15 s timeouts one after another (`getBlock(N)`,
-     `getBlocksWithLimit`, `getBlock(M)`), 45 s in the worst case.
+     `M` because `N` was skipped. The skip path is sequential, and each of its
+     calls (`getBlock(N)`, `getBlocksWithLimit`, `getBlock(M)`) has its own 15 s
+     timeout. A timeout ends that endpoint's answer, so the calls after it never
+     start: the worst case is 45 s, when the first two calls answer just before
+     their deadlines and the third times out.
 
   3. **Not found**: -32004, -32001, -32014, or -32019 (long-term storage
      unreachable; the kit's own addition to the backend's not-found codes), on
@@ -406,15 +427,17 @@ For a Solana source:
      keeps why (`not-available` for the four codes, `no-answer` otherwise),
      never the error's message.
 - **The quorum**, in this order, the first failure shown (W-26b's identity
-  before completeness before content):
+  before completeness before content; a ledger gap is a fault of the provider's
+  data, so it comes before completeness):
   1. `config`: as today, a configuration the Wrapper refuses at boot, or a
      source the configuration does not list; nothing is asked;
   2. `other-chain`: an endpoint, answering or not, reported another cluster's
      genesis hash;
-  3. `too-few`: fewer than `minRpcQuorum` endpoints gave a value;
-  4. `no-chain-id`: an endpoint gave a value but no genesis hash;
-  5. `ledger-gap` (new): an endpoint that gave the pinned genesis hash saw a
-     ledger gap;
+  3. `ledger-gap` (new): an endpoint that gave the pinned genesis hash saw a
+     ledger gap. It is shown even when fewer than `minRpcQuorum` endpoints gave
+     a value, so a gap on one endpoint is never hidden behind `too-few`;
+  4. `too-few`: fewer than `minRpcQuorum` endpoints gave a value;
+  5. `no-chain-id`: an endpoint gave a value but no genesis hash;
   6. `no-block`: an endpoint gave the pinned genesis hash but no value (not
      found, pruned, or malformed);
   7. `hash-mismatch`: the values differ.
@@ -565,11 +588,11 @@ an endpoint enters a configuration document; the runbook gets the checklist
   with a full archive, or an archive plan); the kit does not change for it.
 - **P-6. Independence.** At least two endpoints per Solana source in production
   (`minRpcQuorum` of at least 2, W-26a's boot rule), run by different
-  organizations on separate infrastructure (W-26b), and none of them a provider
-  the engine reads the same cluster through (the backend's Shell bind check:
-  independent RPCs exclude the engine's own; decided by the code owner on
-  2026-11-18). The kit cannot see the engine's provider, so this one is the
-  infrastructure owner's to keep, and the runbook's checklist names it.
+  organizations on separate infrastructure (W-26b), and none of them the
+  provider its own environment's engine reads (section 1; the backend's Shell
+  bind check: independent RPCs exclude the engine's own; decided by the code
+  owner on 2026-11-18). The kit cannot see the engine's provider, so this one is
+  the infrastructure owner's to keep, and the runbook's checklist names it.
 - **P-7. The policies.** Each endpoint's origin is in `PAGES_RPC_ORIGINS`
   (exactly the origins of `PAGES_RPC_ENDPOINTS`' URLs), passes the headers
   step's `origin` pattern, and so reaches both sites' `connect-src`; nothing
@@ -628,15 +651,15 @@ Deterministic and hermetic, as every test (no real network, no real clock).
 Recorded answers, where the slice records them from a real provider, are
 committed as plain JSON results with no URL and no key.
 
-| Row   | Level                   | What it proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ----- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T-39  | unit, `shell` and tools | the configuration: `entropyChainKind` required per source and only for those; `evm` and `solana` only; each cross-check (`solana` with 100 and 104, `evm` with 101 to 103, a `solana` source keyed otherwise, a source keyed `solana` of kind `evm`) refused at its field, never naming a value; a Solana source carries its cluster's genesis hash; the verify page's validator gives the same verdicts (`config-parity`); the two genesis tables equal section 2's; the Pages tool's `CHAIN_PIN_FIELDS` and its production rule `not-mainnet`; a document with an `evm` and a `solana` source (staging's shape) is valid, each source held to its own rules, a source with fewer endpoints than `minRpcQuorum` refused at that source, and a second `solana` source refused                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| T-40  | unit, `shell`           | the Solana tip check against a scripted transport and a manual clock: the calls are exactly `getGenesisHash []` and `getSlot [{ commitment: "finalized" }]`, at once, and nothing else; a quorum that agrees passes; another genesis hash fails as `chain-id-mismatch`, from an endpoint that gave a slot and from one that gave none; a malformed genesis hash or slot (a string, a negative, a fraction, above 2^53 − 1) is no answer; too few; an answering endpoint with no genesis hash; lagging by `tipLagMargin` + 1 slots fails and by `tipLagMargin` passes; a JSON-RPC error and a rejection are no answer; a timeout aborts that call's signal only; the record (section 3's fields, no URL); the bind in slots (`tip`: `N` = `h_top` − margin passes, one less fails; `future`: `N` = `h_top` fails, + 1 passes); with an `evm` and a `solana` source configured, a round of each source makes only its own kind's calls, to its own endpoints; every existing EVM tip-check test passing, unchanged except for the added `kind` discriminant (`tip-check-calls.test.ts`'s whole-answer `toEqual`, `chain-decision.test.ts`'s `TipCheckRecord` literals)                                  |
-| T-41  | unit, Wrapper           | the JSON-RPC transport carries a Solana call's `params` (an object inside the array) as given, resolves a JSON number `result`, and rejects a JSON-RPC error answered with HTTP 200, a status other than 200, and a redirect; the Wrapper's validator takes `entropyChainKind` (`ENVIRONMENT_CONFIG_FIELDS`); the "could not verify the chain" and "failed verification" texts for a Solana source's failures are W-48's labels, unchanged                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| T-42  | e2e, browser            | a Solana config round against the e2e fake Solana RPC: two agreeing endpoints pass and the round reaches `ready`; another genesis hash on one endpoint, and one endpoint silent with a quorum of 2, each fail with T-19's required cancel. Replays the vendored Solana Snapshot and signature vectors, with the fake Solana RPC answering from `entropy/solana/v1`'s mainnet slots (slice 6); until they are vendored the row is pending and T-40 covers the check                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| VT-13 | unit, verify page       | base58 (section 5): every vector of its table and every refusal                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| VT-14 | unit, verify page       | the Solana chain read against a fake endpoint set and a fake clock, replaying `entropy/solana/v1` once vendored (its blockhash, skipped-slot, ledger-gap, non-32-byte, and -32004 cases, and its seed through check 7) and recorded or synthetic answers until then: the calls and their exact options; with an `evm` and a `solana` source configured, a round of each reads only its own source's endpoints with its own kind's calls; a block at `N`; `N` skipped by -32007 and by -32009, with `getBlocksWithLimit` and `getBlock(M)`, the value `M`'s; a ledger gap by `parentSlot ≥ N`, by `M ≤ N`, and by -32007 from `getBlock(M)`; a `previousBlockhash` that is not 32 bytes; the skip path's three calls timing out one after another; an empty `getBlocksWithLimit`; -32001, -32004, -32014, and -32019; a null `blockTime`; a `blockhash` of 31 and 33 bytes; another genesis hash; the failure order of section 4 (one case per failure); two endpoints that disagree on the skip; `entropy.value` equal, different, and absent; a round not ended; the abort during the skip path; the requests' options (no redirect, no referrer, only 200); the EVM read's existing tests unchanged |
-| VT-15 | e2e, browser            | the verify page against the e2e fake Solana RPC and the fake verify API: a Solana book round (built by the harness from the fake chain's value and a round secret, so checks 5 to 7 hold) reaches V-8's book reason; the same round with `N` skipped; an endpoint answering -32001 makes check 6 "could not be verified" with V-7's chain wording and the pruned detail (Q14); on one document with an `evm` and a `solana` source, a round of each verifies against its own fake endpoints; the policy allows the fake endpoints' origins only                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Row   | Level                   | What it proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ----- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T-39  | unit, `shell` and tools | the configuration: `entropyChainKind` required per source and only for those; `evm` and `solana` only; each cross-check (`solana` with 100 and 104, `evm` with 101 to 103, a `solana` source keyed otherwise, a source keyed `solana` of kind `evm`) refused at its field, never naming a value; a Solana source carries its cluster's genesis hash; the verify page's validator gives the same verdicts (`config-parity`); the two genesis tables equal section 2's; the Pages tool's `CHAIN_PIN_FIELDS`; `production-cluster` in both validators (a `production` document with a `solana` source on 102 or 103 refused at `entropyChainId.<source>` and on 101 accepted, a `preview` or `local` one accepted on any of the three, and the Pages tool's production mode refusing it through its validator pass); a document with an `evm` and a `solana` source (staging's shape) is valid, each source held to its own rules, a source with fewer endpoints than `minRpcQuorum` refused at that source, a second `solana` source refused; and, until slices 2 and 4, slice 1's guards: a `solana` source's tip check asks no endpoint and fails as `unsupported-chain-kind`, decided `chain-unverified`, and the verify page's check 6 asks no endpoint and is "could not be verified" (`unsupported-chain-kind`), an `evm` source beside it read as before |
+| T-40  | unit, `shell`           | the Solana tip check against a scripted transport and a manual clock: the calls are exactly `getGenesisHash []` and `getSlot [{ commitment: "finalized" }]`, at once, and nothing else; a quorum that agrees passes; another genesis hash fails as `chain-id-mismatch`, from an endpoint that gave a slot and from one that gave none; a malformed genesis hash or slot (a string, a negative, a fraction, above 2^53 − 1) is no answer; too few; an answering endpoint with no genesis hash; lagging by `tipLagMargin` + 1 slots fails and by `tipLagMargin` passes; a JSON-RPC error and a rejection are no answer; a timeout aborts that call's signal only; the record (section 3's fields, no URL); the bind in slots (`tip`: `N` = `h_top` − margin passes, one less fails; `future`: `N` = `h_top` fails, + 1 passes); with an `evm` and a `solana` source configured, a round of each source makes only its own kind's calls, to its own endpoints; every existing EVM tip-check test passing, unchanged except for the added `kind` discriminant (`tip-check-calls.test.ts`'s whole-answer `toEqual`, `chain-decision.test.ts`'s `TipCheckRecord` literals)                                                                                                                                                                                          |
+| T-41  | unit, Wrapper           | the JSON-RPC transport carries a Solana call's `params` (an object inside the array) as given, resolves a JSON number `result`, and rejects a JSON-RPC error answered with HTTP 200, a status other than 200, and a redirect; the Wrapper's validator takes `entropyChainKind` (`ENVIRONMENT_CONFIG_FIELDS`); the "could not verify the chain" and "failed verification" texts for a Solana source's failures are W-48's labels, unchanged                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| T-42  | e2e, browser            | a Solana config round against the e2e fake Solana RPC: two agreeing endpoints pass and the round reaches `ready`; another genesis hash on one endpoint, and one endpoint silent with a quorum of 2, each fail with T-19's required cancel. Replays the vendored Solana Snapshot and signature vectors, with the fake Solana RPC answering from `entropy/solana/v1`'s mainnet slots (slice 6); until they are vendored the row is pending and T-40 covers the check                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| VT-13 | unit, verify page       | base58 (section 5): every vector of its table and every refusal                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| VT-14 | unit, verify page       | the Solana chain read against a fake endpoint set and a fake clock, replaying `entropy/solana/v1` once vendored (its blockhash, skipped-slot, ledger-gap, non-32-byte, and -32004 cases, and its seed through check 7) and recorded or synthetic answers until then: the calls and their exact options; with an `evm` and a `solana` source configured, a round of each reads only its own source's endpoints with its own kind's calls; a block at `N`; `N` skipped by -32007 and by -32009, with `getBlocksWithLimit` and `getBlock(M)`, the value `M`'s; a ledger gap by `parentSlot ≥ N`, by `M ≤ N`, and by -32007 from `getBlock(M)`; a `previousBlockhash` that is not 32 bytes; a timeout at each of the skip path's three calls separately (each ends the endpoint's answer) and the worst case (the first two calls answering just before their 15 s deadlines, the third timing out); an empty `getBlocksWithLimit`; -32001, -32004, -32014, and -32019; a null `blockTime`; a `blockhash` of 31 and 33 bytes; another genesis hash; the failure order of section 4 (one case per failure); two endpoints that disagree on the skip; `entropy.value` equal, different, and absent; a round not ended; the abort during the skip path; the requests' options (no redirect, no referrer, only 200); the EVM read's existing tests unchanged          |
+| VT-15 | e2e, browser            | the verify page against the e2e fake Solana RPC and the fake verify API: a Solana book round (built by the harness from the fake chain's value and a round secret, so checks 5 to 7 hold) reaches V-8's book reason; the same round with `N` skipped; an endpoint answering -32001 makes check 6 "could not be verified" with V-7's chain wording and the pruned detail (Q14); on one document with an `evm` and a `solana` source, a round of each verifies against its own fake endpoints; the policy allows the fake endpoints' origins only                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 **The e2e fake Solana RPC** (`e2e/tests/harness/fake-solana-rpc.ts`): a
 Playwright route per configured endpoint, as `fake-rpc.ts` is for EVM, answering
@@ -648,10 +671,10 @@ answered, HTTP 200 for every JSON-RPC error, and behaviors `agree`,
 and `pruned` (-32001). A call it does not know is recorded as unexpected and
 fails the test. A second harness configuration document keys the source
 `solana`, kind `solana`, cluster 101, and a lag margin of the harness's
-choosing; a third lists an `evm` and a `solana` source, as staging will. The EVM
-fake stays as it is, and so do the two EVM documents, except for their
-`entropyChainKind` entry (slice 1): `environmentConfig`, keyed `base`, gains
-`{ "base": "evm" }`, and `roundEnvironmentConfig`, which re-keys by
+choosing; a third lists an `evm` and a `solana` source, as staging does during
+its switch. The EVM fake stays as it is, and so do the two EVM documents, except
+for their `entropyChainKind` entry (slice 1): `environmentConfig`, keyed `base`,
+gains `{ "base": "evm" }`, and `roundEnvironmentConfig`, which re-keys by
 `pins.source` (`ethereum:block`), gains `{ [pins.source]: "evm" }`.
 
 ### 9. The slices after this RFC
@@ -661,19 +684,24 @@ reviewer), writes its rules into the specs in the same change, and keeps
 `pnpm check` green.
 
 1. **The configuration and the chain kind** (section 1): the shell's and the
-   verify page's validators, the Wrapper's field list, the two genesis tables,
-   the Pages tool's `CHAIN_PIN_FIELDS` and production rule, the fixtures, the
-   e2e harness's two EVM documents (`environmentConfig` and
+   verify page's validators with `production-cluster`, the Wrapper's field list,
+   the two genesis tables, the Pages tool's `CHAIN_PIN_FIELDS`, the fixtures,
+   the e2e harness's two EVM documents (`environmentConfig` and
    `roundEnvironmentConfig`, section 8), the Wrapper's Configuration tables and
    W-26b's text, the shell spec, and a changeset. T-39. The release runbook in
    the same change (AGENTS.md mandatory action 4): its `PAGES_CHAIN_PINS` field
    list, which says "exactly" six fields today, gains `entropyChainKind`, with
    `{ "anvil": "evm" }` on staging; and Q12's migration procedure (Migration):
    the secret updated right before the merge, with no merge in between, and what
-   a failed configuration job means then.
+   a failed configuration job means then. Until slices 2 and 4, a `solana`
+   source fails closed and calls no endpoint: the tip check fails as
+   `unsupported-chain-kind` (decided `chain-unverified`; the required cancel
+   follows once `T_0` is settled), and the verify page's check 6 is "could not
+   be verified" (`unsupported-chain-kind`). T-39 tests both guards.
 2. **The shell's Solana tip check** (section 3): `RpcCall`, the readers, the
    Solana branch of `runTipCheck`, the record union; W-26b and the shell spec
-   written in; a changeset. T-40.
+   written in; a changeset. T-40. It removes the tip check's
+   `unsupported-chain-kind` guard, and slice 4 the verify page's.
 3. **The Wrapper's Solana transport** (section 3): the transport's tests for
    Solana calls, and any wiring the shell's change needs at boot; no change of
    the transport's code is expected. T-41. Small: the reviewer may fold it into
@@ -715,47 +743,62 @@ reviewer), writes its rules into the specs in the same change, and keeps
    (the old key stays valid until every session opened before the redeploy has
    ended: the Wrapper reads its configuration once, at boot), the procedure for
    **adding** a Solana source beside an existing one on staging (kind `solana`,
-   cluster 103, a `tipLagMargin` in slots, the existing source kept), and the
-   release dry run's fixtures.
+   cluster 101, a `tipLagMargin` of 64 slots, the existing source kept until
+   step 8's fourth sub-step, staging keys Origin-locked to staging's origins),
+   step 8's five-step order with its canary, and the release dry run's fixtures.
 
 Two steps follow that are operations, not pull requests (a finding in either
 comes back as a pull request through the same workflow):
 
-8. **Staging on devnet** (decided, Q11; a dependency on the backend and the
-   infrastructure owner). Staging's one engine moves from Somnia to Solana
-   devnet (cluster 103), and staging's configuration lists **both** sources:
-   `anvil` (Somnia: kind `evm`, `entropyChainId` 50312, its one endpoint, 100
-   blocks) stays, so rounds from before the switch still verify, beside `solana`
-   (kind `solana`, cluster 103). In this order:
-   1. the kit's Solana reader ships: slices 1 to 7 are deployed to staging;
+8. **Staging on Solana mainnet-beta** (decided, Q11; a dependency on the backend
+   and the infrastructure owner). Staging's one engine moves from Somnia to
+   Solana mainnet-beta (cluster 101), the same chain as production. Its `solana`
+   source is kind `solana`, `entropyChainId` 101 (the mainnet genesis hash),
+   `tipLagMargin` 64 slots, provisional, with staging keys on two independent
+   providers that staging's own engine does not read (an environment's browser
+   endpoints never include the provider its own engine reads, so staging's pair
+   may differ from production's), Origin-locked to staging's origins. In this
+   order (slice 7 writes it into the release runbook):
+   1. the kit's Solana reader ships to staging: slices 1 to 7 are deployed;
    2. the infrastructure owner adds the `solana` source to staging's secrets
-      beside `anvil` (the devnet endpoints with browser keys, each passing P-1
-      to P-4 there, and the source's margin in slots), then redeploys. No round
-      names `solana` yet, so nothing changes for players; the configuration only
-      has to be in place before the first Solana round;
-   3. the backend's fix, then the drain of staging's rounds in flight, then the
-      switch of the engine to devnet;
-   4. a fresh Wrapper session plays config rounds on `solana` whose tip check
-      passes, the verify page checks a closed Solana round's block (check 6) and
-      seed (check 7), and a round from before the switch still verifies on
-      `anvil`.
+      **beside** `anvil` (Somnia: kind `evm`, `entropyChainId` 50312, its one
+      endpoint, 100 blocks), each `solana` endpoint passing P-1 to P-4 from
+      staging's origins, then redeploys. `minRpcQuorum` stays 1. No round names
+      `solana` yet, so nothing changes for players; the configuration only has
+      to be in place before the first Solana round;
+   3. the backend's switch and drain, in se-backend#548 (planned for 2026-11-30
+      to 2026-12-03, after the kit's reader is on staging): the backend's fix,
+      the drain of staging's rounds in flight, then the switch of the engine to
+      mainnet-beta;
+   4. `anvil` is dropped from staging's document and `minRpcQuorum` raised to 2,
+      like production: one configuration change, then a new deploy run. Rounds
+      from before the switch then show as not matching on staging's verify page:
+      check 2 fails for a source the configuration does not list (V-7), and
+      check 6 cannot be verified. That is accepted for staging (Q16);
+   5. the canary starts.
 
-   While the Somnia source has one endpoint, staging keeps `minRpcQuorum` 1 and
-   W-26a's degraded indicator for both sources (section 1), so the devnet run
-   proves the Solana calls, readers, and rules, and the quorum of 2 runs first
-   in production. A second endpoint for the Somnia source, or dropping it once
-   its rounds no longer need checking, would let staging set 2.
-   <!-- TODO(backend and infrastructure, Q11): staging's devnet source: the backend's fix, the drain, and the switch date; which providers serve devnet with a browser key, and their endpoints; staging's devnet `tipLagMargin` in slots. -->
+   Staging stays degraded (`minRpcQuorum` 1), as it is today, until step 4;
+   between steps 2 and 4, W-26a's indicator is on both of its sources.
+
+   **Acceptance: the canary** (the gate before production). After step 4, on
+   staging at `minRpcQuorum` 2, the client kit's engineer runs at least 100
+   config rounds on `solana`, over at least 24 hours. A round counts only when
+   its tip check passed and the verify page later shows it as matching (V-6).
+   Any other outcome, a failed tip check or a verify page that shows a mismatch
+   or "could not be verified", restarts the count once its cause is found and
+   recorded (decided by the code owner on 2026-11-19).
+   <!-- TODO(backend and infrastructure, Q11): staging's mainnet-beta source: the staging keys on two providers staging's own engine does not read, Origin-locked to staging's origins; the backend's fix, drain, and switch (se-backend#548, planned 2026-11-30 to 2026-12-03); then the change that drops `anvil` and raises `minRpcQuorum` to 2; then the canary's result. -->
 
 9. **Production's first document** (decided by the code owner, 2026-11-18): the
    publish path (se-client-kit#154) stays off until slice 1 is merged and both
-   Solana browser providers pass P-1 to P-6. Production's `pages-prod-config`
-   then gets its first document, Solana-only (the one source `solana`, cluster
-   101, two endpoints, the `tipLagMargin` of 64 slots, provisional (Q1), or the
-   backend's measurement if it has landed), with no interim document before it.
-   A production round passes the tip check only on a release that carries the
-   Solana tip check (slices 2 and 3), and Q11 has staging's devnet run (step 8)
-   come before production. Once production runs on Solana, this RFC is archived.
+   Solana browser providers pass P-1 to P-6, and production's first document
+   waits for step 8's canary to pass. Production's `pages-prod-config` then gets
+   its first document, Solana-only (the one source `solana`, cluster 101, two
+   endpoints, the `tipLagMargin` of 64 slots, provisional (Q1), or the backend's
+   measurement if it has landed), with no interim document before it. A
+   production round passes the tip check only on a release that carries the
+   Solana tip check (slices 2 and 3). Once production runs on Solana, this RFC
+   is archived.
 
 ## Alternatives
 
@@ -796,12 +839,16 @@ comes back as a pull request through the same workflow):
 - The verify page reaches back only as far as the shallower provider's history
   (P-5).
 - Until `entropy/solana/v1` and the Solana round vectors are vendored (slice 6),
-  the Wrapper's Solana path is proven by unit tests and by staging's devnet run
-  (Q11), not by a browser test in CI.
-- Staging's devnet run stays degraded (`minRpcQuorum` 1) while its Somnia source
-  has one endpoint, so the quorum of 2 first runs in production.
-- Staging's devnet run depends on the backend and the infrastructure owner, and
-  production's first document waits for it.
+  the Wrapper's Solana path is proven by unit tests and by staging's canary on
+  mainnet-beta (Q11), not by a browser test in CI.
+- Staging stays degraded (`minRpcQuorum` 1), as today, until step 4 of its
+  switch, on both of its sources from step 2; the canary runs at quorum 2, like
+  production (Q16).
+- Once `anvil` is dropped, staging's rounds from before the switch show as not
+  matching on its verify page, check 2 failing for an unlisted source (accepted
+  for staging, Q16).
+- Staging's switch depends on the backend (se-backend#548) and the
+  infrastructure owner, and production's first document waits for its canary.
 
 ## Impact
 
@@ -852,25 +899,35 @@ comes back as a pull request through the same workflow):
   other merge between. A configuration job that fails in that window means the
   secret and the code disagree (one has landed without the other): the job stops
   the deploy before anything is uploaded, the deployed site stays as it was, and
-  the deploy is re-run once both have landed. Slice 1 writes this procedure into
-  the release runbook, with the field list.
+  the deploy is started again as a new run on the merged revision once both have
+  landed (a rerun of the failed job reuses its old commit and validator). Slice
+  1 writes this procedure into the release runbook, with the field list.
 - **The backend's preview stack** serves its own document to the kit's preview
   e2e run (T-10 to T-12); it adds the field when its kit pin moves past slice 1.
 - **Sessions already open** keep the configuration they booted with (the Wrapper
   reads it once).
 - **EVM rounds** are unaffected: the same calls, readers, records (plus the
-  `kind` discriminant), failures, and texts.
-- **Staging's switch to devnet** (Q11; section 9, step 8) comes after slices 1
-  to 7, in step 8's order: the kit's reader, then the `solana` source added to
-  staging's secrets (`PAGES_RPC_ENDPOINTS`, `PAGES_RPC_ORIGINS`, and
-  `PAGES_CHAIN_PINS`) beside the Somnia source, which stays, then the backend's
-  fix, the drain, and the engine's switch. Unlike the move from anvil to Somnia,
-  the earlier source is kept, so its rounds still verify on staging's verify
-  page. Production mode's `not-mainnet` rule does not apply: staging is
-  `preview`.
+  `kind` discriminant), failures, and texts. One validation change: a source of
+  kind `evm` whose `entropyChainId` is 101, 102, or 103, and a source keyed
+  `solana` of kind `evm`, are now refused (`entropy-chain-kind-mismatch`,
+  section 1). No deployed document has either: staging's one source is `anvil`,
+  at 50312.
+- **Staging's switch to mainnet-beta** (Q11, Q16; section 9, step 8) comes after
+  slices 1 to 7, in step 8's order: the kit's reader; the `solana` source
+  (cluster 101) added to staging's secrets (`PAGES_RPC_ENDPOINTS`,
+  `PAGES_RPC_ORIGINS`, and `PAGES_CHAIN_PINS`) beside the Somnia source, at
+  `minRpcQuorum` 1; the backend's switch and drain (se-backend#548); then
+  `anvil` dropped and `minRpcQuorum` raised to 2, in one configuration change
+  and a new deploy run; then the canary. Staging stays degraded, as today, until
+  the fourth of those steps. Once `anvil` is dropped, staging's rounds from
+  before the switch show as not matching on its verify page (check 2 fails for
+  an unlisted source), which is accepted for staging. Staging is `preview`, so
+  `production-cluster` does not apply to it; its `solana` source is cluster 101
+  anyway.
 - **Production's secrets and the publish path** (decided by the code owner,
   2026-11-18): the publish path (se-client-kit#154) stays off until slice 1 is
-  merged and both Solana browser providers pass P-1 to P-6. Production's
+  merged and both Solana browser providers pass P-1 to P-6, and production's
+  first document waits for step 8's canary (Q11). Production's
   `pages-prod-config` then gets its first document, Solana-only, with the Solana
   `tipLagMargin` of 64 slots, provisional (Q1); there is no interim document
   (section 9, step 9).
@@ -938,23 +995,35 @@ comes back as a pull request through the same workflow):
     compares with the `finalized` tip, never `processed`; an `N` above the final
     tip passes the `tip` rule, as W-26b and the backend's Shell bind check
     state. #235's criterion is updated to say so.
-  - **Q10. Production's cluster rule**: production mode refuses a `solana`
-    source that is not cluster 101 (`not-mainnet`, section 1). Staging's devnet
-    source (Q11) is in a `preview` document, which production mode never checks,
-    so the rule does not block it.
-  - **Q11. A Solana source before production**: staging runs a Solana devnet
-    (cluster 103) entropy source, so the Solana path runs end to end, the
-    Wrapper's tip check and the verify page's check 6, against real providers
-    before production. Staging's one engine switches to devnet after the kit's
-    Solana reader ships, then the backend's fix and a drain; staging's Pages
-    configuration keeps the Somnia source (`anvil`, kind `evm`, 50312) beside
-    `solana` (cluster 103), so rounds from before the switch still verify. It
-    depends on the backend and the infrastructure owner (browser keys and
-    staging's secrets); section 9's step 8 and Migration.
+  - **Q10. Production's cluster rule**: both validators refuse a `production`
+    document with a `solana` source that is not cluster 101
+    (`production-cluster`, section 1), so the rule runs at boot and in the Pages
+    tool's production mode (moved there from the Pages tool alone by the code
+    owner's review of 2026-11-19). Staging's `solana` source is cluster 101 too,
+    in a `preview` document: nothing treats 101 as production-only, and nothing
+    requires another cluster on staging.
+  - **Q11. A Solana source before production** (changed by the code owner on
+    2026-11-18, from devnet to mainnet-beta): staging's Solana source is
+    **mainnet-beta, cluster 101**, the same chain as production, so the Solana
+    path runs end to end, the Wrapper's tip check and the verify page's check 6,
+    against the real chain and providers before production. Staging's pins are
+    `entropyChainKind.solana` `solana`, `entropyChainId.solana` 101 (the mainnet
+    genesis hash), and `tipLagMargin.solana` 64, provisional. Its endpoints are
+    staging keys on two independent providers that staging's own engine does not
+    read, Origin-locked to staging's origins: an environment's browser endpoints
+    never include the provider its own engine reads, so staging's pair may
+    differ from production's (code owner, 2026-11-18). The backend switches
+    staging's engine in se-backend#548, planned for 2026-11-30 to 2026-12-03,
+    after the kit's reader is on staging. The gate before production is a canary
+    on staging: at least 100 config rounds over at least 24 hours, each passing
+    the tip check and then matching on the verify page, any other outcome
+    restarting the count (section 9, step 8), run by the client kit's engineer;
+    production's first document waits for it. The testnet and devnet pins stay
+    in the kit for local or test use. Section 9's step 8, and Migration.
   - **Several entropy sources, of different kinds, at once** (follows from Q11):
     the configuration supports them, each round is read by its own source's
     kind, and the validator's rules and the production rules hold per source
-    (section 1).
+    (section 1). There is no quorum per source.
   - **Q12. The migration of the required field**: one step on staging
     (Migration).
   - **Q13. The verify page's EVM read**: left as it is; aligning its request
@@ -972,11 +1041,29 @@ comes back as a pull request through the same workflow):
     (se-client-kit#154) stays off until slice 1 is merged and both Solana
     browser providers pass P-1 to P-6; production's `pages-prod-config` then
     gets its first document, Solana-only, with no interim document (Migration;
-    section 9, step 9).
+    section 9, step 9). Q11 adds step 8's canary to this gate.
   - **Issue numbers** (se-backend#375, se-backend#471, and the like) stay in
     these public documents as bare numbers, without links, as RFC-006 does.
   - **#235's body** is updated by the human, with the code owner's agreement,
     its criterion reworded to "stale" (Q9).
+  - **Q16. Staging's quorum** (option (b), the recommendation): after staging's
+    engine switch and drain (se-backend#548), the `anvil` (Somnia, 50312) source
+    is removed from staging's document and staging sets `minRpcQuorum` 2, like
+    production, in one configuration change and a new deploy run. The canary
+    starts only after that, so it runs at quorum 2. Staging's rounds from before
+    the switch then show as not matching on its verify page: check 2 fails for a
+    source the configuration does not list (V-7) and check 6 cannot be verified.
+    That is accepted for staging; the canary counts `solana` rounds only. There
+    is no quorum per source. Section 9's step 8, and Migration.
+- **2026-11-19, the code owner, on the review of this draft**:
+  - **The production cluster rule** (Q10): both validators refuse a `production`
+    document whose `solana` source is not cluster 101 (`production-cluster`), so
+    the rule runs in the player's browser at boot; the Pages tool's own
+    `not-mainnet` rule is dropped, since production mode applies the validators'
+    rule.
+  - **The canary's pass** (Q11; section 9, step 8): a round counts only when its
+    tip check passed and the verify page shows it as matching; any other outcome
+    restarts the count once its cause is found and recorded.
 
 ## Unresolved questions
 
@@ -998,7 +1085,9 @@ RFC waits on, not questions):
   published by the backend's slice through its contracts manifest; the kit
   vendors and lock-pins them in slice 6, and the lists of what it may copy gain
   the set there.
-- **Staging's devnet source** (Q11; section 9, step 8): the backend's fix, the
-  drain, and the engine's switch; which providers serve devnet with a browser
-  key; staging's devnet `tipLagMargin`; and the infrastructure owner's keys and
-  staging secrets.
+- **Staging's switch to mainnet-beta** (Q11, Q16; section 9, step 8): the
+  staging keys on two providers staging's own engine does not read,
+  Origin-locked to staging's origins, and staging's secrets (the infrastructure
+  owner); the backend's fix, drain, and switch in se-backend#548 (planned for
+  2026-11-30 to 2026-12-03); the change that drops `anvil` and raises
+  `minRpcQuorum` to 2; and the canary's result (the client kit's engineer).

@@ -478,8 +478,9 @@ payout is recomputed by check 7 (OQ-B9).
      and the comparison with `entropy.value` are as above, with one more
      failure, `ledger-gap`, and check 7 uses the 32 bytes as it uses an EVM
      block hash. A document may list sources of both kinds at once (staging
-     keeps its Somnia source beside a devnet one); each round is read by its own
-     `entropy.source`'s kind and endpoints. The full rules are in
+     lists its Somnia source beside a mainnet-beta one during its switch); each
+     round is read by its own `entropy.source`'s kind and endpoints. The full
+     rules are in
      [RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md),
      sections 1 and 4, until the implementing slice writes them here.
   7. **Seed and outcome.** Under kernel version 1:
