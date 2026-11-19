@@ -1,9 +1,10 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
+import { installStub, removeStubs } from "./fixtures/stub-bin.ts";
 import { runStep } from "./fixtures/workflow-step.ts";
 import { release } from "./release-workflow-lines.ts";
 import { jobRange, keyLine, scalarAt, stepNamed } from "./workflow-text.ts";
@@ -12,7 +13,8 @@ import { jobRange, keyLine, scalarAt, stepNamed } from "./workflow-text.ts";
 // first npm with trusted publishing (.github/workflows/release.yml, step
 // "Require npm 11.5.1 or later"). This test runs that step's own script as
 // Actions runs it (tools/fixtures/workflow-step.ts) with a stub `npm` that
-// reports a given version.
+// reports a given version: one stub (tools/fixtures/stub-bin.ts), given the
+// version in its environment.
 
 const [from, to] = stepNamed(
   release,
@@ -22,21 +24,26 @@ const [from, to] = stepNamed(
 const script = scalarAt(release, keyLine(release, from, to, 8, "run"));
 
 const directories: string[] = [];
+afterAll(removeStubs);
 afterEach(() => {
   for (const directory of directories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
   }
 });
 
+/** The stub: `npm --version` prints `$NPM_STUB_VERSION`. */
+const NPM = `#!/bin/sh\nprintf '%s\\n' "$NPM_STUB_VERSION"\n`;
+
 /** The step's exit status with a stub npm that prints `version`. */
 const statusWith = (version: string): number | null => {
   const directory = mkdtempSync(join(tmpdir(), "se-client-kit-npm-"));
   directories.push(directory);
-  const npm = join(directory, "npm");
-  writeFileSync(npm, `#!/bin/sh\necho '${version}'\n`);
-  chmodSync(npm, 0o755);
+  installStub(directory, "npm", NPM);
   return runStep(script, directory, {
-    env: { PATH: `${directory}:${process.env["PATH"] ?? ""}` },
+    env: {
+      PATH: `${directory}:${process.env["PATH"] ?? ""}`,
+      NPM_STUB_VERSION: version,
+    },
   }).status;
 };
 

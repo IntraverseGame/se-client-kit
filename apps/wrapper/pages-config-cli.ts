@@ -1,8 +1,11 @@
 // Writes the two Pages sites' environment configuration documents
 // (pages-config.ts) from the environment's values, for the Pages workflow's
-// `config-stage` job:
+// `config-stage` job, and with `--production` (production's own rule too:
+// `environment` must be `production`, pages-config-rules.ts) for the
+// production deploy's `config-prod` job and the release's check
+// (pages-prod-check.yml, `config-check`):
 //
-//   pnpm exec tsx apps/wrapper/pages-config-cli.ts --out <empty directory>
+//   pnpm exec tsx apps/wrapper/pages-config-cli.ts [--production] --out <empty directory>
 //
 // It writes `wrapper-environment-config.json` and
 // `verifier-environment-config.json` into `--out`, and prints no value: on a
@@ -14,22 +17,32 @@ import { parseArgs } from "node:util";
 
 import { buildPagesConfigs } from "./pages-config.ts";
 
-const { values } = parseArgs({ options: { out: { type: "string" } } });
+const { values } = parseArgs({
+  options: {
+    out: { type: "string" },
+    production: { type: "boolean", default: false },
+  },
+});
 const out = values.out;
 if (out === undefined || (existsSync(out) && readdirSync(out).length > 0)) {
-  console.error("Usage: pages-config-cli.ts --out <empty directory>");
+  console.error(
+    "Usage: pages-config-cli.ts [--production] --out <empty directory>",
+  );
   process.exit(2);
 }
 
-const result = buildPagesConfigs({
-  PAGES_WRAPPER_ORIGIN: process.env["PAGES_WRAPPER_ORIGIN"],
-  PAGES_VERIFIER_ORIGIN: process.env["PAGES_VERIFIER_ORIGIN"],
-  PAGES_CHAIN_PINS: process.env["PAGES_CHAIN_PINS"],
-  PAGES_RPC_ENDPOINTS: process.env["PAGES_RPC_ENDPOINTS"],
-  PAGES_RPC_ORIGINS: process.env["PAGES_RPC_ORIGINS"],
-  PAGES_GAME_ORIGINS: process.env["PAGES_GAME_ORIGINS"],
-  PAGES_OPERATOR_ORIGINS: process.env["PAGES_OPERATOR_ORIGINS"],
-});
+const result = buildPagesConfigs(
+  {
+    PAGES_WRAPPER_ORIGIN: process.env["PAGES_WRAPPER_ORIGIN"],
+    PAGES_VERIFIER_ORIGIN: process.env["PAGES_VERIFIER_ORIGIN"],
+    PAGES_CHAIN_PINS: process.env["PAGES_CHAIN_PINS"],
+    PAGES_RPC_ENDPOINTS: process.env["PAGES_RPC_ENDPOINTS"],
+    PAGES_RPC_ORIGINS: process.env["PAGES_RPC_ORIGINS"],
+    PAGES_GAME_ORIGINS: process.env["PAGES_GAME_ORIGINS"],
+    PAGES_OPERATOR_ORIGINS: process.env["PAGES_OPERATOR_ORIGINS"],
+  },
+  { production: values.production },
+);
 if (!result.ok) {
   for (const issue of result.issues) console.error(`::error::${issue}`);
   process.exit(1);

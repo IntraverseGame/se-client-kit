@@ -94,12 +94,21 @@ export const bookEnding = (ending: BookEnding) => {
   } as const;
 };
 
-/** The made-up table of the mode (no vector carries one). */
+/**
+ * The made-up table of the mode (no vector carries one): three rows whose
+ * weights add up to `totalWeight`, row 0 paying nothing (the lost ending's
+ * draw) and row 2 paying 2x (the won ending's).
+ */
 const TABLE = {
   cost: "1",
   merkleRoot: `0x${"5a".repeat(32)}`,
   entryCount: 3,
   totalWeight: "1000000",
+  table: [
+    { id: "1", weight: "680000", multiplierMilli: "0" },
+    { id: "2", weight: "300000", multiplierMilli: "500" },
+    { id: "3", weight: "20000", multiplierMilli: "2000" },
+  ],
 } as const;
 
 /**

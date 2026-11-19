@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-11-13 (RFC-005: T-29 to T-35; the shell's `controller-layout.test.ts`, `autoplay-run.test.ts` over `fixtures/autoplay.ts`, `play-session-autoplay.test.ts`; the Wrapper's `bet-stepper.test.ts`, `fairness.test.ts`, `fairness-view.test.ts`, `autoplay-bar.test.ts`, `bar-controls.test.ts`, `stage-layout.test.ts`, `environment-config-autoplay.test.ts`, the rewritten `stylesheet-contrast.test.ts`; `fixtures/screen.ts`'s `controls` leaves out the bar's furniture; `wired` takes a document and a stage layout; earlier: 2026-11-10, ADR-011: a framed Wrapper whose `location.ancestorOrigins` proves a single listed parent opens with no `hello`, still required where the list is missing; earlier: 2026-11-09, the Snapshot schema's `cashOutValue` and its vectors synced from se-backend `c4a4801`, the Wrapper's rendering of it now live; T-12 and `t27-cash-out-amount.spec.ts` over the vendored quote vector; earlier: 2026-11-03, VT-12, `earlierPins`: `tools/config-parity.test.ts` holds the page and the Pages tool to one rule for the field the Wrapper refuses; check 3's tests use the vector's pair as the earlier pair, since it is the only pair with a signature; 2026-10-30, cash-out-value.test.ts, the cash-out value on the bar's control; earlier: 2026-10-30, the single screen, RFC-004: the readiness signal of the e2e helpers, `fixtures/screen.ts`, T-25, T-27, T-28's Wrapper half, `t14a-inert-frame.spec.ts`; earlier: 2026-10-29, kernel sets of se-backend bc4f4adf, #156: check 5 replays `round-secret-hash`; earlier: verify book rounds, #156: VT-11's `book-*.test.ts` over `fixtures/book-body.ts` and `fixtures/book-run.ts`, check 5 and 7 replaying `kernel/public/v1/seed`, the canned book rounds and `verifyRounds: "book"`, `verify-page-book.spec.ts`, VT-6's book round; Snapshot contract re-vendor at se-backend `80ac5b8`: T-5 also checks that every issue of an `invalid/` vector is at or below its `failsAt`; 2026-10-28, #133: the release and production workflow tests of ADR-009; #146 book contract re-vendor: the placeholder filters removed, T-24's `won` and `lost` runs on `valid/book-lifecycle-*` in all three projects, at se-backend `65f9086`; 2026-10-27, preview run evidence: the run at the pin, the browser names not yet measured on the job runner; preview mode of the e2e suite pull request, RFC-002: the `preview` project, `preview-support/`, `preview-guard/`, `tools/e2e-preview-*.test.ts`, the reference game plays any `steps` round; verify e2e rows VT-6 to VT-8 pull request: the link, accessibility, and policy and SRI specs, the `verifyPolicy` option; recorded verify rounds pull request: the backend's won and lost rounds in the e2e fake; verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify e2e fake pull request: the fake verify API, the canned rounds, VT-5's rows; verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-11-18 (`tools/commit-msg-hook.test.ts` over `.githooks/commit-msg`, a `test:tools` input; 2026-11-17, the production check before publish: `tools/pages-prod-check-workflow.test.ts`, `tools/pages-prod-check-scripts.test.ts`, `tools/pages-config-origins.test.ts`, `apps/wrapper/src/pages-config-rules.test.ts`; contracts sync: `book-table.test.ts` validates `book.table`, `verify-api-patterns.test.ts` holds `BookTableRow` and the 250,000-row cap to the document, `contracts-lock.test.ts`'s `KERNEL_SETS` gains `book-table-commitment`, the e2e fakes list nine kernel sets and carry a made-up `table`; 2026-11-13, RFC-005: T-29 to T-35; the shell's `controller-layout.test.ts`, `autoplay-run.test.ts` over `fixtures/autoplay.ts`, `play-session-autoplay.test.ts`; the Wrapper's `bet-stepper.test.ts`, `fairness.test.ts`, `fairness-view.test.ts`, `autoplay-bar.test.ts`, `bar-controls.test.ts`, `stage-layout.test.ts`, `environment-config-autoplay.test.ts`, the rewritten `stylesheet-contrast.test.ts`; `fixtures/screen.ts`'s `controls` leaves out the bar's furniture; `wired` takes a document and a stage layout; earlier: 2026-11-10, ADR-011: a framed Wrapper whose `location.ancestorOrigins` proves a single listed parent opens with no `hello`, still required where the list is missing; earlier: 2026-11-09, the Snapshot schema's `cashOutValue` and its vectors synced from se-backend `c4a4801`, the Wrapper's rendering of it now live; T-12 and `t27-cash-out-amount.spec.ts` over the vendored quote vector; earlier: 2026-11-03, VT-12, `earlierPins`: `tools/config-parity.test.ts` holds the page and the Pages tool to one rule for the field the Wrapper refuses; check 3's tests use the vector's pair as the earlier pair, since it is the only pair with a signature; 2026-10-30, cash-out-value.test.ts, the cash-out value on the bar's control; earlier: 2026-10-30, the single screen, RFC-004: the readiness signal of the e2e helpers, `fixtures/screen.ts`, T-25, T-27, T-28's Wrapper half, `t14a-inert-frame.spec.ts`; earlier: 2026-10-29, kernel sets of se-backend bc4f4adf, #156: check 5 replays `round-secret-hash`; earlier: verify book rounds, #156: VT-11's `book-*.test.ts` over `fixtures/book-body.ts` and `fixtures/book-run.ts`, check 5 and 7 replaying `kernel/public/v1/seed`, the canned book rounds and `verifyRounds: "book"`, `verify-page-book.spec.ts`, VT-6's book round; Snapshot contract re-vendor at se-backend `80ac5b8`: T-5 also checks that every issue of an `invalid/` vector is at or below its `failsAt`; 2026-10-28, #133: the release and production workflow tests of ADR-009; #146 book contract re-vendor: the placeholder filters removed, T-24's `won` and `lost` runs on `valid/book-lifecycle-*` in all three projects, at se-backend `65f9086`; 2026-10-27, preview run evidence: the run at the pin, the browser names not yet measured on the job runner; preview mode of the e2e suite pull request, RFC-002: the `preview` project, `preview-support/`, `preview-guard/`, `tools/e2e-preview-*.test.ts`, the reference game plays any `steps` round; verify e2e rows VT-6 to VT-8 pull request: the link, accessibility, and policy and SRI specs, the `verifyPolicy` option; recorded verify rounds pull request: the backend's won and lost rounds in the e2e fake; verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify e2e fake pull request: the fake verify API, the canned rounds, VT-5's rows; verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
 ---
 
 # Testing (agent context)
@@ -39,9 +39,13 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   in full by `coin-flip-payout.test.ts` (plus the input checks no vector
   reaches), and check 7's payout comparison by `outcome-payout.test.ts`
   (OQ-B9); `fairness-checks.test.ts`'s Coin Flip evidence takes its bet and
-  terms from that set. `weighted-draw` and `book-draw` are vendored but
-  replayed by no test: the page cannot redraw a book round (OQ-B8, the verify
-  API's missing table). The e2e recorded rounds have a `payout` tamper (check
+  terms from that set. `weighted-draw`, `book-draw`, and
+  `book-table-commitment` are vendored but replayed by no test: the page does
+  not redraw a book round or recompute its table's commitment yet (OQ-B8; the
+  verify API's `book.table` is validated by `book-table.test.ts` and not
+  used). The kit has no rule that a vendored set must be replayed: the catalog
+  imports every set, and `tools/contracts-lock.test.ts`'s `KERNEL_SETS` checks
+  each is locked under its set id. The e2e recorded rounds have a `payout` tamper (check
   7). A book round's
   checks 5 and 7 (`book-verdict.test.ts`) replay the `seed` set through the
   page's whole run: the seed from each vector's block value and secret, and
@@ -444,12 +448,15 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   digest check does not enforce size by itself.
 - **Workflows:** `tools/workflow-text.ts` is a small block-style reader (no
   YAML parser in the repository); `tools/release-workflow-lines.ts` reads
-  `release.yml` and `pages-prod.yml` and shares helpers.
+  `release.yml`, `pages-prod-check.yml`, and `pages-prod.yml` and shares
+  helpers.
   `tools/release-workflow.test.ts` compares `release.yml`'s layout whole (the
   push trigger, no concurrency group, every job `if:`, exact permissions per
   job, no job with both the pull-request write and the OIDC token, the
-  environments, the job graph, checkouts, the `production` call and its
-  permissions equal to what `pages-prod.yml`'s jobs ask, every `run:` step of
+  environments, the job graph, checkouts, the `production` and `prod-check`
+  calls (no input, no secret, `publish` needing `prod-check`) and their
+  permissions equal to what `pages-prod.yml`'s and `pages-prod-check.yml`'s
+  jobs ask, every `run:` step of
   both workflows `shell: bash` with `set -euo pipefail` first, the publish
   re-check first and every later publish step gated on it); it also checks
   ci.yml's `check:size-budget` step. `tools/release-workflow-split.test.ts`
@@ -481,14 +488,25 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   same env (CHANGESETS_OUTPUT). `tools/release-notes-step.test.ts` runs
   `wrapper-assets`' notes step (after the upload, appends to the changelog,
   exact tag, a failing `gh` fails). `tools/workflow-shell.test.ts` holds every
-  `run:` step of `release.yml` and `pages-prod.yml` to `shell: bash` with
+  `run:` step of `release.yml`, `pages-prod-check.yml`, and `pages-prod.yml`
+  to `shell: bash` with
   `set -euo pipefail` first. `tools/release-version-guard.test.ts` runs
   `tools/release-version-guard.sh` with bash in temporary git repositories (no
   user or system git configuration) and checks the index is left unstaged.
   The tests that run a workflow step's script use
   `tools/fixtures/workflow-step.ts`, which runs it as Actions runs
   `shell: bash` (`bash --noprofile --norc -eo pipefail`): a test without `-e`
-  once missed a step that failed in Actions.
+  once missed a step that failed in Actions. Their stub executables come from
+  `tools/fixtures/stub-bin.ts` (`installStub`, and `removeStubs` in
+  `afterAll`): each distinct stub body is written once per test file and
+  hard-linked into each test's directory, read-only (0o555) so no test can
+  write through a link into the shared file, its data in files beside it or in
+  its environment (`STUB_DIR`, `NPM_STUB_VERSION`), never in a new body per
+  test. macOS assesses every new executable file on its first exec (140 to
+  240 ms idle, seconds under `pnpm check`'s load, one system daemon for all
+  processes), so a fresh stub per test made these files time out at Vitest's
+  5 s (#192). The first exec of each stub body in a file still pays that
+  check; after it, a test takes 10 to 100 ms.
   `tools/release-assets-guard.test.ts` runs the wrapper-assets job's release
   guard with a stub `gh` serving pages of releases through jq (exactly one
   release with the tag and neither file goes on; files already attached, no
@@ -498,12 +516,31 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `tools/pages-prod-workflow.test.ts` checks `pages-prod.yml` (triggers, jobs,
   `prod-worker` and `config-prod` needing `prod-verify`, permissions, environments, `pages-prod` concurrency on `deploy-prod` only,
   secrets, no production value written, staging's worker and headers scripts
-  reused verbatim, digest checks); `tools/pages-prod-scripts.test.ts` runs
+  reused verbatim, digest checks, `--production` in `config-prod` and not in
+  staging's `config-stage`); `tools/pages-prod-check-workflow.test.ts` checks
+  `pages-prod-check.yml` (`workflow_call` only; `config-check` in
+  `pages-prod-config` with `contents: read`, the default checkout, no upload,
+  `config-prod`'s two steps verbatim, the Wrapper's build, and the deploy's
+  headers step verbatim; `deploy-check` in `pages-prod` with
+  `permissions: {}`, no `uses:`, `deploy-prod`'s settings step verbatim; each
+  job's secrets only), and `tools/pages-prod-check-scripts.test.ts` runs the
+  settings step (missing settings, project-name rule, same project, no value
+  printed) and `config-check`'s layout and headers steps on the built
+  `headers.json` (100 RPC origins fail the 2000-character line limit, naming
+  the site and header); `tools/pages-prod-scripts.test.ts` runs
   `release-check` (refusal while a
   release run is requested, queued, pending, waiting, or in progress; tag shape;
   peeled commit; the call path's commit check) and `prod-verify` (the
   `.sha256` name and bytes, `gh attestation verify` arguments, a failed
   verification) with stubs.
+  `tools/release-tag-peel.test.ts` runs real git against a local bare
+  repository (`file://`, no user or system git configuration): `ls-remote`
+  lists an annotated tag's `^{}` line only when the `<ref>^{}` pattern is
+  passed (so the peeling scripts pass both patterns), and `release-check`
+  resolves an annotated and a lightweight tag to the commit. The stub `git` of
+  `tools/pages-prod-scripts.test.ts` and
+  `tools/fixtures/release-mode-checkout.ts` answers per pattern the same way;
+  a stub that listed `^{}` for the bare ref once hid an unpeeled annotated tag.
   `tools/actions-allow-list.test.ts` holds every `uses:` under `.github/` to
   the Actions allow-list table in `specs/client-kit/supply-chain.md`. `tools/pages-workflow.test.ts` checks
   `pages.yml` (gates, permissions, the `pages-stage` environment, the project
@@ -520,7 +557,15 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   upstream origin, and the 502s. `tools/pages-headers.test.ts` reads the built
   `apps/wrapper/dist/headers.json` (tools may not import an app's source; the
   lint forbids it), and the Pages configuration builder is tested in the
-  Wrapper app (`apps/wrapper/src/pages-config.test.ts`).
+  Wrapper app (`apps/wrapper/src/pages-config.test.ts`; the tool's own rules
+  in `pages-config-rules.test.ts`: `preview`/`local` refused in production mode
+  only, a quorum of 1 refused, an uppercase, `_`, IPv6, or loopback-`http` RPC
+  host and `_` in the origin lists refused in both modes).
+  `tools/pages-config-origins.test.ts` loads the builder by path (as
+  `tools/config-parity.test.ts` does), requires its origin pattern to be the
+  headers step's `origin='...'` character for character, and runs the step's
+  own script on a document with each case's values: the step fails exactly
+  when the tool, in either mode, refuses.
 - **Release dry run:** `pnpm release:dry-run` (and the `release-dry-run` CI
   job; not part of `pnpm check`, it takes about 15 seconds) packs the five
   libraries in a scratch copy and checks the tarballs
@@ -750,6 +795,14 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `tools/test-only-entry.test.ts` covers the `contracts` test-only entry check.
   `tools/index-files.test.ts` covers the index-file rule (only entries, only
   re-exports) and runs it over the repository.
+  `tools/commit-msg-hook.test.ts` runs `.githooks/commit-msg` on refused and
+  passed messages (`C` and `C.UTF-8` locales; a bare `noreply@anthropic.com`,
+  an "AI Assistant" co-author, and a 20,000-line body refused; the human
+  co-authors "Kai Smith" and "Haider Ali" passed), refuses a missing message
+  file (the hook fails closed), runs in a real `git commit -v`, and checks the
+  exec bit (100755 once tracked; an untracked hook is accepted) and the plain
+  `hooks` script; `.githooks/**` is a `test:tools` input. The hook is local
+  only: CI checks no commit message.
 - The jsdom smoke test is `apps/wrapper/src/environment.test.ts`; component
   tests set `environment: "jsdom"` through `apps/wrapper/vite.config.ts`.
 - **Wrapper component tests** (`apps/wrapper/src/*.test.ts`) mount the UI with
@@ -789,4 +842,8 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - CI jobs (`.github/workflows/ci.yml`): `lint`, `format`, `typecheck`, `unit`,
   `allow-list`, `contracts`, `build`, `e2e-fake` (a matrix, so its checks are
   `e2e-fake (chromium)`, `e2e-fake (firefox)`, `e2e-fake (webkit)`), `audit` (fails only on high and critical advisories; the weekly `audit.yml` reports every severity), `dependency-review` (pull requests only),
-  and the aggregate `ci-ok`. `contracts-drift` and `release` are not defined yet.
+  and the aggregate `ci-ok`. `release` is its own workflow (`release.yml`).
+  `contracts-drift` is specified
+  ([the spec](../../specs/client-kit/the-contracts-drift-job.md)) and not built
+  yet (#138): its own workflow (schedule and on demand), never in `ci-ok` or
+  `pnpm check`; its pure functions get hermetic unit tests.

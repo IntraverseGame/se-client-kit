@@ -87,6 +87,8 @@ scripts), changesets (with the GitHub changelog generator), and wireit for task
 orchestration and caching (ADR-001). Use these scripts and never an ad-hoc
 equivalent; Node and pnpm are pinned in `.node-version` and `packageManager`.
 
+- `pnpm hooks` (once per clone: points git at `.githooks/`, whose `commit-msg`
+  hook refuses AI attribution; every worktree of the clone shares the setting)
 - `pnpm install --frozen-lockfile` · `pnpm check` (format check, lint,
   typecheck, unit tests, the dependency allow-list, the contracts check, then a
   build, the build-output check, and the Wrapper's size budget)
@@ -223,6 +225,12 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
 - The mandatory actions below run in every non-trivial PR.
 - No staging or committing without human + reviewer-agent approval (above).
 - One logical change per PR; no secrets; no new dependency without an ADR.
+- **No AI attribution.** Commits, pull requests, issues, review comments, code,
+  and docs name no AI model or agent as an author: no co-author trailer, no
+  "Generated with" line, no agent footer. The `commit-msg` hook refuses one in a
+  commit message; install it once per clone with `pnpm hooks`, and never bypass
+  it (`--no-verify`) to get an attribution through. Existing history is not
+  rewritten (ADR-003).
 
 ## Public repository
 
@@ -247,6 +255,8 @@ add, in any file, commit, issue, pull request, log, or agent output:
   vectors, proposed in RFC-006) are shared, and only as copies;
 - personal data, or the names, emails, or handles of people unless they are
   already public as maintainers or authors;
+- attribution to an AI model or agent (a co-author trailer, a "Generated with"
+  line, an agent footer; see [Non-Negotiables](#non-negotiables));
 - unreleased security findings (use [SECURITY.md](./SECURITY.md)).
 
 When unsure, leave it out and ask. Every file copied from a private source is

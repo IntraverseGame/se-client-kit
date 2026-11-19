@@ -109,7 +109,8 @@ export type components = {
        *   "kernel/public/v1/round-secret-hash",
        *   "kernel/public/v1/coin-flip-payout",
        *   "kernel/public/v1/weighted-draw",
-       *   "kernel/public/v1/book-draw"
+       *   "kernel/public/v1/book-draw",
+       *   "kernel/public/v1/book-table-commitment"
        * ]
        */
       vectorSets: string[];
@@ -267,6 +268,27 @@ export type components = {
       entryCount?: number;
       /** @description The sum of the table's weights, the length of the weighted draw's line, a base-10 integer string. */
       totalWeight?: string;
+      /**
+       * @description Every row of the mode's table in table order, so a verifier can
+       * redraw the row and recompute `merkleRoot`. A row's position is its
+       * `index`, and its `cumulativeStart` is the sum of the weights before
+       * it. Set with the table fields, except for a table of more than
+       * 250,000 rows, which answers its commitments only.
+       */
+      table?: components["schemas"]["BookTableRow"][];
+    };
+    /** @description A row of a book mode's table. */
+    BookTableRow: {
+      /** @description The row's Stake `id`, a base-10 integer string. Ids need not be consecutive. */
+      id: string;
+      /** @description The row's weight in the draw, a base-10 integer string. */
+      weight: string;
+      /**
+       * @description The row's payout multiplier in thousandths of the base bet, a
+       * base-10 integer string. The Merkle leaf takes the package's
+       * hundredths, this value divided by 10.
+       */
+      multiplierMilli: string;
     };
     RecomputedStep: {
       node: number;

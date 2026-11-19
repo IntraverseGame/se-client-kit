@@ -6,6 +6,7 @@ import {
   jobKey,
   jobKeys,
   prod,
+  prodCheck,
   release,
   stepRun,
   usesOf,
@@ -37,6 +38,7 @@ import {
 const JOBS = [
   "changesets-mode",
   "version",
+  "prod-check",
   "publish",
   "wrapper-build",
   "attest",
@@ -81,6 +83,7 @@ describe("the release workflow", () => {
     expect(conditions).toEqual({
       "changesets-mode": ["github.ref == 'refs/heads/main'"],
       version: ["needs.changesets-mode.outputs.pending == 'true'"],
+      "prod-check": [PUBLISH_IF],
       publish: [PUBLISH_IF],
       "wrapper-build": ["needs.publish.outputs.wrapper-tag != ''"],
       attest: [],
@@ -89,7 +92,7 @@ describe("the release workflow", () => {
     });
   });
 
-  it("gates publishing on RELEASE_PUBLISH_ENABLED in publish alone; the mode step reads it only for its notice", () => {
+  it("gates publishing on RELEASE_PUBLISH_ENABLED in prod-check and publish alone; the mode step reads it only for its notice", () => {
     expect(
       release
         .filter(line => line.text.includes("RELEASE_PUBLISH_ENABLED"))
@@ -100,6 +103,7 @@ describe("the release workflow", () => {
       'elif [ "$candidate" = true ] && [ "${RELEASE_PUBLISH_ENABLED:-}" = true ]; then',
       'echo "::notice::Publishing was off: nothing was published for${untagged}. Re-run this run within 30 days once RELEASE_PUBLISH_ENABLED is true (runbook/client-kit-release.md, Release)."',
       "vars.RELEASE_PUBLISH_ENABLED == 'true'",
+      "vars.RELEASE_PUBLISH_ENABLED == 'true'",
     ]);
     expect(
       release
@@ -108,10 +112,11 @@ describe("the release workflow", () => {
     ).toEqual([
       "RELEASE_PUBLISH_ENABLED: ${{ vars.RELEASE_PUBLISH_ENABLED }}",
       "vars.RELEASE_PUBLISH_ENABLED == 'true'",
+      "vars.RELEASE_PUBLISH_ENABLED == 'true'",
     ]);
   });
 
-  it("orders the jobs: mode first, then version or publish, the Wrapper's jobs, production last", () => {
+  it("orders the jobs: mode first, then version, or the configuration check and publish, the Wrapper's jobs, production last", () => {
     const needs = Object.fromEntries(
       JOBS.filter(job => job !== "changesets-mode").map(job => [
         job,
@@ -120,7 +125,8 @@ describe("the release workflow", () => {
     );
     expect(needs).toEqual({
       version: "changesets-mode",
-      publish: "changesets-mode",
+      "prod-check": "changesets-mode",
+      publish: "[changesets-mode, prod-check]",
       "wrapper-build": "publish",
       attest: "wrapper-build",
       "wrapper-assets": "[wrapper-build, attest]",
@@ -130,6 +136,14 @@ describe("the release workflow", () => {
 
   it("never continues on an error", () => {
     expect(valuesOf(release, "continue-on-error")).toEqual([]);
+  });
+
+  // A failed prod-check skips publish, and so every job after it, unless a
+  // job's or a step's `if:` (on any line of it) calls a status function.
+  it("runs nothing past a failed or skipped job or step: no always(), cancelled(), or failure() in any condition", () => {
+    const statusCall = /\b(?:always|cancelled|failure)\s*\(/u;
+    const lines = release.filter(line => !line.text.startsWith("#"));
+    expect(lines.filter(line => statusCall.test(line.text))).toEqual([]);
   });
 
   it("gives each job exactly its permissions, and no token at the top", () => {
@@ -142,6 +156,7 @@ describe("the release workflow", () => {
     expect(permissions).toEqual({
       "changesets-mode": ["contents: read", "pull-requests: read"],
       version: ["contents: write", "pull-requests: write"],
+      "prod-check": ["contents: read"],
       publish: ["contents: write", "id-token: write"],
       "wrapper-build": ["contents: read"],
       attest: ["contents: read", "id-token: write", "attestations: write"],
@@ -171,6 +186,30 @@ describe("the release workflow", () => {
     expect(scalarAt(release, jobKey("publish", "environment"))).toBe("release");
     expect(scalarAt(release, jobKey("attest", "environment"))).toBe("attest");
     expect(jobKeys("version", "environment")).toEqual([]);
+    expect(jobKeys("prod-check", "environment")).toEqual([]);
+  });
+
+  it("checks production's configuration through pages-prod-check.yml before publish, passing it no input and no secret", () => {
+    expect(scalarAt(release, jobKey("prod-check", "uses"))).toBe(
+      "./.github/workflows/pages-prod-check.yml",
+    );
+    expect(jobKeys("prod-check", "with")).toEqual([]);
+    expect(jobKeys("prod-check", "secrets")).toEqual([]);
+    expect(jobKeys("prod-check", "steps")).toEqual([]);
+    expect(scalarAt(release, jobKey("publish", "needs"))).toContain(
+      "prod-check",
+    );
+  });
+
+  it("gives prod-check exactly what pages-prod-check.yml's job asks for", () => {
+    const asked = new Set(
+      jobNames(prodCheck).flatMap(job =>
+        mappingAt(prodCheck, jobKey(job, "permissions", prodCheck)),
+      ),
+    );
+    expect([...asked].toSorted()).toEqual(
+      mappingAt(release, jobKey("prod-check", "permissions")).toSorted(),
+    );
   });
 
   it("deploys production through pages-prod.yml with the released tag, passing it no secret", () => {

@@ -139,4 +139,11 @@ export const GROUPS: readonly Group[] = [
     sourceName: "kernel/public/v1/book-draw",
     vectors: true,
   },
+  {
+    id: "kernel-vectors-book-table-commitment",
+    kind: "file",
+    destination: "src/vectors/kernel/v1/book-table-commitment.json",
+    sourceName: "kernel/public/v1/book-table-commitment",
+    vectors: true,
+  },
 ];

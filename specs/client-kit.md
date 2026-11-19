@@ -178,7 +178,9 @@ transcript helper, the action grammar, and the vectors. See
 Vendor now, publish later: which backend documents are copied into `contracts`,
 the lock file, and the rules to vendor, verify offline, detect drift, sync
 additive changes, and review before publish. See
-[`client-kit/how-the-kit-gets-its-contracts.md`](./client-kit/how-the-kit-gets-its-contracts.md).
+[`client-kit/how-the-kit-gets-its-contracts.md`](./client-kit/how-the-kit-gets-its-contracts.md),
+and for the scheduled comparison with what each environment serves,
+[`client-kit/the-contracts-drift-job.md`](./client-kit/the-contracts-drift-job.md).
 
 ### Versioning and compatibility
 
@@ -265,11 +267,21 @@ another origin.
    tar by tag, checks its digest, and runs `gh attestation verify` against the
    tag's commit; the proxy worker is built with `tsc` at the tag's commit; the
    configuration is built in the environment `pages-prod-config`, which holds no
-   deploy credential; and the deploy job (`pages-prod`, no required reviewer,
-   alone in the concurrency group `pages-prod`) refuses any other digest. A
-   person can redeploy a released tag by dispatching the same workflow, which
-   refuses while a release run is not completed. Production cannot deploy before
-   the publish path is on (#154). Staging:
+   deploy credential, in production mode (below); and the deploy job
+   (`pages-prod`, no required reviewer, alone in the concurrency group
+   `pages-prod`) refuses any other digest. **Before it publishes**, the release
+   checks production's settings (`.github/workflows/pages-prod-check.yml`, which
+   the `publish` job needs; ADR-009, amendment note of 2026-11-17): the same
+   production configuration build in the same environment at the release commit,
+   followed by the deploy's own headers step on the documents (which also
+   refuses a `_headers` line over the Pages limit of 2,000 characters), and, in
+   `pages-prod` with no repository code, the deploy's own settings step (the
+   token, the account id, and the two project names set, the names Pages project
+   names, and different). A missing or refused production value stops the
+   release before anything reaches npm. A person can redeploy a released tag by
+   dispatching the same workflow, which refuses while a release run is not
+   completed. Production cannot deploy before the publish path is on (#154).
+   Staging:
    - A build job with a read-only token and no secret builds the Wrapper
      artifact twice (the release dry run) and requires one digest, makes the
      reference game's artifact from the dry run's two builds and requires one
@@ -379,6 +391,34 @@ artifact's bytes and digest are unchanged. The config job builds both from the
 each with the Wrapper's own validator for its site's origin (the verifier's
 without `earlierPins`, below); any issue fails the job, naming an input or a
 field, never a value.
+
+**The tool's own rules** (`apps/wrapper/pages-config-rules.ts`; ADR-009,
+amendment note of 2026-11-17), beyond the validator's, so that a configuration
+job refuses what its deploy would refuse later:
+
+- **In both modes**, every origin the deploy's headers step reads from the
+  Wrapper's document must match that step's `origin` pattern (code
+  `not-https-origin`): `https`, lowercase dot-separated labels of letters,
+  digits, and inner `-`, and an optional port of up to five digits. It holds for
+  the origin of each RPC endpoint URL (its scheme and authority, as the step
+  takes it), each game and operator origin, and the Wrapper's origin. The
+  validator accepts some origins the step refuses (a host with an uppercase
+  letter in an RPC URL, an `_`, a bracketed IPv6 host, `http` on a loopback
+  host); the tool refuses them all, on staging as in production. The pattern is
+  the step's, character for character, and a test runs the step's own script on
+  the same values to hold the two to one verdict
+  (`tools/pages-config-origins.test.ts`).
+- **In production mode** (`pages-config-cli.ts --production`, from the
+  `pages-prod-config` secrets, the same seven names), `environment` must also be
+  `production` (code `not-production`, at `PAGES_CHAIN_PINS`' `environment`), so
+  W-26a's boot rule applies to the documents: `minRpcQuorum` at least 2, its
+  default when unset (the validator's `production-quorum`), so every RPC source
+  needs at least two endpoints (W-26b). A staging-like `preview` or `local`
+  document, or a quorum of 1, never reaches production. Staging runs as
+  `preview`, without the flag.
+
+An issue names the input and the field (an RPC endpoint by its source and index,
+a list entry by its index) with the code, never a value.
 
 - `PAGES_CHAIN_PINS` holds the chain pins only (`environment`, `runtimeSigner`,
   `registryDomain`, `entropyChainId`, `minRpcQuorum`, `tipLagMargin`, and the
@@ -614,9 +654,13 @@ vulnerability reporting, the publishing environment), are in the
 
 ## Errors and edge cases
 
-- **A contract file in the kit is stale.** The drift check flags it; the fix is
-  a sync pull request here. Until then the kit works against the contract it
-  pinned.
+- **A contract file in the kit is stale.** The fix is a sync pull request here.
+  Until then the kit works against the contract it pinned. The drift job
+  ([The contracts drift job](./client-kit/the-contracts-drift-job.md)) is
+  specified and not built yet (#138), and it does not cover the signing vectors.
+  Until it lands, drift is detected from the backend side and by the person who
+  runs the sync, as before, and nobody relies on the job. After it lands, the
+  signing vectors stay that person's check.
 - **A breaking contract change lands first.** It needs a new surface prefix, so
   the old kit keeps working through the deprecation window.
 - **A dependency of the kit is compromised.** The lockfile and the allow-list
@@ -646,7 +690,7 @@ workflow's logs are public and hold no secret.
 | Turning the publish path on (#154): the npm trusted publishers, an org owner's confirmation of the OIDC precondition and of a `github-actions[bot]` approval not satisfying the `main` ruleset's code-owner review, and `RELEASE_PUBLISH_ENABLED` (only once the production environments hold their secrets, which #133 sets). The release workflow itself is built (#134) | org owners, with the TPO                            | <!-- TODO(release, #154): org-owner settings (runbook, Bootstrap steps 4 and 6 to 8) -->                                                                                                            |
 | The first-publish rehearsal (#208): once, after the first publish, the npm deprecation and dist-tag steps on the first published version and a Pages rollback                                                                                                                                                                                                              | org owners, with the TPO                            | <!-- TODO(release, #208): the first-publish rehearsal, after the first publish (runbook, Roll back or deprecate) -->                                                                                |
 | Hosting of the released Wrapper and its deploy credentials (decided for staging: ADR-008's push to Cloudflare Pages; the account, projects, token, and DNS stay the infrastructure owner's)                                                                                                                                                                                | infrastructure owner                                | <!-- TODO(hosting, #133): deferred to #133; production hosting and the production environments' secrets, `frame-ancestors` source. Reason: staging only; production is to come. -->                 |
-| Publication of the backend's contracts and vectors (later step; not a blocker, OQ-6 decided)                                                                                                                                                                                                                                                                               | backend maintainers                                 | <!-- TODO(contract publication, #138): deferred until go-live; where and when -->                                                                                                                   |
+| The published locations of the backend's contracts and the `contracts-drift` job (#138; OQ-6 decided; [the job](./client-kit/the-contracts-drift-job.md) is specified, and lands once the locations are handed over)                                                                                                                                                       | backend maintainers                                 | <!-- TODO(contracts, #138): the backend hands over the locations (planned by 2026-11-27) and the environments' origins; then the job is built and its environment set up. -->                       |
 | The preview-stack pin and job                                                                                                                                                                                                                                                                                                                                              | backend repository                                  | the kit's side is the preview mode of the e2e suite ([testing-and-ci.md](./client-kit/testing-and-ci.md), [runbook](../runbook/preview-e2e.md)); the pin and the job live in the backend repository |
 | Type-aware lint (`oxlint-tsgolint`, for rules such as `no-floating-promises`)                                                                                                                                                                                                                                                                                              | follow-up pull request (needs an ADR-001 amendment) | <!-- TODO(follow-up): add `oxlint-tsgolint` to the allow-list and enable the type-aware rules -->                                                                                                   |
 

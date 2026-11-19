@@ -42,6 +42,7 @@ export const KERNEL_V1_VECTOR_SETS: readonly string[] = [
   "kernel/public/v1/coin-flip-payout",
   "kernel/public/v1/weighted-draw",
   "kernel/public/v1/book-draw",
+  "kernel/public/v1/book-table-commitment",
 ];
 
 const isRecord = (value: unknown): value is Json =>

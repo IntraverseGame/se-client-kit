@@ -109,6 +109,12 @@ export const SOURCES: Readonly<Record<string, GroupSource>> = {
     ref: "main",
     path: "k/book-draw.json",
   },
+  "kernel-vectors-book-table-commitment": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "k/book-table-commitment.json",
+  },
 };
 
 export type MemorySource = {
@@ -138,6 +144,7 @@ export const memorySource = (): MemorySource => {
     ["k/coin-flip-payout.json", '{"k":13}\n'],
     ["k/weighted-draw.json", '{"k":14}\n'],
     ["k/book-draw.json", '{"k":15}\n'],
+    ["k/book-table-commitment.json", '{"k":16}\n'],
   ]);
   const source: MemorySource = {
     files,

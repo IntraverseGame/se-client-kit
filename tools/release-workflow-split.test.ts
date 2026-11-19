@@ -38,7 +38,10 @@ import {
 // the releases step creates releases, and the assets job only uploads and edits
 // the notes.
 
-const STEPPED_JOBS = jobNames(release).filter(job => job !== "production");
+// Every job but the two that call a reusable workflow (no steps of their own).
+const STEPPED_JOBS = jobNames(release).filter(
+  job => job !== "production" && job !== "prod-check",
+);
 
 /** The `ls-remote` lines of job `job`'s scripts. */
 const lookups = (job: string): string[] =>
@@ -256,7 +259,7 @@ describe("the release workflow's jobs", () => {
     expect(lookups("changesets-mode")).toEqual([found]);
     expect(lookups("publish")).toEqual([
       found,
-      `refs="$(${SAFE_GIT} ls-remote --tags "\${GITHUB_SERVER_URL}/\${GITHUB_REPOSITORY}.git" "$ref")"`,
+      `refs="$(${SAFE_GIT} ls-remote --tags "\${GITHUB_SERVER_URL}/\${GITHUB_REPOSITORY}.git" "$ref" "$ref^{}")"`,
     ]);
   });
 

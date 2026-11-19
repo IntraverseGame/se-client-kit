@@ -105,10 +105,9 @@ confirm drafts and settle choices).
   and any new comments.
 - **Author side:** the thread list with its sorting, the fixes, and the draft
   replies.
-- Every draft shows the text exactly as it will be posted. The review summary
-  and the author-side summary comment end with the disclosure line of ADR-003
-  (`Drafted with pr-shepherd, reviewed by @<login>.`); inline comments and
-  replies carry no marker.
+- Every draft shows the text exactly as it will be posted. Nothing posted
+  carries an agent footer or any other attribution to an AI model or agent
+  (ADR-003, amendment note of 2026-11-18).
 - After posting: links to what was posted and what is still open.
 
 ## References

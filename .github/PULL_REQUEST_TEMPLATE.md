@@ -43,6 +43,8 @@
       enabled; any new GitHub Action is pinned by full commit SHA.
 - [ ] Approved by a human reviewer, then by the reviewer agent, before it was
       committed (ADR-003).
+- [ ] No attribution to an AI model or agent in the commits, this description,
+      the code, or the docs (no co-author trailer, no "Generated with" line).
 
 See [`AGENTS.md`](../AGENTS.md) for the mandatory actions and
 [`CONTRIBUTING.md`](../CONTRIBUTING.md#development-flow) for the development

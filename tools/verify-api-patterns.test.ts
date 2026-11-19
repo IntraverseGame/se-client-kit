@@ -23,7 +23,10 @@ const document = readFileSync(
   "utf8",
 );
 
-type Reader = { readonly PATTERNS: Readonly<Record<string, string>> };
+type Reader = {
+  readonly PATTERNS: Readonly<Record<string, string>>;
+  readonly BOOK_TABLE_MAX_ROWS: number;
+};
 const reader = (await import(
   pathToFileURL(join(root, "apps", "verify", "src", "verify-readers.ts")).href
 )) as Reader;
@@ -68,6 +71,9 @@ describe("the verify page's reader against the vendored verify API document", ()
     ["amount", "DrawnRow", "multiplierMilli"],
     ["cost", "BookVerification", "cost"],
     ["positive", "BookVerification", "totalWeight"],
+    ["amount", "BookTableRow", "id"],
+    ["amount", "BookTableRow", "weight"],
+    ["amount", "BookTableRow", "multiplierMilli"],
   ] as const)("spells %s as the document's %s.%s (V-21)", (key, name, prop) => {
     expect(patternOf(name, prop)).toBeDefined();
     expect(reader.PATTERNS[key]).toBe(patternOf(name, prop));
@@ -81,6 +87,17 @@ describe("the verify page's reader against the vendored verify API document", ()
       /entryCount:\n {10}type: integer\n {10}format: int64\n {10}minimum: 1\b/u,
     );
     expect(schema("BookVerification")).toMatch(/required: \[mode\]/u);
+  });
+
+  it("caps `book.table` at the document's row limit, every row field required (V-21)", () => {
+    const limit = /table:\n {10}type: array\n {10}maxItems: (\d+)\n/u.exec(
+      schema("BookVerification"),
+    )?.[1];
+    expect(limit).toBeDefined();
+    expect(reader.BOOK_TABLE_MAX_ROWS).toBe(Number(limit));
+    expect(schema("BookTableRow")).toMatch(
+      /required: \[id, weight, multiplierMilli\]/u,
+    );
   });
 
   it("spells the house edge's pattern as an amount's", () => {

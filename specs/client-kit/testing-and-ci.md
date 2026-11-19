@@ -17,37 +17,43 @@ The kit's tests are the executable half of
 **CI jobs** (GitHub Actions, one required aggregate job `ci-ok`): `lint` and
 `format`; `typecheck`; `unit` (`pnpm test`); `allow-list` (the dependency
 allow-list); `contracts` (the hash check, the regenerated-types diff, and the
-import check that the test-only entry is imported only by tests);
-`contracts-drift` ([rule 3](./how-the-kit-gets-its-contracts.md), when a source
-is published); `build` (the bundle, its manifest, a size budget, a check that
-the same bundle is what e2e runs and what is released (no test or
-per-environment build), and a check that no vector reaches any bundle or release
-output); `e2e-fake` (Playwright against the in-repo fake Play API, which answers
-from the contract's vectors, one job per browser project: Chromium, Firefox, and
-WebKit); `audit` (`pnpm audit --prod`, failing on high and critical advisories
-only); `dependency-review` (pull requests only); `release-dry-run` (the release
-dry run: changesets applied on a scratch copy, the five tarballs packed and
-checked and imported as a consumer would, the Wrapper artifact built twice with
-one digest, and held to the size budget; no token, no network). The release
-itself is a separate workflow, `release` (changesets/action on every push to
-`main`, provenance: `changesets-mode` decides, `version` opens the bump pull
-request, `publish` (in the protected `release` environment) publishes and tags,
-and `wrapper-build`, `attest`, `wrapper-assets`, and `production` attest the
+import check that the test-only entry is imported only by tests); `build` (the
+bundle, its manifest, a size budget, a check that the same bundle is what e2e
+runs and what is released (no test or per-environment build), and a check that
+no vector reaches any bundle or release output); `e2e-fake` (Playwright against
+the in-repo fake Play API, which answers from the contract's vectors, one job
+per browser project: Chromium, Firefox, and WebKit); `audit`
+(`pnpm audit --prod`, failing on high and critical advisories only);
+`dependency-review` (pull requests only); `release-dry-run` (the release dry
+run: changesets applied on a scratch copy, the five tarballs packed and checked
+and imported as a consumer would, the Wrapper artifact built twice with one
+digest, and held to the size budget; no token, no network). The release itself
+is a separate workflow, `release` (changesets/action on every push to `main`,
+provenance: `changesets-mode` decides, `version` opens the bump pull request,
+`publish` (in the protected `release` environment) publishes and tags, and
+`wrapper-build`, `attest`, `wrapper-assets`, and `production` attest the
 Wrapper, attach it to its release, and deploy it;
-[release runbook](../../runbook/client-kit-release.md#release)).
+[release runbook](../../runbook/client-kit-release.md#release)). The contracts
+drift check is a separate workflow too, `contracts-drift` (once a day and on
+demand, never on a pull request, not part of `ci-ok`): it compares
+`contracts.lock.json` with the manifest each environment serves, and fails on a
+changed vector, on an environment it could not check (a network error or timeout
+after its retry, a 4xx or 5xx, a body over its limit, or a manifest it cannot
+read), and when neither origin is set
+([The contracts drift job](./the-contracts-drift-job.md)).
 
 Today `contracts` runs the test-only-entry import check, the hash check against
 `contracts.lock.json`, and the generated-files diff (the Snapshot types, the
-Play API document's types, and the vector catalog). `contracts-drift` is not
-defined yet. `build` builds every workspace (the Wrapper's build writes and
-checks its manifest), and the job also runs `pnpm check:build-output` (the
-no-vector content check, now over the vendored vectors),
-`pnpm check:package-files`, and `pnpm check:size-budget` (below). `e2e-fake` is
-a matrix of three jobs side by side, one per Playwright project (`chromium`,
-`firefox`, `webkit`; their checks are named `e2e-fake (chromium)` and so on),
-all aggregated by `ci-ok` (the `main` ruleset requires no status check, so
-`ci-ok` is the one check to keep green before merging); each installs only its
-own browser (`playwright install --with-deps <project>`, at the
+Play API document's types, and the vector catalog). `contracts-drift` is
+specified and not built yet (#138). `build` builds every workspace (the
+Wrapper's build writes and checks its manifest), and the job also runs
+`pnpm check:build-output` (the no-vector content check, now over the vendored
+vectors), `pnpm check:package-files`, and `pnpm check:size-budget` (below).
+`e2e-fake` is a matrix of three jobs side by side, one per Playwright project
+(`chromium`, `firefox`, `webkit`; their checks are named `e2e-fake (chromium)`
+and so on), all aggregated by `ci-ok` (the `main` ruleset requires no status
+check, so `ci-ok` is the one check to keep green before merging); each installs
+only its own browser (`playwright install --with-deps <project>`, at the
 `@playwright/test` version the lockfile pins; before it, apt is set to time out
 a stalled download after 30 seconds and retry it three times, and to wait up to
 a minute for the package lock, because the download has hung until the job's
@@ -68,6 +74,49 @@ and `id-token: write`, for provenance and trusted publishing; `attest` adds
 and pin every Action by full commit SHA, on the Actions allow-list
 ([supply chain](./supply-chain.md), Pinned toolchain;
 `tools/actions-allow-list.test.ts`).
+
+**The commit-msg hook.** Nothing in the kit's history names an AI model or agent
+as an author
+([ADR-003](../../decisions/ADR-003-agent-workflow-and-approvals.md), amendment
+note of 2026-11-18). `.githooks/commit-msg`, a Bash script, refuses a commit
+message that holds a co-author trailer naming an AI model or tool or a `[bot]`
+account, a line that starts (after any symbols) with "Generated with" or
+"Generated by" and names one, or the address `noreply@anthropic.com`. The names
+match as whole words, so a human co-author named Kai or Haider passes; one
+actually named Claude or Ai is refused, an accepted cost. Before it matches, it
+drops lines that start with `#` and everything below the scissors line (the diff
+of `git commit -v`), as git's cleanup does for a message written in the editor.
+It fails closed: if it cannot read the message or a command fails, it refuses
+the commit ("could not check the commit message"). `pnpm hooks` installs it once
+per clone (`git config core.hooksPath .githooks`, shared by every worktree). It
+is a plain script, not a wireit task, and no lifecycle script runs it, so a
+clone where nobody ran `pnpm hooks` has no hook. Its limits, each left to
+review:
+
+- it runs only locally; CI checks no commit message, and merges GitHub makes on
+  its servers (a Dependabot squash) run no hook;
+- `git commit --no-verify` skips it; never use that to get an attribution
+  through;
+- with `-m` or `-F` and no editor, git keeps lines that start with `#` and does
+  not cut at a scissors line, while the hook still drops and cuts them; an
+  attribution on a `#` line of such a message passes. That is a deliberate
+  bypass, and review catches it;
+- it assumes `#` as git's comment character. With another `core.commentChar`, it
+  reads git's comment lines and the `-v` diff as message text, so it may refuse
+  a clean message;
+- it catches only the wordings above: `Assisted-by:`, "Made with …", an indented
+  trailer, or a `Signed-off-by:` that names an AI are not refused.
+
+`tools/commit-msg-hook.test.ts` (in `test:tools`, whose inputs include
+`.githooks/**`) runs the hook on messages it must refuse and messages it must
+pass, under the `C` and `C.UTF-8` locales. The refused ones include a bare
+`noreply@anthropic.com`, an "AI Assistant" co-author, and a trailer above a
+20,000-line body, which guards long messages; the passed ones include the human
+co-authors "Kai Smith" and "Haider Ali". It checks that a missing message file
+is refused. It also makes a real `git commit -v` whose staged diff holds the
+address below the scissors line, and checks that the hook is executable (and,
+once tracked, tracked as `100755`) and that `hooks` is that exact plain script,
+with no `prepare` or install lifecycle script.
 
 **The size budget** of the Wrapper's release output (`tools/size-budget.ts`,
 unit-tested) is checked by `pnpm check:size-budget` (part of `pnpm check`, and
@@ -542,7 +591,7 @@ development-only, so it may import the test-only entry of `contracts`.
   body, or an abort (errors with the document's `Problem` body); canned rounds
   in the verify API document's shape, built at run time from the vendored round
   (matching, one tampered field per check, not ended, unknown kernel, a shape of
-  three options; each lists the kernel's eight public vector sets as
+  three options; each lists the kernel's nine public vector sets as
   `kernel.vectorSets`, in the document's order), the vendored book round `won`
   and `lost` with a tampered copy per check 5 to 8 (`verify-book-rounds.ts`,
   #156), and two rounds the backend recorded (`recorded-rounds/`, a `won` and a

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Refuses a commit message that credits an AI tool or an agent (a co-author
+# trailer, a "Generated with" line, an Anthropic noreply address): this
+# repository is public, and its history names only people. Installed with
+# `pnpm hooks` (core.hooksPath); tested by tools/commit-msg-hook.test.ts.
+set -euo pipefail
+message_file="$1"
+# Drop what git's cleanup drops: the `git commit -v` diff below the scissors
+# line, and comment lines. A plain assignment keeps sed's status, so set -e
+# stops here on a read error. No pipe: grep reads the whole message from a
+# here-string, so no writer can be cut short by SIGPIPE.
+message=$(sed -e '/^# -\{24\} >8 -\{24\}$/,$d' -e '/^#/d' "$message_file")
+# Each word stands alone (\b on both sides), so a name or an address that only
+# contains one ("Haider", "Egpt") is not refused; `[bot]` has its own pattern,
+# since \b cannot come before `[`. Fail closed: grep's 0 is a match, 1 no
+# match, anything else an error.
+status=0
+grep -Ei \
+  -e '^co-authored-by:.*\b(claude|anthropic|openai|chatgpt|gpt|copilot|gemini|cursor|codex|aider|ai)\b' \
+  -e '^co-authored-by:.*\[bot\]' \
+  -e '^[^[:alnum:]]*generated (with|by) .*\b(claude|ai|copilot|chatgpt|gpt|gemini|cursor|codex|agent)\b' \
+  -e 'noreply@anthropic\.com' >/dev/null <<<"$message" || status=$?
+case "$status" in
+  0)
+    echo "commit-msg: AI or agent attribution is not allowed in commit messages." >&2
+    exit 1
+    ;;
+  1) exit 0 ;;
+  *)
+    echo "commit-msg: could not check the commit message." >&2
+    exit 1
+    ;;
+esac
