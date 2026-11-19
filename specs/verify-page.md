@@ -466,6 +466,23 @@ payout is recomputed by check 7 (OQ-B9).
      `entropy.block`, an `int64` in the document: the page reads a JSON integer
      as `bigint`, and a value that is not a safe integer (above 2^53 − 1, which
      `JSON.parse` would already have rounded) fails the body's validation.
+     **Solana sources (proposed, RFC-007).** Today the read makes the EVM calls
+     above for every source; a Solana RPC answers neither, so a Solana round's
+     check 6 fails as `too-few` and check 7 is not run. Proposed: for a source
+     of kind `solana`, each endpoint is asked `getGenesisHash` (compared with
+     the cluster's pinned genesis hash, in place of the chain id) and `getBlock`
+     at slot `N` and `finalized`, with no transactions and no rewards; the value
+     is the block's `blockhash` decoded from base58 to exactly 32 bytes (the
+     page's own decoder), and a skipped slot `N` takes the value of the first
+     finalized block after it, with the backend's ledger-gap check; the quorum
+     and the comparison with `entropy.value` are as above, with one more
+     failure, `ledger-gap`, and check 7 uses the 32 bytes as it uses an EVM
+     block hash. A document may list sources of both kinds at once (staging
+     lists its Somnia source beside a mainnet-beta one during its switch); each
+     round is read by its own `entropy.source`'s kind and endpoints. The full
+     rules are in
+     [RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md),
+     sections 1 and 4, until the implementing slice writes them here.
   7. **Seed and outcome.** Under kernel version 1:
      - **The seed** is `SHA-256(blockValue || roundSecret)`: a 64-byte preimage,
        block N's 32-byte hash first, then the round secret's 32 bytes.
