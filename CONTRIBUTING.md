@@ -115,7 +115,9 @@ at run time; `shell` depends on `signing`, `snapshot`, and `play-client`; the
 controller protocol's types; the `verify` app depends on `signing` (and may take
 `snapshot`, `play-client`, and `contracts`' runtime entry), never on `shell`;
 the `pages-proxy` app imports nothing. See
-[`.ai/memories/architecture.md`](./.ai/memories/architecture.md).
+[`.ai/memories/architecture.md`](./.ai/memories/architecture.md). The edges that
+RFC-006 and ADR-012 propose (a `signing-page` app, and `shell` on `contracts`'
+runtime entry) are not rules yet; `AGENTS.md` lists them apart.
 
 ## Development flow
 

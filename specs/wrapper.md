@@ -31,6 +31,12 @@ In scope (first release):
 - opening a session from a launch code read from the URL fragment, the play
   token, and its refresh;
 - the action key: generation, custody, and what may be stored;
+- a wallet's delegation to the action key: opt-in, signed once per session on
+  the signing page, and sent with every start (proposed,
+  [RFC-006](../rfcs/active/RFC-006-wallet-delegated-action-key.md) and
+  [ADR-012](../decisions/ADR-012-the-signing-page-on-its-own-origin.md); not
+  built yet, slices S2 to S7; its detailed rules stay in RFC-006 until those
+  slices write them here);
 - two tabs of one session (Web Locks);
 - the transcript: tracking `T_n`, never signing two actions at one sequence;
 - starting a round with the action key's address (no signed start, W-22), and
@@ -51,7 +57,11 @@ Out of scope:
 
 - native bet controls and controller API variations (later increments). The
   controller boundary below is the minimal first-release one;
-- wallet-delegated keys and player-supplied keys;
+- player-supplied keys (a key the player imports). Wallet-delegated keys are
+  proposed into scope (RFC-006, above);
+- any wallet other than an injected browser wallet found through EIP-6963 (no
+  WalletConnect), and delegation on a book game until the backend accepts it
+  (proposed, RFC-006);
 - WebSocket. The first release uses the REST verbs and polls the Snapshot;
 - more than one game at a time; and, of the `playback` presentation, everything
   beyond a book round's base-mode playback with no player input other than the
@@ -92,7 +102,13 @@ owns.
     may use its own node, W-26a);
   - one environment configuration document ([Configuration](#configuration));
   - the operator launch contract, by name only: the launch URL whose fragment
-    carries the launch code (W-1).
+    carries the launch code (W-1);
+  - the key-delegation contract `key-delegation/v1`: its notices, through
+    `contracts`' runtime entry, and its vectors in tests (proposed, RFC-006;
+    from S5).
+- **The Wrapper talks to** the signing page, on its own origin, over
+  `se.delegation/1`, and never to a wallet (proposed, RFC-006 and ADR-012; from
+  S5).
 - **The Wrapper is consumed by:**
   - the player;
   - the operator page, which embeds the Wrapper, completes the `se.operator/1`
@@ -140,6 +156,7 @@ to AC5), or to the security model the Wrapper exists to keep.
 | #146    | play a book round's base mode: start, the draw played back by the game, the payout from the Snapshot (decided 2026-10-28)                               | W-50 to W-56; T-22 to T-24                                       |
 | RFC-004 | one screen: the game frame shown for the session over one control bar; no round shown as ready before W-26 (decided 2026-10-30)                         | W-57, W-58; T-25 to T-28                                         |
 | RFC-005 | the control bar, version 2: dark, the stepper, the round receipt, the state edge, the game under the bar, autoplay, the menu                            | W-57, W-59 to W-61; T-29 to T-35                                 |
+| RFC-006 | an opt-in wallet delegation to the action key, signed on the signing page and sent with every start (proposed; not built yet)                           | W-9, W-11, W-12, W-49b, W-49g; the rest in RFC-006 for now       |
 | AC1     | browser e2e: a win, a loss, and a cash-out against a preview stack                                                                                      | [Test plan](#test-plan) T-10 to T-12; [OQ-3](#decided-questions) |
 | AC2     | the shared signature vectors pass in this repository's suite                                                                                            | T-1 to T-3                                                       |
 | AC3     | Snapshot golden vectors render without error                                                                                                            | T-5, T-6                                                         |
@@ -476,7 +493,7 @@ level AA**.
 
 ### Operator embedding
 
-W-49 to W-49f: `frame-ancestors` as the primary control and the Wrapper's own
+W-49 to W-49g: `frame-ancestors` as the primary control and the Wrapper's own
 checks as defense in depth; direct embedding only; the `se.operator/1` protocol
 (`hello`, `welcome`, `resize`) with its operator-first, record-then-check
 handshake, which gates the redeem, the start, and every signature where
@@ -484,8 +501,9 @@ handshake, which gates the redeem, the start, and every signature where
 single listed parent (decided 2026-11-10,
 [ADR-011](../decisions/ADR-011-no-hello-where-the-parent-is-proven.md)); the
 lobby and deposit as navigations to the Snapshot's `context.links`, and the
-states that offer them; the refusal reasons; and T-9a's test plan. Decided in
-human review on 2026-10-18 (RFC-001,
+states that offer them; the embedding page's opener policy (W-49g, proposed,
+RFC-006: no COOP `same-origin`); the refusal reasons; and T-9a's test plan.
+Decided in human review on 2026-10-18 (RFC-001,
 [ADR-006](../decisions/ADR-006-the-operator-protocol-se-operator-1.md),
 accepted). Built (#42); it replaced the fail-closed minimum of 2026-10-17. See
 [`wrapper/operator-embedding.md`](./wrapper/operator-embedding.md).

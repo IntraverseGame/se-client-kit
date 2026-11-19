@@ -6,8 +6,9 @@ Part of the [Wrapper spec](../wrapper.md), section
 The operator page (origin A) embeds the Wrapper (the SE origin) in an iframe,
 and the Wrapper hosts the game (origin D) in a second iframe. This file is the
 operator side: how the Wrapper checks who frames it, the `se.operator/1`
-handshake, `resize`, and the lobby and deposit controls. The decisions behind it
-were taken in human review on 2026-10-18 (RFC-001,
+handshake, `resize`, the lobby and deposit controls, and the embedding page's
+opener policy (W-49g). The decisions behind it were taken in human review on
+2026-10-18 (RFC-001,
 [`rfcs/active/RFC-001-operator-launch-contract.md`](../../rfcs/active/RFC-001-operator-launch-contract.md),
 section Decisions) and are recorded in
 [ADR-006](../../decisions/ADR-006-the-operator-protocol-se-operator-1.md). The
@@ -118,9 +119,13 @@ and deposit anchors (`operator-links.ts`). ADR-006 is accepted.
     anything else dropped. Each channel then checks `event.origin` (A on
     `operatorOrigins`, or D) and its own schema. When the Wrapper is not framed,
     `window.parent === window`, so there is no operator route: a message whose
-    source is the Wrapper's own window is dropped. The two channels share no
-    state and no schema; no operator message is forwarded to the game and no
-    game message to the operator.
+    source is the Wrapper's own window is dropped. It is dropped when the
+    Wrapper is framed too: wallet extensions inject into the Wrapper's document
+    and post their own messages to that window (RFC-006's spike), and none of
+    them is read. The signing window adds a third route, its handle, when it is
+    built (proposed, RFC-006; from S5). The two channels share no state and no
+    schema; no operator message is forwarded to the game and no game message to
+    the operator.
   - **No secret in any message, in either direction:** no action key, play
     token, launch code, signature, proof, `CreateRoundAuth`, header, session id,
     round id, or amount. No `se.operator/1` message carries money; a later
@@ -356,6 +361,25 @@ and deposit anchors (`operator-links.ts`). ADR-006 is accepted.
   since the fake Play API answers a fixed Snapshot and cannot change a balance
   between reads.
 
+## The embedding page's opener policy
+
+- **W-49g.** (Proposed,
+  [RFC-006](../../rfcs/active/RFC-006-wallet-delegated-action-key.md).) The
+  operator page that embeds the Wrapper MUST NOT send
+  `Cross-Origin-Opener-Policy: same-origin`; `same-origin-allow-popups`, or no
+  such header, is allowed. Under `same-origin`, a window the Wrapper opens is
+  cut off from it: `window.open` returns `null`, yet the window may still open,
+  with no `window.opener` (RFC-006's spike). The Wrapper cannot read the
+  operator page's headers, so it does not check this in advance; it handles the
+  result. It treats a `null` from `window.open` as a blocked window, tells the
+  player the signing window could not connect (and to close it if it opened),
+  and plays on without a delegation, on the shell's key; the signing page does
+  nothing in a window that has no opener. The rule matters to the wallet
+  delegation RFC-006 proposes only, which is not built yet: today the Wrapper
+  opens no window it talks to (the verify and deposit links open with no
+  opener). A `sandbox` attribute on the Wrapper's iframe without `allow-popups`
+  blocks the window too; the operator guidance already asks for no `sandbox`.
+
 ## What is logged
 
 Through the shell's redacting logger, at `warn`, once per page: one event,
@@ -455,6 +479,15 @@ HTML must not be listed. On that iframe set no `sandbox` attribute, no
 `referrerpolicy` of `no-referrer` or `same-origin` (some browsers then hide your
 origin from the Wrapper, which refuses), and no `allow` feature the Wrapper's
 `Permissions-Policy` turns off.
+
+**A future feature: linking a wallet (proposed, RFC-006; not built yet).** This
+concerns a feature that is still a draft proposal: it may change or not ship,
+and nothing the Wrapper does today depends on it. If it ships, the Wrapper will
+open a window in which a player links a wallet to the game, and your page must
+then not send `Cross-Origin-Opener-Policy: same-origin`;
+`same-origin-allow-popups`, or no such header, is fine. With `same-origin`, that
+window is cut off from the Wrapper, and the player plays on without linking one
+(W-49g).
 
 **Say hello (recommended; required where the browser cannot tell the Wrapper
 your origin).** When your page embeds the Wrapper directly, from a listed
