@@ -14,6 +14,7 @@ export type { ChainDecision };
 
 const tipRecord = (failure?: TipCheckFailure): TipCheckRecord =>
   Object.freeze({
+    kind: "evm",
     source: "ethereum:block",
     passed: failure === undefined,
     ...(failure === undefined ? {} : { failure }),

@@ -72,13 +72,26 @@ describe("runTipCheck", () => {
     expect(result.failure).toBe("too-few-answered");
     expect(result.answers).toEqual([
       {
+        kind: "evm",
         provider: "p1",
         chainId: CHAIN,
         finalBlock: 100n,
         hashAtLow: hashOf(100n),
       },
-      { provider: "p2", chainId: CHAIN, finalBlock: null, hashAtLow: null },
-      { provider: "p3", chainId: CHAIN, finalBlock: null, hashAtLow: null },
+      {
+        kind: "evm",
+        provider: "p2",
+        chainId: CHAIN,
+        finalBlock: null,
+        hashAtLow: null,
+      },
+      {
+        kind: "evm",
+        provider: "p3",
+        chainId: CHAIN,
+        finalBlock: null,
+        hashAtLow: null,
+      },
     ]);
   });
 
@@ -156,18 +169,21 @@ describe("runTipCheck", () => {
     });
     expect(result.answers).toEqual([
       {
+        kind: "evm",
         provider: "p1",
         chainId: CHAIN,
         finalBlock: 101n,
         hashAtLow: hashOf(100n),
       },
       {
+        kind: "evm",
         provider: "p2",
         chainId: CHAIN,
         finalBlock: 100n,
         hashAtLow: hashOf(100n),
       },
       {
+        kind: "evm",
         provider: "p3",
         chainId: CHAIN,
         finalBlock: 102n,
@@ -188,18 +204,21 @@ describe("runTipCheck", () => {
     expect(result.failure).toBe("lagging");
     expect(result.answers).toEqual([
       {
+        kind: "evm",
         provider: "p1",
         chainId: CHAIN,
         finalBlock: 100n,
         hashAtLow: hashOf(90n),
       },
       {
+        kind: "evm",
         provider: "p2",
         chainId: CHAIN,
         finalBlock: 90n,
         hashAtLow: hashOf(90n),
       },
       {
+        kind: "evm",
         provider: "p3",
         chainId: CHAIN,
         finalBlock: 100n,

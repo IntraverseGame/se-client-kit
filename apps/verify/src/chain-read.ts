@@ -49,32 +49,33 @@ export type EndpointAnswer = {
  * Why the read failed, in W-26b's order: `config` (a configuration the Wrapper
  * would refuse at boot), `other-chain`, `too-few` answering, `no-chain-id`
  * (gave a block but no chain id), `no-block` (gave a chain id but no valid hash
- * for block N: it cannot be shown to agree), `hash-mismatch`. Check 6 adds
- * `unsupported-chain-kind`, a source of a kind the page cannot read yet, for
- * which nothing is asked.
+ * for block N: it cannot be shown to agree), `hash-mismatch`. A Solana source
+ * adds `ledger-gap` after `other-chain` (`chain-read-solana.ts`, RFC-007
+ * section 4); the EVM read never returns it.
  */
 export type ChainReadFailure =
   | "config"
-  | "unsupported-chain-kind"
   | "other-chain"
+  | "ledger-gap"
   | "too-few"
   | "no-chain-id"
   | "no-block"
   | "hash-mismatch";
 
-export type ChainRead =
+/** A quorum read's verdict, with what each endpoint gave (`Answer`, by kind). */
+export type ChainRead<Answer = EndpointAnswer> =
   | {
       readonly ok: true;
-      /** The hash every answering endpoint returned. */
+      /** The hash (or Solana value) every answering endpoint returned. */
       readonly blockHash: Hash32;
       /** W-26a's exception: the "chain check not independent" indicator. */
       readonly degraded: boolean;
-      readonly answers: readonly EndpointAnswer[];
+      readonly answers: readonly Answer[];
     }
   | {
       readonly ok: false;
       readonly reason: ChainReadFailure;
-      readonly answers: readonly EndpointAnswer[];
+      readonly answers: readonly Answer[];
     };
 
 const QUANTITY = /^0x(?:0|[1-9a-f][0-9a-f]*)$/iu;
@@ -192,7 +193,7 @@ const askEndpoint = async (
 };
 
 /** W-26a's boot rule and W-26b's endpoint count, as the page sees them. */
-const configIsRefused = (config: ChainReadConfig): boolean =>
+export const configIsRefused = (config: ChainReadConfig): boolean =>
   !Number.isSafeInteger(config.entropyChainId) ||
   config.entropyChainId < 0 ||
   !Number.isInteger(config.minRpcQuorum) ||

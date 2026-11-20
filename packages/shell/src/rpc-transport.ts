@@ -11,9 +11,10 @@ import type { RpcEndpoint } from "./config-fields.ts";
 export type BlockTag = "finalized" | `0x${string}`;
 
 /**
- * The calls the tip check makes: Ethereum JSON-RPC `eth_chainId` (no
- * parameters), and `eth_getBlockByNumber` with the block tag and `false` (no
- * transaction bodies).
+ * The calls the tip check makes. For an `evm` source, Ethereum JSON-RPC
+ * `eth_chainId` (no parameters) and `eth_getBlockByNumber` with the block tag
+ * and `false` (no transaction bodies); for a `solana` source, Solana JSON-RPC
+ * `getGenesisHash` (no parameters) and `getSlot` at commitment `finalized`.
  */
 export type RpcCall =
   | {
@@ -23,6 +24,14 @@ export type RpcCall =
   | {
       readonly method: "eth_getBlockByNumber";
       readonly params: readonly [BlockTag, false];
+    }
+  | {
+      readonly method: "getGenesisHash";
+      readonly params: readonly [];
+    }
+  | {
+      readonly method: "getSlot";
+      readonly params: readonly [{ readonly commitment: "finalized" }];
     };
 
 /**

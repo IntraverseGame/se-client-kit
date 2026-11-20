@@ -1,69 +1,49 @@
-// The tip check (W-26b, with W-26a's quorum and degraded mode). The shell asks
-// every configured endpoint of the round's entropy source for its chain id and
-// its final block, then asks each one that gave a final block for the block at
-// `h_low`. Any endpoint that reports another chain id fails it. It passes only
-// if at least `minRpcQuorum` answered, every one reports the source's
-// configured chain id, every one is within the source's lag margin of
-// `h_top`, and all of them return one hash at `h_low`. It never drops an
-// outlier and never picks a side: any disagreement fails the check.
+// The tip check (W-26b, with W-26a's quorum and degraded mode): the round's
+// entropy source is looked up in the configuration and read by its kind, an
+// `evm` source by `tip-check-evm.ts` and a `solana` source by
+// `tip-check-solana.ts` (RFC-007 section 3), and what they saw is kept as the
+// round's frozen record (W-27). Neither drops an outlier or picks a side: any
+// disagreement fails the check.
 //
-// The network is an injected transport; this module builds the JSON-RPC calls
-// and reads their results as untrusted data.
+// The network is an injected transport; the readers build the JSON-RPC calls
+// and read their results as untrusted data.
 
 import {
   type Clock,
   DEFAULT_REQUEST_TIMEOUT_MS,
 } from "@intraverse/se-client-play-client";
-import type { Bytes32 } from "@intraverse/se-client-signing";
 
 import type { ChainConfig } from "./chain-config.ts";
 import { ShellError } from "./errors.ts";
-import { onAnotherChain, readBlock, readChainId } from "./rpc-answers.ts";
-import type { BlockTag, RpcCall, RpcTransport } from "./rpc-transport.ts";
-import type { SourceConfig } from "./source-config.ts";
-import { ask, NO_ANSWER } from "./tip-check-ask.ts";
+import type { RpcTransport } from "./rpc-transport.ts";
+import { type EvmEndpointAnswer, readEvmTip } from "./tip-check-evm.ts";
+import {
+  readSolanaTip,
+  type SolanaEndpointAnswer,
+} from "./tip-check-solana.ts";
 
 /** One endpoint's answers, kept with the record whether it agreed or not. */
-export type EndpointAnswer = {
-  readonly provider: string;
-  /**
-   * The chain id it reported (`eth_chainId`), or `null` when it did not answer
-   * that call in time with a chain id.
-   */
-  readonly chainId: bigint | null;
-  /** Its final block, or `null` when it did not answer in time. */
-  readonly finalBlock: bigint | null;
-  /**
-   * Its hash of the block at `h_low`, or `null` when it was not asked (it gave
-   * no final block) or did not answer that call with the block at `h_low`.
-   */
-  readonly hashAtLow: Bytes32 | null;
-};
+export type EndpointAnswer = EvmEndpointAnswer | SolanaEndpointAnswer;
 
 /** Why a tip check failed. */
 export type TipCheckFailure =
   /** The configuration lists no endpoints for the round's entropy source. */
   | "unknown-source"
-  /** Fewer than `minRpcQuorum` endpoints gave a final block (W-26a). */
+  /** Fewer than `minRpcQuorum` endpoints gave a final block or slot (W-26a). */
   | "too-few-answered"
-  /** An answering endpoint gave no chain id. */
+  /** An answering endpoint gave no chain id (no genesis hash, for Solana). */
   | "chain-id-unavailable"
   /** An endpoint, answering or not, reported another chain than the source's. */
   | "chain-id-mismatch"
   /** An answering endpoint is more than the lag margin behind `h_top`. */
   | "lagging"
-  /** An answering endpoint gave no block hash at `h_low`. */
+  /** An answering endpoint gave no block hash at `h_low` (EVM only). */
   | "hash-unavailable"
-  /** The answering endpoints gave different hashes at `h_low`. */
-  | "hash-mismatch"
-  /**
-   * The round's source is of a kind the shell cannot read yet (`solana`, until
-   * RFC-007's slice 2): no endpoint is asked.
-   */
-  | "unsupported-chain-kind";
+  /** The answering endpoints gave different hashes at `h_low` (EVM only). */
+  | "hash-mismatch";
 
-/** What the tip check saw, kept with the round's record (W-26b, W-27). */
-export type TipCheckRecord = {
+/** What every tip check records, whatever the source's kind. */
+type RecordFields = {
   /** The Snapshot's `proofs.randomnessProof.source`. */
   readonly source: string;
   readonly passed: boolean;
@@ -71,20 +51,52 @@ export type TipCheckRecord = {
   readonly failure?: TipCheckFailure;
   /** `degraded` when `minRpcQuorum` is 1 (local or preview only, W-26a). */
   readonly tipCheck: "independent" | "degraded";
-  /** The observed tip `h_top`; `null` when no endpoint answered. */
+  /**
+   * The observed tip `h_top` (a block, or a slot for a `solana` source); `null`
+   * when no endpoint answered.
+   */
   readonly tip: bigint | null;
   /** `h_low`; `null` when no endpoint answered. */
   readonly low: bigint | null;
-  /** The source's lag margin the check used. */
+  /** The source's lag margin the check used, in the source's unit. */
   readonly tipLagMargin: bigint | null;
-  /** The source's configured chain id the check required. */
-  readonly chainId: bigint | null;
   /**
-   * Every configured endpoint, in configuration order; none when no endpoint
-   * was asked (`unknown-source`, `unsupported-chain-kind`).
+   * The source's configured chain id the check required (its cluster number,
+   * for a `solana` source).
    */
-  readonly answers: readonly EndpointAnswer[];
+  readonly chainId: bigint | null;
 };
+
+/** The record of an `evm` source's tip check. */
+export type EvmTipCheckRecord = RecordFields & {
+  readonly kind: "evm";
+  /** Every configured endpoint, in configuration order. */
+  readonly answers: readonly EvmEndpointAnswer[];
+};
+
+/** The record of a `solana` source's tip check (RFC-007 section 3). */
+export type SolanaTipCheckRecord = RecordFields & {
+  readonly kind: "solana";
+  /** The genesis hash the kit pins for the source's cluster (base58). */
+  readonly genesisHash: string;
+  /** Every configured endpoint, in configuration order. */
+  readonly answers: readonly SolanaEndpointAnswer[];
+};
+
+/**
+ * The record of a source the configuration does not list (`unknown-source`): it
+ * has no kind, and no endpoint was asked.
+ */
+export type UnlistedTipCheckRecord = RecordFields & {
+  readonly kind: null;
+  readonly answers: readonly [];
+};
+
+/** What the tip check saw, kept with the round's record (W-26b, W-27). */
+export type TipCheckRecord =
+  | EvmTipCheckRecord
+  | SolanaTipCheckRecord
+  | UnlistedTipCheckRecord;
 
 export type TipCheckOptions = {
   readonly config: ChainConfig;
@@ -97,64 +109,23 @@ export type TipCheckOptions = {
   readonly timeoutMs?: number;
 };
 
-const quantity = (value: bigint): `0x${string}` => `0x${value.toString(16)}`;
+const frozenAnswers = <A extends EndpointAnswer>(
+  answers: readonly A[],
+): readonly A[] => Object.freeze(answers.map(a => Object.freeze({ ...a })));
 
-const getBlock = (tag: BlockTag): RpcCall =>
-  Object.freeze({
-    method: "eth_getBlockByNumber",
-    params: Object.freeze([tag, false] as const),
-  });
-
-const GET_CHAIN_ID: RpcCall = Object.freeze({
-  method: "eth_chainId",
-  params: Object.freeze([] as const),
-});
-
-const maxOf = (values: readonly bigint[]): bigint =>
-  values.reduce((a, b) => (b > a ? b : a));
-
-const minOf = (values: readonly bigint[]): bigint =>
-  values.reduce((a, b) => (b < a ? b : a));
-
-const judge = (
-  answers: readonly EndpointAnswer[],
-  quorum: number,
-  tip: bigint,
-  source: SourceConfig,
-): TipCheckFailure | undefined => {
-  const margin = source.tipLagMargin;
-  if (onAnotherChain(answers, source.chainId)) {
-    return "chain-id-mismatch";
-  }
-  const answered = answers.filter(a => a.finalBlock !== null);
-  if (answered.length < quorum) {
-    return "too-few-answered";
-  }
-  if (answered.some(a => a.chainId === null)) {
-    return "chain-id-unavailable";
-  }
-  if (answered.some(a => tip - (a.finalBlock ?? tip) > margin)) {
-    return "lagging";
-  }
-  if (answered.some(a => a.hashAtLow === null)) {
-    return "hash-unavailable";
-  }
-  return new Set(answered.map(a => a.hashAtLow)).size === 1
-    ? undefined
-    : "hash-mismatch";
-};
-
-const record = (fields: TipCheckRecord): TipCheckRecord =>
-  Object.freeze({
-    ...fields,
-    answers: Object.freeze(fields.answers.map(a => Object.freeze({ ...a }))),
-  });
+const verdict = (
+  failure: TipCheckFailure | undefined,
+):
+  | { readonly passed: true }
+  | { readonly passed: false; readonly failure: TipCheckFailure } =>
+  failure === undefined ? { passed: true } : { passed: false, failure };
 
 /**
  * Runs the tip check for `source` against every endpoint the configuration
- * lists for it. Never rejects on an endpoint's failure: the record says what
- * each one answered and whether the check passed. Throws `invalid-input` for a
- * timeout that is not a positive duration.
+ * lists for it, with the calls and the rule of the source's kind. Never rejects
+ * on an endpoint's failure: the record says what each one answered and whether
+ * the check passed. Throws `invalid-input` for a timeout that is not a positive
+ * duration.
  */
 export const runTipCheck = async (
   options: TipCheckOptions,
@@ -169,7 +140,8 @@ export const runTipCheck = async (
     ? config.sources[source]
     : undefined;
   if (sourceConfig === undefined) {
-    return record({
+    return Object.freeze({
+      kind: null,
       source,
       passed: false,
       failure: "unknown-source",
@@ -178,98 +150,36 @@ export const runTipCheck = async (
       low: null,
       tipLagMargin: null,
       chainId: null,
-      answers: [],
+      answers: Object.freeze([] as const),
     });
   }
-  // Until RFC-007's slice 2 reads a Solana chain, its rounds fail closed.
+  const { tipLagMargin, chainId } = sourceConfig;
+  const quorum = config.minRpcQuorum;
+  const common = { source, tipCheck, tipLagMargin, chainId } as const;
   if (sourceConfig.kind === "solana") {
-    return record({
-      source,
-      passed: false,
-      failure: "unsupported-chain-kind",
-      tipCheck,
-      tip: null,
-      low: null,
-      tipLagMargin: sourceConfig.tipLagMargin,
-      chainId: sourceConfig.chainId,
-      answers: [],
+    const reading = await readSolanaTip(
+      options,
+      timeoutMs,
+      sourceConfig,
+      quorum,
+    );
+    return Object.freeze({
+      kind: "solana",
+      ...common,
+      ...verdict(reading.failure),
+      tip: reading.tip,
+      low: reading.low,
+      genesisHash: sourceConfig.genesisHash,
+      answers: frozenAnswers(reading.answers),
     });
   }
-  const { endpoints, tipLagMargin, chainId } = sourceConfig;
-  const [chainIds, finals] = await Promise.all([
-    Promise.all(
-      endpoints.map(endpoint =>
-        ask(options, timeoutMs, endpoint, GET_CHAIN_ID, readChainId),
-      ),
-    ),
-    Promise.all(
-      endpoints.map(endpoint =>
-        ask(options, timeoutMs, endpoint, getBlock("finalized"), readBlock),
-      ),
-    ),
-  ]);
-  const chainIdOf = (i: number): bigint | null => {
-    const reported = chainIds[i];
-    return reported === undefined || reported === NO_ANSWER ? null : reported;
-  };
-  const heights = finals.flatMap(f => (f === NO_ANSWER ? [] : [f.number]));
-  if (heights.length === 0) {
-    const silent = endpoints.map((e, i) => ({
-      provider: e.provider,
-      chainId: chainIdOf(i),
-      finalBlock: null,
-      hashAtLow: null,
-    }));
-    return record({
-      source,
-      passed: false,
-      failure: onAnotherChain(silent, chainId)
-        ? "chain-id-mismatch"
-        : "too-few-answered",
-      tipCheck,
-      tip: null,
-      low: null,
-      tipLagMargin,
-      chainId,
-      answers: silent,
-    });
-  }
-  // `h_top` and `h_low` may include the height of an endpoint on another chain;
-  // the check then fails as `chain-id-mismatch` before they are judged, and the
-  // record still keeps every answer.
-  const tip = maxOf(heights);
-  const low = minOf(heights);
-  const atLow = await Promise.all(
-    endpoints.map((endpoint, i) =>
-      finals[i] === NO_ANSWER
-        ? NO_ANSWER
-        : ask(options, timeoutMs, endpoint, getBlock(quantity(low)), readBlock),
-    ),
-  );
-  const answers = endpoints.map((endpoint, i): EndpointAnswer => {
-    const final = finals[i];
-    const block = atLow[i];
-    return {
-      provider: endpoint.provider,
-      chainId: chainIdOf(i),
-      finalBlock:
-        final === undefined || final === NO_ANSWER ? null : final.number,
-      hashAtLow:
-        block === undefined || block === NO_ANSWER || block.number !== low
-          ? null
-          : block.hash,
-    };
-  });
-  const failure = judge(answers, config.minRpcQuorum, tip, sourceConfig);
-  return record({
-    source,
-    passed: failure === undefined,
-    ...(failure === undefined ? {} : { failure }),
-    tipCheck,
-    tip,
-    low,
-    tipLagMargin,
-    chainId,
-    answers,
+  const reading = await readEvmTip(options, timeoutMs, sourceConfig, quorum);
+  return Object.freeze({
+    kind: "evm",
+    ...common,
+    ...verdict(reading.failure),
+    tip: reading.tip,
+    low: reading.low,
+    answers: frozenAnswers(reading.answers),
   });
 };

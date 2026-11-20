@@ -28,19 +28,22 @@ This RFC adds Solana as a second kind of entropy chain to the two places the kit
 reads one: the shell's tip check (W-26b), which the Wrapper runs before a config
 round can be played, and the verify page's block check (V-12, check 6).
 Production's entropy source is Solana mainnet-beta (decided by the human owner
-on 2026-11-18, #235), and both reads speak only EVM JSON-RPC today. EVM sources,
-staging's included, keep exactly the behavior they have. The semantics come from
-the backend's specs, cited by name: **the backend's Solana entropy spec** (its
-block selection and reorg policy, Solana section), **its Shell bind check**, and
-**its verify API document**, as confirmed by the backend's TPO on 2026-11-10 and
-answered again from se-backend `4a49ab9d` on 2026-11-18. The code owner decided
-every question this draft asked on 2026-11-18, and two more on the review of
-2026-11-19, and the human accepted ADR-013 on 2026-11-20
-([Decisions](#decisions)). Section 1 and section 2's genesis table are written
-into the specs by slice 1 and are normative there; the specs, not this file, are
-canonical for them. The other sections stay here, decided, until their slices
-(section 9) write them into the specs. What is pending from the backend and the
-infrastructure owner is in [Unresolved questions](#unresolved-questions).
+on 2026-11-18, #235), and both reads spoke only EVM JSON-RPC when this RFC was
+drafted. EVM sources, staging's included, keep exactly the behavior they have.
+The semantics come from the backend's specs, cited by name: **the backend's
+Solana entropy spec** (its block selection and reorg policy, Solana section),
+**its Shell bind check**, and **its verify API document**, as confirmed by the
+backend's TPO on 2026-11-10 and answered again from se-backend `4a49ab9d` on
+2026-11-18. The code owner decided every question this draft asked on
+2026-11-18, and two more on the review of 2026-11-19, and the human accepted
+ADR-013 on 2026-11-20 ([Decisions](#decisions)). Section 1 and section 2's
+genesis table are written into the specs by slice 1, section 3 by slices 2 and 3
+(W-26b's Solana tip check and the shell spec), and sections 4 and 5 by slice 4
+(V-12's check 6, with base58, and VT-13 and VT-14); they are normative there,
+and the specs, not this file, are canonical for them. The other sections stay
+here, decided, until their slices (section 9) write them into the specs. What is
+pending from the backend and the infrastructure owner is in
+[Unresolved questions](#unresolved-questions).
 
 ## Problem
 
@@ -432,8 +435,9 @@ For a Solana source:
      unreachable; the kit's own addition to the backend's not-found codes), on
      `getBlock` at `N` or at `M`, a `null` result, any other error, a timeout,
      or a result the readers refuse: the endpoint gives no value. The record
-     keeps why (`not-available` for the four codes, `no-answer` otherwise),
-     never the error's message.
+     keeps why (`not-available` for the four codes, `no-answer` otherwise, an
+     empty `getBlocksWithLimit` included, as approved by the human on
+     2026-11-20), never the error's message.
 - **The quorum**, in this order, the first failure shown (W-26b's identity
   before completeness before content; a ledger gap is a fault of the provider's
   data, so it comes before completeness):
@@ -468,17 +472,19 @@ For a Solana source:
   surfaces.
 - **Old rounds and pruned history**: a provider that no longer holds slot `N`
   answers -32001 (cleaned up) or -32004. That endpoint gives no value, with the
-  detail "this provider no longer serves slot N". With `minRpcQuorum` 2 and two
-  endpoints, a round older than the shallower provider's history cannot reach
-  the quorum, and the read fails as `too-few` (as `no-block` when enough other
-  endpoints still give a value). On an ended round, today's rule holds (decided,
-  Q14): check 6 is "could not be verified", with V-7's chain wording, "this
-  round could not be verified against the chain", and "check again". It fails
-  closed: never a pass, check 7 is not run (it has no agreed value), and the
-  round never reaches V-6 on it. The remedy is the providers' history (section
-  6, P-5), on the backend's side: another provider the engine does not use with
-  a full archive, or a paid archive plan; the kit's behavior does not change
-  with it.
+  detail "this provider does not serve slot N" (neutral, as -32014 and -32004
+  may also mean "not yet"; decided by the human on 2026-11-20, for all four
+  not-found codes). With `minRpcQuorum` 2 and two endpoints, a round older than
+  the shallower provider's history cannot reach the quorum, and the read fails
+  as `too-few` (as `no-block` when enough other endpoints still give a value).
+  On an ended round, today's rule holds (decided, Q14): check 6 is "could not be
+  verified", with V-7's chain wording, "this round could not be verified against
+  the chain", and "check again". It fails closed: never a pass, check 7 is not
+  checked (it has no agreed value), except that an ended round missing a
+  required reveal is a mismatch first, and the round never reaches V-6 on it.
+  The remedy is the providers' history (section 6, P-5), on the backend's side:
+  another provider the engine does not use with a full archive, or a paid
+  archive plan; the kit's behavior does not change with it.
 - **Check 7 needs no change**: the backend confirmed on 2026-11-18 that the
   kernel's seed is `SHA-256(value ‖ roundSecret)` over the 32 bytes of the value
   and the 32 bytes of the round secret, and `seedHash = SHA-256(seed)`, as for
@@ -491,11 +497,16 @@ For a Solana source:
   caller's abort signal ends every request of the read, the skip path's too, and
   rejects with an `AbortError`, as today. The EVM read is left exactly as it is
   (Q13: aligning it is a follow-up issue).
-- **The code**: `ChainReadConfig` gains the kind and, for Solana, the genesis
-  hash; `readBlockHashByQuorum` picks the reader by kind; new modules
-  `chain-read-solana.ts`, `solana-answers.ts`, `base58.ts`, and
-  `solana-clusters.ts` in `apps/verify`; `block-check.ts` passes the kind and
-  shows the new details. `ChainReadFailure` gains `ledger-gap`.
+- **The code** (as built in slice 4; approved by the human on 2026-11-20):
+  `block-check.ts` picks the reader by the source's kind, `chain-read.ts`'s
+  unchanged `readBlockHashByQuorum` for `evm` and `chain-read-solana.ts`'s
+  `readSolanaValueByQuorum` for `solana` (dispatching from `chain-read.ts` would
+  make an import cycle, which lint refuses); `ChainReadConfig` is unchanged and
+  the Solana read's `SolanaReadConfig` extends it with the genesis hash; new
+  modules `chain-read-solana.ts`, `solana-call.ts` (the call that keeps the
+  error's `code`), `solana-answers.ts`, and `base58.ts` in `apps/verify`, beside
+  slice 1's `solana-clusters.ts`; `block-check.ts` shows the new details.
+  `ChainReadFailure` gains `ledger-gap`.
 
 ### 5. base58
 
@@ -1082,8 +1093,9 @@ comes back as a pull request through the same workflow):
   W-26b's Solana sources in
   [signing](../../specs/wrapper/signing-start-move-cash-out-and-cancel.md),
   [the `shell` package](../../specs/client-kit/the-shell-package.md), and V-3 of
-  [the verify page](../../specs/verify-page.md). Sections 3 to 8 are decided and
-  stay here, proposed in the specs, until slices 2 to 7 write them in.
+  [the verify page](../../specs/verify-page.md). Sections 3 to 8 are decided;
+  slices 2 to 4 wrote sections 3 to 5 into the specs, and the rest stay here
+  until their slices write them in.
 
 ## Unresolved questions
 

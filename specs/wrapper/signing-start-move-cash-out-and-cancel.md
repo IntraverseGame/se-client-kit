@@ -453,8 +453,8 @@ Part of the [Wrapper spec](../wrapper.md), section
     identity comes before content. The shell does not drop an outlier and does
     not pick a side: the round fails per W-26, which signs `PlayerCancel` only
     if `T_0` is settled and otherwise signs nothing (W-25). The round's evidence
-    (W-27) records every endpoint's answer (its provider, chain id, final block,
-    and the hash at `h_low`).
+    (W-27) records the source's kind (`evm`) and every endpoint's answer (its
+    provider, chain id, final block, and the hash at `h_low`).
   - **The bind.** The shell records the observed tip with the round's evidence
     and checks `N` against it: for a `future` bind `N` MUST be above that tip;
     for a `tip` bind `N` MUST NOT be older than it, within the source's lag
@@ -493,26 +493,50 @@ Part of the [Wrapper spec](../wrapper.md), section
     configuration ([the `shell` package](../client-kit/the-shell-package.md)). A
     configuration may list sources of both kinds at once, each held to these
     rules on its own, and at most one `solana` source. `tipLagMargin` is in the
-    source's unit: slots for a `solana` source. **Until RFC-007's slice 2, a
-    Solana source fails closed without calling** (interim; slice 2 replaces it):
-    the shell asks no endpoint of a `solana` source, and its tip check fails
-    (`unsupported-chain-kind`, shown as "could not verify the chain"), so W-26's
-    required `PlayerCancel` follows once `T_0` is settled; the evidence (W-27)
-    records the source, the failure, and no answer. **Proposed (RFC-007, section
-    3):** a source of kind `solana` is checked with `getGenesisHash`, compared
-    with the genesis hash the kit pins for the source's cluster, and `getSlot`
-    at `finalized`, both at once; heights are slots, and there is no second pass
-    at `h_low`. The order of the failures and their codes, the quorum, and the
-    bind stay as above. The evidence (W-27) of a Solana source differs: each
-    endpoint's answer has the genesis hash it reported in place of the chain id
-    and no hash at `h_low`, and the record adds the source's kind and the pinned
-    genesis hash. Each round is checked by its own source's kind. The full rules
-    are in
-    [RFC-007](../../rfcs/active/RFC-007-solana-entropy-in-the-browser.md),
-    section 3, until the implementing slice writes them here. Production's
-    Solana `tipLagMargin` is 64 slots, provisional, until the backend's
-    measurement on the contracted providers (se-backend#471) replaces it
-    (RFC-007, Q1).
+    source's unit: slots for a `solana` source. Production's Solana
+    `tipLagMargin` is 64 slots, provisional, until the backend's measurement on
+    the contracted providers (se-backend#471) replaces it (RFC-007, Q1).
+  - **The Solana tip check** (RFC-007, section 3). Each round is checked by its
+    own source's kind: the shell looks up the round's `source` in the
+    configuration and reads a `solana` source as follows, and an `evm` source as
+    above. The endpoints, the quorum and the degraded mode (W-26a), the timeouts
+    (W-43), "never drop an outlier, never pick a side", the decision, and the
+    bind are the same as for an `evm` source; only the calls, the readers, and
+    the second pass differ.
+    - **The calls.** To every configured endpoint of the source, both at once,
+      each a JSON-RPC 2.0 POST of one call (never a batch): `getGenesisHash`
+      with `[]`, and `getSlot` with `[{ "commitment": "finalized" }]` (never
+      `processed` or `confirmed`: the check compares with the final tip only).
+      There is **no second pass** at `h_low` (RFC-007, Q6): a finalized slot is
+      rooted by a supermajority of the cluster and does not fork, and a lying
+      endpoint can only fail the round (a report above the honest tip makes the
+      others lag), never pass it. So the check makes one round of calls and
+      takes at most one timeout.
+    - **The readers** (untrusted results; anything else is no answer). A genesis
+      hash is a string of 32 to 44 characters from the base58 alphabet, compared
+      exactly, as a string, with the genesis hash the kit pins for the source's
+      cluster ([the `shell` package](../client-kit/the-shell-package.md)); a
+      well-formed one that differs is **another cluster**. A final slot is a
+      JSON number that is a non-negative safe integer (at most 2^53 - 1). The
+      shell decodes no base58 and reads no block.
+    - **Definitions and rule.** `h_top` and `h_low` are the maximum and minimum
+      final slots of the endpoints that gave one within the timeout. The
+      failures, in this order, are W-26b's codes, so the player's labels (W-48)
+      and the decision's reasons do not change: `chain-id-mismatch` (an
+      endpoint, answering or not, reported another cluster's genesis hash),
+      `too-few-answered` (fewer than `minRpcQuorum` gave a final slot),
+      `chain-id-unavailable` (an endpoint that gave a final slot gave no genesis
+      hash), and `lagging` (an answering endpoint's final slot more than
+      `tipLagMargin` slots below `h_top`). `hash-unavailable` and
+      `hash-mismatch` never occur for a Solana source.
+    - **The bind**, in slots, against `h_top`: for a `future` bind `N` MUST be
+      above it; for a `tip` bind `N` MUST be at least `h_top` minus
+      `tipLagMargin`.
+    - **The evidence** (W-27): per endpoint, in configuration order, its
+      provider, the genesis hash it reported, and its final slot (`null` for no
+      answer); for the check, the source, its kind, its cluster number, the
+      pinned genesis hash, `h_top`, `h_low`, `tipLagMargin`, `tipCheck`, whether
+      it passed, and the failure. No URL, so no provider key, is ever recorded.
 - **W-27.** The shell SHOULD keep each round's evidence (its `CreateRoundAuth`,
   the tip-check answers, and every signed action) in memory for the page's life
   and SHOULD offer it as a JSON download after the round ends, started by the
