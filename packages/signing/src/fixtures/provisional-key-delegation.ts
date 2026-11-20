@@ -1,5 +1,5 @@
-// Test-only and provisional: only `*.test.ts` imports it. Copied from se-backend
-// 486969a8 (the backend's key-delegation contract), its published
+// Test-only and provisional: only `*.test.ts` imports it. Copied from the
+// backend's key-delegation contract vectors, its published
 // `key-delegation/v1 vectors` (the accepted case); independently re-derived
 // here. S2, #220's vendoring task (RFC-006), deletes this file and moves its
 // tests to the lock-pinned vectors on `contracts`' test-only entry. The notice

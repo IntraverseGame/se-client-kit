@@ -145,8 +145,8 @@ Part of the [Client kit spec](../client-kit.md), section
     struct hash, the domain separator, and the digest are internal and tested.
   - **Vectors.** Until the backend's `key-delegation/v1 vectors` are vendored
     (S2), the tests pin its published values, held as provisional test constants
-    (`src/fixtures/provisional-key-delegation.ts`). They are copied from
-    se-backend `486969a8` (the backend's key-delegation contract), its published
+    (`src/fixtures/provisional-key-delegation.ts`). They are copied from the
+    backend's key-delegation contract vectors, its published
     `key-delegation/v1 vectors` (the accepted case), and independently
     re-derived here. Only tests import that file. S2 (#220's vendoring task)
     deletes it and moves these tests to the lock-pinned vendored vectors on
