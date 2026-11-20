@@ -173,8 +173,8 @@ Out of scope:
   check 6); `entropyChainKind` by the Wrapper's rule, its cross-check with each
   source's key and `entropyChainId` and the production cluster rule
   (`production-cluster`) included ([wrapper.md](./wrapper.md#configuration);
-  RFC-007, section 1), keeping each source's kind and, for a `solana` source,
-  its cluster's genesis hash, which the page pins in code as the shell does
+  ADR-013), keeping each source's kind and, for a `solana` source, its cluster's
+  genesis hash, which the page pins in code as the shell does
   (`apps/verify/src/solana-clusters.ts`; check 6 does not read them yet, below);
   and the verify API's base from a field of its own, **`verifyApiBaseUrl`**
   (D-4): an absolute URL under `playApiBaseUrl`'s rule (`https:`, or `http:` on
@@ -494,8 +494,8 @@ payout is recomputed by check 7 (OQ-B9).
      document may list sources of both kinds at once (staging lists its Somnia
      source beside a mainnet-beta one during its switch); each round is read by
      its own `entropy.source`'s kind and endpoints. The full rules are in
-     [RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md),
-     sections 1 and 4, until the implementing slice writes them here.
+     [RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md), section
+     4, until the implementing slice writes them here.
   7. **Seed and outcome.** Under kernel version 1:
      - **The seed** is `SHA-256(blockValue || roundSecret)`: a 64-byte preimage,
        block N's 32-byte hash first, then the round secret's 32 bytes.

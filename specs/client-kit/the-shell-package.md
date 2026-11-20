@@ -297,32 +297,32 @@ are in brackets.
   `https:`, or `http:` on a loopback host only, with no credentials, query
   string, or fragment), `entropyChainKind` (per source, the protocol its
   endpoints speak, `"evm"` or `"solana"`, required for each source and only for
-  those, with no default; RFC-007 section 1, ADR-013 proposed), `entropyChainId`
-  (per source, the chain id the source's blocks are on, or the cluster number of
-  a `solana` source, an integer of at least 1 and at most 2^53 - 1, required for
-  each source and only for those), `minRpcQuorum` (an integer of at least 1,
-  default 2), and `tipLagMargin` (per source, a non-negative integer in the
-  source's unit, blocks for `evm` and slots for `solana`, required for each
-  source and only for those). Other fields are the Wrapper's and are ignored.
-  Addresses are kept lowercase (their case is not checked against EIP-55); block
-  counts and chain ids become `bigint`. It refuses (`code`):
-  `production-quorum`, the boot rule, `production` with `minRpcQuorum` below 2;
-  `shared-provider`, two endpoints of one source with one provider (names
-  compared without case) or one URL (one provider may serve two sources);
-  `quorum-unreachable`, a source with fewer endpoints than `minRpcQuorum`;
-  `entropy-chain-kind-mismatch` (at `entropyChainKind.<source>`), a source whose
-  kind disagrees with its key or its chain: a `solana` source MUST be keyed
-  `solana` and its `entropyChainId` MUST be 101, 102, or 103, and an `evm`
-  source MUST NOT be keyed `solana` and its `entropyChainId` MUST NOT be one of
-  those numbers (the backend reserves them for Solana; the key is the source
-  name the engine uses and `randomnessTarget` encodes); the key is checked even
-  when `entropyChainId` is refused, the number only when it is valid;
-  `production-cluster` (at `entropyChainId.<source>`; RFC-007, Q10), a
-  `production` document whose `solana` source is on a test cluster, 102 or 103,
-  since production's entropy is mainnet-beta, 101 (`local` and `preview` may use
-  any of the three; a number the cross-check refuses is left to it); and
-  `invalid-environment`, `invalid-signer`, `invalid-domain`, `invalid-quorum`,
-  `invalid-endpoints`, `invalid-entropy-chain-id`, `invalid-lag-margin`, and
+  those, with no default; ADR-013), `entropyChainId` (per source, the chain id
+  the source's blocks are on, or the cluster number of a `solana` source, an
+  integer of at least 1 and at most 2^53 - 1, required for each source and only
+  for those), `minRpcQuorum` (an integer of at least 1, default 2), and
+  `tipLagMargin` (per source, a non-negative integer in the source's unit,
+  blocks for `evm` and slots for `solana`, required for each source and only for
+  those). Other fields are the Wrapper's and are ignored. Addresses are kept
+  lowercase (their case is not checked against EIP-55); block counts and chain
+  ids become `bigint`. It refuses (`code`): `production-quorum`, the boot rule,
+  `production` with `minRpcQuorum` below 2; `shared-provider`, two endpoints of
+  one source with one provider (names compared without case) or one URL (one
+  provider may serve two sources); `quorum-unreachable`, a source with fewer
+  endpoints than `minRpcQuorum`; `entropy-chain-kind-mismatch` (at
+  `entropyChainKind.<source>`), a source whose kind disagrees with its key or
+  its chain: a `solana` source MUST be keyed `solana` and its `entropyChainId`
+  MUST be 101, 102, or 103, and an `evm` source MUST NOT be keyed `solana` and
+  its `entropyChainId` MUST NOT be one of those numbers (the backend reserves
+  them for Solana; the key is the source name the engine uses and
+  `randomnessTarget` encodes); the key is checked even when `entropyChainId` is
+  refused, the number only when it is valid; `production-cluster` (at
+  `entropyChainId.<source>`; RFC-007, Q10), a `production` document whose
+  `solana` source is on a test cluster, 102 or 103, since production's entropy
+  is mainnet-beta, 101 (`local` and `preview` may use any of the three; a number
+  the cross-check refuses is left to it); and `invalid-environment`,
+  `invalid-signer`, `invalid-domain`, `invalid-quorum`, `invalid-endpoints`,
+  `invalid-entropy-chain-id`, `invalid-lag-margin`, and
   `invalid-entropy-chain-kind` for a missing or malformed field
   (`invalid-entropy-chain-kind` at `entropyChainKind` when it is not an object,
   else at `entropyChainKind.<source>`). A document may list any number of

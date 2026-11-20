@@ -1,8 +1,9 @@
 # ADR-013 — Solana entropy sources: an explicit chain kind, genesis hashes in code, no Solana library
 
-- Status: proposed (recommended by RFC-007, for the human's decision; the specs
-  cite it as "proposed, ADR-013" until it is accepted)
-- Date: 2026-11-18
+- Status: accepted (option (a): an explicit `entropyChainKind`, cross-checked,
+  and the genesis hashes in code; accepted by the human, the code owner, on
+  2026-11-20)
+- Date: 2026-11-20 (proposed 2026-11-18, recommended by RFC-007)
 - Relates to: [RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md)
   (Solana entropy in the browser), se-client-kit#235,
   [ADR-001](./ADR-001-toolchain-and-signing.md) (no new runtime dependency;

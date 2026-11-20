@@ -135,8 +135,8 @@ structure below.
   cross-checked with its key and chain id; the shell's `SourceConfig` is a
   union on `kind`, and a `solana` source carries its cluster's genesis hash,
   pinned in code (`solana-clusters.ts`; the verify page holds a copy, held to
-  the shell spec's table by `tools/solana-clusters.test.ts`). Both chain reads (this tip check and the verify page's check 6) speak EVM JSON-RPC only; until RFC-007's slices 2 and 4 a `solana` source fails closed without calling (the tip check as `unsupported-chain-kind`, decided `chain-unverified`; check 6 as could not be verified). The Solana reads are RFC-007's slices 2 to 4 (draft;
-  ADR-013 proposed): build them by that RFC's slice plan, not ad hoc. The
+  the shell spec's table by `tools/solana-clusters.test.ts`). Both chain reads (this tip check and the verify page's check 6) speak EVM JSON-RPC only; until RFC-007's slices 2 and 4 a `solana` source fails closed without calling (the tip check as `unsupported-chain-kind`, decided `chain-unverified`; check 6 as could not be verified). The Solana reads are RFC-007's slices 2 to 4 (RFC-007
+  active; ADR-013 accepted 2026-11-20): build them by that RFC's slice plan, not ad hoc. The
   signing session (lock + key) and the per-round transcript state are not
   exported, so the UI cannot sign an arbitrary action text; they are reached
   through the round flows. Every use of the key checks the signer

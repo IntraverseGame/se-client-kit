@@ -60,7 +60,9 @@ export type Pinned = {
 
 /**
  * A production configuration pinning `pinned`, with two endpoints for each
- * source in `chains` (source to its pinned entropy chain id).
+ * source in `chains` (source to its pinned entropy chain id). A source keyed
+ * `solana` is of kind `solana` (its chain id a cluster number), every other one
+ * of kind `evm`.
  */
 export const configFor = (
   pinned: Pinned,
@@ -78,7 +80,10 @@ export const configFor = (
       Object.keys(chains).map(source => [source, endpoints(2)]),
     ),
     entropyChainKind: Object.fromEntries(
-      Object.keys(chains).map(source => [source, "evm"]),
+      Object.keys(chains).map(source => [
+        source,
+        source === "solana" ? "solana" : "evm",
+      ]),
     ),
     entropyChainId: chains,
     minRpcQuorum: 2,

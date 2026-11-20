@@ -283,7 +283,7 @@ which the tool writes to the verifier's document only
 differ by that field, and the Wrapper's validator refuses it. The rest of this
 decision stands.
 
-Amendment note (2026-11-18, RFC-007, slice 1; ADR-013, proposed):
+Amendment note (2026-11-18, RFC-007, slice 1; ADR-013, accepted 2026-11-20):
 `PAGES_CHAIN_PINS` also holds `entropyChainKind`, each entropy source's kind
 (`evm` or `solana`), a chain pin like `entropyChainId`; staging's value is
 `{ "anvil": "evm" }`, added in one step with the kit change that requires it

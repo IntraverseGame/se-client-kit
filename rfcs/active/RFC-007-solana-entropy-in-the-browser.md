@@ -1,6 +1,7 @@
 # RFC-007 — Solana entropy in the browser
 
-- Status: draft
+- Status: active (partly accepted 2026-11-20: ADR-013 accepted by the human, the
+  code owner; see [Decisions](#decisions))
 - Author: the documenter agent, for human review
 - Created: 2026-11-18
 - Relates to: se-client-kit#235; se-backend#375 (the production RPC providers);
@@ -20,8 +21,8 @@
   and
   [ADR-009](../../decisions/ADR-009-production-pages-deploy-trigger-and-source.md)
   (the Pages deploys and the release's configuration check);
-  [ADR-013](../../decisions/ADR-013-solana-entropy-sources.md) (proposed: the
-  chain kind, the pinned genesis hashes, no Solana library)
+  [ADR-013](../../decisions/ADR-013-solana-entropy-sources.md) (accepted
+  2026-11-20: the chain kind, the pinned genesis hashes, no Solana library)
 
 This RFC adds Solana as a second kind of entropy chain to the two places the kit
 reads one: the shell's tip check (W-26b), which the Wrapper runs before a config
@@ -34,9 +35,12 @@ block selection and reorg policy, Solana section), **its Shell bind check**, and
 **its verify API document**, as confirmed by the backend's TPO on 2026-11-10 and
 answered again from se-backend `4a49ab9d` on 2026-11-18. The code owner decided
 every question this draft asked on 2026-11-18, and two more on the review of
-2026-11-19 ([Decisions](#decisions)); the one item still open (ADR-013's
-acceptance) and what is pending from the backend and the infrastructure owner
-are in [Unresolved questions](#unresolved-questions).
+2026-11-19, and the human accepted ADR-013 on 2026-11-20
+([Decisions](#decisions)). Section 1 and section 2's genesis table are written
+into the specs by slice 1 and are normative there; the specs, not this file, are
+canonical for them. The other sections stay here, decided, until their slices
+(section 9) write them into the specs. What is pending from the backend and the
+infrastructure owner is in [Unresolved questions](#unresolved-questions).
 
 ## Problem
 
@@ -102,9 +106,11 @@ read.
 
 ### 1. The chain kind per entropy source (configuration)
 
-**Proposed: an explicit kind, cross-checked** (option a; #235 asks for it;
-ADR-013, proposed). The environment configuration gains one per-source map
-beside `entropyChainId` and `tipLagMargin`:
+**An explicit kind, cross-checked** (option a; #235 asks for it; ADR-013,
+accepted 2026-11-20; now in the
+[configuration](../../specs/wrapper.md#configuration) of the Wrapper spec). The
+environment configuration gains one per-source map beside `entropyChainId` and
+`tipLagMargin`:
 
 ```text
 "rpcEndpoints":     { "solana": [ { "provider": <name>, "url": <https URL> }, … ] }
@@ -243,9 +249,11 @@ The EVM path proves an endpoint's chain with `eth_chainId`. Solana has no chain
 id; a cluster is identified by its **genesis hash**, which `getGenesisHash`
 returns as a base58 string.
 
-- **Proposed**: the kit pins the three clusters' genesis hashes **in code**, as
-  a protocol constant keyed by the cluster number, and compares each endpoint's
-  `getGenesisHash` with the pinned value, as a string, exactly:
+- **Decided** (ADR-013, accepted 2026-11-20; the table is now in
+  [the `shell` package](../../specs/client-kit/the-shell-package.md)): the kit
+  pins the three clusters' genesis hashes **in code**, as a protocol constant
+  keyed by the cluster number, and compares each endpoint's `getGenesisHash`
+  with the pinned value, as a string, exactly:
 
   | Cluster number | Cluster      | Genesis hash                                   |
   | -------------- | ------------ | ---------------------------------------------- |
@@ -1064,15 +1072,23 @@ comes back as a pull request through the same workflow):
   - **The canary's pass** (Q11; section 9, step 8): a round counts only when its
     tip check passed and the verify page shows it as matching; any other outcome
     restarts the count once its cause is found and recorded.
+- **2026-11-20, the human, the code owner**: **ADR-013 accepted**, option (a):
+  the explicit `entropyChainKind`, cross-checked with the source's key and the
+  cluster numbers (section 1); the genesis hashes pinned in code (section 2);
+  and no Solana library or base58 dependency (section 5). Now in:
+  [ADR-013](../../decisions/ADR-013-solana-entropy-sources.md) (accepted);
+  section 1 and section 2's genesis table in the specs, written by slice 1: the
+  [configuration](../../specs/wrapper.md#configuration) of the Wrapper spec,
+  W-26b's Solana sources in
+  [signing](../../specs/wrapper/signing-start-move-cash-out-and-cancel.md),
+  [the `shell` package](../../specs/client-kit/the-shell-package.md), and V-3 of
+  [the verify page](../../specs/verify-page.md). Sections 3 to 8 are decided and
+  stay here, proposed in the specs, until slices 2 to 7 write them in.
 
 ## Unresolved questions
 
-One open, for the human:
-
-- **ADR-013's acceptance**: option (a), the explicit `entropyChainKind`
-  cross-checked with the cluster numbers (section 1); the genesis hashes pinned
-  in code (section 2); and no Solana library or base58 dependency (section 5).
-  The human decides them by accepting the ADR, or not.
+None open for the human: ADR-013 was accepted on 2026-11-20
+([Decisions](#decisions)).
 
 Pending from the backend and the infrastructure owner (values and checks this
 RFC waits on, not questions):
