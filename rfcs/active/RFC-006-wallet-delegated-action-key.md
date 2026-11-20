@@ -735,10 +735,12 @@ check list, and `RoundVerification.keyDelegation`.
   additions, `RoundVerification.keyDelegation` and the `key_delegation` check
   name, pinned by tests in S7 (or S2). It refuses any other unknown field or
   check name, so V-10's closed schema keeps its meaning.
-- **Today's reader is broader than V-10.** It ignores every unknown top-level
-  field and accepts any check name (checked on 2026-11-17 against
-  `parseEvidence` with the test fixture), and no test pins either. S7 narrows it
-  to the two additions, so it then matches V-10 for everything else.
+- **Today's reader is broader than V-10.** It ignores every unknown field, at
+  any level, and accepts any check name (checked on 2026-11-17 against
+  `parseEvidence` with the test fixture); tests pin it for the `key_delegation`
+  check name and a top-level `keyDelegation` (`verify-body.test.ts`). S7 narrows
+  it to the two additions, so it then matches V-10 for everything else, and
+  changes those tests and the one that ignores an unknown top-level `verified`.
 
 ## Migration considerations
 

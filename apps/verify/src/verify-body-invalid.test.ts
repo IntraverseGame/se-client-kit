@@ -166,6 +166,14 @@ describe("a body that does not validate is an API error, never partly used", () 
       "a check with an unknown result",
       withField("checks", [{ name: "seed", result: "ok" }]),
     ],
+    [
+      "a `key_delegation` check with an unknown result",
+      withField("checks", [{ name: "key_delegation", result: "skipped" }]),
+    ],
+    [
+      "a `key_delegation` check without a result",
+      withField("checks", [{ name: "key_delegation" }]),
+    ],
     ["a shape entry of 26", withField("shape", [26])],
   ])("%s", (_, json) => {
     expect(parseEvidence(json)).toBeUndefined();
