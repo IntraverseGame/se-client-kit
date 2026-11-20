@@ -17,6 +17,7 @@ const PINS = {
     chainId: 31337,
     verifyingContract: "0xd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5",
   },
+  entropyChainKind: { base: "evm" },
   entropyChainId: { base: 8453 },
   minRpcQuorum: 2,
   tipLagMargin: { base: 2 },
@@ -107,6 +108,7 @@ describe("the Pages sites' configuration documents", () => {
       "runtimeSigner",
       "registryDomain",
       "rpcEndpoints",
+      "entropyChainKind",
       "entropyChainId",
       "minRpcQuorum",
       "tipLagMargin",
@@ -149,6 +151,16 @@ describe("the Pages sites' configuration documents", () => {
       "chain pins that carry another field",
       { PAGES_CHAIN_PINS: JSON.stringify({ ...PINS, gameOrigins: [] }) },
       "PAGES_CHAIN_PINS: field gameOrigins",
+    ],
+    [
+      "chain pins without the chain kind",
+      {
+        PAGES_CHAIN_PINS: JSON.stringify({
+          ...PINS,
+          entropyChainKind: undefined,
+        }),
+      },
+      "wrapper document: invalid-entropy-chain-kind at entropyChainKind",
     ],
     [
       "missing RPC endpoints",

@@ -170,10 +170,16 @@ Out of scope:
   makes no request. It uses `runtimeSigner`, `registryDomain`, `earlierPins`,
   and `entropyChainId` as the trust anchor (as W-26 does, `earlierPins` apart);
   `rpcEndpoints`, `minRpcQuorum`, and `environment` for the chain read (V-12,
-  check 6); and the verify API's base from a field of its own,
-  **`verifyApiBaseUrl`** (D-4): an absolute URL under `playApiBaseUrl`'s rule
-  (`https:`, or `http:` on a loopback host, no credentials, query, or fragment)
-  whose path ends with `/verify/v1`, with no trailing slash. The page will read
+  check 6); `entropyChainKind` by the Wrapper's rule, its cross-check with each
+  source's key and `entropyChainId` and the production cluster rule
+  (`production-cluster`) included ([wrapper.md](./wrapper.md#configuration);
+  RFC-007, section 1), keeping each source's kind and, for a `solana` source,
+  its cluster's genesis hash, which the page pins in code as the shell does
+  (`apps/verify/src/solana-clusters.ts`; check 6 does not read them yet, below);
+  and the verify API's base from a field of its own, **`verifyApiBaseUrl`**
+  (D-4): an absolute URL under `playApiBaseUrl`'s rule (`https:`, or `http:` on
+  a loopback host, no credentials, query, or fragment) whose path ends with
+  `/verify/v1`, with no trailing slash. The page will read
   `<verifyApiBaseUrl>/rounds/{roundId}`. The field is required (D-4), never
   derived or defaulted, and its origin is the page's own (V-3a). The field is
   part of the one configuration schema: the Wrapper's validator accepts it and
@@ -466,21 +472,24 @@ payout is recomputed by check 7 (OQ-B9).
      `entropy.block`, an `int64` in the document: the page reads a JSON integer
      as `bigint`, and a value that is not a safe integer (above 2^53 − 1, which
      `JSON.parse` would already have rounded) fails the body's validation.
-     **Solana sources (proposed, RFC-007).** Today the read makes the EVM calls
-     above for every source; a Solana RPC answers neither, so a Solana round's
-     check 6 fails as `too-few` and check 7 is not run. Proposed: for a source
-     of kind `solana`, each endpoint is asked `getGenesisHash` (compared with
-     the cluster's pinned genesis hash, in place of the chain id) and `getBlock`
-     at slot `N` and `finalized`, with no transactions and no rewards; the value
-     is the block's `blockhash` decoded from base58 to exactly 32 bytes (the
-     page's own decoder), and a skipped slot `N` takes the value of the first
-     finalized block after it, with the backend's ledger-gap check; the quorum
-     and the comparison with `entropy.value` are as above, with one more
-     failure, `ledger-gap`, and check 7 uses the 32 bytes as it uses an EVM
-     block hash. A document may list sources of both kinds at once (staging
-     lists its Somnia source beside a mainnet-beta one during its switch); each
-     round is read by its own `entropy.source`'s kind and endpoints. The full
-     rules are in
+     **Until RFC-007's slice 4, a Solana source fails closed without calling**
+     (interim; slice 4 replaces it): for a round whose source is of kind
+     `solana`, check 6 asks no endpoint and is "could not be verified", with the
+     note that the page cannot read a Solana entropy chain yet
+     (`unsupported-chain-kind`), whether or not the round has ended, so it never
+     passes and check 7 is not run (`block-check.ts`). **Solana sources
+     (proposed, RFC-007).** Proposed: for a source of kind `solana`, each
+     endpoint is asked `getGenesisHash` (compared with the cluster's pinned
+     genesis hash, in place of the chain id) and `getBlock` at slot `N` and
+     `finalized`, with no transactions and no rewards; the value is the block's
+     `blockhash` decoded from base58 to exactly 32 bytes (the page's own
+     decoder), and a skipped slot `N` takes the value of the first finalized
+     block after it, with the backend's ledger-gap check; the quorum and the
+     comparison with `entropy.value` are as above, with one more failure,
+     `ledger-gap`, and check 7 uses the 32 bytes as it uses an EVM block hash. A
+     document may list sources of both kinds at once (staging lists its Somnia
+     source beside a mainnet-beta one during its switch); each round is read by
+     its own `entropy.source`'s kind and endpoints. The full rules are in
      [RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md),
      sections 1 and 4, until the implementing slice writes them here.
   7. **Seed and outcome.** Under kernel version 1:
@@ -940,13 +949,13 @@ The page around them is built too:
   shows a pin nowhere else. **Check 6** (`block-check.ts`) calls the quorum read
   for every round.
 - **The configuration** (`environment-config.ts`, `config-fields.ts`,
-  `pin-pairs.ts`, `load-config.ts`) is validated by the Wrapper's rules, spelled
-  again here since the page cannot import the Wrapper;
-  `tools/config-parity.test.ts` runs one shared set of documents through both
-  validators and requires the same verdict (V-3, one schema), and holds the page
-  and the Pages configuration tool to one rule for `earlierPins`, the field the
-  Wrapper refuses (V-3b); the document's path is the Wrapper's, provisional like
-  it.
+  `source-config.ts`, `solana-clusters.ts`, `pin-pairs.ts`, `load-config.ts`) is
+  validated by the Wrapper's rules, spelled again here since the page cannot
+  import the Wrapper; `tools/config-parity.test.ts` runs one shared set of
+  documents through both validators and requires the same verdict (V-3, one
+  schema), and holds the page and the Pages configuration tool to one rule for
+  `earlierPins`, the field the Wrapper refuses (V-3b); the document's path is
+  the Wrapper's, provisional like it.
 - **The states** (`page-state.ts`): a controller with `fetch`, the timers, the
   address bar, and the offline flag injected, which shows exactly one state; a
   submit or a retry is followed by focus on the new heading, a direct load or

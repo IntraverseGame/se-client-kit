@@ -686,19 +686,33 @@ enter this repository, an issue, or a log):
    - **`PAGES_WRAPPER_ORIGIN`**, **`PAGES_VERIFIER_ORIGIN`**: the two sites'
      origins (`https://host`). Set.
    - **`PAGES_CHAIN_PINS`**: JSON with exactly `environment`, `runtimeSigner`,
-     `registryDomain`, `entropyChainId`, `minRpcQuorum`, and `tipLagMargin`
-     ([wrapper.md](../specs/wrapper.md#configuration)), and optionally
-     `earlierPins` (below). Set. Staging is `environment: "preview"` with
-     `minRpcQuorum` 1 while it reads one RPC provider (ADR-008, decision 8). Its
-     one entropy source keeps the key `anvil` with `entropyChainId` 50312,
-     Somnia's public testnet, and `tipLagMargin` 100 blocks (the backend's
-     value, 2026-10-28;
+     `registryDomain`, `entropyChainKind`, `entropyChainId`, `minRpcQuorum`, and
+     `tipLagMargin` ([wrapper.md](../specs/wrapper.md#configuration)), and
+     optionally `earlierPins` (below). Set. `entropyChainKind` (RFC-007) gives
+     each entropy source its kind, `"evm"` or `"solana"`, keyed like
+     `entropyChainId` and `tipLagMargin`, one entry for each source of
+     `PAGES_RPC_ENDPOINTS` and no other; it enters the secret only by the
+     one-step migration below (**Adding `entropyChainKind`**). Staging is
+     `environment: "preview"` with `minRpcQuorum` 1 while it reads one RPC
+     provider (ADR-008, decision 8). Its one entropy source keeps the key
+     `anvil`, of kind `evm` (`"entropyChainKind": { "anvil": "evm" }`), with
+     `entropyChainId` 50312, Somnia's public testnet, and `tipLagMargin` 100
+     blocks (the backend's value, 2026-10-28;
      [W-26b](../specs/wrapper/signing-start-move-cash-out-and-cancel.md));
      `registryDomain` is at chain id 127823, Etherlink Shadownet (the backend,
      2026-11-03): the registry is not on the entropy chain, so do not change it
-     to 50312. Production must be `"production"` with `minRpcQuorum` of at least
-     2; its `tipLagMargin` comes from the backend's measurement of the RPC lag
-     (#133).
+     to 50312. A `solana` source (kind `solana`, `entropyChainId` 101,
+     mainnet-beta, `tipLagMargin` 64 slots, provisional) joins `anvil` on
+     staging only later, by step 8 of RFC-007's section 9, with its own
+     procedure: added beside `anvil` at `minRpcQuorum` 1 (step 8.2), and `anvil`
+     kept until the backend's switch and drain (se-backend#548) are done, when
+     one configuration change drops it and raises `minRpcQuorum` to 2 (step
+     8.4). An environment's browser endpoints never include the provider its own
+     engine reads (the code owner, 2026-11-18), so staging's `solana` endpoints
+     may be a different provider pair from production's. Production must be
+     `"production"` with `minRpcQuorum` of at least 2, and every `solana` source
+     on cluster 101 (the validators' `production-cluster`); its `tipLagMargin`
+     comes from the backend's measurement of the RPC lag (#133).
 
      The verify page checks a round's signature under the configured
      `registryDomain` and `runtimeSigner`, or under a pair listed in
@@ -723,17 +737,17 @@ enter this repository, an issue, or a log):
        `environment-config.json`, the one document that holds the list (that of
        the deployment now live, which during a rollback is older than the last
        successful run). Take only the fields of `PAGES_CHAIN_PINS`
-       (`environment`, `runtimeSigner`, `registryDomain`, `entropyChainId`,
-       `minRpcQuorum`, `tipLagMargin`, `earlierPins`): the document's other
-       fields fail the config job. No `earlierPins` field means an empty list.
-       To see a rollback, open the verifier project's Deployments, or ask the
-       infrastructure owner: the live production deployment should be the newest
-       successful one. If the verifier is rolled back, do not build the value
-       from it: it can lack newer entries or hold a pair removed because its key
-       leaked or was revoked. Agree the value with whoever set the secret, and
-       redeploy `main` first only when it is safe to end the rollback. Until a
-       value is agreed, leave the secret as it is. If the verifier is not rolled
-       back, compare the secret's update time in
+       (`environment`, `runtimeSigner`, `registryDomain`, `entropyChainKind`,
+       `entropyChainId`, `minRpcQuorum`, `tipLagMargin`, `earlierPins`): the
+       document's other fields fail the config job. No `earlierPins` field means
+       an empty list. To see a rollback, open the verifier project's
+       Deployments, or ask the infrastructure owner: the live production
+       deployment should be the newest successful one. If the verifier is rolled
+       back, do not build the value from it: it can lack newer entries or hold a
+       pair removed because its key leaked or was revoked. Agree the value with
+       whoever set the secret, and redeploy `main` first only when it is safe to
+       end the rollback. Until a value is agreed, leave the secret as it is. If
+       the verifier is not rolled back, compare the secret's update time in
        `gh secret list --env pages-stage` with the start time of the
        `config-stage` job in the last successful Pages run. If the secret was
        updated at or after that time, or the timing is unclear, the two may
@@ -770,8 +784,9 @@ enter this repository, an issue, or a log):
 
    - **`PAGES_RPC_ENDPOINTS`**: JSON of `rpcEndpoints`,
      `{"<source>":[{"provider":"…","url":"…"}]}`, keyed by the same entropy
-     source as the pins' `entropyChainId` and `tipLagMargin`;
-     `PAGES_RPC_ORIGINS` must list exactly the origins of its URLs. Set.
+     sources as the pins' `entropyChainKind`, `entropyChainId`, and
+     `tipLagMargin`; `PAGES_RPC_ORIGINS` must list exactly the origins of its
+     URLs. Set.
 
 **The three Pages projects are managed as code by the infrastructure owner**
 (since 2026-10-28): their environment variables, bindings, and compatibility
@@ -808,9 +823,9 @@ public testnet, 2026-10-28). The engine and the Wrapper must pin the same chain,
 so the secrets change right after the backend's switch, not before:
 
 1. The infrastructure owner sends the values: the RPC endpoint and its origin,
-   and the chain pins (`entropyChainId` and `tipLagMargin` per source, with any
-   other pin that changes). They are shared out of band, never in an issue, a
-   pull request, or a log.
+   and the chain pins (`entropyChainKind`, `entropyChainId`, and `tipLagMargin`
+   per source, with any other pin that changes). They are shared out of band,
+   never in an issue, a pull request, or a log.
 2. Right after the backend's switch, a maintainer sets the three `pages-stage`
    secrets: `PAGES_RPC_ENDPOINTS`, `PAGES_RPC_ORIGINS`, and `PAGES_CHAIN_PINS`.
 3. Dispatch the Pages workflow on `main` (**Redeploy**, below). Until that
@@ -823,14 +838,14 @@ so the secrets change right after the backend's switch, not before:
    session opened before the redeploy keeps the old pins and keeps refusing
    until it is relaunched.
 4. Verify the deployed `<site>/environment-config.json` on the Wrapper's and the
-   verifier's sites: `entropyChainId`, `tipLagMargin`, `minRpcQuorum`,
-   `environment`, and `registryDomain` are the values sent, and `rpcEndpoints`
-   names the one endpoint under the expected source key; `earlierPins` is on the
-   verifier's alone, with the outgoing pair last, if the domain or the signer
-   changed. Then open a new Wrapper session from a fresh launch (a new launch
-   code: codes are single-use), never a tab opened before the redeploy, and
-   start a Coin Flip or Cash or Crash round: it passes the start, with the
-   degraded indicator shown.
+   verifier's sites: `entropyChainKind`, `entropyChainId`, `tipLagMargin`,
+   `minRpcQuorum`, `environment`, and `registryDomain` are the values sent, and
+   `rpcEndpoints` names the one endpoint under the expected source key;
+   `earlierPins` is on the verifier's alone, with the outgoing pair last, if the
+   domain or the signer changed. Then open a new Wrapper session from a fresh
+   launch (a new launch code: codes are single-use), never a tab opened before
+   the redeploy, and start a Coin Flip or Cash or Crash round: it passes the
+   start, with the degraded indicator shown.
 
 Expected after a switch, not an alarm: a staging round played on the old chain
 (anvil, before the switch) cannot be verified on staging's verify page
@@ -839,6 +854,47 @@ A change of `registryDomain` or `runtimeSigner` does the same through the verify
 page's check 3 only when the outgoing pair is not in `earlierPins`, which is on
 purpose for a leaked or revoked key's pair and a missed step otherwise
 (`PAGES_CHAIN_PINS`, above).
+
+**Adding `entropyChainKind`** (RFC-007, Q12; once, with the kit change that
+makes the field required, RFC-007's slice 1). For a human maintainer with the
+`pages-stage` environment's secrets, or the infrastructure owner. The kit with
+that change refuses a `PAGES_CHAIN_PINS` without the field
+(`invalid-entropy-chain-kind`), and every kit before it refuses one with the
+field (`field entropyChainKind is not a chain pin`: the field list is closed),
+so the secret and the code change in one step, with no other merge to `main`
+between them (every push to `main` deploys staging). Staging's document is the
+only one to migrate: `pages-prod-config` holds no document yet, and production's
+first document carries the field from the start (RFC-007, Migration).
+
+1. Wait until the pull request with the change is approved by every gate and
+   ready to merge. Agree who sets the secret and who merges, and hold every
+   other merge to `main` from step 2 until step 3 is done.
+2. Right before the merge, set `PAGES_CHAIN_PINS` in `pages-stage` to its
+   current value plus `"entropyChainKind": { "anvil": "evm" }`, and nothing else
+   changed (`gh secret set PAGES_CHAIN_PINS --env pages-stage`). Build the
+   current value as for `earlierPins` (above): from the verifier's served
+   `environment-config.json`, only the fields of `PAGES_CHAIN_PINS`, after
+   checking for a rollback and for a newer secret. Never paste the value into an
+   issue, a pull request, or a log.
+3. Merge the pull request at once. Its push to `main` runs the Pages workflow:
+   `config-stage` builds both documents with the new code and the new secret,
+   and `deploy-stage` deploys them.
+4. Verify both sites' `<site>/environment-config.json`: `entropyChainKind` is
+   `{ "anvil": "evm" }`, and every other value is what it was. Then open a new
+   Wrapper session from a fresh launch and start a Coin Flip or Cash or Crash
+   round: it passes the start, with the degraded indicator shown, as before.
+
+**A failed configuration job in that window** means the secret and the code
+disagree: one has landed without the other. A run of the old code with the new
+secret (a merge or a redeploy between steps 2 and 3) fails `config-stage` with
+`PAGES_CHAIN_PINS: field entropyChainKind is not a chain pin`; a run of the new
+code with the old secret (a merge before the secret was set) fails it with
+`invalid-entropy-chain-kind at entropyChainKind`. Either way the job stops the
+deploy before anything is uploaded: the deployed sites stay as they were, and
+sessions keep the configuration they booted with. Complete the step that is
+missing (set the secret, or merge the pull request), then redeploy `main`
+(**Redeploy**, below) once both have landed. If the change will not merge after
+all, set the secret back to its value without the field and redeploy `main`.
 
 **Production** (`.github/workflows/pages-prod.yml`;
 [ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
@@ -865,7 +921,9 @@ digits, `-`, and `.` and an optional port, exactly what that step accepts: no
 uppercase letter, no `_`, no IPv6 literal, no `http`. **Production mode**
 (`--production`) also requires `PAGES_CHAIN_PINS`' `environment` to be
 `production` (so `minRpcQuorum` is at least 2, and each RPC source has at least
-two endpoints); staging's `config-stage` runs as `preview`, without it.
+two endpoints, and every `solana` source is on cluster 101, mainnet-beta, the
+validators' `production-cluster`); staging's `config-stage` runs as `preview`,
+without it.
 
 **The same checks run before the release publishes**: the release workflow's
 `prod-check` job (`.github/workflows/pages-prod-check.yml`; Release, step 3)
@@ -1078,12 +1136,13 @@ token:
   approval. Which job failed says where:
   - `config-check`: a value in `pages-prod-config`. The errors name the input
     and the field with the validator's code or the tool's (`not-production` at
-    `environment`: the pins are not production's; `production-quorum` at
-    `minRpcQuorum`: a quorum below 2; `not-https-origin`: an origin the deploy's
-    headers step refuses, such as a host with an uppercase letter or an `_`), or
-    the headers step's error ("The wrapper site's _headers line for
-    Content-Security-Policy is over the Pages limit": too many or too long
-    origins for one policy; shorten the lists).
+    `environment`: the pins are not production's; `production-cluster` at
+    `entropyChainId.<source>`: a `solana` source not on cluster 101;
+    `production-quorum` at `minRpcQuorum`: a quorum below 2; `not-https-origin`:
+    an origin the deploy's headers step refuses, such as a host with an
+    uppercase letter or an `_`), or the headers step's error ("The wrapper
+    site's _headers line for Content-Security-Policy is over the Pages limit":
+    too many or too long origins for one policy; shorten the lists).
   - `deploy-check`: a setting of `pages-prod` is missing, a project name is not
     a Pages project name, or both name the same project; the error names the
     setting, never its value.

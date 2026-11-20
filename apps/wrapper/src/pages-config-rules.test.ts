@@ -6,7 +6,8 @@ import { buildPagesConfigs, type PagesConfigInputs } from "../pages-config.ts";
 // pages-config-rules.ts; ADR-009, amendment note of 2026-11-17): in both
 // modes, every origin the deploy's headers step reads must be one it accepts;
 // in production mode only, `environment` must be `production` (so W-26a's
-// quorum rule applies), which staging's mode does not require.
+// quorum rule and the validators' production cluster rule apply), which
+// staging's mode does not require.
 // tools/pages-config-origins.test.ts runs the deploy's own headers step against
 // the same kinds of values.
 // The hosts are reserved example names; the addresses are the signing
@@ -22,6 +23,7 @@ const PINS = {
     chainId: 31337,
     verifyingContract: "0xd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5",
   },
+  entropyChainKind: { base: "evm" },
   entropyChainId: { base: 8453 },
   minRpcQuorum: 2,
   tipLagMargin: { base: 2 },
@@ -199,5 +201,80 @@ describe("the Pages configuration's own rules", () => {
         inputs: { PAGES_GAME_ORIGINS: "https://game_1.example" },
       }),
     ).toEqual(issues.slice(1));
+  });
+});
+
+const SOLANA_RPC = ["https://sol1.example/browser-key", "https://sol2.example"];
+
+/** The tool's inputs with a `solana` source on `cluster` beside `base`. */
+const withSolana = (
+  cluster: number,
+  pins: Readonly<Record<string, unknown>> = {},
+): PagesConfigInputs => {
+  const urls = { base: RPC, solana: SOLANA_RPC };
+  return {
+    ...inputs({
+      pins: {
+        entropyChainKind: { base: "evm", solana: "solana" },
+        entropyChainId: { base: 8453, solana: cluster },
+        tipLagMargin: { base: 2, solana: 64 },
+        ...pins,
+      },
+    }),
+    PAGES_RPC_ENDPOINTS: JSON.stringify(
+      Object.fromEntries(
+        Object.entries(urls).map(([source, list]) => [
+          source,
+          list.map((url, index) => ({ provider: `p${String(index)}`, url })),
+        ]),
+      ),
+    ),
+    PAGES_RPC_ORIGINS: [...RPC, ...SOLANA_RPC]
+      .map(url => new URL(url).origin)
+      .join(" "),
+  };
+};
+
+const solanaIssues = (
+  productionMode: boolean,
+  cluster: number,
+  pins: Readonly<Record<string, unknown>> = {},
+): readonly string[] => {
+  const result = buildPagesConfigs(withSolana(cluster, pins), {
+    production: productionMode,
+  });
+  return result.ok ? [] : result.issues;
+};
+
+describe("production's Solana cluster (production-cluster, the validators' rule)", () => {
+  it("accepts a solana source on mainnet-beta beside an evm source, in both modes", () => {
+    expect(solanaIssues(true, 101)).toEqual([]);
+    expect(solanaIssues(false, 101)).toEqual([]);
+  });
+
+  it.each([102, 103])(
+    "refuses a production document's solana source on cluster %i, in both modes, through the validator",
+    cluster => {
+      const refused = [
+        "wrapper document: production-cluster at entropyChainId.solana",
+        "verifier document: production-cluster at entropyChainId.solana",
+      ];
+      expect(solanaIssues(true, cluster)).toEqual(refused);
+      expect(solanaIssues(false, cluster)).toEqual(refused);
+    },
+  );
+
+  it.each([101, 102, 103])(
+    "accepts a preview document with a solana source on cluster %i in staging's mode",
+    cluster => {
+      const pins = { environment: "preview", minRpcQuorum: 1 };
+      expect(solanaIssues(false, cluster, pins)).toEqual([]);
+    },
+  );
+
+  it("names the field, never a value", () => {
+    const issues = solanaIssues(true, 103);
+    expect(issues).not.toEqual([]);
+    for (const issue of issues) expect(issue).not.toMatch(/103|example/u);
   });
 });

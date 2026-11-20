@@ -4,40 +4,16 @@
 
 import { describe, expect, it } from "vitest";
 
+import { CONFIG_FIELDS, type ConfigIssue } from "./environment-config.ts";
 import {
-  CONFIG_FIELDS,
-  type ConfigIssue,
-  validateEnvironmentConfig,
-  type VerifyConfig,
-} from "./environment-config.ts";
-import {
+  accepted,
+  codes,
   endpoints,
   environmentDocument,
+  issues,
   OWN_ORIGIN,
   SOURCE,
 } from "./fixtures/environment.ts";
-
-const accepted = (
-  document: unknown,
-  ownOrigin: string = OWN_ORIGIN,
-): VerifyConfig => {
-  const result = validateEnvironmentConfig(document, ownOrigin);
-  if (!result.ok) {
-    throw new TypeError(`refused: ${JSON.stringify(result.issues)}`);
-  }
-  return result.config;
-};
-
-const issues = (
-  document: unknown,
-  ownOrigin: string = OWN_ORIGIN,
-): readonly ConfigIssue[] => {
-  const result = validateEnvironmentConfig(document, ownOrigin);
-  return result.ok ? [] : result.issues;
-};
-
-const codes = (document: unknown, ownOrigin: string = OWN_ORIGIN): string[] =>
-  issues(document, ownOrigin).map(issue => issue.code);
 
 describe("a valid document", () => {
   it("is accepted, typed, and frozen", () => {
@@ -51,7 +27,9 @@ describe("a valid document", () => {
       },
       earlierPins: [],
       minRpcQuorum: 2,
-      sources: { [SOURCE]: { chainId: 8453, endpoints: endpoints(2) } },
+      sources: {
+        [SOURCE]: { kind: "evm", chainId: 8453, endpoints: endpoints(2) },
+      },
       verifyBaseUrl: "https://se.example/verify",
       verifyApiBaseUrl: "https://se.example/verify/v1",
     });
@@ -200,6 +178,7 @@ describe("a source whose endpoints are refused", () => {
   const dropped = [
     { code: "invalid-lag-margin", field: `tipLagMargin.${SOURCE}` },
     { code: "invalid-entropy-chain-id", field: `entropyChainId.${SOURCE}` },
+    { code: "invalid-entropy-chain-kind", field: `entropyChainKind.${SOURCE}` },
   ];
 
   it("refuses an endpoint over plain http on a public host", () => {

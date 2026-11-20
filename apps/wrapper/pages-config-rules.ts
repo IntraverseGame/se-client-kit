@@ -12,8 +12,9 @@
 //   game and operator origin, and the Wrapper's origin (of `playApiBaseUrl`).
 //   The step refuses any other.
 // - In production mode only, `environment` is `production`, so W-26a's boot
-//   rule (`minRpcQuorum` at least 2) applies when the Wrapper's validator
-//   checks the documents. Staging runs as `preview`.
+//   rule (`minRpcQuorum` at least 2) and the production cluster rule (every
+//   `solana` source on mainnet-beta) apply when the Wrapper's validator checks
+//   the documents. Staging runs as `preview`.
 //
 // An issue names an input and a field with a code, never a value: the values
 // are hostnames kept out of the logs.

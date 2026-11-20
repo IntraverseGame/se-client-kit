@@ -283,6 +283,13 @@ which the tool writes to the verifier's document only
 differ by that field, and the Wrapper's validator refuses it. The rest of this
 decision stands.
 
+Amendment note (2026-11-18, RFC-007, slice 1; ADR-013, proposed):
+`PAGES_CHAIN_PINS` also holds `entropyChainKind`, each entropy source's kind
+(`evm` or `solana`), a chain pin like `entropyChainId`; staging's value is
+`{ "anvil": "evm" }`, added in one step with the kit change that requires it
+([release runbook](../runbook/client-kit-release.md#deploy-to-cloudflare-pages)).
+The rest of this decision stands.
+
 Derived, never configured: `playApiBaseUrl` is the Wrapper's origin plus
 `/play/v1` (both documents); `verifyApiBaseUrl` is each site's own origin plus
 `/verify/v1`; `verifyBaseUrl` is the verifier's origin plus `/verify` (both

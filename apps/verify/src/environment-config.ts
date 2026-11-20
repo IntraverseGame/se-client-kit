@@ -20,19 +20,13 @@ import {
   readEndpoint,
   readOrigins,
   readOwnApiBase,
-  readPerSource,
   readUrl,
   shareProvider,
 } from "./config-fields.ts";
 import { type PinPair, readDomain, readEarlierPins } from "./pin-pairs.ts";
+import { readSources, type SourceConfig } from "./source-config.ts";
 
 export type Environment = "production" | "preview" | "local";
-
-/** The pinned chain and endpoints of one entropy source. */
-export type SourceConfig = {
-  readonly chainId: number;
-  readonly endpoints: readonly RpcEndpoint[];
-};
 
 /** A document that passed `validateEnvironmentConfig`. */
 export type VerifyConfig = PinPair & {
@@ -64,6 +58,9 @@ export type ConfigIssueCode =
   | "quorum-unreachable"
   | "invalid-entropy-chain-id"
   | "invalid-lag-margin"
+  | "invalid-entropy-chain-kind"
+  | "entropy-chain-kind-mismatch"
+  | "production-cluster"
   | "invalid-play-api-base"
   | "invalid-verify-base"
   | "invalid-verify-api-base"
@@ -92,6 +89,7 @@ export const CONFIG_FIELDS: readonly string[] = Object.freeze([
   "registryDomain",
   "earlierPins",
   "rpcEndpoints",
+  "entropyChainKind",
   "entropyChainId",
   "minRpcQuorum",
   "tipLagMargin",
@@ -209,19 +207,12 @@ export const validateEnvironmentConfig = (
   );
   const quorum = readQuorum(own(fields, "minRpcQuorum"), environment, issues);
   const endpoints = readEndpoints(own(fields, "rpcEndpoints"), issues);
-  const names = [...(endpoints?.keys() ?? [])];
-  const margins = readPerSource(fields, "tipLagMargin", 0, names);
-  const chainIds = readPerSource(fields, "entropyChainId", 1, names);
-  issues.push(
-    ...margins.refused.map(field => ({
-      code: "invalid-lag-margin" as const,
-      field,
-    })),
-    ...chainIds.refused.map(field => ({
-      code: "invalid-entropy-chain-id" as const,
-      field,
-    })),
+  const pinned = readSources(
+    fields,
+    endpoints ?? new Map(),
+    environment === "production",
   );
+  issues.push(...pinned.issues);
   for (const [source, list] of endpoints ?? []) {
     if (quorum !== undefined && list.length < quorum) {
       issues.push({
@@ -276,13 +267,6 @@ export const validateEnvironmentConfig = (
       issues: Object.freeze(issues.map(issue => Object.freeze(issue))),
     });
   }
-  const sources: Record<string, SourceConfig> = {};
-  for (const [source, list] of endpoints) {
-    const chainId = chainIds.values.get(source);
-    if (chainId !== undefined) {
-      sources[source] = Object.freeze({ chainId, endpoints: list });
-    }
-  }
   return Object.freeze({
     ok: true,
     config: Object.freeze({
@@ -291,7 +275,7 @@ export const validateEnvironmentConfig = (
       registryDomain,
       earlierPins: earlierPins.pairs,
       minRpcQuorum: quorum,
-      sources: Object.freeze(sources),
+      sources: pinned.sources,
       verifyBaseUrl,
       verifyApiBaseUrl,
     }),

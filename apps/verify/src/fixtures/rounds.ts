@@ -86,6 +86,7 @@ export const configFor = (
   minRpcQuorum: 2,
   sources: {
     [SOURCE]: {
+      kind: "evm",
       chainId: ENTROPY_CHAIN_ID,
       endpoints: RPC_URLS.map((url, i) => ({ provider: `p${String(i)}`, url })),
     },

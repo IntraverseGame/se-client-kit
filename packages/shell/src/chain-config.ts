@@ -1,10 +1,10 @@
 // The chain part of the environment configuration (W-26, W-26a, W-26b, and the
 // Wrapper's Configuration section): the environment, the backend signer
-// address, the registry domain, the RPC endpoints and the pinned chain of each
-// entropy source, the quorum, and the lag margins. It is the only trust anchor
-// of the chain checks: a value a response carries is compared with it, never
-// used in its place. The rest of the document (the API bases, the origin
-// allow-lists) is read by the Wrapper; this module ignores it.
+// address, the registry domain, the RPC endpoints, the chain kind, and the
+// pinned chain of each entropy source, the quorum, and the lag margins. It is
+// the only trust anchor of the chain checks: a value a response carries is
+// compared with it, never used in its place. The rest of the document (the API
+// bases, the origin allow-lists) is read by the Wrapper; this module ignores it.
 
 import type { Address } from "@intraverse/se-client-signing";
 
@@ -15,30 +15,13 @@ import {
   own,
   readAddress,
   readEndpoint,
-  readPerSource,
   type RpcEndpoint,
   shareProvider,
 } from "./config-fields.ts";
+import { readSources, type SourceConfig } from "./source-config.ts";
 
 /** Which environment the document configures (W-26a's boot rule reads it). */
 export type Environment = "production" | "preview" | "local";
-
-/** The pinned chain, endpoints, and lag margin of one entropy source (W-26b). */
-export type SourceConfig = {
-  /**
-   * The chain the source's blocks are on: every endpoint must report it
-   * (`eth_chainId`, W-26b), and a round's `entropyChainId` must equal it (W-26,
-   * check 3).
-   */
-  readonly chainId: bigint;
-  readonly endpoints: readonly RpcEndpoint[];
-  /**
-   * How many blocks an endpoint may be behind the highest final block.
-   * Required: there is no default. PROVISIONAL: the margin per chain is not
-   * decided yet.
-   */
-  readonly tipLagMargin: bigint;
-};
 
 declare const VALIDATED: unique symbol;
 
@@ -93,7 +76,23 @@ export type ChainConfigIssueCode =
    * `tipLagMargin` is missing for a source, names a source with no endpoints,
    * or is not a non-negative integer.
    */
-  | "invalid-lag-margin";
+  | "invalid-lag-margin"
+  /**
+   * `entropyChainKind` is not an object, or its entry is missing for a source,
+   * names a source with no endpoints, or is not `evm` or `solana`.
+   */
+  | "invalid-entropy-chain-kind"
+  /**
+   * A source's kind disagrees with its name or its pinned chain: a `solana`
+   * source not keyed `solana` or whose `entropyChainId` is not 101, 102, or
+   * 103, or an `evm` source keyed `solana` or with one of those numbers.
+   */
+  | "entropy-chain-kind-mismatch"
+  /**
+   * A `production` document pins a `solana` source on a test cluster (102 or
+   * 103): production's entropy is mainnet-beta, 101 (RFC-007, Q10).
+   */
+  | "production-cluster";
 
 /** One refusal: what is wrong and in which field (a dotted path). */
 export type ChainConfigIssue = {
@@ -181,13 +180,15 @@ const readQuorum = (
  * Validates the chain part of the environment configuration document (parsed
  * JSON) and returns it typed and frozen, or every issue found. The Wrapper
  * refuses to start (the configuration-error state, nothing signed) on any
- * issue; `production-quorum` is W-26a's boot rule.
+ * issue; `production-quorum` is W-26a's boot rule, and `production-cluster`
+ * keeps a `production` document's `solana` source on mainnet-beta.
  *
  * Read fields: `environment`, `runtimeSigner`, `registryDomain` (`chainId`,
  * `verifyingContract`), `rpcEndpoints` (per source, a list of `{ provider, url
- * }`), `entropyChainId` (per source, required: the source's chain id),
- * `minRpcQuorum` (default 2), and `tipLagMargin` (per source, required). Other
- * fields are ignored.
+ * }`), `entropyChainKind` (per source, required: `evm` or `solana`),
+ * `entropyChainId` (per source, required: the source's chain id, or its cluster
+ * number for a `solana` source), `minRpcQuorum` (default 2), and `tipLagMargin`
+ * (per source, required). Other fields are ignored.
  */
 export const validateChainConfig = (document: unknown): ChainConfigResult => {
   // A document that is not an object is read as an empty one: every required
@@ -208,19 +209,12 @@ export const validateChainConfig = (document: unknown): ChainConfigResult => {
   }
   const quorum = readQuorum(own(fields, "minRpcQuorum"), environment, issues);
   const endpoints = readEndpoints(own(fields, "rpcEndpoints"), issues);
-  const sourceNames = [...(endpoints?.keys() ?? [])];
-  const margins = readPerSource(fields, "tipLagMargin", 0, sourceNames);
-  const chainIds = readPerSource(fields, "entropyChainId", 1, sourceNames);
-  issues.push(
-    ...margins.refused.map(field => ({
-      code: "invalid-lag-margin" as const,
-      field,
-    })),
-    ...chainIds.refused.map(field => ({
-      code: "invalid-entropy-chain-id" as const,
-      field,
-    })),
+  const pinned = readSources(
+    fields,
+    endpoints ?? new Map(),
+    environment === "production",
   );
+  issues.push(...pinned.issues);
   if (quorum !== undefined && endpoints !== undefined) {
     for (const [source, list] of endpoints) {
       if (list.length < quorum) {
@@ -243,25 +237,13 @@ export const validateChainConfig = (document: unknown): ChainConfigResult => {
       issues: Object.freeze(issues.map(issue => Object.freeze(issue))),
     });
   }
-  const sources: Record<string, SourceConfig> = {};
-  for (const [source, list] of endpoints) {
-    const tipLagMargin = margins.values.get(source);
-    const chainId = chainIds.values.get(source);
-    if (tipLagMargin !== undefined && chainId !== undefined) {
-      sources[source] = Object.freeze({
-        chainId,
-        endpoints: list,
-        tipLagMargin,
-      });
-    }
-  }
   const config = {
     environment: environment as Environment,
     runtimeSigner,
     registryDomain,
     minRpcQuorum: quorum,
     degraded: quorum < DEFAULT_MIN_RPC_QUORUM,
-    sources: Object.freeze(sources),
+    sources: pinned.sources,
   } as ChainConfig;
   return Object.freeze({ ok: true, config: Object.freeze(config) });
 };

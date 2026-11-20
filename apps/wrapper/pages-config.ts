@@ -10,7 +10,8 @@
 // Beyond the validator (pages-config-rules.ts; ADR-009, amendment note of
 // 2026-11-17): in both modes, every origin the deploy's headers step reads must
 // be one that step accepts; production mode (`production: true`) also requires
-// `environment` to be `production`, so W-26a's quorum rule applies.
+// `environment` to be `production`, so W-26a's quorum rule and the production
+// cluster rule apply.
 //
 // The two documents differ only where the site differs:
 // - `playApiBaseUrl`: the Wrapper's origin plus `/play/v1` in both (the
@@ -64,6 +65,7 @@ export const CHAIN_PIN_FIELDS: readonly string[] = Object.freeze([
   "runtimeSigner",
   "registryDomain",
   "earlierPins",
+  "entropyChainKind",
   "entropyChainId",
   "minRpcQuorum",
   "tipLagMargin",

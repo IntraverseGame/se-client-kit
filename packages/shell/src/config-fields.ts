@@ -63,33 +63,39 @@ export const shareProvider = (endpoints: readonly RpcEndpoint[]): boolean => {
   return providers.size < endpoints.length || urls.size < endpoints.length;
 };
 
+/** A reader of an integer of at least `minimum`, kept as a `bigint`. */
+export const readCount =
+  (minimum: number): ((value: unknown) => bigint | undefined) =>
+  value =>
+    isCount(value, minimum) ? BigInt(value) : undefined;
+
 /**
  * Reads the per-source map `name` of a document (`tipLagMargin`,
- * `entropyChainId`): one entry for each of `sources` and for no other, each an
- * integer of at least `minimum`, kept as a `bigint`. `refused` names each field
- * that is missing or malformed (the map itself when it is not an object).
+ * `entropyChainId`, `entropyChainKind`): one entry for each of `sources` and
+ * for no other, each one `read` accepts. `refused` names each field that is
+ * missing or malformed (the map itself when it is not an object).
  */
-export const readPerSource = (
+export const readPerSource = <T>(
   document: Readonly<Record<string, unknown>>,
   name: string,
-  minimum: number,
   sources: readonly string[],
+  read: (entry: unknown) => T | undefined,
 ): {
-  readonly values: ReadonlyMap<string, bigint>;
+  readonly values: ReadonlyMap<string, T>;
   readonly refused: readonly string[];
 } => {
   const value = own(document, name);
   if (!isRecord(value)) {
     return { values: new Map(), refused: [name] };
   }
-  const values = new Map<string, bigint>();
+  const values = new Map<string, T>();
   const refused: string[] = [];
   for (const source of sources) {
-    const entry = own(value, source);
-    if (isCount(entry, minimum)) {
-      values.set(source, BigInt(entry));
-    } else {
+    const entry = read(own(value, source));
+    if (entry === undefined) {
       refused.push(`${name}.${source}`);
+    } else {
+      values.set(source, entry);
     }
   }
   for (const source of Object.keys(value)) {

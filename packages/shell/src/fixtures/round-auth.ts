@@ -77,6 +77,9 @@ export const configFor = (
     rpcEndpoints: Object.fromEntries(
       Object.keys(chains).map(source => [source, endpoints(2)]),
     ),
+    entropyChainKind: Object.fromEntries(
+      Object.keys(chains).map(source => [source, "evm"]),
+    ),
     entropyChainId: chains,
     minRpcQuorum: 2,
     tipLagMargin: Object.fromEntries(

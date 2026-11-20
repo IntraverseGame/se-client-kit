@@ -77,6 +77,7 @@ describe("decideChain", () => {
     ["too-few-answered", "chain-unverified"],
     ["chain-id-unavailable", "chain-unverified"],
     ["hash-unavailable", "chain-unverified"],
+    ["unsupported-chain-kind", "chain-unverified"],
     ["chain-id-mismatch", "verification-failed"],
     ["lagging", "verification-failed"],
     ["hash-mismatch", "verification-failed"],

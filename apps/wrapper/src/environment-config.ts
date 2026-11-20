@@ -2,11 +2,12 @@
 // One document per environment, served from the SE origin, holds only public
 // values; the Wrapper refuses to start on an invalid one. The chain part
 // (`environment`, `runtimeSigner`, `registryDomain`, `rpcEndpoints`,
-// `entropyChainId`, `minRpcQuorum`, `tipLagMargin`) is validated by the shell's
-// `validateChainConfig`, which also applies both boot rules: `production` with
-// `minRpcQuorum` below 2 (W-26a) and a source with fewer endpoints than
-// `minRpcQuorum` (W-26b). This module reads the rest and refuses any field the
-// schema does not list, and applies the disjoint-origins rule:
+// `entropyChainKind`, `entropyChainId`, `minRpcQuorum`, `tipLagMargin`) is
+// validated by the shell's `validateChainConfig`, which also applies both boot
+// rules, `production` with `minRpcQuorum` below 2 (W-26a) and a source with
+// fewer endpoints than `minRpcQuorum` (W-26b), and the chain kind's
+// cross-check (RFC-007 section 1). This module reads the rest and refuses any
+// field the schema does not list, and applies the disjoint-origins rule:
 // `operatorOrigins` and `gameOrigins` share no entry, and neither holds the
 // Wrapper's own origin (the SE origin), so no origin is both an embedder and a
 // game (W-49, specs/wrapper/operator-embedding.md).
@@ -85,6 +86,7 @@ export const ENVIRONMENT_CONFIG_FIELDS: readonly string[] = Object.freeze([
   "runtimeSigner",
   "registryDomain",
   "rpcEndpoints",
+  "entropyChainKind",
   "entropyChainId",
   "minRpcQuorum",
   "tipLagMargin",

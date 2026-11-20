@@ -34,6 +34,7 @@ export const environmentDocument = (
     verifyingContract: "0xd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5",
   },
   rpcEndpoints: { [SOURCE]: endpoints(2) },
+  entropyChainKind: { [SOURCE]: "evm" },
   entropyChainId: { [SOURCE]: 8453 },
   minRpcQuorum: 2,
   tipLagMargin: { [SOURCE]: 2 },

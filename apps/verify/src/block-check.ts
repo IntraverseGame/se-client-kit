@@ -20,9 +20,12 @@ import {
 import type { VerifyConfig } from "./environment-config.ts";
 import type { Hash32 } from "./hex.ts";
 import type { RoundEvidence } from "./round-evidence.ts";
+import type { SourceConfig } from "./source-config.ts";
 
 const CHAIN_FAILURES: Readonly<Record<ChainReadFailure, string>> = {
   config: "No usable endpoints are configured for this entropy source.",
+  "unsupported-chain-kind":
+    "This page cannot read a Solana entropy chain yet; no endpoint was asked.",
   "other-chain": "An endpoint reports another chain than the pinned one.",
   "too-few": "Too few endpoints answered.",
   "no-chain-id": "An endpoint gave a block but no chain id.",
@@ -38,6 +41,38 @@ const answersOf = (read: ChainRead): Detail[] =>
     },
     { label: `${a.provider}: block hash`, value: a.blockHash ?? "no answer" },
   ]);
+
+/** The quorum read of block N from the round's source, or why there is none. */
+const readSource = (
+  deps: ChainReadDeps,
+  config: VerifyConfig,
+  pinned: SourceConfig | undefined,
+  blockNumber: bigint,
+  signal: AbortSignal | undefined,
+): Promise<ChainRead> => {
+  if (pinned === undefined) {
+    return Promise.resolve({ ok: false, reason: "config", answers: [] });
+  }
+  // Until RFC-007's slice 4 reads a Solana chain, its rounds fail closed.
+  if (pinned.kind === "solana") {
+    return Promise.resolve({
+      ok: false,
+      reason: "unsupported-chain-kind",
+      answers: [],
+    });
+  }
+  return readBlockHashByQuorum(
+    deps,
+    {
+      endpoints: pinned.endpoints,
+      entropyChainId: pinned.chainId,
+      minRpcQuorum: config.minRpcQuorum,
+      environment: config.environment,
+    },
+    blockNumber,
+    signal,
+  );
+};
 
 /**
  * Check 6: block N's hash by a quorum read, beside the evidence's optional one.
@@ -59,20 +94,7 @@ export const checkBlock = async (
   const pinned = Object.hasOwn(config.sources, source)
     ? config.sources[source]
     : undefined;
-  const read: ChainRead =
-    pinned === undefined
-      ? { ok: false, reason: "config", answers: [] }
-      : await readBlockHashByQuorum(
-          deps,
-          {
-            endpoints: pinned.endpoints,
-            entropyChainId: pinned.chainId,
-            minRpcQuorum: config.minRpcQuorum,
-            environment: config.environment,
-          },
-          blockNumber,
-          signal,
-        );
+  const read = await readSource(deps, config, pinned, blockNumber, signal);
   if (!read.ok) {
     return {
       agreed: undefined,

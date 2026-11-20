@@ -19,6 +19,7 @@ import {
   OWN_ORIGIN,
   VALID_EARLIER_PINS,
 } from "./fixtures/config-documents.ts";
+import { CHAIN_KIND_DOCUMENTS } from "./fixtures/config-kind-documents.ts";
 
 type Issue = { readonly code: string; readonly field: string };
 type Result =
@@ -63,6 +64,7 @@ const toolInputs = (earlierPins: unknown): Readonly<Record<string, string>> => {
       runtimeSigner: document["runtimeSigner"],
       registryDomain: document["registryDomain"],
       earlierPins,
+      entropyChainKind: document["entropyChainKind"],
       entropyChainId: document["entropyChainId"],
       minRpcQuorum: document["minRpcQuorum"],
       tipLagMargin: document["tipLagMargin"],
@@ -86,9 +88,11 @@ const issuesOf = (result: Result): string[] =>
     ? []
     : result.issues.map(issue => `${issue.code} ${issue.field}`).toSorted();
 
+const DOCUMENTS = [...CONFIG_DOCUMENTS, ...CHAIN_KIND_DOCUMENTS];
+
 describe("one configuration schema (V-3)", () => {
   it("has documents both valid and not", () => {
-    const verdicts = CONFIG_DOCUMENTS.map(
+    const verdicts = DOCUMENTS.map(
       ({ document, ownOrigin }) =>
         wrapper.validateEnvironmentConfig(document, ownOrigin).ok,
     );
@@ -96,7 +100,7 @@ describe("one configuration schema (V-3)", () => {
     expect(verdicts).toContain(false);
   });
 
-  it.each(CONFIG_DOCUMENTS)(
+  it.each(DOCUMENTS)(
     "$name: the same verdict and issues",
     ({ name, document, ownOrigin }) => {
       const fromWrapper = wrapper.validateEnvironmentConfig(

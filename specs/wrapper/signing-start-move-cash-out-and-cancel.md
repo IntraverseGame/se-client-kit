@@ -465,7 +465,9 @@ Part of the [Wrapper spec](../wrapper.md), section
     share a provider (names compared without case) or a URL. The configuration
     schema also refuses an entropy source whose configured endpoint count is
     below `minRpcQuorum`, so a quorum can never be unreachable by configuration,
-    and an entropy source without its pinned `entropyChainId`.
+    an entropy source without its pinned `entropyChainId` or its
+    `entropyChainKind`, and one whose kind disagrees with its key or its chain
+    (below).
   - **The lag margin per environment** (the `tipLagMargin` configuration value,
     in blocks per entropy source; the backend, 2026-10-28). The value is set per
     configuration document, not per `environment` value. The local chain uses 0
@@ -477,27 +479,40 @@ Part of the [Wrapper spec](../wrapper.md), section
     longer on staging (the backend, 2026-10-28). Production's value is derived
     from the measured RPC lag, owned by the backend.
     <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner; the measurement: backend). Production's `tipLagMargin` per entropy source: for its Solana source, 64 slots, provisional (the Solana note below; RFC-007, Q1), until the backend's measurement on the contracted providers (se-backend#471) replaces it; a configuration value, set in production's configuration document. Reason: not measured yet; production is to come. -->
-  - **Solana sources (proposed, RFC-007).** Production's entropy source is
-    Solana mainnet-beta (decided by the human owner, 2026-11-18, #235). Today
-    the shell reads every source with the EVM calls above, which a Solana RPC
-    does not answer, so a Solana source's tip check fails as `too-few-answered`.
-    Proposed: a source of kind `solana` (the configuration's `entropyChainKind`,
-    [wrapper.md](../wrapper.md#configuration)) is checked with `getGenesisHash`,
-    compared with the genesis hash the kit pins for the source's cluster
-    (`entropyChainId` 101, 102, or 103), and `getSlot` at `finalized`, both at
-    once; heights are slots, `tipLagMargin` is in slots, and there is no second
-    pass at `h_low`. The order of the failures and their codes, the quorum, and
-    the bind stay as above. The evidence (W-27) of a Solana source differs: each
+  - **Solana sources.** Production's entropy source is Solana mainnet-beta
+    (decided by the human owner, 2026-11-18, #235). The configuration says which
+    protocol each entropy source speaks (`entropyChainKind`, `evm` or `solana`,
+    required for each source; [wrapper.md](../wrapper.md#configuration)), and
+    cross-checks it: a `solana` source is keyed `solana`, the source name the
+    engine uses and `randomnessTarget` encodes, and is pinned by its cluster
+    number in `entropyChainId` (101, 102, or 103, which the backend reserves for
+    Solana), and an `evm` source is neither keyed `solana` nor on one of those
+    numbers. In a `production` document a `solana` source is on 101,
+    mainnet-beta (`production-cluster`; `local` and `preview` may use any of the
+    three). The kit pins each cluster's genesis hash in code, never in the
+    configuration ([the `shell` package](../client-kit/the-shell-package.md)). A
+    configuration may list sources of both kinds at once, each held to these
+    rules on its own, and at most one `solana` source. `tipLagMargin` is in the
+    source's unit: slots for a `solana` source. **Until RFC-007's slice 2, a
+    Solana source fails closed without calling** (interim; slice 2 replaces it):
+    the shell asks no endpoint of a `solana` source, and its tip check fails
+    (`unsupported-chain-kind`, shown as "could not verify the chain"), so W-26's
+    required `PlayerCancel` follows once `T_0` is settled; the evidence (W-27)
+    records the source, the failure, and no answer. **Proposed (RFC-007, section
+    3):** a source of kind `solana` is checked with `getGenesisHash`, compared
+    with the genesis hash the kit pins for the source's cluster, and `getSlot`
+    at `finalized`, both at once; heights are slots, and there is no second pass
+    at `h_low`. The order of the failures and their codes, the quorum, and the
+    bind stay as above. The evidence (W-27) of a Solana source differs: each
     endpoint's answer has the genesis hash it reported in place of the chain id
     and no hash at `h_low`, and the record adds the source's kind and the pinned
-    genesis hash (RFC-007, section 3). A configuration may list sources of both
-    kinds at once; each round is checked by its own source's kind. The full
-    rules are in
+    genesis hash. Each round is checked by its own source's kind. The full rules
+    are in
     [RFC-007](../../rfcs/active/RFC-007-solana-entropy-in-the-browser.md),
-    sections 1 and 3, until the implementing slice writes them here.
-    Production's Solana `tipLagMargin` is 64 slots, provisional, until the
-    backend's measurement on the contracted providers (se-backend#471) replaces
-    it (RFC-007, Q1).
+    section 3, until the implementing slice writes them here. Production's
+    Solana `tipLagMargin` is 64 slots, provisional, until the backend's
+    measurement on the contracted providers (se-backend#471) replaces it
+    (RFC-007, Q1).
 - **W-27.** The shell SHOULD keep each round's evidence (its `CreateRoundAuth`,
   the tip-check answers, and every signed action) in memory for the page's life
   and SHOULD offer it as a JSON download after the round ends, started by the

@@ -64,28 +64,34 @@ export const shareProvider = (endpoints: readonly RpcEndpoint[]): boolean =>
     endpoints.length ||
   new Set(endpoints.map(e => e.url.toLowerCase())).size < endpoints.length;
 
+/** A reader of an integer of at least `minimum`. */
+export const readCount =
+  (minimum: number): ((value: unknown) => number | undefined) =>
+  value =>
+    isCount(value, minimum) ? value : undefined;
+
 /**
- * The per-source map `name` (`tipLagMargin`, `entropyChainId`): one integer of
- * at least `minimum` for each of `sources` and no other entry; `refused` names
- * each field that is missing or malformed.
+ * The per-source map `name` (`tipLagMargin`, `entropyChainId`,
+ * `entropyChainKind`): one entry `read` accepts for each of `sources` and no
+ * other entry; `refused` names each field that is missing or malformed.
  */
-export const readPerSource = (
+export const readPerSource = <T>(
   document: Fields,
   name: string,
-  minimum: number,
   sources: readonly string[],
+  read: (entry: unknown) => T | undefined,
 ): {
-  readonly values: ReadonlyMap<string, number>;
+  readonly values: ReadonlyMap<string, T>;
   readonly refused: readonly string[];
 } => {
   const value = own(document, name);
   if (!isRecord(value)) return { values: new Map(), refused: [name] };
-  const values = new Map<string, number>();
+  const values = new Map<string, T>();
   const refused: string[] = [];
   for (const source of sources) {
-    const entry = own(value, source);
-    if (isCount(entry, minimum)) values.set(source, entry);
-    else refused.push(`${name}.${source}`);
+    const entry = read(own(value, source));
+    if (entry === undefined) refused.push(`${name}.${source}`);
+    else values.set(source, entry);
   }
   for (const source of Object.keys(value)) {
     if (!sources.includes(source)) refused.push(`${name}.${source}`);

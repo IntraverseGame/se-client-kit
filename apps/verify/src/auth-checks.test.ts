@@ -92,7 +92,7 @@ describe("check 2: the entropy target", () => {
     const result = checkEntropyTarget(
       await evidenceOf(input),
       configFor(pinned, {
-        sources: { [SOURCE]: { chainId: 5, endpoints: [] } },
+        sources: { [SOURCE]: { kind: "evm", chainId: 5, endpoints: [] } },
       }),
     );
     expect(failing(result)).toEqual([

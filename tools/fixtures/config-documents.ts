@@ -9,9 +9,11 @@ export const OWN_ORIGIN = "https://se.example";
 /** The own origin of the local documents, a loopback host. */
 export const LOCAL_ORIGIN = "http://localhost:8080";
 
-const SOURCE = "ethereum:block";
+/** The entropy source of `configDocument()`. */
+export const SOURCE = "ethereum:block";
 
-const endpoints = (count: number): { provider: string; url: string }[] =>
+/** `count` endpoints, providers `p1` to `p<count>`. */
+export const endpoints = (count: number): { provider: string; url: string }[] =>
   Array.from({ length: count }, (_, i) => ({
     provider: `p${i + 1}`,
     url: `https://rpc${i + 1}.example/eth`,
@@ -32,6 +34,7 @@ export const configDocument = (
       verifyingContract: "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
     },
     rpcEndpoints: { [SOURCE]: endpoints(2) },
+    entropyChainKind: { [SOURCE]: "evm" },
     entropyChainId: { [SOURCE]: 1 },
     minRpcQuorum: 2,
     tipLagMargin: { [SOURCE]: 2 },

@@ -131,6 +131,7 @@ describe("runTipCheck and the source's chain id", () => {
       source: "other",
       config: {
         rpcEndpoints: { [SOURCE]: endpoints(2), other: endpoints(2) },
+        entropyChainKind: { [SOURCE]: "evm", other: "evm" },
         entropyChainId: { [SOURCE]: ENTROPY_CHAIN_ID, other: 1 },
         tipLagMargin: { [SOURCE]: 2, other: 2 },
       },
