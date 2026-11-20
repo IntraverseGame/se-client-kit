@@ -148,10 +148,10 @@ const PINS = {
     chainId: 31337,
     verifyingContract: "0xd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5",
   },
-  entropyChainKind: { base: "evm" },
-  entropyChainId: { base: 8453 },
+  entropyChainKind: { solana: "solana" },
+  entropyChainId: { solana: 101 },
   minRpcQuorum: 2,
-  tipLagMargin: { base: 2 },
+  tipLagMargin: { solana: 64 },
 };
 
 /**
@@ -161,7 +161,7 @@ const PINS = {
 const wrapperDocument = (count: number): string => {
   const urls = Array.from(
     { length: count },
-    (_, index) => `https://rpc-${String(index)}.example/base`,
+    (_, index) => `https://rpc-${String(index)}.example/browser-key`,
   );
   const result = pagesTool.buildPagesConfigs(
     {
@@ -169,7 +169,7 @@ const wrapperDocument = (count: number): string => {
       PAGES_VERIFIER_ORIGIN: "https://verifier.example",
       PAGES_CHAIN_PINS: JSON.stringify(PINS),
       PAGES_RPC_ENDPOINTS: JSON.stringify({
-        base: urls.map((url, index) => ({
+        solana: urls.map((url, index) => ({
           provider: `p${String(index)}`,
           url,
         })),

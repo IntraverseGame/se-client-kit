@@ -800,12 +800,18 @@ comes back as a pull request through the same workflow):
    between steps 2 and 4, W-26a's indicator is on both of its sources.
 
    **Acceptance: the canary** (the gate before production). After step 4, on
-   staging at `minRpcQuorum` 2, the client kit's engineer runs at least 100
-   config rounds on `solana`, over at least 24 hours. A round counts only when
-   its tip check passed and the verify page later shows it as matching (V-6).
-   Any other outcome, a failed tip check or a verify page that shows a mismatch
-   or "could not be verified", restarts the count once its cause is found and
-   recorded (decided by the code owner on 2026-11-19).
+   staging at `minRpcQuorum` 2, the client kit's engineer runs at least 100 Coin
+   Flip config rounds on `solana`, over at least 24 hours; a Cash or Crash round
+   is neither counted nor restarts the count. A round counts only when its tip
+   check passed and the verify page later shows it as matching (V-6). Any other
+   outcome of a Coin Flip round, a failed tip check or a verify page that shows
+   a mismatch or "could not be verified", restarts the count once its cause is
+   found and recorded, and so does a change of provider; a browser key's
+   rotation on the same provider does not. The record (round ids, outcomes,
+   failure codes, causes, and restarts; never a URL, a key, or a hostname) is
+   kept in a public tracking issue of this repository, opened at step 5, and
+   #235 links its result (decided by the code owner on 2026-11-19 and
+   2026-11-20).
    <!-- TODO(backend and infrastructure, Q11): staging's mainnet-beta source: the staging keys on two providers staging's own engine does not read, Origin-locked to staging's origins; the backend's fix, drain, and switch (se-backend#548, planned 2026-11-30 to 2026-12-03); then the change that drops `anvil` and raises `minRpcQuorum` to 2; then the canary's result. -->
 
 9. **Production's first document** (decided by the code owner, 2026-11-18): the
@@ -1065,15 +1071,17 @@ comes back as a pull request through the same workflow):
     these public documents as bare numbers, without links, as RFC-006 does.
   - **#235's body** is updated by the human, with the code owner's agreement,
     its criterion reworded to "stale" (Q9).
-  - **Q16. Staging's quorum** (option (b), the recommendation): after staging's
-    engine switch and drain (se-backend#548), the `anvil` (Somnia, 50312) source
-    is removed from staging's document and staging sets `minRpcQuorum` 2, like
-    production, in one configuration change and a new deploy run. The canary
-    starts only after that, so it runs at quorum 2. Staging's rounds from before
-    the switch then show as not matching on its verify page: check 2 fails for a
-    source the configuration does not list (V-7) and check 6 cannot be verified.
-    That is accepted for staging; the canary counts `solana` rounds only. There
-    is no quorum per source. Section 9's step 8, and Migration.
+  - **Q16. Staging's quorum** (accepted as written by the code owner on
+    2026-11-20): after staging's engine switch and drain (se-backend#548), the
+    `anvil` (Somnia, 50312) source is removed from staging's document and
+    staging sets `minRpcQuorum` 2, like production, in one configuration change
+    and a new deploy run. The canary starts only after that, so it runs at
+    quorum 2. Staging's rounds from before the switch then show as not matching
+    on its verify page: check 2 fails for a source the configuration does not
+    list (V-7) and check 6 cannot be verified. That is accepted for staging
+    only; production lists `solana` alone from its first document, so it is not
+    affected. The canary counts `solana` rounds only. There is no quorum per
+    source. Section 9's step 8, and Migration.
 - **2026-11-19, the code owner, on the review of this draft**:
   - **The production cluster rule** (Q10): both validators refuse a `production`
     document whose `solana` source is not cluster 101 (`production-cluster`), so
@@ -1096,6 +1104,17 @@ comes back as a pull request through the same workflow):
   [the verify page](../../specs/verify-page.md). Sections 3 to 8 are decided;
   slices 2 to 4 wrote sections 3 to 5 into the specs, and the rest stay here
   until their slices write them in.
+- **2026-11-20, the code owner, on slice 7** (refinements of the canary's pass
+  rule; Q11; section 9, step 8):
+  - **Coin Flip rounds only**: only Coin Flip config rounds count, since only a
+    round of one step and two options reaches V-6 (A-3); a Cash or Crash round
+    is neither counted nor restarts the count.
+  - **The record**: a dedicated public tracking issue in se-client-kit, opened
+    by whoever runs the canary at step 8's fifth sub-step, holds the round ids,
+    outcomes, failure codes, causes, and restarts, never a URL, a key, or a
+    hostname; #235 links its result.
+  - **Endpoint changes during the canary**: a browser key's rotation on the same
+    provider does not restart the count; a change of provider does.
 
 ## Unresolved questions
 

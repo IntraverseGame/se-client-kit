@@ -157,6 +157,11 @@ org owners apply the settings; ask them for each.
      `PAGES_OPERATOR_ORIGINS` still deploys with no page allowed to embed the
      Wrapper, and a deploy token that is set but expired or lacks the Pages
      permission still fails the deploy after npm has published;
+   - `pages-prod-config`'s chain values are production's first document, which
+     waits for RFC-007's slice 1, both production browser providers passing P-1
+     to P-6, and staging's canary
+     ([Solana entropy sources](#solana-entropy-sources), Production's first
+     document); the variable waits for them too;
    - after the first real publish, the one-time rehearsal in
      [Roll back or deprecate](#roll-back-or-deprecate) (#208).
    <!-- TODO(org owners, #154): RELEASE_PUBLISH_ENABLED, once steps 5 to 7 are done, the trusted publishers exist, and the production environments hold their secrets (#133). -->
@@ -467,9 +472,13 @@ needs no credential and no network, and publishes nothing:
 4. It builds the Wrapper release artifact in each copy (the second with another
    time zone and locale): `se-client-wrapper-<version>.tar`, a deterministic tar
    of `apps/wrapper/dist/` (sorted, fixed metadata, uncompressed), whose SRI,
-   policy, and manifest the Wrapper's build already enforced. Its **digest** is
-   the SHA-256 of that file (`sha256:<hex>`). The two digests must be equal, and
-   the two copies' package tarballs byte-identical.
+   policy, and manifest the Wrapper's build already enforced. The artifact is
+   the same for every environment and holds no configuration document (the
+   deploys write each site's), so the dry run reads no chain pins and has none
+   to keep up to date: an entropy source of either kind changes nothing here.
+   Production's pins are checked by the release's `prod-check` (Release, step
+   3). Its **digest** is the SHA-256 of that file (`sha256:<hex>`). The two
+   digests must be equal, and the two copies' package tarballs byte-identical.
 5. It holds the first copy's Wrapper output to its size budget
    (`tools/size-budget.ts`: every file uncompressed, and the page with its
    scripts and stylesheets gzip-compressed), and the verify page under `verify/`
@@ -542,9 +551,7 @@ After publishing:
    from a test launch (the launch page URL, then `#`, then the bare launch
    code), and check there is no console error, the address bar no longer shows
    the code once the page has loaded, and a reload shows "Your session has
-   ended" (the code is single use). Until the Play API's redeem answer carries
-   `gameOrigin` and the kit vendors it, the Wrapper mounts no game, so a round
-   cannot be played to its end there.
+   ended" (the code is single use).
 
 ### Deploy to Cloudflare Pages
 
@@ -704,12 +711,13 @@ enter this repository, an issue, or a log):
      to 50312. A `solana` source (kind `solana`, `entropyChainId` 101,
      mainnet-beta, `tipLagMargin` 64 slots, provisional) joins `anvil` on
      staging only later, by step 8 of RFC-007's section 9, with its own
-     procedure: added beside `anvil` at `minRpcQuorum` 1 (step 8.2), and `anvil`
-     kept until the backend's switch and drain (se-backend#548) are done, when
-     one configuration change drops it and raises `minRpcQuorum` to 2 (step
-     8.4). An environment's browser endpoints never include the provider its own
-     engine reads (the code owner, 2026-11-18), so staging's `solana` endpoints
-     may be a different provider pair from production's. Production must be
+     procedure ([Solana entropy sources](#solana-entropy-sources), below): added
+     beside `anvil` at `minRpcQuorum` 1 (step 8.2), and `anvil` kept until the
+     backend's switch and drain (se-backend#548) are done, when one
+     configuration change drops it and raises `minRpcQuorum` to 2 (step 8.4). An
+     environment's browser endpoints never include the provider its own engine
+     reads (the code owner, 2026-11-18), so staging's `solana` endpoints may be
+     a different provider pair from production's. Production must be
      `"production"` with `minRpcQuorum` of at least 2, and every `solana` source
      on cluster 101 (the validators' `production-cluster`); its `tipLagMargin`
      comes from the backend's measurement of the RPC lag (#133).
@@ -786,7 +794,9 @@ enter this repository, an issue, or a log):
      `{"<source>":[{"provider":"…","url":"…"}]}`, keyed by the same entropy
      sources as the pins' `entropyChainKind`, `entropyChainId`, and
      `tipLagMargin`; `PAGES_RPC_ORIGINS` must list exactly the origins of its
-     URLs. Set.
+     URLs. Set. A Solana source's endpoints go under the key `solana`, each
+     first through the provider checklist
+     ([Solana entropy sources](#solana-entropy-sources)).
 
 **The three Pages projects are managed as code by the infrastructure owner**
 (since 2026-10-28): their environment variables, bindings, and compatibility
@@ -815,12 +825,18 @@ takes about 3 s longer on staging; that is expected (the backend, 2026-10-28;
 [W-26b](../specs/wrapper/signing-start-move-cash-out-and-cancel.md)). No
 record-chain RPC is needed in the browser before INC1 anchoring. The URL is the
 infrastructure owner's value, never written in this repository. Production's RPC
-providers (two independent per entropy source), their CORS behavior, and their
-`connect-src` entries are #133's, shared out of band.
+providers (two independent providers for its one source, `solana`, chosen in
+se-backend#375, neither the one production's engine reads), their CORS behavior,
+and their `connect-src` entries are #133's, shared out of band, and each passes
+the provider checklist first
+([Solana entropy sources](#solana-entropy-sources)).
 
 **Switching staging's entropy chain** (as for the move from anvil to Somnia's
 public testnet, 2026-10-28). The engine and the Wrapper must pin the same chain,
-so the secrets change right after the backend's switch, not before:
+so the secrets change right after the backend's switch, not before. The move to
+Solana mainnet-beta does not follow this procedure: it adds the new source
+beside the old one before the backend's switch
+([Solana entropy sources](#solana-entropy-sources)).
 
 1. The infrastructure owner sends the values: the RPC endpoint and its origin,
    and the chain pins (`entropyChainKind`, `entropyChainId`, and `tipLagMargin`
@@ -1052,6 +1068,377 @@ the same scope, writes it into the `pages-stage` environment's
 `CLOUDFLARE_API_TOKEN`, runs the workflow by hand on `main` to prove it, and
 revokes the old token. Record the date (the secret name and date only).
 
+### Solana entropy sources
+
+The operations of
+[RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md) (Solana
+entropy in the browser;
+[ADR-013](../decisions/ADR-013-solana-entropy-sources.md), accepted): a Solana
+source's endpoints in the Pages secrets, the checklist every browser endpoint
+passes first, a browser key's rotation, staging's move to Solana mainnet-beta
+(RFC-007, section 9, step 8, with its canary), and production's first document
+(step 9). For the infrastructure owner, a human maintainer with the
+environment's secrets, and the client kit's engineer, who runs the canary.
+Provider names, endpoint URLs, browser keys, and origins are shared out of band
+and never written in this repository, an issue, a pull request, or a log. Until
+RFC-007's slices 2 and 4 are deployed, a `solana` source fails closed without
+calling any endpoint: the tip check as `unsupported-chain-kind`, the verify
+page's check 6 as "could not be verified".
+
+**A Solana source's endpoints.** The source lives in three secrets, of the same
+names in `pages-stage` and in `pages-prod-config` (the setup's step 4, above):
+
+- `PAGES_RPC_ENDPOINTS` holds the Solana endpoints under the source key
+  `solana`, beside any other source's list. A source of kind `solana` is keyed
+  `solana`, so a document has at most one (RFC-007, Q7):
+  `{"solana":[{"provider":"<name>","url":"<URL>"},{"provider":"<name>","url":"<URL>"}]}`.
+  - `provider` is a short name (a letter or a digit, then up to 63 letters,
+    digits, `.`, `_`, `:`, or `-`), a different one for each endpoint of the
+    source (compared without case: the validator's `shared-provider`). The
+    round's evidence and the verify page show it, never the URL.
+  - `url` is `https`, with no credentials, no query string, and no fragment
+    (`invalid-endpoints` otherwise). The browser key goes in the URL's **path**
+    (P-3), or the URL is the bare `https://host` of a tokenless endpoint with an
+    Origin allowlist. A provider whose only key form is a query parameter cannot
+    be used. Two endpoints of one source never share a URL.
+- `PAGES_RPC_ORIGINS` lists exactly the origins of every URL in
+  `PAGES_RPC_ENDPOINTS`, of every source, each once: `https://`, the host, and
+  the port if the URL names one, never a path (so never a key). While staging
+  lists `anvil` and `solana`, it holds Somnia's origin and the Solana endpoints'
+  origins. Any other list fails the config job
+  (`PAGES_RPC_ORIGINS: not exactly the origins of PAGES_RPC_ENDPOINTS`).
+- Every endpoint's origin passes the headers step's `origin` pattern (the
+  `origin=` line of "Write the Pages headers files" in
+  `.github/workflows/pages.yml`, which `apps/wrapper/pages-config-rules.ts`
+  copies character for character): `https`, a lowercase host of dot-separated
+  labels of letters, digits, and inner `-`, and an optional port of up to five
+  digits. The config job refuses any other (`not-https-origin`, naming the
+  source and the endpoint's index), on staging as in production. Both sites'
+  `connect-src` take the origins only: the path, and the key in it, never reach
+  a header.
+- The key is public by design, since the served `environment-config.json` holds
+  the URL: a quota credential, never a secret. It is a key for the browser only,
+  separate from any key an engine uses, restricted by `Origin` to the
+  environment's Wrapper and verifier origins, never by `Referer` (the kit sends
+  none), with a rate or spend cap at the provider (P-3). Still, never paste it
+  into an issue, a pull request, or a log.
+
+**The provider checklist** (RFC-007, section 6, P-1 to P-7). The infrastructure
+owner runs it for every endpoint before it enters an environment's
+`PAGES_RPC_ENDPOINTS`, and again for a new key, with the browser key that
+environment will use, from **both** of the environment's origins: the Wrapper's
+(the tip check, and the Wrapper's copy of the verify page) and the verifier's.
+Which items:
+
+- **production:** P-1 to P-7. No production document lists a provider before it
+  passes P-1 to P-6 (RFC-007, Q2);
+- **staging:** P-1 to P-4 from staging's origins, and P-6 against staging's own
+  engine (step 8.2, below). P-5 is production's requirement: a shallower
+  provider only limits how far back staging's verify page reaches. The config
+  job enforces P-7.
+
+Record the result per provider (its name, the environment, the date, and the
+items passed), never a URL or a key: with the infrastructure owner's provider
+records, and for production in se-backend#375, which holds the providers' check.
+
+The calls, by hand, with `curl`, which sends no `Referer` (the kit sends none)
+and follows no redirect. Paste the URL into `read`, which keeps it out of the
+shell's history, set `ORIGIN` to the Wrapper's origin, and run everything again
+with the verifier's:
+
+```sh
+read -r RPC_URL
+ORIGIN='https://<wrapper host>'
+curl -s -i -X OPTIONS "$RPC_URL" -H "Origin: $ORIGIN" \
+  -H 'Access-Control-Request-Method: POST' \
+  -H 'Access-Control-Request-Headers: content-type'
+rpc() {
+  curl -s -i -X POST "$RPC_URL" -H "Origin: $ORIGIN" \
+    -H 'Content-Type: application/json' \
+    --data "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$1\",\"params\":$2}"
+}
+rpc getGenesisHash '[]'
+rpc getSlot '[{"commitment":"finalized"}]'
+rpc getBlocksWithLimit '[<slot>,50,{"commitment":"finalized"}]'
+rpc getBlock '[<slot>,{"commitment":"finalized","encoding":"json","transactionDetails":"none","rewards":false,"maxSupportedTransactionVersion":0}]'
+```
+
+`<slot>` is a finalized slot a few hundred below the `getSlot` answer, and the
+`getBlock` options are the kit's own, exactly (RFC-007, section 4).
+
+1. **P-1. CORS.** The preflight answers a 2xx status with
+   `Access-Control-Allow-Origin` that origin (or `*`: the kit sends no
+   credentials), `Access-Control-Allow-Methods` with `POST`, and
+   `Access-Control-Allow-Headers` with `content-type` (a `*` in either is a
+   wildcard a browser accepts for a request without credentials). Every POST's
+   answer carries `Access-Control-Allow-Origin` too. For a key Origin-locked to
+   the environment's two origins, the same preflight from an origin not on its
+   list (`ORIGIN='https://example.com'`) gets no `Access-Control-Allow-Origin`
+   for it.
+2. **P-2. HTTP.** Every answer is HTTP 200, a JSON-RPC error included, and never
+   a redirect (`curl` follows none here, so one shows as its 3xx). To see an
+   error: the `getBlocksWithLimit` answer lists the next 50 blocks from
+   `<slot>`; a slot missing between two listed ones was skipped, and `getBlock`
+   at it answers HTTP 200 with `error.code` -32007 or -32009 in the body, which
+   the verify page reads. The kit sends one call per request, never a batch, and
+   needs no WebSocket.
+3. **P-3. Authorization.** The key is in the URL's path, or there is none and
+   the endpoint has an Origin allowlist; never in a query string or a fragment.
+   It is the browser's own key, not an engine's, restricted by `Origin` to the
+   environment's two origins (P-1's refused preflight shows it), never by
+   `Referer`, with a rate or spend cap in the provider's settings.
+4. **P-4. Methods.** `getGenesisHash` answers exactly the genesis hash pinned
+   for cluster 101, mainnet-beta (`packages/shell/src/solana-clusters.ts`);
+   `getSlot` at `finalized`, a non-negative integer; `getBlock` at a finalized
+   slot, an object with `blockhash`, `previousBlockhash`, an integer
+   `blockTime`, and `parentSlot`; `getBlocksWithLimit`, a list of slots. Errors
+   carry the Solana validator's JSON-RPC codes (-32001, -32004, -32007, -32009,
+   -32014, -32019), as P-2's skipped slot shows.
+5. **P-5. History** (production). The verify page checks a round back to at
+   least the operator's dispute window, and never less than 90 days (RFC-007,
+   Q15). `getBlock` at a slot that old answers a block, never -32001, -32004,
+   -32019, or `null`: pick the slot well below the `getSlot` answer, and read
+   the answer's `blockTime` (Unix seconds) to confirm the block is at least that
+   old; go further back until it is. At `minRpcQuorum` 2 with two endpoints, the
+   verify page reaches only as far back as the shallower one. A provider that
+   falls short is replaced or upgraded on the backend's side (another provider
+   the engine does not use with a full archive, or an archive plan), never
+   worked around in the kit.
+6. **P-6. Independence.** At least two endpoints for the source (production;
+   staging from step 8.4), run by different organizations on separate
+   infrastructure, and none of them the provider that environment's own engine
+   reads (the code owner, 2026-11-18). The kit cannot see the engine's provider:
+   confirm it with the backend, for that environment. Staging's pair may differ
+   from production's.
+7. **P-7. The policies.** Each endpoint's origin is in `PAGES_RPC_ORIGINS` and
+   passes the headers step's pattern (above; the config job refuses it
+   otherwise). After the deploy, each site's `Content-Security-Policy` lists it
+   in `connect-src` (**After the first deploy**, check 4).
+
+**Rotating a browser key.** The Wrapper reads its configuration once, at boot,
+and keeps it for the session's life, so a session opened before the redeploy
+keeps calling the old URL until it ends; a verify page loaded before it keeps
+the old URL until it is reloaded. The old key therefore stays valid until every
+such session has ended:
+
+1. Create the new key at the provider with the old one's restrictions (browser
+   only, Origin-locked to the environment's Wrapper and verifier origins, a rate
+   or spend cap). Leave the old key valid.
+2. Run the checklist with the new key from both origins: P-1 to P-4, and in
+   production P-5 too (a new key can sit on another plan).
+3. Set `PAGES_RPC_ENDPOINTS` with the new URL in the old one's place and the
+   provider's name unchanged, and `PAGES_RPC_ORIGINS` too if the origin changed
+   (a key in the path leaves it as it is): `--env pages-stage` on staging,
+   `--env pages-prod-config` in production
+   (`gh secret set PAGES_RPC_ENDPOINTS --env <environment>`). Build the current
+   value from the served `environment-config.json`'s `rpcEndpoints`, after the
+   rollback and newer-secret checks of `earlierPins` (above).
+4. Redeploy: on staging, the Pages workflow on `main` (**Redeploy**, above); in
+   production, "Pages production" from `main` with the live release's tag
+   (**Redeploy, roll back, or roll forward by tag**, above).
+5. Check both sites' `<site>/environment-config.json`: `rpcEndpoints` holds the
+   new URL (never copy it anywhere). Then a config round from a fresh launch
+   passes the start.
+6. Wait until every session opened before the redeploy has ended: at least the
+   Play API's longest session (from the redeem to its hard end, the redeem
+   answer's `sessionExpiresAt`) after the deploy finished. Then revoke the old
+   key at the provider and record the date (the provider's name and the date
+   only).
+   <!-- TODO(backend): the longest session the Play API opens (from the redeem to `sessionExpiresAt`), so the wait before an old browser key is revoked is a number. -->
+
+Revoke the old key at once only when it must go now: every session opened before
+the redeploy then loses that endpoint, and at `minRpcQuorum` 2 with two
+endpoints their Solana config rounds fail the tip check (`too-few-answered`,
+with the required cancel once `T_0` is settled) until the player relaunches.
+
+**Staging's move to Solana mainnet-beta** (RFC-007, section 9, step 8; decided,
+Q11 and Q16). Staging's one engine moves from Somnia's public testnet to Solana
+mainnet-beta (cluster 101), the same chain as production. Its `solana` source is
+kind `solana`, `entropyChainId` 101, and `tipLagMargin` 64 slots (provisional,
+Q1, until the backend's measurement, se-backend#471), with staging browser keys
+on two independent providers that staging's own engine does not read,
+Origin-locked to staging's Wrapper and verifier origins. The five steps run in
+this order, each once the one before is done. Unlike **Switching staging's
+entropy chain** (above), the new source goes in **before** the backend's switch,
+beside the old one, so no round is ever refused for an unknown source.
+<!-- TODO(hosting, RFC-007 Q11): staging's two Solana endpoints (staging browser keys on two independent providers staging's engine does not read, Origin-locked to staging's origins), shared out of band; then step 8.2's change. -->
+
+1. **The kit's Solana reader is on staging.** RFC-007's slices 1 to 7 are merged
+   to `main`, and the Pages run of the last of those merges ended green (its
+   `deploy-stage` ran).
+2. **Add the `solana` source beside `anvil`** (the infrastructure owner, or a
+   human maintainer with `pages-stage`'s secrets):
+   1. Run the checklist for both endpoints (staging's items, above).
+   2. Agree who sets the secrets, and hold every merge to `main` until step 2.4
+      is done. Each of the three secrets below is invalid without the other two,
+      so a push between them runs `config-stage` on a half-changed set, which it
+      refuses (the sites stay as they were, but the run fails).
+   3. Build each current value from the verifier's served
+      `environment-config.json`, after the rollback and newer-secret checks of
+      `earlierPins` (above), and set (`gh secret set <name> --env pages-stage`):
+      - `PAGES_CHAIN_PINS`: the current value with the `solana` entry added to
+        `entropyChainKind`, `entropyChainId`, and `tipLagMargin`, and nothing
+        else changed: `minRpcQuorum` stays 1, `environment` stays `preview`.
+        Those fields then read:
+
+        ```text
+        "entropyChainKind": { "anvil": "evm", "solana": "solana" }
+        "entropyChainId":   { "anvil": 50312, "solana": 101 }
+        "tipLagMargin":     { "anvil": 100,   "solana": 64 }
+        "minRpcQuorum":     1
+        ```
+
+      - `PAGES_RPC_ENDPOINTS`: the current value plus the `solana` list of two
+        endpoints; `anvil`'s list unchanged;
+      - `PAGES_RPC_ORIGINS`: the current list plus the two Solana origins.
+   4. Redeploy `main` (**Redeploy**, above).
+   5. Check both sites' `<site>/environment-config.json`: `entropyChainKind`,
+      `entropyChainId`, and `tipLagMargin` as above, `rpcEndpoints` with
+      `anvil`'s endpoint unchanged and two under `solana`, `minRpcQuorum` 1, and
+      `environment` `preview`; every other value as it was. The
+      `Content-Security-Policy` of `/` and `/verify/` on the Wrapper's site and
+      of `/` on the verifier's lists the new origins in `connect-src`. Then a
+      new Wrapper session from a fresh launch: a Coin Flip round passes the
+      start, with the degraded indicator, as before. No round names `solana`
+      yet, so nothing changes for players: the source only has to be in place
+      before the first Solana round.
+
+   A failed `config-stage` names the input, the field, and the issue (for
+   example `invalid-entropy-chain-kind at entropyChainKind.solana` when a map
+   lacks the source, `not-https-origin`, or the `PAGES_RPC_ORIGINS` mismatch)
+   and deploys nothing: fix the secret, then redeploy `main`.
+
+3. **The backend's switch and drain** (se-backend#548, planned for 2026-11-30 to
+   2026-12-03): the backend's fix, the drain of staging's rounds in flight, then
+   the engine's switch to mainnet-beta. The kit does nothing here; wait for the
+   backend's word that all three are done. From the switch on, staging's config
+   rounds name `solana`, still at `minRpcQuorum` 1 under the degraded indicator.
+4. **Drop `anvil` and raise `minRpcQuorum` to 2** (Q16): one configuration
+   change, then a new deploy run.
+   1. Hold every merge to `main`, as in step 2.2.
+   2. Build each current value as in step 2.3, and set:
+      - `PAGES_CHAIN_PINS`: the `anvil` entry removed from `entropyChainKind`,
+        `entropyChainId`, and `tipLagMargin`, and `minRpcQuorum` 2;
+        `environment` stays `preview`, and nothing else changes. Those fields
+        then read:
+
+        ```text
+        "entropyChainKind": { "solana": "solana" }
+        "entropyChainId":   { "solana": 101 }
+        "tipLagMargin":     { "solana": 64 }
+        "minRpcQuorum":     2
+        ```
+
+      - `PAGES_RPC_ENDPOINTS`: the `anvil` list removed;
+      - `PAGES_RPC_ORIGINS`: Somnia's origin removed.
+   3. Redeploy `main` (**Redeploy**, above): a new run, never "Re-run" of a
+      failed one, which keeps that run's commit.
+   4. Check both sites' `<site>/environment-config.json`: only `solana` in the
+      three maps and in `rpcEndpoints`, `minRpcQuorum` 2, and `environment`
+      `preview`. Somnia's origin is gone from `connect-src`. Then a new session
+      from a fresh launch shows no "chain check not independent (development)"
+      indicator, and a Coin Flip round passes the start.
+
+   **Expected, not an alarm** (accepted for staging, Q16): a staging round
+   played before the switch, on `anvil`, now shows as not matching on staging's
+   verify page: check 2 fails for a source the configuration does not list
+   (V-7), and check 6 cannot be verified. Rounds played on `solana` between
+   steps 3 and 4 still verify. A session opened before this redeploy keeps
+   `minRpcQuorum` 1, `anvil`, and the degraded indicator until it ends.
+
+5. **The canary** (the gate before production; decided by the code owner,
+   2026-11-19, and refined on 2026-11-20). The client kit's engineer runs it
+   after step 4, on staging at `minRpcQuorum` 2:
+   - **Open the canary's tracking issue first**: a new public issue in this
+     repository, which holds the canary's whole record (below). It does not
+     exist before this step; whoever runs the canary opens it.
+   - Play at least **100 Coin Flip (`coin-flip-v1`) config rounds over at least
+     24 hours**, each played to its end, each from a session launched after step
+     4's redeploy (an older session still checks at quorum 1).
+   - **Only Coin Flip rounds count.** Only a round of one step and two options
+     can reach V-6 (A-3). A Cash or Crash round, which ends at V-8 on the verify
+     page, is neither counted nor restarts the count; nor is a book round, which
+     runs no tip check (W-52).
+   - A Coin Flip round **counts** only when both hold: its tip check passed (the
+     round reached play, and its round receipt read "Checked", never "Checked
+     (dev)" or "Not verified", W-59), and, once the round has ended, the verify
+     page (the receipt's **Verify this round**) shows it as matching (V-6),
+     check 6 included. A verify page that says the round has not ended yet (V-8)
+     is not an outcome: check again later.
+   - **Any other outcome of a Coin Flip round restarts the count**: a failed tip
+     check ("could not verify the chain", then "this round failed
+     verification"), or a verify page that shows a mismatch (V-7) or "could not
+     be verified" (check 6). The count restarts at zero once the cause is found
+     and recorded (**A Solana config round fails its tip check** and **A Solana
+     round's check 6 is not matching**, in Troubleshooting), and the 24 hours
+     run from the first round counted after it.
+   - **A change to staging's Solana endpoints during the canary.** A browser
+     key's rotation on the same provider (**Rotating a browser key**, above)
+     does not restart the count. A change of provider does: the count restarts
+     at zero, and only rounds from sessions launched after that change's
+     redeploy count.
+   - **The record**, in the tracking issue: each round's id, when it was played,
+     and its outcome (the tip check's and the verify page's); for any other
+     outcome, the failure code (the tip check's, such as `too-few-answered` or
+     `lagging`, or the verify page's failed check and its reason) and, once
+     found, its cause; and each restart with its reason. Never a URL, a key, or
+     a hostname.
+   - It **passes** at 100 counted rounds in a row, the first and the hundredth
+     at least 24 hours apart. Post the result in the tracking issue, link it
+     from se-client-kit#235, and report it to the code owner: production's first
+     document waits for it (step 9, below).
+
+**Production's first document** (RFC-007, section 9, step 9; decided by the code
+owner, 2026-11-18). Production's `pages-prod-config` gets no chain value, and
+the publish path (se-client-kit#154, `RELEASE_PUBLISH_ENABLED`, Bootstrap
+step 8) stays off, until **all** of these hold:
+
+1. RFC-007's slice 1 is merged;
+2. both production browser providers pass P-1 to P-6, with production's browser
+   keys, from production's Wrapper and verifier origins (se-backend#375);
+3. step 8's canary has passed.
+
+There is no interim document before it: no `evm` source, and no `anvil`. The
+first release deploys production in the same run, and its `prod-check` reads
+`pages-prod-config`, so the variable is set only after the document's values
+are. A production config round passes the tip check only on a release that
+carries the Solana tip check (slices 2 and 3), and the verify page reads its
+check 6 only from slice 4: both are on `main` before step 8 starts. The values,
+set by the infrastructure owner (#133)
+(`gh secret set <name> --env pages-prod-config`):
+
+- `PAGES_CHAIN_PINS`: `environment` `production`, production's `runtimeSigner`
+  and `registryDomain` (the backend's), no `earlierPins`, and one source:
+
+  ```text
+  "entropyChainKind": { "solana": "solana" }
+  "entropyChainId":   { "solana": 101 }
+  "tipLagMargin":     { "solana": 64 }
+  "minRpcQuorum":     2
+  ```
+
+  `tipLagMargin` is 64 slots, provisional (Q1), or the backend's measurement on
+  the contracted providers if it has landed (se-backend#471);
+
+- `PAGES_RPC_ENDPOINTS`: `{"solana":[…]}`, two endpoints on two independent
+  providers production's engine does not read (P-6), with production's browser
+  keys, Origin-locked to production's Wrapper and verifier origins;
+- `PAGES_RPC_ORIGINS`: exactly those two origins;
+- `PAGES_WRAPPER_ORIGIN`, `PAGES_VERIFIER_ORIGIN`, `PAGES_GAME_ORIGINS`, and
+  `PAGES_OPERATOR_ORIGINS`: #133's.
+
+The release's `prod-check` refuses, before npm publishes, a document that is not
+`production` (`not-production`), a quorum below 2 (`production-quorum`), a
+`solana` source not on cluster 101 (`production-cluster`), a source with fewer
+endpoints than the quorum (`quorum-unreachable`), or an origin the headers step
+refuses (`not-https-origin`). After the first deploy, run **After the first
+deploy**'s checks 1 to 4 and check both sites' `<site>/environment-config.json`
+against the values above; then play one round from a test launch
+([Verify before and after](#verify-before-and-after), step 5): it passes the
+start with no degraded indicator. Once production runs on Solana, RFC-007 is
+archived.
+<!-- TODO(hosting, se-backend#375): production's two Solana browser providers (the second still to be chosen), their browser keys, and P-1 to P-6 from production's origins; shared out of band, never written in this repository. -->
+
 ### Roll back or deprecate
 
 - **A bad Wrapper deploy:** roll the Pages projects back to the previous
@@ -1279,6 +1666,41 @@ token:
   dry run's, something in the environment moved the store (`PNPM_HOME`, a
   `store-dir` setting); the dry run keeps `PNPM_HOME` and names the store
   explicitly for that reason.
+- **A Solana config round fails its tip check** ("could not verify the chain",
+  then "this round failed verification"; the round receipt reads "Not
+  verified"). Before RFC-007's slice 2 is deployed, every `solana` round does
+  (`unsupported-chain-kind`). After it, the shell asked each `solana` endpoint
+  `getGenesisHash` and `getSlot` at `finalized`, and, in W-26b's order: an
+  endpoint reported another cluster's genesis hash (`chain-id-mismatch`: a URL
+  that reaches another cluster; run P-4 on it); fewer than `minRpcQuorum`
+  endpoints gave a final slot (`too-few-answered`: an endpoint down, out of
+  quota, or refusing the origin, or a call the browser blocked); an endpoint
+  that gave a slot gave no genesis hash (`chain-id-unavailable`); or an
+  endpoint's final slot was more than `tipLagMargin` slots below the highest
+  (`lagging`). In the browser's developer tools, the Network panel shows each
+  endpoint's calls and answers, and the Console a CORS or `connect-src` refusal;
+  never share a capture that shows a URL. Run the provider checklist again on
+  the endpoint at fault ([Solana entropy sources](#solana-entropy-sources)). A
+  provider that keeps lagging goes to the backend, whose measurement sets the
+  margin (se-backend#471). During the canary, record the cause in its tracking
+  issue before the count restarts.
+- **A Solana round's check 6 is not matching** on the verify page ("could not be
+  verified", or V-7's "this round could not be verified against the chain").
+  Before RFC-007's slice 4 is deployed, every `solana` round's check 6 is "could
+  not be verified" (`unsupported-chain-kind`). After it, the page shows, per
+  endpoint, its genesis hash ("this cluster", "another cluster", or "no answer")
+  and its value or the reason it has none (RFC-007, section 4): another cluster
+  (P-4); "this provider does not serve slot N", a provider whose history is
+  shallower than the round (P-5), that does not serve a just-finalized slot yet,
+  or whose long-term storage is unreachable for now (check again); "its ledger
+  has a gap at slot N", the provider's own data; "An endpoint gave a block but
+  no genesis hash." or "An endpoint gave the genesis hash but no valid block for
+  slot N.", a provider answering out of shape; too few values (an endpoint down,
+  or blocked as above); or two values that differ, including two endpoints that
+  disagree on whether the slot was skipped. Check again once; if it persists,
+  take it to the backend with the provider's name and the round id, never a URL.
+  During the canary, record the cause in its tracking issue before the count
+  restarts.
 - **The drift check reports a difference.** Read the run's summary; the findings
   are in
   [The contracts drift job](../specs/client-kit/the-contracts-drift-job.md#what-it-compares).
@@ -1320,4 +1742,8 @@ cannot be taken back once cloned). An outside finding is reported through
 - [specs/client-kit.md](../specs/client-kit.md),
   [specs/wrapper.md](../specs/wrapper.md),
   [ADR-001](../decisions/ADR-001-toolchain-and-signing.md),
-  [ADR-008](../decisions/ADR-008-pages-deploy-with-wrangler.md).
+  [ADR-008](../decisions/ADR-008-pages-deploy-with-wrangler.md),
+  [ADR-013](../decisions/ADR-013-solana-entropy-sources.md) (accepted),
+  [RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md) (Solana
+  entropy in the browser: section 6's provider requirements, section 9's steps 8
+  and 9).
