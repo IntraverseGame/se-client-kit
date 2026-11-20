@@ -49,10 +49,13 @@ export type EndpointAnswer = {
  * Why the read failed, in W-26b's order: `config` (a configuration the Wrapper
  * would refuse at boot), `other-chain`, `too-few` answering, `no-chain-id`
  * (gave a block but no chain id), `no-block` (gave a chain id but no valid hash
- * for block N: it cannot be shown to agree), `hash-mismatch`.
+ * for block N: it cannot be shown to agree), `hash-mismatch`. Check 6 adds
+ * `unsupported-chain-kind`, a source of a kind the page cannot read yet, for
+ * which nothing is asked.
  */
 export type ChainReadFailure =
   | "config"
+  | "unsupported-chain-kind"
   | "other-chain"
   | "too-few"
   | "no-chain-id"

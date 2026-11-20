@@ -25,8 +25,8 @@ export const endpoints = (
   }));
 
 /**
- * A production document with three endpoints, the source's chain pinned, and a
- * margin of 2 blocks.
+ * A production document with three endpoints, the source's kind (`evm`) and
+ * chain pinned, and a margin of 2 blocks.
  */
 export const configDocument = (
   overrides: Readonly<Record<string, unknown>> = {},
@@ -36,6 +36,7 @@ export const configDocument = (
   runtimeSigner: SIGNER,
   registryDomain: { chainId: 31337, verifyingContract: REGISTRY },
   rpcEndpoints: { [SOURCE]: endpoints(3) },
+  entropyChainKind: { [SOURCE]: "evm" },
   entropyChainId: { [SOURCE]: ENTROPY_CHAIN_ID },
   minRpcQuorum: 2,
   tipLagMargin: { [SOURCE]: 2 },

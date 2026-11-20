@@ -29,7 +29,6 @@ export {
   type ChainConfigIssueCode,
   type ChainConfigResult,
   type Environment,
-  type SourceConfig,
 } from "./chain-config.ts";
 export {
   AUTOPLAY_MAX_COUNT,
@@ -43,6 +42,7 @@ export {
 } from "./autoplay-types.ts";
 export type { CancelState } from "./cancel-state.ts";
 export type { RpcEndpoint } from "./config-fields.ts";
+export type { SourceConfig } from "./source-config.ts";
 export {
   createControllerBridge,
   type ControllerBridge,

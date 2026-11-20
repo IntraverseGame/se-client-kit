@@ -295,54 +295,101 @@ are in brackets.
   entropy source, named as the Snapshot's `proofs.randomnessProof.source`, a
   non-empty list of `{ provider, url }`: the provider a short token, the URL
   `https:`, or `http:` on a loopback host only, with no credentials, query
-  string, or fragment), `entropyChainId` (per source, the chain id the source's
-  blocks are on, an integer of at least 1 and at most 2^53 - 1, required for
-  each source and only for those), `minRpcQuorum` (an integer of at least 1,
-  default 2), and `tipLagMargin` (per source, a non-negative integer of blocks,
-  required for each source and only for those). Other fields are the Wrapper's
-  and are ignored. Addresses are kept lowercase (their case is not checked
-  against EIP-55); block counts and chain ids become `bigint`. It refuses
-  (`code`): `production-quorum`, the boot rule, `production` with `minRpcQuorum`
-  below 2; `shared-provider`, two endpoints of one source with one provider
-  (names compared without case) or one URL (one provider may serve two sources);
-  `quorum-unreachable`, a source with fewer endpoints than `minRpcQuorum`; and
-  `invalid-environment`, `invalid-signer`, `invalid-domain`, `invalid-quorum`,
-  `invalid-endpoints`, `invalid-entropy-chain-id`, and `invalid-lag-margin` for
-  a missing or malformed field. `local` and `preview` may set `minRpcQuorum` to
-  1: the config is then `degraded`, the Wrapper shows the "chain check not
-  independent (development)" indicator, and every tip check records
-  `tipCheck: "degraded"`. The Wrapper refuses to start on any issue. This
-  configuration is the only trust anchor of the chain checks: the signer
-  address, the registry domain, and each entropy source's chain id are pinned
-  per environment, and a Snapshot's or a response's copy of them is compared
-  with it, never used in its place.
+  string, or fragment), `entropyChainKind` (per source, the protocol its
+  endpoints speak, `"evm"` or `"solana"`, required for each source and only for
+  those, with no default; ADR-013), `entropyChainId` (per source, the chain id
+  the source's blocks are on, or the cluster number of a `solana` source, an
+  integer of at least 1 and at most 2^53 - 1, required for each source and only
+  for those), `minRpcQuorum` (an integer of at least 1, default 2), and
+  `tipLagMargin` (per source, a non-negative integer in the source's unit,
+  blocks for `evm` and slots for `solana`, required for each source and only for
+  those). Other fields are the Wrapper's and are ignored. Addresses are kept
+  lowercase (their case is not checked against EIP-55); block counts and chain
+  ids become `bigint`. It refuses (`code`): `production-quorum`, the boot rule,
+  `production` with `minRpcQuorum` below 2; `shared-provider`, two endpoints of
+  one source with one provider (names compared without case) or one URL (one
+  provider may serve two sources); `quorum-unreachable`, a source with fewer
+  endpoints than `minRpcQuorum`; `entropy-chain-kind-mismatch` (at
+  `entropyChainKind.<source>`), a source whose kind disagrees with its key or
+  its chain: a `solana` source MUST be keyed `solana` and its `entropyChainId`
+  MUST be 101, 102, or 103, and an `evm` source MUST NOT be keyed `solana` and
+  its `entropyChainId` MUST NOT be one of those numbers (the backend reserves
+  them for Solana; the key is the source name the engine uses and
+  `randomnessTarget` encodes); the key is checked even when `entropyChainId` is
+  refused, the number only when it is valid; `production-cluster` (at
+  `entropyChainId.<source>`; RFC-007, Q10), a `production` document whose
+  `solana` source is on a test cluster, 102 or 103, since production's entropy
+  is mainnet-beta, 101 (`local` and `preview` may use any of the three; a number
+  the cross-check refuses is left to it); and `invalid-environment`,
+  `invalid-signer`, `invalid-domain`, `invalid-quorum`, `invalid-endpoints`,
+  `invalid-entropy-chain-id`, `invalid-lag-margin`, and
+  `invalid-entropy-chain-kind` for a missing or malformed field
+  (`invalid-entropy-chain-kind` at `entropyChainKind` when it is not an object,
+  else at `entropyChainKind.<source>`). A document may list any number of
+  sources, of either kind, each held to every per-source rule on its own; since
+  a `solana` source must be keyed `solana`, it has at most one. `local` and
+  `preview` may set `minRpcQuorum` to 1: the config is then `degraded`, the
+  Wrapper shows the "chain check not independent (development)" indicator, and
+  every tip check records `tipCheck: "degraded"`. The Wrapper refuses to start
+  on any issue. This configuration is the only trust anchor of the chain checks:
+  the signer address, the registry domain, and each entropy source's kind and
+  chain id are pinned per environment, and a Snapshot's or a response's copy of
+  them is compared with it, never used in its place.
+
+  Each validated `SourceConfig` is a union on `kind`: an `evm` source holds its
+  `chainId`, `endpoints`, and `tipLagMargin`; a `solana` source holds the same
+  and its cluster's `genesisHash`, which the shell pins in code
+  (`solana-clusters.ts`), never reads from the configuration, so a reader takes
+  it from the configuration it was given. A Solana cluster is identified by its
+  genesis hash (base58, as `getGenesisHash` returns it); the table is a protocol
+  constant, the same in every environment, keyed by the cluster number (101 is
+  mainnet-beta, production's; 102 and 103 are Solana's public test clusters,
+  kept for local and test use). The verify page holds a copy of it (it cannot
+  import the shell), and `tools/solana-clusters.test.ts` holds both copies to
+  this table:
+
+  | Cluster number | Genesis hash                                   |
+  | -------------- | ---------------------------------------------- |
+  | 101            | `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d` |
+  | 102            | `4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY` |
+  | 103            | `EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG` |
+
+  A reset of a test cluster with a new genesis needs a kit release.
+
 - **The tip check (W-26b, W-26a).** It runs over the endpoints the configuration
   lists for the round's source, through an injected `RpcTransport`
   (`(endpoint, call, signal?) => Promise<result>`: it sends one JSON-RPC 2.0
   request and resolves with its `result`, or rejects). There are no provider
-  names or URLs in the code. It makes two rounds of calls, each in parallel:
-  `eth_chainId` with `[]` and `eth_getBlockByNumber` with `["finalized", false]`
-  to every endpoint, then `eth_getBlockByNumber` with `[h_low, false]` (`h_low`
-  as a JSON-RPC quantity) to each endpoint that gave a final block. Each call
-  times out on the injected clock (default 15 s, W-43) and has its own abort
-  signal (from the platform `AbortController`; typed as `play-client`'s
-  `CancelSignal`, since the kit compiles without the DOM library), aborted when
-  that call times out and never otherwise; where the platform has no
-  `AbortController` the signal is absent. A transport may ignore it, and a late
-  answer is ignored. A rejection, a timeout, a transport that throws, and a
-  `result` that is not a chain id (a canonical lowercase quantity of at most 64
-  bits) or a block (an object whose `number` is such a quantity and whose `hash`
-  is 32 bytes of hex) are no answer; a hash is kept lowercase. `h_top` and
-  `h_low` are the maximum and minimum final block of the endpoints that answered
-  (gave a final block). The check passes only if no endpoint reported another
-  chain id than the source's configured one (answering or not), at least
-  `minRpcQuorum` answered, each of them reported the configured chain id, each
-  is at most `tipLagMargin` blocks behind `h_top`, each gave the block at
-  `h_low`, and every hash at `h_low` is the same. The failures, in this order,
-  are `chain-id-mismatch` (an endpoint reported another chain),
+  names or URLs in the code. **Until RFC-007's slice 2, a Solana source fails
+  closed without calling** (interim; slice 2 replaces it with the Solana tip
+  check, proposed in RFC-007 section 3): for a source of kind `solana` no
+  endpoint is asked and the check fails as `unsupported-chain-kind`, which the
+  decision takes as `chain-unverified`, so W-26's required `PlayerCancel`
+  follows once `T_0` is settled; its record holds the source's chain id and lag
+  margin, no tip, and no answer. For an `evm` source it makes two rounds of
+  calls, each in parallel: `eth_chainId` with `[]` and `eth_getBlockByNumber`
+  with `["finalized", false]` to every endpoint, then `eth_getBlockByNumber`
+  with `[h_low, false]` (`h_low` as a JSON-RPC quantity) to each endpoint that
+  gave a final block. Each call times out on the injected clock (default 15 s,
+  W-43) and has its own abort signal (from the platform `AbortController`; typed
+  as `play-client`'s `CancelSignal`, since the kit compiles without the DOM
+  library), aborted when that call times out and never otherwise; where the
+  platform has no `AbortController` the signal is absent. A transport may ignore
+  it, and a late answer is ignored. A rejection, a timeout, a transport that
+  throws, and a `result` that is not a chain id (a canonical lowercase quantity
+  of at most 64 bits) or a block (an object whose `number` is such a quantity
+  and whose `hash` is 32 bytes of hex) are no answer; a hash is kept lowercase.
+  `h_top` and `h_low` are the maximum and minimum final block of the endpoints
+  that answered (gave a final block). The check passes only if no endpoint
+  reported another chain id than the source's configured one (answering or not),
+  at least `minRpcQuorum` answered, each of them reported the configured chain
+  id, each is at most `tipLagMargin` blocks behind `h_top`, each gave the block
+  at `h_low`, and every hash at `h_low` is the same. The failures, in this
+  order, are `chain-id-mismatch` (an endpoint reported another chain),
   `too-few-answered`, `chain-id-unavailable` (an answering endpoint gave no
   chain id), `lagging`, `hash-unavailable`, and `hash-mismatch`; a source the
-  configuration does not list is `unknown-source` and no endpoint is asked. The
+  configuration does not list is `unknown-source`, and a `solana` source
+  `unsupported-chain-kind` (above), and for those no endpoint is asked. The
   order is by what each failure proves: a chain id mismatch is proof of an
   endpoint foreign to the source, so it comes first, whatever the rest; the
   quorum is a precondition of judging the rest; and the endpoints' identity
@@ -350,26 +397,28 @@ are in brackets.
   an outlier or picks a side. The record (frozen) holds the source, `passed`,
   the `failure`, `tipCheck` (`independent` or `degraded`), the observed tip
   `h_top` and `h_low` (`null` when no endpoint answered), the lag margin, the
-  source's configured chain id, and every configured endpoint's answer in order:
-  its provider, its chain id, its final block, and its hash at `h_low` (`null`
-  for no answer). Block numbers and chain ids are `bigint`.
+  source's configured chain id, and every configured endpoint's answer in order
+  (none when no endpoint was asked): its provider, its chain id, its final
+  block, and its hash at `h_low` (`null` for no answer). Block numbers and chain
+  ids are `bigint`.
 - **The decision (W-26, W-26b).** `decideChain(record, bind)` returns `pass`
   only if the check passed and the bind holds: for a `future` bind `N` is above
   `h_top`; for a `tip` bind `N` is at least `h_top` minus the lag margin.
   Otherwise it returns `fail`, with the record kept and a reason:
   `chain-unverified` ("could not verify the chain": `too-few-answered`,
-  `chain-id-unavailable`, `hash-unavailable`, or `unknown-source`) or
-  `verification-failed` ("this round failed verification": `chain-id-mismatch`,
-  `lagging`, `hash-mismatch`, or a bind that does not hold, `failure: "bind"`).
-  The session runs it through the Wrapper's JSON-RPC transport
-  (`session-tip.ts`). A failure signs nothing by itself: per W-25 and W-26 the
-  shell signs `PlayerCancel` (through the round's `signCancel`) as soon as the
-  round is `active` only if `T_0` is settled and the round's `CreateRoundAuth`
-  was not re-issued, and the player then sees the reason's text, with "and was
-  canceled" added to "this round failed verification"; if `T_0` is not settled
-  it signs nothing for the round, not even `PlayerCancel`, keeps the evidence,
-  and the round ends by its game's expiry rule. The round's verdict (below)
-  combines the decision with checks 1 to 5.
+  `chain-id-unavailable`, `hash-unavailable`, `unknown-source`, or
+  `unsupported-chain-kind`) or `verification-failed` ("this round failed
+  verification": `chain-id-mismatch`, `lagging`, `hash-mismatch`, or a bind that
+  does not hold, `failure: "bind"`). The session runs it through the Wrapper's
+  JSON-RPC transport (`session-tip.ts`). A failure signs nothing by itself: per
+  W-25 and W-26 the shell signs `PlayerCancel` (through the round's
+  `signCancel`) as soon as the round is `active` only if `T_0` is settled and
+  the round's `CreateRoundAuth` was not re-issued, and the player then sees the
+  reason's text, with "and was canceled" added to "this round failed
+  verification"; if `T_0` is not settled it signs nothing for the round, not
+  even `PlayerCancel`, keeps the evidence, and the round ends by its game's
+  expiry rule. The round's verdict (below) combines the decision with checks 1
+  to 5.
 - **The `CreateRoundAuth` checks (W-26 items 1 to 5).** They read a validated
   Snapshot, the validated chain configuration (the only trust anchor, OQ-7), and
   what the shell sent in `start` (the action key's address and the
@@ -892,8 +941,8 @@ are in brackets.
     stricter `future` rule waits for the contract that carries the mode. Kept
     provisional (decided in human review, 2026-10-17).
     <!-- TODO(bind mode): take `bindMode` from the contract that carries it (the Snapshot or the signed-action spec) and drop the session input. -->
-  - `tipLagMargin` has no default and is required per source: the margin in
-    blocks per chain is not decided (W-26b).
+  - `tipLagMargin` has no default and is required per source: the margin per
+    chain, in blocks (in slots for a `solana` source), is not decided (W-26b).
   - The bind's mode (`future` or `tip`) and `N` are inputs of the decision: the
     Snapshot's `proofs.randomnessProof.blockNumber` is `N`, and the mode is not
     yet in a contract the kit has vendored.
@@ -934,60 +983,61 @@ are in brackets.
   whole-session test checks that the key's bytes (hex, base64, and decimal)
   appear in no printed object, error, log line, or global, and that no storage,
   cookie, URL, history, network, or messaging global is read or written. The
-  chain configuration's tests cover each refusal (T-8a) and the boot rule; the
-  tip check runs against a scripted JSON-RPC transport and a manual clock and
-  covers every T-8 tip case: exactly the quorum agreeing passes, one outlier
-  among three fails, too few answering fails, a hash mismatch at `h_low` fails,
-  a disagreement just beyond the lag margin fails (and at it passes), `h_top` is
-  reported, every answer is recorded, and the degraded mode records
-  `tipCheck: "degraded"`; plus the calls' shape, untrusted answers, and the
-  request timeout (T-8a), and the pinned chain: an endpoint that reports another
-  chain id fails, whether or not it gave a final block (in degraded mode too),
-  and an answering one that gives no chain id or a malformed one fails closed.
-  The `signature/` Snapshot vectors are read and validated and replay through
-  checks 1 to 4 with their verdicts and reasons, each under a configuration that
-  pins its `pinned` values and its own entropy source and chain id; the vendored
-  `valid/coinflip-active-ready-hash` round passes checks 1 to 5 and settles
-  `T_0` as its `readyHash`. Since the vectors do not pin the entropy chain id,
-  the wrong-chain cases have their own tests: a configuration that pins another
-  chain, a round signed on another chain, an `entropyChainId` changed after
-  signing, and a source the configuration does not list. The other T-8 cases
-  issue a round with a registry key drawn at run time from a seeded source (so
-  no key is written down) and change a field before or after signing: each check
-  fails with its reason and in order (`missing`, `pinned-mismatch`,
-  `cross-field` for a wrong round, key, bet, currency, secret hash, chain, or
-  `randomnessTarget`, `recover-mismatch` for a tampered `playerRef`, `gameId`,
-  `gameVersion`, `circuitVersion`, `payoutTermsHash`, `prepareWindow`, or
-  `expiry`, another signer, a high-`s` signature, or another domain,
-  `ready-mismatch`, and `missing` for `readyHash` still absent at `active`); a
-  past `expiry` passes; the verdict never sets `cancel` when `T_0` is not
-  settled, sets it for a tip-check failure only once `T_0` is settled and the
-  round is `active`, and withdraws it on a re-issue, which is recorded once with
-  the first object kept. The game bridge (T-9) runs against a fake frame and
-  listener: a wrong `source` or origin, a bad schema, an unknown `type`, a
-  string, an accessor, and an extra field are ignored; each mount refusal;
-  nothing before `hello`, the first valid one only, and an incompatible one ends
-  the boundary; every post goes to D; each reject reason and `busy` for a
-  repeated id in flight; a seeded property test over recorded sessions of every
-  golden and `signature/` Snapshot, with legal, illegal, malformed, and forged
-  messages, checks that every message the game receives holds only allow-listed
-  fields and no proof, signature, session id, link, or amount; and a session
-  that signs a move through the pick use case shows that the key's bytes, the
-  token, the key's address, the signature, and the digest reach no message and
-  that no messaging, storage, or network global is touched. The round flows
-  (T-4, T-4b, and the T-8 cases that need a flow) run against a scripted Play
-  API transport, a round issued for the session's own key (with three steps
-  where a cash-out is needed), a stand-in tip decision, and the canonical
-  encoder wrapped to record what it got: the start sends the key and the bet and
-  signs nothing; a start with no response, a 503 `UNAVAILABLE` (either
-  `retryable`), a bare 503, or a 500 `INTERNAL` is sent once more with the same
-  body and key and its answer is the round (an ended one held as a first answer
-  is), a failed resend is thrown with no third send, a page that lost the lock
-  before the resend sends nothing more, and any other failure (a 500 of another
-  code, a 400, a 409, a 422, a voided start's 503) is thrown with one send
-  (`round-start-resend.test.ts`); through the session, a `ROUND_ACTIVE` to the
-  resend shows that round, and a session that ended before the resend sends
-  nothing more (`play-session-play.test.ts`); a move is signed at the next
+  chain configuration's tests cover each refusal (T-8a), the boot rule, and the
+  chain kind with its cross-check, `production-cluster`, and the genesis hash a
+  `solana` source carries (T-39); the tip check runs against a scripted JSON-RPC
+  transport and a manual clock and covers every T-8 tip case: exactly the quorum
+  agreeing passes, one outlier among three fails, too few answering fails, a
+  hash mismatch at `h_low` fails, a disagreement just beyond the lag margin
+  fails (and at it passes), `h_top` is reported, every answer is recorded, and
+  the degraded mode records `tipCheck: "degraded"`; plus the calls' shape,
+  untrusted answers, and the request timeout (T-8a), and the pinned chain: an
+  endpoint that reports another chain id fails, whether or not it gave a final
+  block (in degraded mode too), and an answering one that gives no chain id or a
+  malformed one fails closed. The `signature/` Snapshot vectors are read and
+  validated and replay through checks 1 to 4 with their verdicts and reasons,
+  each under a configuration that pins its `pinned` values and its own entropy
+  source and chain id; the vendored `valid/coinflip-active-ready-hash` round
+  passes checks 1 to 5 and settles `T_0` as its `readyHash`. Since the vectors
+  do not pin the entropy chain id, the wrong-chain cases have their own tests: a
+  configuration that pins another chain, a round signed on another chain, an
+  `entropyChainId` changed after signing, and a source the configuration does
+  not list. The other T-8 cases issue a round with a registry key drawn at run
+  time from a seeded source (so no key is written down) and change a field
+  before or after signing: each check fails with its reason and in order
+  (`missing`, `pinned-mismatch`, `cross-field` for a wrong round, key, bet,
+  currency, secret hash, chain, or `randomnessTarget`, `recover-mismatch` for a
+  tampered `playerRef`, `gameId`, `gameVersion`, `circuitVersion`,
+  `payoutTermsHash`, `prepareWindow`, or `expiry`, another signer, a high-`s`
+  signature, or another domain, `ready-mismatch`, and `missing` for `readyHash`
+  still absent at `active`); a past `expiry` passes; the verdict never sets
+  `cancel` when `T_0` is not settled, sets it for a tip-check failure only once
+  `T_0` is settled and the round is `active`, and withdraws it on a re-issue,
+  which is recorded once with the first object kept. The game bridge (T-9) runs
+  against a fake frame and listener: a wrong `source` or origin, a bad schema,
+  an unknown `type`, a string, an accessor, and an extra field are ignored; each
+  mount refusal; nothing before `hello`, the first valid one only, and an
+  incompatible one ends the boundary; every post goes to D; each reject reason
+  and `busy` for a repeated id in flight; a seeded property test over recorded
+  sessions of every golden and `signature/` Snapshot, with legal, illegal,
+  malformed, and forged messages, checks that every message the game receives
+  holds only allow-listed fields and no proof, signature, session id, link, or
+  amount; and a session that signs a move through the pick use case shows that
+  the key's bytes, the token, the key's address, the signature, and the digest
+  reach no message and that no messaging, storage, or network global is touched.
+  The round flows (T-4, T-4b, and the T-8 cases that need a flow) run against a
+  scripted Play API transport, a round issued for the session's own key (with
+  three steps where a cash-out is needed), a stand-in tip decision, and the
+  canonical encoder wrapped to record what it got: the start sends the key and
+  the bet and signs nothing; a start with no response, a 503 `UNAVAILABLE`
+  (either `retryable`), a bare 503, or a 500 `INTERNAL` is sent once more with
+  the same body and key and its answer is the round (an ended one held as a
+  first answer is), a failed resend is thrown with no third send, a page that
+  lost the lock before the resend sends nothing more, and any other failure (a
+  500 of another code, a 400, a 409, a 422, a voided start's 503) is thrown with
+  one send (`round-start-resend.test.ts`); through the session, a `ROUND_ACTIVE`
+  to the resend shows that round, and a session that ended before the resend
+  sends nothing more (`play-session-play.test.ts`); a move is signed at the next
   sequence with the canonical text and path, and its body carries the encoder's
   bytes; a second pick for a step already signed (pending, in flight, or shown
   again by an older Snapshot) is refused; a W-16 resend sends the same body; a

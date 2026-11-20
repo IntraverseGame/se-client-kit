@@ -178,15 +178,24 @@ else showGenericError(); // rejected: not rendered
   - `validateChainConfig(document)` reads the chain part of the parsed
     environment configuration: `environment`, `runtimeSigner`, `registryDomain`
     (`chainId`, `verifyingContract`), `rpcEndpoints` (per entropy source,
-    `{ provider, url }` entries), `entropyChainId` (per source, required: the
-    chain the source's blocks are on), `minRpcQuorum` (default 2,
-    `DEFAULT_MIN_RPC_QUORUM`), and `tipLagMargin` (per source, required). It
-    returns the configuration typed and frozen, or every issue found. It refuses
-    `production` with `minRpcQuorum` below 2, two endpoints of one source that
-    share a provider or a URL, and a source with fewer endpoints than
-    `minRpcQuorum`. `local` and `preview` may set `minRpcQuorum` to 1; the
-    configuration is then `degraded`. The pinned signer, registry domain, and
-    entropy chain ids are the only trust anchor of the chain checks.
+    `{ provider, url }` entries), `entropyChainKind` (per source, required:
+    `"evm"` or `"solana"`), `entropyChainId` (per source, required: the chain
+    the source's blocks are on, or a Solana source's cluster number),
+    `minRpcQuorum` (default 2, `DEFAULT_MIN_RPC_QUORUM`), and `tipLagMargin`
+    (per source, required). It returns the configuration typed and frozen, or
+    every issue found. It refuses `production` with `minRpcQuorum` below 2, two
+    endpoints of one source that share a provider or a URL, a source with fewer
+    endpoints than `minRpcQuorum`, and a source whose kind disagrees with its
+    key or its chain: a `solana` source is keyed `solana` on cluster 101, 102,
+    or 103, and an `evm` source never uses those numbers; and a `production`
+    document whose `solana` source is not on cluster 101, mainnet-beta
+    (`production-cluster`). Each `SourceConfig` is a union on `kind`; a `solana`
+    source carries its cluster's `genesisHash`, which the package pins, never
+    read from the configuration. For now, a `solana` source's tip check asks no
+    endpoint and fails closed (`unsupported-chain-kind`, a `RoundTipFailure`).
+    `local` and `preview` may set `minRpcQuorum` to 1; the configuration is then
+    `degraded`. The pinned signer, registry domain, and entropy sources' kinds
+    and chain ids are the only trust anchor of the chain checks.
   - `RpcTransport`, `RpcCall`, and `BlockTag` type the RPC transport the Wrapper
     supplies: one JSON-RPC 2.0 call (`eth_chainId` or `eth_getBlockByNumber`) to
     one endpoint, resolving with the response's `result`. The optional third

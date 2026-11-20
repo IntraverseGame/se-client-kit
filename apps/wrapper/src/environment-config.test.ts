@@ -151,6 +151,7 @@ describe("boot rule W-26b: every source can reach the quorum", () => {
             [SOURCE]: endpoints(2),
             other: endpoints(1, "other"),
           },
+          entropyChainKind: { [SOURCE]: "evm", other: "evm" },
           entropyChainId: { [SOURCE]: 8453, other: 10 },
           tipLagMargin: { [SOURCE]: 2, other: 2 },
         }),

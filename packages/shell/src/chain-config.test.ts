@@ -134,6 +134,7 @@ describe("validateChainConfig", () => {
     it("allows one provider on two different sources", () => {
       const document = configDocument({
         rpcEndpoints: { [SOURCE]: endpoints(2), other: endpoints(2) },
+        entropyChainKind: { [SOURCE]: "evm", other: "evm" },
         entropyChainId: { [SOURCE]: ENTROPY_CHAIN_ID, other: 1 },
         tipLagMargin: { [SOURCE]: 2, other: 5 },
       });
@@ -144,6 +145,7 @@ describe("validateChainConfig", () => {
       const document = configDocument({
         minRpcQuorum: 3,
         rpcEndpoints: { [SOURCE]: endpoints(3), other: endpoints(2) },
+        entropyChainKind: { [SOURCE]: "evm", other: "evm" },
         entropyChainId: { [SOURCE]: ENTROPY_CHAIN_ID, other: 1 },
         tipLagMargin: { [SOURCE]: 2, other: 2 },
       });
@@ -198,6 +200,7 @@ describe("validateChainConfig", () => {
       const config = accepted(
         configDocument({
           rpcEndpoints: { [SOURCE]: endpoints(2), other: endpoints(2) },
+          entropyChainKind: { [SOURCE]: "evm", other: "evm" },
           entropyChainId: { [SOURCE]: ENTROPY_CHAIN_ID, other: 1 },
           tipLagMargin: { [SOURCE]: 2, other: 2 },
         }),

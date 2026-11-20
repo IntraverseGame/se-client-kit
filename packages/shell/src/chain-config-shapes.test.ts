@@ -128,6 +128,7 @@ describe("validateChainConfig shapes", () => {
       "invalid-endpoints",
       "invalid-lag-margin",
       "invalid-entropy-chain-id",
+      "invalid-entropy-chain-kind",
     ]);
   });
 

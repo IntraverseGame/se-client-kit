@@ -16,16 +16,12 @@ import {
 } from "@intraverse/se-client-play-client";
 import type { Bytes32 } from "@intraverse/se-client-signing";
 
-import type { ChainConfig, SourceConfig } from "./chain-config.ts";
-import type { RpcEndpoint } from "./config-fields.ts";
+import type { ChainConfig } from "./chain-config.ts";
 import { ShellError } from "./errors.ts";
 import { onAnotherChain, readBlock, readChainId } from "./rpc-answers.ts";
-import {
-  type BlockTag,
-  platformAbortController,
-  type RpcCall,
-  type RpcTransport,
-} from "./rpc-transport.ts";
+import type { BlockTag, RpcCall, RpcTransport } from "./rpc-transport.ts";
+import type { SourceConfig } from "./source-config.ts";
+import { ask, NO_ANSWER } from "./tip-check-ask.ts";
 
 /** One endpoint's answers, kept with the record whether it agreed or not. */
 export type EndpointAnswer = {
@@ -59,7 +55,12 @@ export type TipCheckFailure =
   /** An answering endpoint gave no block hash at `h_low`. */
   | "hash-unavailable"
   /** The answering endpoints gave different hashes at `h_low`. */
-  | "hash-mismatch";
+  | "hash-mismatch"
+  /**
+   * The round's source is of a kind the shell cannot read yet (`solana`, until
+   * RFC-007's slice 2): no endpoint is asked.
+   */
+  | "unsupported-chain-kind";
 
 /** What the tip check saw, kept with the round's record (W-26b, W-27). */
 export type TipCheckRecord = {
@@ -78,7 +79,10 @@ export type TipCheckRecord = {
   readonly tipLagMargin: bigint | null;
   /** The source's configured chain id the check required. */
   readonly chainId: bigint | null;
-  /** Every configured endpoint, in configuration order. */
+  /**
+   * Every configured endpoint, in configuration order; none when no endpoint
+   * was asked (`unknown-source`, `unsupported-chain-kind`).
+   */
   readonly answers: readonly EndpointAnswer[];
 };
 
@@ -93,8 +97,6 @@ export type TipCheckOptions = {
   readonly timeoutMs?: number;
 };
 
-const NO_ANSWER: unique symbol = Symbol("no answer");
-
 const quantity = (value: bigint): `0x${string}` => `0x${value.toString(16)}`;
 
 const getBlock = (tag: BlockTag): RpcCall =>
@@ -107,44 +109,6 @@ const GET_CHAIN_ID: RpcCall = Object.freeze({
   method: "eth_chainId",
   params: Object.freeze([] as const),
 });
-
-/**
- * One call with its timeout: what `read` makes of the result, or `NO_ANSWER` on
- * a rejection, a timeout (which aborts the call's signal), or a result `read`
- * refuses.
- */
-const ask = <T>(
-  options: TipCheckOptions,
-  timeoutMs: number,
-  endpoint: RpcEndpoint,
-  call: RpcCall,
-  read: (result: unknown) => T | undefined,
-): Promise<T | typeof NO_ANSWER> =>
-  new Promise(resolve => {
-    const controller = platformAbortController();
-    const handle = options.clock.setTimeout(() => {
-      resolve(NO_ANSWER);
-      controller?.abort();
-    }, timeoutMs);
-    const settle = (value: T | typeof NO_ANSWER): void => {
-      options.clock.clearTimeout(handle);
-      resolve(value);
-    };
-    const answer = async (): Promise<void> => {
-      try {
-        const result = await options.transport(
-          endpoint,
-          call,
-          controller?.signal,
-        );
-        settle(read(result) ?? NO_ANSWER);
-      } catch {
-        // A rejection, or a transport that throws at once: no answer.
-        settle(NO_ANSWER);
-      }
-    };
-    void answer();
-  });
 
 const maxOf = (values: readonly bigint[]): bigint =>
   values.reduce((a, b) => (b > a ? b : a));
@@ -214,6 +178,20 @@ export const runTipCheck = async (
       low: null,
       tipLagMargin: null,
       chainId: null,
+      answers: [],
+    });
+  }
+  // Until RFC-007's slice 2 reads a Solana chain, its rounds fail closed.
+  if (sourceConfig.kind === "solana") {
+    return record({
+      source,
+      passed: false,
+      failure: "unsupported-chain-kind",
+      tipCheck,
+      tip: null,
+      low: null,
+      tipLagMargin: sourceConfig.tipLagMargin,
+      chainId: sourceConfig.chainId,
       answers: [],
     });
   }

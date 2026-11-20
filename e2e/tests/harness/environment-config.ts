@@ -21,9 +21,10 @@ export const ENVIRONMENT_CONFIG_PATH = "/environment-config.json";
 const SOURCE = "base";
 
 /**
- * A valid `preview` document: the fake Play API at `playApiBaseUrl`, two RPC
- * endpoints of distinct providers (so `minRpcQuorum` is 2 and no degraded
- * indicator is shown), and one game origin. No page may embed the Wrapper.
+ * A valid `preview` document: the fake Play API at `playApiBaseUrl`, one `evm`
+ * entropy source with two RPC endpoints of distinct providers (so
+ * `minRpcQuorum` is 2 and no degraded indicator is shown), and one game origin.
+ * No page may embed the Wrapper.
  */
 export const environmentConfig = (
   playApiBaseUrl: string,
@@ -44,6 +45,7 @@ export const environmentConfig = (
       { provider: "p2", url: "https://rpc2.e2e.test/base" },
     ],
   },
+  entropyChainKind: { [SOURCE]: "evm" },
   entropyChainId: { [SOURCE]: 8453 },
   minRpcQuorum: 2,
   tipLagMargin: { [SOURCE]: 2 },
@@ -96,9 +98,9 @@ export const ROUND_RPC_ENDPOINTS: readonly {
 
 /**
  * A valid `preview` document that pins `pins`, the vendored round's signer,
- * domain, and entropy source (round-play.ts), so a round of the session's own
- * key passes W-26's checks 1 to 5; the tip check (W-26b) goes to the fake RPC
- * endpoints (fake-rpc.ts), with a quorum of 2 and a lag margin of 2.
+ * domain, and entropy source (round-play.ts), of kind `evm`, so a round of the
+ * session's own key passes W-26's checks 1 to 5; the tip check (W-26b) goes to
+ * the fake RPC endpoints (fake-rpc.ts), with a quorum of 2 and a lag margin of 2.
  */
 export const roundEnvironmentConfig = (
   playApiBaseUrl: string,
@@ -108,6 +110,7 @@ export const roundEnvironmentConfig = (
   runtimeSigner: pins.signer,
   registryDomain: pins.domain,
   rpcEndpoints: { [pins.source]: ROUND_RPC_ENDPOINTS },
+  entropyChainKind: { [pins.source]: "evm" },
   entropyChainId: { [pins.source]: pins.entropyChainId },
   tipLagMargin: { [pins.source]: 2 },
 });

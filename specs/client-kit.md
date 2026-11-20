@@ -413,22 +413,25 @@ job refuses what its deploy would refuse later:
   `production` (code `not-production`, at `PAGES_CHAIN_PINS`' `environment`), so
   W-26a's boot rule applies to the documents: `minRpcQuorum` at least 2, its
   default when unset (the validator's `production-quorum`), so every RPC source
-  needs at least two endpoints (W-26b). A staging-like `preview` or `local`
-  document, or a quorum of 1, never reaches production. Staging runs as
-  `preview`, without the flag.
+  needs at least two endpoints (W-26b), and every `solana` source (its
+  `entropyChainKind` entry `solana`) on cluster 101, mainnet-beta (the
+  validator's `production-cluster`, at `entropyChainId.<source>`; RFC-007, Q10),
+  so a test cluster's entropy never reaches production. Production mode adds no
+  rule of its own for the cluster: the Wrapper's and the verify page's
+  validators refuse it in a `production` document, at boot as here. A
+  staging-like `preview` or `local` document, or a quorum of 1, never reaches
+  production. Staging runs as `preview`, without the flag; its `solana` source,
+  once added (RFC-007, section 9, step 8), is cluster 101 too.
 
 An issue names the input and the field (an RPC endpoint by its source and index,
 a list entry by its index) with the code, never a value.
 
 - `PAGES_CHAIN_PINS` holds the chain pins only (`environment`, `runtimeSigner`,
-  `registryDomain`, `entropyChainId`, `minRpcQuorum`, `tipLagMargin`, and the
-  optional `earlierPins`); `PAGES_RPC_ORIGINS` must list exactly the origins of
-  `PAGES_RPC_ENDPOINTS`' URLs. Proposed in
-  [RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md) (section
-  1): `PAGES_CHAIN_PINS` also holds `entropyChainKind`, and both validators
-  refuse a `production` document whose `solana` source is not mainnet-beta
-  (`production-cluster`), which production mode applies through its validator
-  pass.
+  `registryDomain`, `entropyChainKind`, `entropyChainId`, `minRpcQuorum`,
+  `tipLagMargin`, and the optional `earlierPins`; `CHAIN_PIN_FIELDS` in
+  `apps/wrapper/pages-config.ts`); `PAGES_RPC_ORIGINS` must list exactly the
+  origins of `PAGES_RPC_ENDPOINTS`' URLs, which hold every source's endpoints
+  under its key.
 - `earlierPins`, a list of `{ registryDomain, runtimeSigner }` pairs
   ([verify page](./verify-page.md), V-3b), goes into the verifier's document
   only, as its last field, since the Wrapper's validator refuses it. An absent

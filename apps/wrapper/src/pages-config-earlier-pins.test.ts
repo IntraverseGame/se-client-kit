@@ -16,6 +16,7 @@ const PINS = {
     chainId: 31337,
     verifyingContract: "0xd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5",
   },
+  entropyChainKind: { base: "evm" },
   entropyChainId: { base: 8453 },
   minRpcQuorum: 2,
   tipLagMargin: { base: 2 },

@@ -212,6 +212,18 @@ here with the commit that did it.
   `document`: it is not the shape the suite reads. `environment`: it is not
   `preview`; the mode refuses a `production` or `local` stack. `game-origin`:
   `gameOrigins` does not list `SE_E2E_PREVIEW_GAME_ORIGIN`.
+- **Every spec stops at "The game cannot start", and the browser console shows
+  `config.refused` with the code `invalid-entropy-chain-kind`.** From the kit
+  version with RFC-007's slice 1 on, the stack's `/environment-config.json` must
+  carry `entropyChainKind`, one entry per entropy source and for no other (each
+  `"evm"` or `"solana"`; an anvil stack's is `{ "anvil": "evm" }`),
+  cross-checked with the source's key and its `entropyChainId`
+  ([wrapper.md](../specs/wrapper.md#configuration)). Without it the Wrapper
+  refuses the document at boot with a configuration error that names the field
+  (`invalid-entropy-chain-kind`; `entropy-chain-kind-mismatch` when the kind
+  disagrees with the key or the chain id) and signs nothing. The suite's own
+  document check above does not read the field, so it passes. Add the field to
+  the stack's document; nothing changes on the kit's side.
 - **`refused an origin that is not on the allow-list: <origin>`.** The document
   names an origin (an API base or an RPC endpoint), or the browser reached one,
   that is not the preview origin or listed in `SE_E2E_PREVIEW_ALLOWED_ORIGINS`.

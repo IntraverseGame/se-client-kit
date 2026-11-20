@@ -33,6 +33,7 @@ export const configDocument = (
       { provider: "p2", url: "https://rpc2.example/eth" },
     ],
   },
+  entropyChainKind: { "ethereum:block": "evm" },
   entropyChainId: { "ethereum:block": 1 },
   minRpcQuorum: 2,
   tipLagMargin: { "ethereum:block": 2 },
