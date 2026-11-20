@@ -477,13 +477,17 @@ payout is recomputed by check 7 (OQ-B9).
      `solana`, check 6 asks no endpoint and is "could not be verified", with the
      note that the page cannot read a Solana entropy chain yet
      (`unsupported-chain-kind`), whether or not the round has ended, so it never
-     passes and check 7 is not run (`block-check.ts`). **Solana sources
-     (proposed, RFC-007).** Proposed: for a source of kind `solana`, each
-     endpoint is asked `getGenesisHash` (compared with the cluster's pinned
-     genesis hash, in place of the chain id) and `getBlock` at slot `N` and
-     `finalized`, with no transactions and no rewards; the value is the block's
-     `blockhash` decoded from base58 to exactly 32 bytes (the page's own
-     decoder), and a skipped slot `N` takes the value of the first finalized
+     passes (`block-check.ts`); a book round whose `entropy.chainId` differs
+     from the pinned cluster number is a mismatch instead (V-19). Check 7 then
+     has no agreed block hash and is not checked, except that an ended round
+     missing a required reveal is a mismatch first (`verify-round.ts`,
+     `book-checks.ts`); the seed is recomputed only from a hash check 6 agreed
+     on. **Solana sources (proposed, RFC-007).** Proposed: for a source of kind
+     `solana`, each endpoint is asked `getGenesisHash` (compared with the
+     cluster's pinned genesis hash, in place of the chain id) and `getBlock` at
+     slot `N` and `finalized`, with no transactions and no rewards; the value is
+     the block's `blockhash` decoded from base58 to exactly 32 bytes (the page's
+     own decoder), and a skipped slot `N` takes the value of the first finalized
      block after it, with the backend's ledger-gap check; the quorum and the
      comparison with `entropy.value` are as above, with one more failure,
      `ledger-gap`, and check 7 uses the 32 bytes as it uses an EVM block hash. A
