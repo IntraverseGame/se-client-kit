@@ -167,7 +167,13 @@ the checkout anywhere, a path with a `preview` directory included.
 
 The current pin is the merge commit `0693bc7961318b500a2fed91f09021128a24b35c`,
 which contains the spec-selection fix. The backend runner hands the stack and
-the project this one pin.
+the project this one pin. A bump to `ace4a160` or later needs the stack's
+`verifyApiBaseUrl` on the preview origin (every spec; the stack already serves
+it there), one to `9ee2895f` or later also needs it to serve the Snapshot's
+`cashOutValue` (T-12), and one to `c2681365` or later also needs
+`entropyChainKind` in its environment configuration (every spec; see
+[Changes](#changes)). A pin earlier than `aa5da647` (kit PR #217) refuses a
+document that carries the optional `autoplay` (`unknown-field`).
 
 What the job does at the pin: check out the SHA; install the pinned toolchain
 and `pnpm install --frozen-lockfile`; install Playwright's Chromium; start or
@@ -184,14 +190,19 @@ the kit alone.
 
 ### Changes
 
-Every rename of a variable, every change of the hook's contract, and every
-change of the assertions that needs something new from the stack is recorded
-here with the commit that did it.
+Every rename of a variable, every change of the hook's contract, every change of
+the assertions that needs something new from the stack, and every other kit
+change that needs something new from the stack (its environment document or what
+its APIs serve) where the preview suite reaches it is recorded here with the
+commit that did it.
 
-| Commit                                       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `9c305bbd` (the merge commit of RFC-002)     | The mode is added: the `preview` project and `pnpm test:e2e:preview`; `SE_E2E_PREVIEW_ORIGIN`, `SE_E2E_PREVIEW_LAUNCH_COMMAND`, `SE_E2E_PREVIEW_GAME_ORIGIN`, `SE_E2E_PREVIEW_ALLOWED_ORIGINS`; the launch hook; T-10, T-11, and T-12.                                                                                                                                                                                                                                                                  |
-| `0693bc79` (the merge commit of kit PR #131) | The first real run passed T-10 to T-12. The preview project's `testMatch` and the fake projects' `testIgnore` are one regular expression anchored to the tests directory's absolute path, no longer a glob (a checkout path with a `preview` directory matched every spec); the timeouts are tightened to measured values (test 2 minutes, run 15 minutes, hook 15 s, step 30 s). No variable or hook contract changed, apart from the hook's timeout of 15 s. The pin must be at or after this commit. |
+| Commit                                       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `9c305bbd` (the merge commit of RFC-002)     | The mode is added: the `preview` project and `pnpm test:e2e:preview`; `SE_E2E_PREVIEW_ORIGIN`, `SE_E2E_PREVIEW_LAUNCH_COMMAND`, `SE_E2E_PREVIEW_GAME_ORIGIN`, `SE_E2E_PREVIEW_ALLOWED_ORIGINS`; the launch hook; T-10, T-11, and T-12.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `0693bc79` (the merge commit of kit PR #131) | The first real run passed T-10 to T-12. The preview project's `testMatch` and the fake projects' `testIgnore` are one regular expression anchored to the tests directory's absolute path, no longer a glob (a checkout path with a `preview` directory matched every spec); the timeouts are tightened to measured values (test 2 minutes, run 15 minutes, hook 15 s, step 30 s). No variable or hook contract changed, apart from the hook's timeout of 15 s. The pin must be at or after this commit.                                                                                                                                                                                                                                                                                          |
+| `ace4a160` (the merge commit of kit PR #157) | The Wrapper and the verify page accept `verifyApiBaseUrl` only on their own origin (V-3a): the stack's document must name its verify API on the preview origin, or both refuse the document (`invalid-verify-api-base`) and the Wrapper signs nothing. The suite's own document check still accepts a verify API on any origin listed in `SE_E2E_PREVIEW_ALLOWED_ORIGINS`, so it passes. The preview stack already meets it: its `verifyApiBaseUrl` is the preview origin plus `/verify/v1`. An earlier pin accepts the verify API on any origin. No variable, hook contract, or assertion changed.                                                                                                                                                                                              |
+| `9ee2895f` (the merge commit of kit PR #205) | The Snapshot's optional `cashOutValue` is vendored. T-12 now reads the amount the Wrapper's cash-out control shows beside "Cash out" and requires the payout line after the close to show the same text, so the stack must serve `cashOutValue` on the `active` Cash or Crash Snapshot after a surviving pick, and the settled Snapshot's payout `formatted` must equal it. Without it the control shows the multiplier (for example `×1.94`) instead and T-12 fails at the payout line. Every kit before this commit refuses a Snapshot that carries the field (W-28), so a stack that serves it needs a pin at or after this commit. No variable or hook contract changed; T-10 and T-11 are unchanged.                                                                                        |
+| `c2681365` (the merge commit of kit PR #251) | RFC-007's slice 1. The stack's `/environment-config.json` must carry `entropyChainKind`, one entry per entropy source and for no other (each `"evm"` or `"solana"`; an anvil stack's is `{ "anvil": "evm" }`), cross-checked with the source's key and its `entropyChainId`. Without it the Wrapper and the verify page refuse the document (`invalid-entropy-chain-kind`) and T-10 to T-12 stop at "The game cannot start" ([Troubleshooting](#troubleshooting)); the suite's own document check does not read the field. Every kit before this commit refuses a document with the field (`unknown-field`), so the stack's document and the pin move together: a pin at or after this commit needs the field, an earlier pin needs it absent. No variable, hook contract, or assertion changed. |
 
 ## Troubleshooting
 
@@ -223,7 +234,10 @@ here with the commit that did it.
   (`invalid-entropy-chain-kind`; `entropy-chain-kind-mismatch` when the kind
   disagrees with the key or the chain id) and signs nothing. The suite's own
   document check above does not read the field, so it passes. Add the field to
-  the stack's document; nothing changes on the kit's side.
+  the stack's document; nothing changes on the kit's side. That holds only with
+  a kit pin at or after `c2681365`: an earlier pin refuses the field
+  (`unknown-field`), so its document must leave it out ([Changes](#changes), the
+  `c2681365` row).
 - **`refused an origin that is not on the allow-list: <origin>`.** The document
   names an origin (an API base or an RPC endpoint), or the browser reached one,
   that is not the preview origin or listed in `SE_E2E_PREVIEW_ALLOWED_ORIGINS`.
