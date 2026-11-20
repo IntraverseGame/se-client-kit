@@ -7,7 +7,11 @@ import type { Bytes32 } from "@intraverse/se-client-signing";
 
 import type { RpcEndpoint } from "../config-fields.ts";
 import type { RpcCall, RpcTransport } from "../rpc-transport.ts";
-import { runTipCheck, type TipCheckRecord } from "../tip-check.ts";
+import {
+  type EvmTipCheckRecord,
+  runTipCheck,
+  type UnlistedTipCheckRecord,
+} from "../tip-check.ts";
 import { chainConfig, ENTROPY_CHAIN_ID, SOURCE } from "./chain-config.ts";
 import { flush } from "./fake-locks.ts";
 
@@ -118,6 +122,10 @@ export const createFakeRpc = (
         value => `0x${value.toString(16)}`,
       );
     }
+    if (call.method !== "eth_getBlockByNumber") {
+      // An EVM endpoint knows no Solana method (fake-solana-rpc.ts answers those).
+      return Promise.reject(new Error("method not found"));
+    }
     const [tag] = call.params;
     return tag === "finalized"
       ? respond(endpoint.provider, script.final, 0n)
@@ -180,7 +188,8 @@ export type TipCheckRun = {
 };
 
 export type TipCheckRunResult = {
-  readonly result: TipCheckRecord;
+  /** An `evm` source's record, or an unlisted source's. */
+  readonly result: EvmTipCheckRecord | UnlistedTipCheckRecord;
   readonly rpc: FakeRpc;
   readonly clock: ManualClock;
 };
@@ -210,5 +219,9 @@ export const runScripted = async ({
   between?.(rpc);
   await flush();
   clock.fireAll();
-  return { result: await pending, rpc, clock };
+  const result = await pending;
+  if (result.kind === "solana") {
+    throw new Error("runScripted reads EVM sources; use runSolanaScripted");
+  }
+  return { result, rpc, clock };
 };

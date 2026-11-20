@@ -54,12 +54,14 @@ export const VERIFY_PAGE_GZIP = "verify page, gzip";
 
 /**
  * The verify page's budget, in bytes (decided by the human, 2026-10-20: about
- * 25% over the 119788 and 39199 bytes its first build measured; V-16, D-3). A
- * change is a reviewed change to this list and the spec's together.
+ * 25% over the 119788 and 39199 bytes its first build measured; raised by the
+ * human on 2026-11-20 for the Solana read, RFC-007 slice 4, about 25% over the
+ * 150909 and 48928 bytes measured that day; V-16, D-3). A change is a reviewed
+ * change to this list and the spec's together.
  */
 export const VERIFY_BUDGET: readonly Budget[] = [
-  { name: VERIFY_OUTPUT, limit: 150_000 },
-  { name: VERIFY_PAGE_GZIP, limit: 49_152 },
+  { name: VERIFY_OUTPUT, limit: 188_416 },
+  { name: VERIFY_PAGE_GZIP, limit: 61_440 },
 ];
 
 /** Both budgets: a release is held to every one of them. */

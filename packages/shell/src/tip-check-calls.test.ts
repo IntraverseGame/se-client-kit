@@ -98,6 +98,7 @@ describe("runTipCheck calls", () => {
     });
     expect(result.passed).toBe(true);
     expect(result.answers[2]).toEqual({
+      kind: "evm",
       provider: "p3",
       chainId: BigInt(ENTROPY_CHAIN_ID),
       finalBlock: null,

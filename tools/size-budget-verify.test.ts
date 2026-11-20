@@ -67,11 +67,11 @@ describe("the verify page's budget", () => {
       new Map([
         ["index.html", html],
         ["verify/index.html", html],
-        ["verify/assets/a.js", new Uint8Array(150_000)],
+        ["verify/assets/a.js", new Uint8Array(188_416)],
       ]),
     );
     expect(report.problems).toEqual([
-      `verify output: ${String(150_000 + html.byteLength)} bytes, over its size budget of 150000 bytes by ${String(html.byteLength)}`,
+      `verify output: ${String(188_416 + html.byteLength)} bytes, over its size budget of 188416 bytes by ${String(html.byteLength)}`,
     ]);
   });
 });

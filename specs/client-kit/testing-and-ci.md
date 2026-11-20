@@ -140,10 +140,12 @@ is held apart from the Wrapper's: the files under `verify/` do not count in the
 two measurements above, and have two of their own, checked by the same three
 places with the same rules. Their limits were set by the human on 2026-10-20
 from the first build of the real page, about 25% over its measurement of 119788
-and 39199 bytes:
+and 39199 bytes (150000 and 49152), and raised by the human on 2026-11-20 to
+make room for the Solana read (RFC-007 slice 4), about 25% over the 150909 and
+48928 bytes measured that day:
 
-- verify output: 150000 bytes. Every file under `verify/`, uncompressed.
-- verify page, gzip: 49152 bytes. `verify/index.html` and every `.js` and `.css`
+- verify output: 188416 bytes. Every file under `verify/`, uncompressed.
+- verify page, gzip: 61440 bytes. `verify/index.html` and every `.js` and `.css`
   file under `verify/`, each compressed on its own with gzip at zlib's default
   level and summed.
 

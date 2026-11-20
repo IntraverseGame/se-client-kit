@@ -101,7 +101,6 @@ describe("the chip's popover (T-30)", () => {
       "lagging",
       "hash-unavailable",
       "hash-mismatch",
-      "unsupported-chain-kind",
       "bind",
     ];
     for (const failure of failures) {

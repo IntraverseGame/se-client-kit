@@ -8,6 +8,7 @@ import { type Bind, bindHolds, decideChain } from "./chain-decision.ts";
 import type { TipCheckFailure, TipCheckRecord } from "./tip-check.ts";
 
 const passed: TipCheckRecord = Object.freeze({
+  kind: "evm",
   source: "base",
   passed: true,
   tipCheck: "independent",
@@ -17,12 +18,14 @@ const passed: TipCheckRecord = Object.freeze({
   chainId: 8453n,
   answers: Object.freeze([
     {
+      kind: "evm",
       provider: "p1",
       chainId: 8453n,
       finalBlock: 100n,
       hashAtLow: `0x${"1".repeat(64)}`,
     },
     {
+      kind: "evm",
       provider: "p2",
       chainId: 8453n,
       finalBlock: 99n,
@@ -77,7 +80,6 @@ describe("decideChain", () => {
     ["too-few-answered", "chain-unverified"],
     ["chain-id-unavailable", "chain-unverified"],
     ["hash-unavailable", "chain-unverified"],
-    ["unsupported-chain-kind", "chain-unverified"],
     ["chain-id-mismatch", "verification-failed"],
     ["lagging", "verification-failed"],
     ["hash-mismatch", "verification-failed"],

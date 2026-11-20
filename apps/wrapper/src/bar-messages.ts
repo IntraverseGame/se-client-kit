@@ -88,7 +88,6 @@ export type BarMessageKey =
   | "tip.lagging"
   | "tip.hash-unavailable"
   | "tip.hash-mismatch"
-  | "tip.unsupported-chain-kind"
   | "tip.bind";
 
 export type BarMessages = Readonly<Record<BarMessageKey, string>>;
@@ -191,8 +190,6 @@ export const EN_BAR: BarMessages = {
   "tip.lagging": "A chain endpoint is too far behind.",
   "tip.hash-unavailable": "A chain endpoint gave no block hash.",
   "tip.hash-mismatch": "The chain endpoints disagree.",
-  "tip.unsupported-chain-kind":
-    "This version cannot read the round's chain yet.",
   "tip.bind": "The round's randomness block does not fit the chain's tip.",
 };
 

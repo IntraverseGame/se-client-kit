@@ -24,6 +24,7 @@ import type { TipCheckFailure, TipCheckRecord } from "./tip-check.ts";
 
 const record = (failure?: TipCheckFailure): TipCheckRecord =>
   Object.freeze({
+    kind: "evm",
     source: "ethereum:block",
     passed: failure === undefined,
     ...(failure === undefined ? {} : { failure }),

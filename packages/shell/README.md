@@ -191,17 +191,20 @@ else showGenericError(); // rejected: not rendered
     document whose `solana` source is not on cluster 101, mainnet-beta
     (`production-cluster`). Each `SourceConfig` is a union on `kind`; a `solana`
     source carries its cluster's `genesisHash`, which the package pins, never
-    read from the configuration. For now, a `solana` source's tip check asks no
-    endpoint and fails closed (`unsupported-chain-kind`, a `RoundTipFailure`).
-    `local` and `preview` may set `minRpcQuorum` to 1; the configuration is then
-    `degraded`. The pinned signer, registry domain, and entropy sources' kinds
-    and chain ids are the only trust anchor of the chain checks.
+    read from the configuration. The tip check reads each round's source by its
+    kind: Ethereum JSON-RPC for `evm`, Solana JSON-RPC for `solana` (its genesis
+    hash compared with the pinned one, and its final slot). `local` and
+    `preview` may set `minRpcQuorum` to 1; the configuration is then `degraded`.
+    The pinned signer, registry domain, and entropy sources' kinds and chain ids
+    are the only trust anchor of the chain checks.
   - `RpcTransport`, `RpcCall`, and `BlockTag` type the RPC transport the Wrapper
-    supplies: one JSON-RPC 2.0 call (`eth_chainId` or `eth_getBlockByNumber`) to
-    one endpoint, resolving with the response's `result`. The optional third
-    argument is an abort signal (`play-client`'s `CancelSignal`, which the
-    platform `AbortSignal` satisfies) that the shell aborts when the call times
-    out; a transport may ignore it, and a late answer is ignored.
+    supplies: one JSON-RPC 2.0 call (`eth_chainId` or `eth_getBlockByNumber` for
+    an `evm` source, `getGenesisHash` or `getSlot` at `finalized` for a `solana`
+    source), its `method` and `params` sent as given, to one endpoint, resolving
+    with the response's `result`. The optional third argument is an abort signal
+    (`play-client`'s `CancelSignal`, which the platform `AbortSignal` satisfies)
+    that the shell aborts when the call times out; a transport may ignore it,
+    and a late answer is ignored.
   - `createControllerBridge(options)` mounts the boundary to the game iframe
     (`se.controller/1`). It refuses a game origin that is not on the
     configuration's allow-list, is the Wrapper's own origin, may share the
