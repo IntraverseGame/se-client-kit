@@ -893,8 +893,10 @@ code with the old secret (a merge before the secret was set) fails it with
 deploy before anything is uploaded: the deployed sites stay as they were, and
 sessions keep the configuration they booted with. Complete the step that is
 missing (set the secret, or merge the pull request), then redeploy `main`
-(**Redeploy**, below) once both have landed. If the change will not merge after
-all, set the secret back to its value without the field and redeploy `main`.
+(**Redeploy**, below) once both have landed: a new run, never "Re-run failed
+jobs" on the failed one, which keeps its old commit. If the change will not
+merge after all, set the secret back to its value without the field and redeploy
+`main`.
 
 **Production** (`.github/workflows/pages-prod.yml`;
 [ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md),
