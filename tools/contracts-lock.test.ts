@@ -12,6 +12,7 @@ import {
   readLock,
   verifyLock,
 } from "./contracts-lock.ts";
+import { lockedFilesIn } from "./contracts-notices.ts";
 import {
   COMMIT_A,
   COMMIT_B,
@@ -54,9 +55,13 @@ afterEach(() => {
 const syncInto = (source: MemorySource, allowVectorChange = false): void => {
   applySync(
     packageDir,
-    planSync(SOURCES, readLock(packageDir).entries, source.reader, {
-      allowVectorChange,
-    }),
+    planSync(
+      SOURCES,
+      readLock(packageDir).entries,
+      source.reader,
+      { allowVectorChange },
+      lockedFilesIn(packageDir),
+    ),
   );
 };
 
@@ -79,10 +84,12 @@ describe("sync", () => {
     const { entries, problems } = readLock(packageDir);
     expect(problems).toEqual([]);
     expect(entries.map(entry => entry.path)).toEqual([
+      "src/schemas/key-delegation/v1/notices.json",
       "src/schemas/play.v1.openapi.yaml",
       "src/schemas/se.snapshot.v1.schema.json",
       "src/schemas/verify.v1.openapi.yaml",
       ...KERNEL_SETS.map(set => kernelPath(set)),
+      "src/vectors/key-delegation/v1/vectors.json",
       "src/vectors/signing.json",
       "src/vectors/snapshot/invalid/b.json",
       "src/vectors/snapshot/signature/d.json",
@@ -247,9 +254,9 @@ describe("verify", () => {
 
   it("fails on a sourceName that is a path in a private repository", () => {
     expect(
-      editFirstEntry({ sourceName: "internal/some/private/play.yaml" }),
+      editFirstEntry({ sourceName: "internal/some/private/notices.json" }),
     ).toEqual([
-      'src/schemas/play.v1.openapi.yaml: sourceName must be the public name "play/v1 OpenAPI document"',
+      'src/schemas/key-delegation/v1/notices.json: sourceName must be the public name "key-delegation/v1 notices"',
     ]);
   });
 

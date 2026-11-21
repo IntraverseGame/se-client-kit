@@ -49,6 +49,15 @@ export type paths = {
      * is `CONFLICT`. A game that cannot be played free is
      * `FAILED_PRECONDITION`.
      *
+     * **Key delegation.** A player who links an EVM wallet sends
+     * `keyDelegation`: the wallet's one signature for the session, sent with
+     * every start of the session. It covers this start's `actionKey` and the
+     * token's session, which it does not repeat. The engine checks it before
+     * the round exists: a bad one is `KEY_DELEGATION_INVALID`,
+     * `KEY_DELEGATION_EXPIRED` or `KEY_DELEGATION_NOTICE_UNKNOWN` (422), and a
+     * book game's start with one is `INVALID_ARGUMENT`. It is part of the
+     * request: the same key with another `keyDelegation` is `CONFLICT`.
+     *
      * After a lost response, `UNAVAILABLE` or `INTERNAL`, the round may
      * already have been started: the same key and body answer it, so sending
      * them again is safe. A resend may fail the same way;
@@ -214,7 +223,32 @@ export type components = {
       /** @description The config shape, the number of options of each step, for a game whose package does not fix it. Leave it out for a game that does (Coin Flip, Cash or Crash). */
       shape?: number[];
       grantId?: components["schemas"]["GrantId"];
+      keyDelegation?: components["schemas"]["KeyDelegationRequest"];
     };
+    /**
+     * @description The player's wallet's EIP-712 signature of
+     * `KeyDelegation(string notice,address actionKey,bytes32 sessionId,uint64 expiry)`
+     * under the domain `{name: "SuperEngine KeyDelegation", version: "1"}`,
+     * which names no chain. `notice` is the text of a notice from the
+     * published notice list, `actionKey` this start's, `sessionId` the
+     * session's 16 UUIDv7 bytes (the 32 hex digits after `ses_`)
+     * left-aligned and zero-padded. Sign once per session; send the same
+     * object with every start, or leave the field out (a `null` is the same
+     * as leaving it out).
+     */
+    KeyDelegationRequest: ({
+      /** @description The address that signed, `0x` + 40 hex digits (either case). */
+      wallet: string;
+      /**
+       * Format: int64
+       * @description The signed expiry, Unix seconds. Set it to the session's `sessionExpiresAt`, rounded down; it must be after the start.
+       */
+      expiry: number;
+      /** @description keccak256 of the signed notice's text, `0x` + 64 hex digits (either case). */
+      noticeHash: string;
+      /** @description The wallet's signature, 65 bytes `r || s || v` with a low `s` and `v` 27 or 28, `0x` + 130 hex digits (either case). */
+      signature: string;
+    }) | null;
     /**
      * @description The id of a free-bet grant, a UUIDv7 in lowercase. Send one of `GET /play/v1/grants` to play the round as a free bet; leave it out for a round paid from the balance.
      * @example 01927c5e-8b3a-7f21-9c4d-5e6f7a8b9c0d
@@ -337,6 +371,7 @@ export type components = {
       balance: components["schemas"]["Amount"];
       minBet: components["schemas"]["Amount"];
       maxBet: components["schemas"]["Amount"];
+      /** @description The bets the player is offered, in ascending order of value: the minimum bet's multiples 1, 2, 5, 10, 20, 50 and 100 that are at most maxBet. Empty when maxBet is below minBet (no bet of the game fits). Each carries the server's formatted text; a client offers these and never builds an amount of its own. */
       suggestedBets: components["schemas"]["Amount"][];
       defaultBet: components["schemas"]["Amount"];
     };
@@ -389,6 +424,7 @@ export type components = {
       randomnessProof: components["schemas"]["RandomnessProof"];
       createRoundAuth?: components["schemas"]["CreateRoundAuth"];
       record?: components["schemas"]["OnChainRecord"];
+      keyDelegation?: components["schemas"]["KeyDelegation"];
     };
     /** @description Config rounds only. */
     FairnessProof: {
@@ -400,6 +436,7 @@ export type components = {
     RandomnessProof: {
       /** @description Entropy source identifier. */
       source: string;
+      /** @description The entropy height N the round is bound to: the block number on an EVM chain; the slot on Solana (source solana), not the block height. */
       blockNumber: number;
       blockValue?: components["schemas"]["Hash32"];
       blockExplorerUrl?: components["schemas"]["HttpsUrl"];
@@ -413,10 +450,34 @@ export type components = {
       txHash: components["schemas"]["Hash32"];
       explorerUrl?: components["schemas"]["HttpsUrl"];
     };
+    /** @description Config rounds started with a key delegation only: the player's wallet's EIP-712 KeyDelegation(string notice,address actionKey,bytes32 sessionId,uint64 expiry) for the round's action key, under the domain {name: SuperEngine KeyDelegation, version: 1}, which names no chain. Absent on a round without one: never null and never empty. Recover the signer from notice, actionKey, sessionId and expiry and compare it with wallet; actionKey is the one createRoundAuth.newRound names. */
+    KeyDelegation: {
+      wallet: components["schemas"]["Address"];
+      actionKey: components["schemas"]["Address"];
+      sessionId: components["schemas"]["Hash32"];
+      /** @description The signed expiry, Unix seconds. */
+      expiry: number;
+      /** @description The id of the signed notice in the published notice list. */
+      noticeId: string;
+      noticeHash: components["schemas"]["Hash32"];
+      /** @description The signed consent text, from the published notice list. */
+      notice: string;
+      signature: components["schemas"]["Signature65"];
+      domain: components["schemas"]["KeyDelegationDomain"];
+      /** @description When the engine accepted the delegation with the start, Unix seconds; expiry is after it. The engine's statement. */
+      acceptedAt: number;
+    };
+    /** @description The key delegation's EIP-712 domain, EIP712Domain(string name,string version): no chainId and no verifyingContract. */
+    KeyDelegationDomain: {
+      /** @enum {string} */
+      name: "SuperEngine KeyDelegation";
+      /** @enum {string} */
+      version: "1";
+    };
     /** @description Config rounds only, required from the bind on: the round creation authorization, an EIP-712 signature by the registry admin key over CreateRoundAuth(bytes32 created,uint40 prepareWindow,uint256 expiry), where created = keccak256(abi.encode(newRound)). The same object on every read of the round. domain and signer are the round's own values; a client trusts them only when they equal the values pinned in its own configuration. */
     CreateRoundAuth: {
       newRound: components["schemas"]["NewRound"];
-      /** @description Chain of the entropy source. Not signed itself: with randomnessProof.source and blockNumber it recomputes newRound.randomnessTarget. */
+      /** @description Chain of the entropy source: the EVM chain id, or on Solana the cluster number (101 mainnet-beta, 102 testnet, 103 devnet). Not signed itself: with randomnessProof.source and blockNumber it recomputes newRound.randomnessTarget. */
       entropyChainId: number;
       /** @description The signed prepareWindow (uint40), in seconds. */
       prepareWindow: number;
@@ -639,6 +700,15 @@ export type operations = {
    * request: the same key with another `grantId`, or with and without one,
    * is `CONFLICT`. A game that cannot be played free is
    * `FAILED_PRECONDITION`.
+   *
+   * **Key delegation.** A player who links an EVM wallet sends
+   * `keyDelegation`: the wallet's one signature for the session, sent with
+   * every start of the session. It covers this start's `actionKey` and the
+   * token's session, which it does not repeat. The engine checks it before
+   * the round exists: a bad one is `KEY_DELEGATION_INVALID`,
+   * `KEY_DELEGATION_EXPIRED` or `KEY_DELEGATION_NOTICE_UNKNOWN` (422), and a
+   * book game's start with one is `INVALID_ARGUMENT`. It is part of the
+   * request: the same key with another `keyDelegation` is `CONFLICT`.
    *
    * After a lost response, `UNAVAILABLE` or `INTERNAL`, the round may
    * already have been started: the same key and body answer it, so sending

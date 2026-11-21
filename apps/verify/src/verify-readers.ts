@@ -23,6 +23,11 @@ export const PATTERNS = {
   cost: "^[1-9][0-9]*(/[1-9][0-9]*)?$",
   /** A whole number from 1, as text: a book table's `totalWeight` (V-21). */
   positive: "^[1-9][0-9]*$",
+  /** A key delegation's `noticeId` (V-22). */
+  noticeId: "^[a-z0-9-]{1,64}$",
+  /** A key delegation's `domain.name` and `domain.version` (V-22). */
+  delegationName: "^SuperEngine KeyDelegation$",
+  delegationVersion: "^1$",
 };
 export const PATTERN = {
   roundId: new RegExp(PATTERNS.roundId, "u"),
@@ -33,11 +38,35 @@ export const PATTERN = {
   amount: new RegExp(PATTERNS.amount, "u"),
   cost: new RegExp(PATTERNS.cost, "u"),
   positive: new RegExp(PATTERNS.positive, "u"),
+  noticeId: new RegExp(PATTERNS.noticeId, "u"),
+  delegationName: new RegExp(PATTERNS.delegationName, "u"),
+  delegationVersion: new RegExp(PATTERNS.delegationVersion, "u"),
 };
 export const AMOUNT_MAX_LENGTH = 78;
 export const MAX_DECIMALS = 77;
 /** The most rows `book.table` may list (the document's `maxItems`, V-21). */
 export const BOOK_TABLE_MAX_ROWS = 250_000;
+/** A key delegation's `notice`: 1 to 512 characters (code points, V-22). */
+export const NOTICE_MAX_LENGTH = 512;
+
+/**
+ * The document's closed list of check names (`Check.name`): a name outside it
+ * fails the body (V-10), `key_delegation` included since slice S7 of #220.
+ */
+export const CHECK_NAMES: readonly string[] = [
+  "secret_commitment",
+  "randomness_target",
+  "seed",
+  "seed_commitment",
+  "ready_hash",
+  "transcript",
+  "action_signatures",
+  "configuration",
+  "payout",
+  "onchain_record",
+  "proofs",
+  "key_delegation",
+];
 
 // A reader returns the value, or `Bad` for a present value that is malformed;
 // an optional field that is absent reads as `undefined`.
@@ -76,11 +105,19 @@ export const list =
     return out;
   };
 
-/** Reads `fields` of `source` with their readers; `Bad` if any is. */
+/**
+ * Reads `fields` of `source` with their readers; `Bad` if any is, or if
+ * `source` has a field no reader names: every object of the document is closed
+ * (`additionalProperties: false`), and so is the page's reading of it (The
+ * evidence, since slice S7 of #220).
+ */
 export const shape = <T extends Record<string, (v: unknown) => unknown>>(
   source: Json,
   readers: T,
 ): { [K in keyof T]: Exclude<ReturnType<T[K]>, typeof Bad> } | typeof Bad => {
+  if (Object.keys(source).some(key => !Object.hasOwn(readers, key))) {
+    return Bad;
+  }
   const out: Record<string, unknown> = {};
   for (const [key, read] of Object.entries(readers)) {
     const value = read(Object.hasOwn(source, key) ? source[key] : undefined);

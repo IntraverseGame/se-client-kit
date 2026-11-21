@@ -28,6 +28,12 @@ export type FakeSecret = {
   readonly value: string;
 };
 
+/** A redeem's `sessionId` and `sessionExpiresAt`, as the document gives them. */
+export type RedeemSession = {
+  readonly sessionId: string;
+  readonly sessionExpiresAt: string;
+};
+
 export type FakePlayApiOptions = {
   /** The Play API base, ending with `/play/v1`, as the configuration gives it. */
   readonly playApiBaseUrl: string;
@@ -73,6 +79,11 @@ export type FakePlayApi = {
    * code once, so a second launch of one code is otherwise refused.
    */
   readonly redeemAgain: () => void;
+  /**
+   * The redeem answers this session id and hard end instead of the seeded ones:
+   * T-50 opens the key-delegation vector's session.
+   */
+  readonly redeemAs: (session: RedeemSession) => void;
   readonly restore: () => void;
   /**
    * Moves the server's time on by `ms` (0 or more), as the server's clock moves

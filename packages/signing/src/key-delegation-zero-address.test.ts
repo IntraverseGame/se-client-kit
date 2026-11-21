@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { codeOf, withByte } from "./fixtures/helpers.ts";
-import { provisionalKeyDelegation as vector } from "./fixtures/provisional-key-delegation.ts";
+import { acceptedDelegation as vector } from "./fixtures/key-delegation-vectors.ts";
 import { type KeyDelegation, recoverKeyDelegation } from "./key-delegation.ts";
 
 vi.mock("@noble/hashes/sha3.js", () => ({

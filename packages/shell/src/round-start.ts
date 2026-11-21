@@ -1,24 +1,27 @@
-// Starting a round (W-22): the Play API's `start` verb with a fresh
-// idempotency key, the bet as an `AmountRequest`, and the action key's
-// address. There is no signed start: nothing is signed here, and a config
-// round's `CreateRoundAuth` then commits to that address (W-26, check 3). A
-// book round (`playback`, W-51) starts the same way and is then only read: the
-// session holds it as a book round (book-round.ts), which signs nothing. A start whose
-// round may exist although its answer was lost is sent once more with the same
-// key and body (`startMayBeStored`): the Play API document says that after a
-// lost response, `UNAVAILABLE`, or `INTERNAL` the round may already have been
-// started, and the same key and body answer it.
+// Starting a round (W-22): the Play API's `start` verb with a fresh idempotency
+// key, the bet as an `AmountRequest`, the action key's address, and, while a
+// wallet's delegation is registered, its `keyDelegation` (W-70), fixed with the
+// body so the resend repeats it. There is no signed start: nothing is signed
+// here, and a config round's `CreateRoundAuth` then commits to that address
+// (W-26, check 3). A book round (`playback`, W-51) starts the same way and is
+// then only read: the session holds it as a book round (book-round.ts), which
+// signs nothing. A start whose round may exist although its answer was lost is
+// sent once more with the same key and body (`startMayBeStored`): the Play API
+// document says that after a lost response, `UNAVAILABLE`, or `INTERNAL` the
+// round may already have been started, and the same key and body answer it.
 
 import {
   newIntent,
   type PlayResult,
   type RandomUuid,
   startRound,
+  type StartRoundRequest,
 } from "@intraverse/se-client-play-client";
 import { validateAmountRequest } from "@intraverse/se-client-snapshot";
 
 import { createBookRound } from "./book-round.ts";
 import type { StartRequest } from "./create-round-auth.ts";
+import type { ExpectedDelegation } from "./delegation-check.ts";
 import { ShellError } from "./errors.ts";
 import {
   createRoundFlow,
@@ -45,12 +48,27 @@ export type StartRoundFlowOptions = RoundFlowOptions & {
   readonly randomUuid: RandomUuid;
   readonly bet: Bet;
   /**
+   * The registered delegation the start carries as `keyDelegation` (W-70);
+   * absent, the body has no such field (never `null`).
+   */
+  readonly delegation?: ExpectedDelegation;
+  /**
    * Called with the round's flow once it exists, before its first Snapshot is
    * read: a cancel that Snapshot requires is signed and sent before this
    * function resolves, so the session holds the round from here (W-25).
    */
   readonly onFlow?: (flow: RoundFlow) => void;
 };
+
+/** The start body's `keyDelegation`: the four fields as registered (W-70). */
+const keyDelegationOf = (
+  delegation: ExpectedDelegation,
+): NonNullable<StartRoundRequest["keyDelegation"]> => ({
+  wallet: delegation.wallet,
+  expiry: delegation.expiry,
+  noticeHash: delegation.noticeHash,
+  signature: delegation.signature,
+});
 
 /** A start that was answered: the round's first Snapshot and what was sent. */
 type Started = {
@@ -68,7 +86,15 @@ const sendStart = async (options: StartRoundFlowOptions): Promise<Started> => {
   if (!bet.ok) throw new ShellError("invalid-input");
   const actionKey = options.session.address();
   const { idempotencyKey } = newIntent(options.randomUuid);
-  const body = { idempotencyKey, bet: bet.value, actionKey };
+  const { delegation } = options;
+  const body = {
+    idempotencyKey,
+    bet: bet.value,
+    actionKey,
+    ...(delegation === undefined
+      ? {}
+      : { keyDelegation: keyDelegationOf(delegation) }),
+  };
   const send = (): Promise<PlayResult<unknown>> =>
     startRound(options.transport, body, {
       authorization: options.authorization,
@@ -88,6 +114,7 @@ const sendStart = async (options: StartRoundFlowOptions): Promise<Started> => {
     request: {
       actionKey,
       bet: { value: bet.value.value, unit: bet.value.unit },
+      ...(delegation === undefined ? {} : { delegation }),
     },
     idempotencyKey,
   };

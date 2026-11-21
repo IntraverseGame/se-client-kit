@@ -1207,6 +1207,106 @@ h2.se-heading {
   }
 }
 
+/*
+ * The consent dialog (W-65): the one modal dialog, in the popovers' colours of
+ * the one dark theme until a designed dialog replaces it (se-client-kit#256).
+ * Sizes are in rem, so it reflows at 200 % zoom; the notice scrolls inside it,
+ * its text as the list holds it (whitespace and case kept).
+ */
+.se-dialog {
+  box-sizing: border-box;
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  padding: 1.25rem;
+  overflow-y: auto;
+  border: 0.0625rem solid var(--se-line);
+  border-radius: var(--se-radius);
+  background: var(--se-popover);
+  color: var(--se-fg);
+  font-family: var(--se-font);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.se-dialog::backdrop {
+  background: var(--se-scrim);
+}
+
+.se-dialog p {
+  margin: 0 0 0.75rem;
+}
+
+.se-dialog__title {
+  margin: 0 0 0.875rem;
+  font-size: 1.125rem;
+}
+
+.se-dialog__title:focus {
+  outline: none;
+}
+
+.se-dialog__title:focus-visible {
+  outline: 0.125rem solid var(--se-accent);
+}
+
+.se-dialog__label {
+  color: var(--se-strong);
+  font-weight: 600;
+}
+
+.se-dialog__pending {
+  color: var(--se-problem);
+}
+
+.se-dialog__notice {
+  max-height: 12rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  overflow-y: auto;
+  border: 0.0625rem solid var(--se-line);
+  border-radius: var(--se-control-radius);
+  background: var(--se-page);
+  color: var(--se-fg);
+  text-transform: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.se-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.se-button--primary {
+  border-color: transparent;
+  background: var(--se-accent);
+  color: var(--se-on-accent);
+  font-weight: 600;
+}
+
+.se-button--primary:hover:not(:disabled) {
+  background: var(--se-accent-press);
+}
+
+/* The menu's wallet entry (W-64): a control, or the linked wallet's line. */
+.se-menu .se-popover > .se-button {
+  width: 100%;
+  margin-top: 0.625rem;
+}
+
+.se-menu .se-popover > .se-wallet {
+  margin: 0.625rem 0 0;
+  padding-top: 0.625rem;
+  border-top: 0.0625rem solid var(--se-line);
+}
+
+.se-wallet__address {
+  color: var(--se-strong);
+  font-variant-numeric: tabular-nums;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

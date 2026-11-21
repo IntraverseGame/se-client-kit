@@ -126,6 +126,7 @@ describe("redeemLaunchCode", () => {
         method: "POST",
         headers: { accept: ACCEPT, "content-type": "application/json" },
         body: { launchCode: FIXTURE_LAUNCH_CODE },
+        rawBody: JSON.stringify({ launchCode: FIXTURE_LAUNCH_CODE }),
       },
     ]);
     expect(h.server.served[0]?.url).not.toContain(FIXTURE_LAUNCH_CODE);
@@ -235,6 +236,7 @@ describe("refreshPlayToken", () => {
         method: "POST",
         headers: { accept: ACCEPT, authorization: BEARER },
         body: undefined,
+        rawBody: undefined,
       },
     ]);
     expect(result.body).toEqual({ ...refreshAnswer, playToken: SEALED });
@@ -252,6 +254,8 @@ describe.each(SNAPSHOT_CALLS)("$id", ({ id, sent, headers, call }) => {
         method: PLAY_ROUTES[id].method,
         headers: { accept: ACCEPT, authorization: BEARER, ...headers },
         body: sent,
+        // `undefined` for a call without a body, as `JSON.stringify` gives it.
+        rawBody: JSON.stringify(sent),
       },
     ]);
   });

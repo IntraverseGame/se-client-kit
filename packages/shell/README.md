@@ -257,10 +257,13 @@ else showGenericError(); // rejected: not rendered
   - `takeLaunchCode(location, history)` takes the launch code out of the URL and
     `discardLaunchCode(code)` forgets one. `openPlaySession(options)` resolves
     with a `SessionOpening`: `open` with a `PlaySession`, or `no-launch-code`,
-    `redeem-failed`, `other-tab`, or `unsupported`. A `PlaySession` is what a UI
+    `redeem-failed`, `other-tab`, `unsupported`, or `key-generation` (the action
+    key, drawn at the open, could not be drawn). A `PlaySession` is what a UI
     plays through: `read`, `checkAgain`, `start`, `cashOut`, `round`,
     `gameOrigin`, `mountGame`, `autoplay`, `stopAutoplay`, `autoplayState`,
-    `onAutoplay`, `onChange`, `onEnd`, `ended`, and `end`.
+    `onAutoplay`, the wallet delegation's `delegation`, `delegationOffer`,
+    `beginDelegation`, `receiveDelegation`, `dropDelegation`, and
+    `onDelegation`, `onChange`, `onEnd`, `ended`, and `end`.
     - `autoplay({ count, bet, minIntervalMs })` begins a run of book rounds:
       `count` starts of the bet, each copied from the latest Snapshot's own
       amount, the next only `minIntervalMs` after the previous result. It
@@ -272,6 +275,22 @@ else showGenericError(); // rejected: not rendered
       player's stop and the page hidden. `autoplayState` and `onAutoplay` give
       its state; its starts' answers reach `onChange`, and `start` is refused
       `busy` while it runs. Nothing of it is stored or logged.
+    - The wallet delegation (opt-in): `delegationOffer()` says whether a "Link a
+      wallet" entry may be offered and with which notice (`DelegationOffer`,
+      `DelegationNotice`); `beginDelegation(handle)` takes the handle
+      `window.open` returned for the signing page (or `null`) and speaks
+      `se.delegation/1` with it (`DELEGATION_SCHEMA`, `DelegationReady`,
+      `DelegationRequest`, `DelegationResult`, `DelegationFailed`): it waits
+      `DELEGATION_READY_TIMEOUT_MS` for `ready`, reads the window's `closed`
+      every `DELEGATION_CLOSED_POLL_MS`, posts one request to the signing page's
+      origin only, and registers the wallet's answer only once it has recovered
+      the signer itself. The UI routes the window's messages to
+      `receiveDelegation`; `delegation()` and `onDelegation` give its
+      `DelegationState` (`DelegationFailureReason`, `DelegationRefusalCode`),
+      and `dropDelegation()` forgets it. While it is registered, every `start`
+      carries it; while a delegated start stands refused, `start` is refused
+      `delegation-refused`. The delegation lives in memory for the session only
+      and is never logged.
     - A use case answers a `SessionRead`: a `SnapshotRead`, `session-ended`,
       `refused` (the shell did not act: nothing was signed or sent), or
       `session-changed` (a Snapshot changed the session's presentation, model,
@@ -279,11 +298,12 @@ else showGenericError(); // rejected: not rendered
       is reloaded the session reads, signs, starts, and forwards nothing).
     - `round()` gives the read-only `RoundState`, when there is a round:
       `roundId`, `verdict`, `outOfSync`, `cashOutOffered`, `cancel`, and, when
-      set, `shown` (what a `failed` verdict tells the player), `failure` and
-      `tipFailure` (which check refused the round, as a machine code a UI
-      labels: `RoundFailure`, `RoundTipFailure`), `unconfirmed` (a lost resend,
-      settled only by a read) and `pending` (the move or cash-out signed and not
-      yet seen applied, with no signature, key, or bytes in it).
+      set, `shown` (what a `failed` verdict tells the player), `failure`,
+      `tipFailure`, and `delegationFailure` (which check refused the round, as a
+      machine code a UI labels: `RoundFailure`, `RoundTipFailure`,
+      `DelegationFailure`), `unconfirmed` (a lost resend, settled only by a
+      read) and `pending` (the move or cash-out signed and not yet seen applied,
+      with no signature, key, or bytes in it).
     - `mountGame({ frame, listen, onIncompatible, onCopy?, onCapabilities?, insetBottom? })`
       mounts the bridge with the session's own game origin, allow-list,
       environment, and pick use case. It answers
@@ -330,11 +350,11 @@ else showGenericError(); // rejected: not rendered
 
 - This is the only code in the kit that holds the player's action key and play
   token. The UI receives use cases and read-only state, never a secret.
-- The action key is generated inside the package, on first need, from the
-  platform's cryptographic random source, and stays in a closure: nothing
-  returns, prints, or stores it. Every value that holds a secret prints
-  `[redacted]` under `String()`, `JSON.stringify`, template literals, and the
-  Node inspect hook.
+- The action key is generated inside the package when the session opens, once
+  the page holds the session's Web Lock, from the platform's cryptographic
+  random source, and stays in a closure: nothing returns, prints, or stores it.
+  Every value that holds a secret prints `[redacted]` under `String()`,
+  `JSON.stringify`, template literals, and the Node inspect hook.
 - The key is used only while the page holds the session's Web Lock; without the
   Web Locks API it signs nothing. A round never gets two different signed
   actions at one sequence, a signed action is kept with its idempotency key
@@ -348,7 +368,14 @@ else showGenericError(); // rejected: not rendered
   Snapshot and the closed `reject` reasons, never a key, a token, a signature,
   or a proof, and every message to it names its origin, never `*`.
 - It depends on `@intraverse/se-client-signing`,
-  `@intraverse/se-client-snapshot`, and `@intraverse/se-client-play-client`.
+  `@intraverse/se-client-snapshot`, `@intraverse/se-client-play-client`, and the
+  runtime entry of `@intraverse/se-client-contracts` (for the wallet
+  delegation's notices only).
+- A round started with a wallet's delegation is checked beside the chain check:
+  the round's evidence must carry exactly the delegation the start sent,
+  compared by value, and a round started without one must carry none. A failure
+  with the round's ready evidence settled requires the one cancel; a later read
+  that carries another delegation stops all signing for the round.
 - Amounts and block numbers are strings or `bigint`, never `number`.
 - The chain check asks every configured endpoint, needs `minRpcQuorum` of them
   to answer, all of them to report the source's pinned chain id, and all of them

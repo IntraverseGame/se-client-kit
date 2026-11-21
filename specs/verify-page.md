@@ -38,7 +38,14 @@ document now carries the mode's table (`book.table`, its rows, for a table of at
 most 250,000 rows), and the kernel's `kernel/public/v1/book-table-commitment`
 set is vendored: the page validates the rows (V-21) and does not use them yet;
 redrawing the row and recomputing `merkleRoot` from them is a later increment,
-marked `TODO(verify page, #156)` (OQ-B8).
+marked `TODO(verify page, #156)` (OQ-B8). **The key delegation** (slice S7 of
+#220, [The key delegation](#the-key-delegation-v-22), V-22) is specified and
+built with the wallet delegation: check 9 and its display
+(`apps/verify/src/key-delegation-check.ts`, `delegation-view.ts`), and the
+body's reading closed to the vendored document, which since that change accepts
+exactly `RoundVerification.keyDelegation` and the check name `key_delegation`
+(The evidence; `verify-readers.ts`' `shape` refuses a field no reader names, and
+`CHECK_NAMES` is the document's list).
 
 ## Purpose
 
@@ -167,30 +174,38 @@ Out of scope:
   reads anything else (the one field apart is `earlierPins`, V-3b). The
   Wrapper's optional `autoplay` (RFC-005, W-61) is validated by the same rule,
   so the two judge a document alike (`invalid-autoplay`), and the page does not
-  use it. An invalid document shows the configuration-error state and the page
-  makes no request. It uses `runtimeSigner`, `registryDomain`, `earlierPins`,
-  and `entropyChainId` as the trust anchor (as W-26 does, `earlierPins` apart);
-  `rpcEndpoints`, `minRpcQuorum`, and `environment` for the chain read (V-12,
-  check 6); `entropyChainKind` by the Wrapper's rule, its cross-check with each
-  source's key and `entropyChainId` and the production cluster rule
-  (`production-cluster`) included ([wrapper.md](./wrapper.md#configuration);
-  ADR-013), keeping each source's kind and, for a `solana` source, its cluster's
-  genesis hash, which the page pins in code as the shell does
-  (`apps/verify/src/solana-clusters.ts`; check 6 reads a `solana` source with
-  them, below); and the verify API's base from a field of its own,
-  **`verifyApiBaseUrl`** (D-4): an absolute URL under `playApiBaseUrl`'s rule
-  (`https:`, or `http:` on a loopback host, no credentials, query, or fragment)
-  whose path ends with `/verify/v1`, with no trailing slash. The page will read
-  `<verifyApiBaseUrl>/rounds/{roundId}`. The field is required (D-4), never
-  derived or defaulted, and its origin is the page's own (V-3a). The field is
-  part of the one configuration schema: the Wrapper's validator accepts it and
-  does not use it ([wrapper.md](./wrapper.md#configuration)), and refuses a
-  document without it (`invalid-verify-api-base`). Before this change the
-  Wrapper refused it as an unknown field, so **the Wrapper's acceptance of the
-  field ships before, or in the same release as, any configuration document that
-  carries it**; and, the field being required, the configuration document of
-  every environment is updated in that same release, since the Wrapper that
-  accepts the field refuses a document without it.
+  use it; so are the Wrapper's optional `signingPageOrigin` and
+  `acceptPendingNotices` (the wallet delegation, W-62 to W-63; its codes
+  `invalid-signing-page-origin`, `signing-page-same-site`,
+  `overlapping-origins`, `invalid-accept-pending-notices`, and
+  `pending-notices-in-production`, judged against the page's own origin as the
+  Wrapper judges them against its own), which the page validates and does not
+  use: the Wrapper's site serves the page with the Wrapper's document, which
+  carries them. An invalid document shows the configuration-error state and the
+  page makes no request. It uses `runtimeSigner`, `registryDomain`,
+  `earlierPins`, and `entropyChainId` as the trust anchor (as W-26 does,
+  `earlierPins` apart); `rpcEndpoints`, `minRpcQuorum`, and `environment` for
+  the chain read (V-12, check 6); `entropyChainKind` by the Wrapper's rule, its
+  cross-check with each source's key and `entropyChainId` and the production
+  cluster rule (`production-cluster`) included
+  ([wrapper.md](./wrapper.md#configuration); ADR-013), keeping each source's
+  kind and, for a `solana` source, its cluster's genesis hash, which the page
+  pins in code as the shell does (`apps/verify/src/solana-clusters.ts`; check 6
+  reads a `solana` source with them, below); and the verify API's base from a
+  field of its own, **`verifyApiBaseUrl`** (D-4): an absolute URL under
+  `playApiBaseUrl`'s rule (`https:`, or `http:` on a loopback host, no
+  credentials, query, or fragment) whose path ends with `/verify/v1`, with no
+  trailing slash. The page will read `<verifyApiBaseUrl>/rounds/{roundId}`. The
+  field is required (D-4), never derived or defaulted, and its origin is the
+  page's own (V-3a). The field is part of the one configuration schema: the
+  Wrapper's validator accepts it and does not use it
+  ([wrapper.md](./wrapper.md#configuration)), and refuses a document without it
+  (`invalid-verify-api-base`). Before this change the Wrapper refused it as an
+  unknown field, so **the Wrapper's acceptance of the field ships before, or in
+  the same release as, any configuration document that carries it**; and, the
+  field being required, the configuration document of every environment is
+  updated in that same release, since the Wrapper that accepts the field refuses
+  a document without it.
 - **V-3a. The verify API base is on the page's own origin.** The verify API
   sends no CORS headers, so a same-origin read is the only one (V-2, D-10). Both
   validators refuse a document whose `verifyApiBaseUrl` has an origin (scheme,
@@ -287,8 +302,9 @@ what happened, and, where the player can act, one control.
   - the round was voided or refused (A-5): the page says so, and offers no retry
     (below);
   - the round is not a one-step, two-option config round (A-3): the page says it
-    recomputes rounds of that shape only, shows checks 1 to 4 and 6, runs no
-    derivation of checks 5 and 7, and offers no retry;
+    recomputes rounds of that shape only, shows checks 1 to 4 and 6 (and 9 for a
+    round with a key delegation, V-22), runs no derivation of checks 5 and 7,
+    and offers no retry;
   - the round is a book round that has ended and its draw (check 8) could not be
     recomputed (V-20): the page shows the checks it ran, the result and the
     payout as the verify API reports them, says the draw, the multiplier, and
@@ -333,12 +349,13 @@ the page's own code) is shown as V-10, never left on V-5.
 
 ### What the page recomputes (V-12, V-13)
 
-The page validates the evidence, then runs the checks below in the browser.
-Checks 1 to 4 use the published `CreateRoundAuth` definitions and `signing`;
-checks 5 and 7 use **the SuperEngine fairness kernel, kernelVersion 1**, part of
-the public fairness contract (decided by the backend's TPO, 2026-10-18); the
-rules below are written in this spec's words, and the kernel's vectors pin them
-(VT-2).
+The page validates the evidence, then runs the checks below in the browser, and,
+for a round that carries a wallet's key delegation, check 9
+([The key delegation](#the-key-delegation-v-22), V-22). Checks 1 to 4 use the
+published `CreateRoundAuth` definitions and `signing`; checks 5 and 7 use **the
+SuperEngine fairness kernel, kernelVersion 1**, part of the public fairness
+contract (decided by the backend's TPO, 2026-10-18); the rules below are written
+in this spec's words, and the kernel's vectors pin them (VT-2).
 
 **The kernel's vectors.** The kernel's public vector bundle (synced from
 se-backend `bc4f4adf`, and `book-table-commitment` later, at the commit
@@ -636,14 +653,17 @@ payout is recomputed by check 7 (OQ-B9).
        is implemented in `apps/verify`, so the app adds no runtime dependency of
        its own.
 - **V-13. Shown, not checked.** The page shows, and labels as not checked by
-  this page: the payout terms' binding (`payoutTermsHash` is taken as signed, as
-  W-26 does, and is not tied to `game.terms`, which check 7's payout reads as
-  the body gives it; OQ-B9), a payout on a round that is not `won` or `lost`,
-  the on-chain record (`record.txHash`, `chainId`), and a ZK proof's `status`
-  and `verifiedBy` (`record` and `zkProof` are optional and shown only when
-  present; the verify API document has no field for them, its `onchain_record`
-  and `proofs` checks being "not available yet", so today none is present); and,
-  for a `canceled` round without reveals, checks 5 and 7; and
+  this page: for a round with a key delegation (V-22), `acceptedAt` (the
+  engine's statement), the session that `sessionId` names (the page has no
+  session to compare it with), and, for a notice not in its list, whether it is
+  a published notice; the payout terms' binding (`payoutTermsHash` is taken as
+  signed, as W-26 does, and is not tied to `game.terms`, which check 7's payout
+  reads as the body gives it; OQ-B9), a payout on a round that is not `won` or
+  `lost`, the on-chain record (`record.txHash`, `chainId`), and a ZK proof's
+  `status` and `verifiedBy` (`record` and `zkProof` are optional and shown only
+  when present; the verify API document has no field for them, its
+  `onchain_record` and `proofs` checks being "not available yet", so today none
+  is present); and, for a `canceled` round without reveals, checks 5 and 7; and
   `newRound.actionKey` (A-4: the page has no player key to compare it with). For
   a book round (V-20), also: the drawn row and its multiplier (check 8), the
   mode's table (`merkleRoot`, `entryCount`, `totalWeight`), its `cost`, the
@@ -676,16 +696,26 @@ payout is recomputed by check 7 (OQ-B9).
 validates the fields it uses, and the ones the document requires of the rest
 (`closed`, `bet`, `game`, `actions`, `checks`, and the shapes inside them), and
 maps them to the evidence its checks take. A field that is present and malformed
-fails the whole body (V-10); a field the page does not know is ignored. The page
-never reads the document's own verdict: `checks` and `recomputed.kind` are
-validated and unused, and the result is the page's own (Security). The page
-reads a check's `name` as any string, not the document's closed list, and its
-`result` as one of the document's three values (`passed`, `failed`,
-`not_applicable`), so a `key_delegation` check the verify API may add is read
-and, like every check, unused. This is broader than the document's schema;
-RFC-006 (proposed) narrows it at S7 to the document's list plus that one added
-name, and the unknown fields to `RoundVerification.keyDelegation`, refusing any
-other unknown field or check name. The map:
+fails the whole body (V-10), and so does a field the document does not define
+(below). The page never reads the document's own verdict: `checks` and
+`recomputed.kind` are validated and unused, and the result is the page's own
+(Security). The page reads a check's `name` as one of the document's closed
+list, and its `result` as one of the document's three values (`passed`,
+`failed`, `not_applicable`). **Closed since slice S7 of #220** (RFC-006, the
+kit-first rule): the page's validation is the document's, as V-10 says, at every
+level: a field the vendored document does not define, in an object it closes,
+fails the body (V-10), and so does a check `name` outside the document's closed
+list. The vendored document (synced in S2, in the same change) defines the two
+additions the backend makes for the wallet delegation,
+`RoundVerification.keyDelegation` and the check name `key_delegation`, so the
+page accepts exactly those two and refuses any other unknown field or check
+name. Before S7 the page ignored every unknown field, at any level, and read a
+check's `name` as any string (pinned by `verify-body.test.ts`, which S7 changes:
+its cases for the `key_delegation` name and a top-level `keyDelegation` now pass
+on their own merits, and its case that ignores an unknown top-level `verified`
+now fails the body). The backend emits the two additions in an environment only
+once the release with S7 is deployed there, and adds no other field or check
+name without a kit release that accepts it first. The map:
 
 | The page's evidence                                     | The document's field                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -702,6 +732,7 @@ other unknown field or check name. The map:
 | `steps` (`optionCount`, `selectedIndex`, `losingIndex`) | `recomputed.steps` (`node`, `option`, `losers`): the API's replay of the round, which the page compares with its own (check 7); `optionCount` is the node's `options`; `losingIndex` is the only entry of `losers` and is absent when the replay names none or several                                                                                                                                                                                                                                                                                                                               |
 | `payout` (`formatted`, `value`, `unit`)                 | `payout` (`amount`, `currency`, `decimals`); `formatted` is written by the page from the base units and `decimals` by `bigint` arithmetic (`1.94 EUR`), as the document carries no formatted string                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `book` (`mode`, `drawn`, `cost`, `table`, `apiDraw`)    | `book` (`BookVerification`): `mode`, `drawn` (`DrawnRow`: `index`, `multiplierMilli`), `cost`, and the table's `merkleRoot`, `entryCount`, `totalWeight` (V-21), and `table`, whose rows are validated and not kept (V-21); with what a book round's checks read elsewhere in the body: `game.packageHash`, `recomputed.draw` as `apiDraw` (the API's own redraw, never the page's result; compared with `book.drawn` for consistency only, V-19 check 8), `entropy.chainId` (check 6), and `reveal.seed` (check 7: a book round has no `seedHash`, so no `fairnessProof`); a book round only (V-18) |
+| `keyDelegation`                                         | `keyDelegation` (`KeyDelegationEvidence`): `wallet`, `actionKey`, `sessionId`, `expiry` (an integer, read as a `number`: a time, never an amount, a safe integer by the schema), `noticeId`, `noticeHash`, `notice`, `signature`, `domain`, and `acceptedAt`; optional, on a config round started with a delegation only (V-22). A body that carries both `book` and `keyDelegation` fails the body (V-10): a book round cannot carry a delegation (the Snapshot schema refuses it, and the backend refuses a book start that carries one)                                                           |
 
 The page also validates, and does not use, `bet`, `game`'s other fields, `shape`
 beyond A-3, `transcriptHash`, `reveal.configuration`, `actions` (the signed
@@ -897,6 +928,97 @@ reports them.
     `tools/verify-api-patterns.test.ts` as the others are.
   - No amount, weight, count, or multiplier of a book round is ever a JS
     `number`.
+
+### The key delegation (V-22)
+
+Slice S7 of #220
+([RFC-006](../rfcs/archived/RFC-006-wallet-delegated-action-key.md), section 8;
+accepted 2026-11-20). A player may link a browser wallet to a session: the
+wallet signs a `KeyDelegation`, the statement that the session's action key acts
+for it, and every round the player starts in the session carries it
+([The wallet delegation](./wrapper/the-wallet-delegation.md)). The verify API
+publishes it as `RoundVerification.keyDelegation`.
+
+- **V-22. Check 9, the key delegation.** For a config round whose body carries
+  `keyDelegation` (a round without one has no check 9, and the page says nothing
+  about a wallet; a book round never carries one, V-10), the page recomputes,
+  with `signing` and `contracts`' runtime entry:
+  1. **The notice's text.** `noticeHash(notice)` (the Keccak-256 of the text's
+     exact UTF-8 bytes) equals `noticeHash` by bytes (`sameHex`).
+  2. **The signer.** `recoverKeyDelegation` over the `KeyDelegation` of
+     `noticeHash`, `actionKey`, `sessionId` (the published `bytes32`, used as it
+     is: the page has no session to tie it to), and `expiry`, with the published
+     `signature`, recovers `wallet` (by bytes), and the signature it returns in
+     canonical form is the published one by bytes: the backend accepts only the
+     canonical form, so a published signature that `recoverKeyDelegation` had to
+     normalize (a high `s`, or `v` 0 or 1) is a mismatch, never normalized away.
+  3. **The round's key.** `actionKey` is the action key the round's signed
+     `newRound` names (its decoded `actionKey`, by bytes), so the delegation is
+     the one of this round's key, the key every action of the round recovers to.
+  4. **The expiry.** `expiry` is after `acceptedAt`, both integers. `acceptedAt`
+     is the engine's statement, which a third party cannot check: the page
+     compares the two numbers and labels `acceptedAt` as given (V-13).
+  5. **The notice is published.** The page looks the notice up by `noticeHash`
+     in the whole vendored list (`keyDelegationNotices`, read with `signing`'s
+     `readKeyDelegationNotices`), `retired` entries included: the evidence names
+     the hash and the text, and a round delegated under a notice that was later
+     retired still verifies. Found: its `id` must equal `noticeId` and its text
+     `notice` (a difference is a mismatch); the entry's status is shown and
+     changes nothing. **Not found** (a notice newer than this release's list;
+     decided 2026-11-17, RFC-006 Q-b): items 1 to 4 still run, and item 5 is
+     shown as "not checked: this notice is not in this page's list yet", and is
+     never a mismatch (V-7). A later release, with a newer list, checks it in
+     full.
+
+  The check passes when items 1 to 4 match and item 5 matches or is not checked;
+  any mismatch makes the round V-7's. Before the round is bound, the body has no
+  `createRoundAuth` and so no `newRound` for item 3: on a round that has not
+  ended, item 3 is shown as "not checked: it waits for the round's signed
+  authorization" and the other items still run and decide the check; on an ended
+  round it is a mismatch (A-2, as for checks 2 to 4; decided by the human,
+  2026-11-21). A well-formed value `signing` refuses (a signature whose `v` is
+  not 27, 28, 0, or 1, or whose `r` or `s` is out of range, that is 0 or not
+  below the curve's order; a signature that recovers to the zero address; a
+  notice with a lone surrogate) is a mismatch naming every refused field, never
+  an exception. A malformed field (a signature of the wrong length, a hash or
+  address not in lowercase hex) fails the body instead (V-10), as the errors
+  table says. Check 9 depends neither on the kernel version (V-12a) nor on the
+  round's shape (A-3), so it runs for every config round that carries a
+  delegation, including one the page cannot recompute otherwise (V-8), and it
+  does not wait for the round's end: the delegation is fixed at the start.
+
+  **What the page shows** (V-6's list of checks, and its summary): a heading
+  "Wallet link", the wallet's address in full (lowercase, as published), the
+  statement "This wallet signed, for this round's key, the text below", the
+  notice's text as text (never markup), its `noticeId` and whether it is
+  `approved`, `pending`, or `retired` in this page's list (or "not in this
+  page's list yet"), the expiry and `acceptedAt` as dates and times in the
+  browser's locale and time zone (with the unix seconds beside them), and each
+  item's comparison with "matches" or the two values. It says what the link
+  means and does not: the wallet signed for the session's key; it does not show
+  where the signature was made (any site can ask a wallet for one), and
+  `acceptedAt` is the engine's statement. Links in it are text, as V-13 says. It
+  reads the API's `key_delegation` check as it reads every check: validated and
+  unused (The evidence). Built: the heading is check 9's title ("9. Wallet link:
+  matches"), the text is a `<blockquote>` of one text node, each date is the
+  browser's `Date.prototype.toLocaleString()` with "(<seconds> unix seconds)"
+  beside it (the seconds alone for a value past the dates a `Date` holds), and
+  the comparisons are, in order: `noticeHash` (the notice's keccak256 against
+  the published one), `wallet` (recovered, lowercase, against the published
+  one), `signature` (the canonical form against the published one), `actionKey`
+  (`newRound`'s against the delegation's), "expiry after acceptedAt" (the two
+  integers, `acceptedAt` labelled as given), and, for a listed notice,
+  `noticeId` and `notice` (the list's against the published ones). A value
+  `signing` refuses gives the note "A value was refused (...)" naming the
+  refused field ("notice" or "signature"), or "Values were refused (notice,
+  signature)" when both are, in item order. Check 9's texts, in English (its
+  heading, the statement, the labels, the "not checked" lines of items 3 and 5,
+  what the link means, and the rows V-13 lists for a delegation, in
+  `apps/verify/src/messages.ts`), are **staging drafts** (decided by the human,
+  2026-11-20): they are used on staging as written, and reviewed before
+  production offers the delegation; the review may change them, never the
+  notice, which is the backend's. The page reads no clock for check 9: the
+  expiry is compared with `acceptedAt`, never with the time.
 
 ### What is built
 
@@ -1123,38 +1245,43 @@ The page around them is built too:
 
 ## Errors and edge cases
 
-| Situation                                                                           | Behavior                                                          |
-| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| id with upper-case hex, or white space around it                                    | normalized (V-4), then checked                                    |
-| id that is a UUID but not v7, or not canonical                                      | refused by the pattern (V-4); no request                          |
-| unknown round                                                                       | not found (V-9)                                                   |
-| round not ended                                                                     | not recomputable (V-8), with "check again"                        |
-| unknown `kernelVersion`                                                             | not recomputable (V-8), no derivation run                         |
-| `canceled` without reveals                                                          | checks 5 and 7 "not checked" (V-13)                               |
-| `won` or `lost` without a reveal                                                    | check 5 fails: mismatch (V-7)                                     |
-| RPC endpoints disagree, or too few answer                                           | check 6 fails: could not verify the chain (V-7)                   |
-| `blockValue` differs from the chain's hash                                          | check 6 fails: mismatch (V-7)                                     |
-| a Solana slot N skipped                                                             | check 6 reads the first finalized block after it (V-12)           |
-| a Solana endpoint with a ledger gap at slot N                                       | check 6 fails: could not verify the chain (`ledger-gap`, V-7)     |
-| a Solana round older than a provider's history                                      | check 6 fails: could not verify the chain (V-7), "check again"    |
-| body that fails validation                                                          | API error (V-10); nothing of it is shown as fact                  |
-| a source the configuration does not list                                            | check 2 fails: mismatch (V-7)                                     |
-| signature that recovers to another signer, or has a high `s` or an out-of-range `r` | check 3 fails: mismatch (V-7)                                     |
-| a round's domain and signer that are no configured pair, or mix two (V-3b)          | check 3 fails: mismatch (V-7), against the current pair           |
-| a listed earlier pair whose signature recovers to another signer (V-3b)             | check 3 fails: mismatch (V-7), under that pair                    |
-| signature of the wrong length or with a bad `v`                                     | body fails validation: API error (V-10)                           |
-| configuration document not fetched or not read                                      | configuration error with "try again" (V-3)                        |
-| invalid configuration document                                                      | configuration error, no control; no request (V-3)                 |
-| offline, or a request blocked by the policy                                         | API unreachable (V-11)                                            |
-| a read replaced by a newer one (submit, retry, back, forward, the form)             | the older API and chain requests are aborted; nothing of it shows |
-| two checks fail                                                                     | every failed check is listed (V-7)                                |
-| a book round that ended, every check it can run passing                             | V-8's book reason: the draw is not recomputed (V-20)              |
-| `book` with `createRoundAuth`, `readyHash`, signed actions, or `game.terms`         | body fails validation: API error (V-10, V-18)                     |
-| neither `book` nor `game.terms`                                                     | body fails validation: API error (V-10, V-18)                     |
-| a config round with `game.terms.maxMultiplierMilli` below 1                         | body fails validation: API error (V-10, V-21)                     |
-| a book round without `drawn` or the table fields                                    | read; shown as "not reported" (V-21)                              |
-| `book.drawn` differs from `recomputed.draw`                                         | check 8 fails: mismatch (V-7)                                     |
-| a book round whose `entropy.chainId` is not the configured one                      | check 6 fails: mismatch (V-7)                                     |
+| Situation                                                                                                                                                            | Behavior                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| id with upper-case hex, or white space around it                                                                                                                     | normalized (V-4), then checked                                    |
+| id that is a UUID but not v7, or not canonical                                                                                                                       | refused by the pattern (V-4); no request                          |
+| unknown round                                                                                                                                                        | not found (V-9)                                                   |
+| round not ended                                                                                                                                                      | not recomputable (V-8), with "check again"                        |
+| unknown `kernelVersion`                                                                                                                                              | not recomputable (V-8), no derivation run                         |
+| `canceled` without reveals                                                                                                                                           | checks 5 and 7 "not checked" (V-13)                               |
+| `won` or `lost` without a reveal                                                                                                                                     | check 5 fails: mismatch (V-7)                                     |
+| RPC endpoints disagree, or too few answer                                                                                                                            | check 6 fails: could not verify the chain (V-7)                   |
+| `blockValue` differs from the chain's hash                                                                                                                           | check 6 fails: mismatch (V-7)                                     |
+| a Solana slot N skipped                                                                                                                                              | check 6 reads the first finalized block after it (V-12)           |
+| a Solana endpoint with a ledger gap at slot N                                                                                                                        | check 6 fails: could not verify the chain (`ledger-gap`, V-7)     |
+| a Solana round older than a provider's history                                                                                                                       | check 6 fails: could not verify the chain (V-7), "check again"    |
+| body that fails validation                                                                                                                                           | API error (V-10); nothing of it is shown as fact                  |
+| a source the configuration does not list                                                                                                                             | check 2 fails: mismatch (V-7)                                     |
+| a `createRoundAuth` signature that recovers to another signer or to the zero address, or whose `v` is not 27, 28, 0, or 1, or with a high `s` or an out-of-range `r` | check 3 fails: mismatch (V-7), never V-10                         |
+| a round's domain and signer that are no configured pair, or mix two (V-3b)                                                                                           | check 3 fails: mismatch (V-7), against the current pair           |
+| a listed earlier pair whose signature recovers to another signer (V-3b)                                                                                              | check 3 fails: mismatch (V-7), under that pair                    |
+| signature of the wrong length, or not lowercase hex                                                                                                                  | body fails validation: API error (V-10)                           |
+| configuration document not fetched or not read                                                                                                                       | configuration error with "try again" (V-3)                        |
+| invalid configuration document                                                                                                                                       | configuration error, no control; no request (V-3)                 |
+| offline, or a request blocked by the policy                                                                                                                          | API unreachable (V-11)                                            |
+| a read replaced by a newer one (submit, retry, back, forward, the form)                                                                                              | the older API and chain requests are aborted; nothing of it shows |
+| two checks fail                                                                                                                                                      | every failed check is listed (V-7)                                |
+| a book round that ended, every check it can run passing                                                                                                              | V-8's book reason: the draw is not recomputed (V-20)              |
+| `book` with `createRoundAuth`, `readyHash`, signed actions, or `game.terms`                                                                                          | body fails validation: API error (V-10, V-18)                     |
+| neither `book` nor `game.terms`                                                                                                                                      | body fails validation: API error (V-10, V-18)                     |
+| a config round with `game.terms.maxMultiplierMilli` below 1                                                                                                          | body fails validation: API error (V-10, V-21)                     |
+| a book round without `drawn` or the table fields                                                                                                                     | read; shown as "not reported" (V-21)                              |
+| `book.drawn` differs from `recomputed.draw`                                                                                                                          | check 8 fails: mismatch (V-7)                                     |
+| a field the document does not define, at any level, or an unknown check name                                                                                         | body fails validation: API error (V-10)                           |
+| `keyDelegation` on a book round, or malformed                                                                                                                        | body fails validation: API error (V-10, V-22)                     |
+| a delegation that does not recompute, or not canonical (V-22)                                                                                                        | check 9 fails: mismatch (V-7)                                     |
+| a delegation signature `signing` refuses (`v`, `r`, `s`, zero address)                                                                                               | check 9 fails: mismatch naming it (V-22), not V-10                |
+| a delegation whose notice is not in this page's list                                                                                                                 | check 9's item 5 "not checked"; never V-7 (V-22)                  |
+| a book round whose `entropy.chainId` is not the configured one                                                                                                       | check 6 fails: mismatch (V-7)                                     |
 
 ## Security
 
@@ -1208,7 +1335,7 @@ never reported anywhere.
 | VT-1a | unit                | the chain read (check 6): a quorum that agrees passes; another chain id, too few answering, a timeout, an endpoint with a chain id but no block, and two hashes fail in W-26b's order, and a refused configuration (`config`) asks nothing; `fetch` is called unbound; `blockValue` present and equal, present and different, absent; the one-endpoint degraded indicator                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | VT-1b | unit                | the kernel version (V-12a): kernel 1 runs the derivations, an unknown one shows V-8 and runs none; a `canceled` round without reveals shows checks 5 and 7 as "not checked"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | VT-2  | unit                | each check of V-12 against the vendored vectors, each with a passing case and a case per failure: checks 1 to 4 against `created`, `ready`, and the `signature/` Snapshot vectors' `randomnessTarget` and signature verdicts; checks 5 and 7 (SHA-256, the seed, StepsDerive, Coin Flip's outcome) against the fairness kernel's public vectors (the SuperEngine fairness kernel, kernelVersion 1: `kernel/public/v1/seed`, `kernel/public/v1/shuffle-draw`, `kernel/public/v1/steps-derive`, and `kernel/public/v1/derive`, read through the `contracts` test-only entry as `kernelVectors.v1`), and `roundSecretHash` against `kernel/public/v1/round-secret-hash`, its `secret-length` refusals included; check 7's payout against all of `kernel/public/v1/coin-flip-payout`, with a refused term or bet a mismatch and the payout following the recomputed outcome (OQ-B9; `coin-flip-payout.test.ts`, `outcome-payout.test.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| VT-3  | unit                | the body's validation: a body that fails the page's validation (The evidence, from the verify API document) is an API error, never a partial result; amounts read as `bigint`; a field the page does not know is ignored and the API's `checks` are validated and unused: a `key_delegation` check the verify API may add is read under each of its three results, and a top-level `keyDelegation` object leaves the evidence as without it, while such a check with an unknown result or none fails the body (`verify-body.test.ts`, `verify-body-invalid.test.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| VT-3  | unit                | the body's validation: a body that fails the page's validation (The evidence, from the verify API document) is an API error, never a partial result; amounts read as `bigint`; since S7 a field the document does not define fails the body at any level (a top-level `verified` included), and the API's `checks` are validated and unused: a `key_delegation` check is read under each of its three results, while such a check with an unknown result or none, or a check name outside the document's list, fails the body (`verify-body.test.ts`, `verify-body-invalid.test.ts`, `verify-body-closed.test.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | VT-3a | unit                | the abort of a read: the verify API port sends the read's signal, ends the request when it aborts, and answers `aborted` (neither V-10 nor V-11); the controller aborts the earlier read when a newer one starts or the form replaces it, shows nothing for an `aborted` answer, and drops a late answer of a replaced read; it is passed to `fetch` as a signal that is not aborted for the read that stands; the same signal reaches the checks of a found round (`verify`, `verifyRound`, `checkBlock`, the chain read): a newer read or the form ends the chain requests in flight, an aborted run shows nothing and is neither a failed check nor an `api-error`, an aborted chain call is not counted as an endpoint that disagreed or did not answer (it rejects with an `AbortError`, not `too-few` or `hash-mismatch`), a call is not sent when the signal is already aborted, an abort during the recompute of checks 5 and 7 rejects too, the caller's signal keeps no listener after a call resolves, fails, times out, or aborts, and a timeout stays "no answer"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | VT-4  | component (jsdom)   | every state V-4 to V-11 (V-6's payout shown as recomputed, V-8's voided, refused, and book reasons included, the book reason with the result and payout labeled as the API's) and the configuration error renders its heading, text, and control, with no inline style; values from the body render as text. jsdom component tests; the axe scan is in the browser rows (VT-7), as for the Wrapper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | VT-5  | e2e, browser        | against the e2e fake of the verify API: paste a round id and see it matched; open a round's URL directly; a tampered field gives a mismatch naming the check; not found; an API error; the API unreachable (the route aborted); a round not yet ended; a round of a kernel version the page does not know (V-8); a book round's `won` and `lost` (V-20, #156) reach V-8's book reason, never V-10, and a tampered copy names check 5, 6, 7, or 8 (built: `verify-page-book.spec.ts`); the backend's recorded `won` and `lost` rounds match with checks 5 and 7 recomputed (the payout included, shown without "not checked"), and a tampered copy of each (its loser, its payout, its round secret) names check 5 or 7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -1220,6 +1347,8 @@ never reported anywhere.
 | VT-12 | unit + e2e          | `earlierPins` (V-3b): check 3 under the current pair and each earlier pair, the same verdict, the detail naming the pair; a validly signed mix of two pairs in both directions, a pair not listed, an empty or absent list, and a listed pair whose signature recovers to another signer all fail, with no trust from the answer's own domain and signer; address case (`auth-checks-earlier-pins.test.ts`, `render-earlier-pins.test.ts`), each with the round's verdict (`verify-round-earlier-pins.test.ts`: the same verdict under an earlier pair, and a mismatch naming check 3 for a mix and for a listed pair recovering to another signer); in a browser, from the configuration document to the rendered check (`verify-page-earlier-pins.spec.ts`: "a round under a listed earlier pair matches, and check 3 names the pair", "a round whose pair is not listed does not match"); the page's validator (`environment-config-earlier-pins.test.ts`); the Pages tool writing the list to the verifier's document only and refusing a malformed entry, the current pair, and a repeat (`pages-config-earlier-pins.test.ts`); the page and the tool judging alike, and the Wrapper refusing the field (`tools/config-parity.test.ts`). No backend vectors: the vector's own pair plays the earlier one                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | VT-13 | unit                | base58 (RFC-007 section 5; built: `base58.test.ts`): every vector of RFC-007's table (the three genesis hashes, 32 zero bytes, `…1112`, 32 bytes of `ff`) decoded to its bytes, the 33-byte and 31-byte texts refused by their decoded length, and the refusals without arithmetic: the empty string, 31 and 45 characters, each of `0`, `O`, `I`, `l`, `+`, `/`, a space, and a non-ASCII character in an otherwise valid text, and a value that is not a string; it never throws                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | VT-14 | unit                | the Solana chain read (check 6, RFC-007 section 4; built: `chain-read-solana.test.ts`, `chain-read-solana-value.test.ts`, `chain-read-solana-time.test.ts`, `solana-call.test.ts`, `block-check-solana-read.test.ts`, `block-check-solana-rounds.test.ts`; slice 1's `block-check-solana.test.ts` now holds that an endpoint which does not answer the Solana calls gives no value) against a fake endpoint set and a manual clock (`fixtures/solana-rpc.ts`), with synthetic answers until `entropy/solana/v1` is vendored (RFC-007 slice 6), which then replaces its blockhash, skipped-slot, ledger-gap, non-32-byte, -32004, and seed cases: the calls and their exact options, at once, and nothing else; a refused configuration or slot asks nothing; a block at N; N skipped by -32007 and by -32009, with `getBlocksWithLimit` and `getBlock(M)`, the value `M`'s, shown with the skipped slot; a ledger gap by `parentSlot ≥ N`, by `M ≤ N`, and by -32007 or -32009 from `getBlock(M)`; an empty or malformed `getBlocksWithLimit`; -32001, -32004, -32014, and -32019 at N and at M (not available, shown as "this provider does not serve slot N"); a `blockhash` of 31 and 33 bytes, a `previousBlockhash` that is not 32 bytes, a null or missing `blockTime`, a `parentSlot` at or after N; another genesis hash; the failure order (one case per failure, a ledger gap shown even with too few values); two endpoints that disagree on the skip; with three endpoints and a quorum of 2, a fully silent third endpoint (or one with a ledger gap and no genesis hash) not counted as `no-block`, and a third with a value but no genesis hash failing as `no-chain-id`; each failure's Solana note and display detail ("another cluster", the ledger gap, "no answer", the not-served slot, the other value); `entropy.value` equal, different, and absent (absent: "block value (chain)" and its note); a round not ended (`too-few` waits, `ledger-gap` surfaces); an ended round past a provider's history is could not be verified with V-7's chain wording; a timeout at each of the skip path's three calls (each ends the endpoint's answer, no later call starts) and the 45 s worst case; a timeout aborts that call's signal only; the abort during the skip path; no listener left on the caller's signal; the requests' options (no credentials, cache, referrer, or redirect; only an HTTP 200 JSON-RPC 2.0 answer; an error's code kept, never its message; `fetch` called unbound); with an `evm` and a `solana` source in one document, a round of each reads only its own source's endpoints with its own kind's calls; a Solana book round's decoded value through check 7's seed to V-8's book reason, at N and with N skipped; the EVM read's existing tests (VT-1a, VT-3a) unchanged |
+| VT-15 | e2e, browser        | reserved for RFC-007 (#253): the verify page against the e2e fake Solana RPC, added once the backend's Solana vectors are vendored ([RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| VT-16 | unit + component    | the key delegation (V-22, slice S7 of #220; built: `key-delegation-check.test.ts` (the items, the refusals, and the list), `key-delegation-check-zero-address.test.ts` (a signature that recovers to the zero address), `key-delegation-vectors.test.ts` (the `key-delegation/v1` vectors replayed, each refused one failing on the comparisons it names), `verify-round-delegation.test.ts` (check 9 in the run and the verdict), `verify-body.test.ts`, `verify-body-closed.test.ts`, and `verify-body-maximal.test.ts` (the reading), `render-delegation.test.ts` (the display), the patterns and check names in `tools/verify-api-patterns.test.ts` and each reader's fields against the document's `properties` in `tools/verify-api-fields.test.ts`, and in a browser `verify-page-key-delegation.spec.ts` (V-6 and V-7 with check 9, each with an axe audit)): the vendored `valid/coinflip-active-key-delegation` vector's object, mapped into a body, passes items 1 to 5 (`en-draft-1`, `pending` in the list); each item fails alone (a changed byte of `notice`, `noticeHash`, `actionKey` against `newRound`, `sessionId`, `expiry`, `wallet`, or `signature`; the signature in its high-`s` or `v` 0 form, which recovers but is not the published canonical form; `expiry` equal to `acceptedAt`; a `noticeId` other than the list's); a notice not in the list with a good hash and signature passes with item 5 "not checked", never V-7; a notice the list holds as `retired` (a test list) still verifies; a round without `keyDelegation` has no check 9; check 9 does not wait for a round not ended, runs for a round of another shape, and waits only for item 3 on a round not bound yet; a body with both `book` and `keyDelegation`, any other unknown field at any level, or a check `name` outside the document's list fails the body (V-10), while `keyDelegation` and `key_delegation` are accepted, and a body with every optional field the document defines is read; a value `signing` refuses is a mismatch whose note names every refused field; the display (the wallet, the notice as text, its status, the dates beside their seconds, each item's comparison) in V-6 and V-7, and an axe audit; the configuration validator judging `signingPageOrigin` and `acceptPendingNotices` as the Wrapper's does (T-46)                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | VT-10 | unit (source check) | `apps/verify`'s sources never reference `navigator.locks`, `BroadcastChannel`, `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `document.cookie`, `Worker`, `SharedWorker`, or `serviceWorker` (the shared-origin rule), and its `<meta>` policy carries `worker-src 'none'`. Built: `tools/shared-origin.test.ts` scans every non-test source and HTML file of `apps/verify` as text, comments and strings included, for each name as a whole word (`locks`, `cookie`, and `cookieStore` included), with a case per name; the `<meta>` part is checked in `apps/wrapper/src/release-verify.test.ts`, which feeds the page's `index.html` through the release step, and the source HTML itself is checked for no inline script or style and no policy of its own                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 **The e2e fake of the verify API** joins the fake Play API in the e2e harness: a
@@ -1303,6 +1432,12 @@ In `e2e/tests/harness/` (the suite's harness, never shipped):
 - `verify-page-earlier-pins.spec.ts` is VT-12's browser rows: the served
   document's current pins are another pair, and `earlierPins` lists the canned
   round's own pins or does not.
+- `verify-delegated-rounds.ts` (VT-16, S7): the matching round with the vendored
+  `coinflip-active-key-delegation` vector's `proofs.keyDelegation` as its
+  `keyDelegation` (the same round and `newRound`), and a copy whose `acceptedAt`
+  is its expiry; `verify-page-key-delegation.spec.ts` opens each, checks check
+  9's display (the statement, the notice, the wallet, the notice id and its
+  status, the expiry beside its seconds) or V-7 naming it, and runs axe on both.
 
 - `recorded-rounds.ts` and `recorded-rounds/*.json`: two real Coin Flip rounds,
   one `won` (payout 194) and one `lost`, that the backend recorded on its local

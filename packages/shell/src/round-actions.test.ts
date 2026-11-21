@@ -59,6 +59,7 @@ const setUp = async (
     evidence: () => ({
       auth: { first: undefined, reissues: [] },
       tip: undefined,
+      delegation: [],
     }),
     tipError: nothing,
   };

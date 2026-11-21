@@ -31,6 +31,7 @@ import type {
   FakePlayApi,
   FakePlayApiOptions,
   FakeSecret,
+  RedeemSession,
   Served,
 } from "./fake-play-types.ts";
 import {
@@ -41,6 +42,7 @@ import {
   issueIndex,
   opaque,
   ownProblem,
+  playApiPrefix,
   routeOf,
   snapshotBody,
   type Answer,
@@ -56,20 +58,6 @@ import {
 import { redactSecrets } from "./secret-needles.ts";
 import { invalidVector, validVector } from "./vectors.ts";
 
-const API_SUFFIX = "/play/v1";
-
-/**
- * The path below which the Play API's document paths sit at `playApiBaseUrl`:
- * the document's paths start with `/play/v1`, and the base may sit below a
- * prefix. A base that does not end with `/play/v1` is refused.
- */
-export const playApiPrefix = (playApiBaseUrl: string): string => {
-  if (!playApiBaseUrl.endsWith(API_SUFFIX)) {
-    throw new Error("playApiBaseUrl must end with /play/v1");
-  }
-  return new URL(playApiBaseUrl).pathname.slice(0, -API_SUFFIX.length);
-};
-
 const never = (): void => {};
 
 export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
@@ -81,6 +69,7 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
   const valid = new Set<string>();
   // The real API redeems a code once; `redeemAgain` adds one for T-17.
   let redeemsLeft = 1;
+  let redeemSession: RedeemSession | undefined;
   let isCut = false;
   const time = createServerTime(now);
   const served: Served[] = [];
@@ -161,10 +150,11 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
     }
     redeemsLeft -= 1;
     const response: PlaySuccessBody<"redeemLaunchCode"> = {
-      sessionId,
+      sessionId: redeemSession?.sessionId ?? sessionId,
       playToken: issueToken(),
       tokenExpiresAt: time.tokenExpiresAt(),
-      sessionExpiresAt: time.sessionExpiresAt(),
+      sessionExpiresAt:
+        redeemSession?.sessionExpiresAt ?? time.sessionExpiresAt(),
       ...REDEEM_GAME,
     };
     await json(route, 200, response);
@@ -284,6 +274,9 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
     },
     redeemAgain: () => {
       redeemsLeft += 1;
+    },
+    redeemAs: session => {
+      redeemSession = session;
     },
     restore: () => {
       isCut = false;

@@ -160,7 +160,19 @@ if (host !== null) {
         // else, against these, fixed here (W-37).
         gameOrigins: config.gameOrigins,
         ownOrigin: globalThis.location.origin,
+        // The wallet delegation (W-62, W-63), as the validator accepted them:
+        // without a signing page nothing is offered.
+        ...(config.signingPageOrigin === undefined
+          ? {}
+          : { signingPageOrigin: config.signingPageOrigin }),
+        acceptPendingNotices: config.acceptPendingNotices === true,
       }),
+    // The signing window (W-66): the platform `window.open`, called in the
+    // consent dialog's click, and the menu's pointer and hover checks (W-64).
+    delegation: {
+      open: globalThis.window.open.bind(globalThis.window),
+      matches: (query: string): boolean => globalThis.matchMedia(query).matches,
+    },
   });
   // The UI is rendered: the bar floats or docks (RFC-005), it is sticky only
   // while it takes at most half the viewport, and the alert line is reachable

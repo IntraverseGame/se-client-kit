@@ -80,6 +80,7 @@ export type BarMessageKey =
   | "fail.reissued"
   | "fail.tip-check"
   | "fail.changed"
+  | "fail.delegation"
   | "fail.unknown"
   | "tip.unknown-source"
   | "tip.too-few-answered"
@@ -182,6 +183,8 @@ export const EN_BAR: BarMessages = {
   "fail.reissued": "The round's authorization changed after it was checked.",
   "fail.tip-check": "The chain check failed.",
   "fail.changed": "The round's randomness record changed during the round.",
+  // W-72's label (a staging draft, as W-65's texts are).
+  "fail.delegation": "The wallet link in this round's evidence does not match.",
   "fail.unknown": "A check failed.",
   "tip.unknown-source": "No endpoint is set up for the round's chain.",
   "tip.too-few-answered": "Too few chain endpoints answered.",

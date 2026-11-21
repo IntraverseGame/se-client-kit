@@ -1,6 +1,6 @@
 ---
 description: How tests are organized and how to add one. Read before writing or changing tests.
-last-verified: 2026-11-20 (RFC-007 slice 4, VT-13 and VT-14: base58's vectors, the verify page's Solana chain read on a fake endpoint set and a manual clock; slices 2 and 3, T-40 and T-41: the Solana tip check against `fixtures/fake-solana-rpc.ts`, the Wrapper transport's Solana calls; RFC-007 slice 1, T-39: the chain kind's parity cases, `production-cluster` in both validators, `tools/solana-clusters.test.ts`, the fail-closed guards' tests over self-consistent rounds (the verify page's `fixtures/issued-round.ts`); earlier: 2026-11-18, `tools/commit-msg-hook.test.ts` over `.githooks/commit-msg`, a `test:tools` input; 2026-11-17, T-36: the play token's lifecycle in the browser, `t36-token-lifecycle.spec.ts`, on a page clock paused before load; the fake's `advanceServerTime`, `setTokenLifetime` (`harness/fake-play-time.ts`), and `Served.tokenIndex`; the paused-clock caveat re-checked in Chromium, WebKit, and Firefox, and corrected; RFC-006 slice S3: T-37 and T-38, `signing`'s `key-delegation*.test.ts` and `same-hex.test.ts` over the provisional constants in `fixtures/provisional-key-delegation.ts` until S2 vendors the `key-delegation/v1` vectors; the production check before publish: `tools/pages-prod-check-workflow.test.ts`, `tools/pages-prod-check-scripts.test.ts`, `tools/pages-config-origins.test.ts`, `apps/wrapper/src/pages-config-rules.test.ts`; contracts sync: `book-table.test.ts` validates `book.table`, `verify-api-patterns.test.ts` holds `BookTableRow` and the 250,000-row cap to the document, `contracts-lock.test.ts`'s `KERNEL_SETS` gains `book-table-commitment`, the e2e fakes list nine kernel sets and carry a made-up `table`; 2026-11-13, RFC-005: T-29 to T-35; the shell's `controller-layout.test.ts`, `autoplay-run.test.ts` over `fixtures/autoplay.ts`, `play-session-autoplay.test.ts`; the Wrapper's `bet-stepper.test.ts`, `fairness.test.ts`, `fairness-view.test.ts`, `autoplay-bar.test.ts`, `bar-controls.test.ts`, `stage-layout.test.ts`, `environment-config-autoplay.test.ts`, the rewritten `stylesheet-contrast.test.ts`; `fixtures/screen.ts`'s `controls` leaves out the bar's furniture; `wired` takes a document and a stage layout; earlier: 2026-11-10, ADR-011: a framed Wrapper whose `location.ancestorOrigins` proves a single listed parent opens with no `hello`, still required where the list is missing; earlier: 2026-11-09, the Snapshot schema's `cashOutValue` and its vectors synced from se-backend `c4a4801`, the Wrapper's rendering of it now live; T-12 and `t27-cash-out-amount.spec.ts` over the vendored quote vector; earlier: 2026-11-03, VT-12, `earlierPins`: `tools/config-parity.test.ts` holds the page and the Pages tool to one rule for the field the Wrapper refuses; check 3's tests use the vector's pair as the earlier pair, since it is the only pair with a signature; 2026-10-30, cash-out-value.test.ts, the cash-out value on the bar's control; earlier: 2026-10-30, the single screen, RFC-004: the readiness signal of the e2e helpers, `fixtures/screen.ts`, T-25, T-27, T-28's Wrapper half, `t14a-inert-frame.spec.ts`; earlier: 2026-10-29, kernel sets of se-backend bc4f4adf, #156: check 5 replays `round-secret-hash`; earlier: verify book rounds, #156: VT-11's `book-*.test.ts` over `fixtures/book-body.ts` and `fixtures/book-run.ts`, check 5 and 7 replaying `kernel/public/v1/seed`, the canned book rounds and `verifyRounds: "book"`, `verify-page-book.spec.ts`, VT-6's book round; Snapshot contract re-vendor at se-backend `80ac5b8`: T-5 also checks that every issue of an `invalid/` vector is at or below its `failsAt`; 2026-10-28, #133: the release and production workflow tests of ADR-009; #146 book contract re-vendor: the placeholder filters removed, T-24's `won` and `lost` runs on `valid/book-lifecycle-*` in all three projects, at se-backend `65f9086`; 2026-10-27, preview run evidence: the run at the pin, the browser names not yet measured on the job runner; preview mode of the e2e suite pull request, RFC-002: the `preview` project, `preview-support/`, `preview-guard/`, `tools/e2e-preview-*.test.ts`, the reference game plays any `steps` round; verify e2e rows VT-6 to VT-8 pull request: the link, accessibility, and policy and SRI specs, the `verifyPolicy` option; recorded verify rounds pull request: the backend's won and lost rounds in the e2e fake; verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify e2e fake pull request: the fake verify API, the canned rounds, VT-5's rows; verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)
+last-verified: 2026-11-21 (#220 S7: VT-16 on the verify page, the closed body reader; #220 S6b: T-47 in apps/signing-page, T-50's signing-page half in two specs, the WebKit-on-macOS keyboard note; earlier: 2026-11-20 (#220: T-43 to T-51 and VT-16 for the wallet delegation, the replay wallet over the vendored key-delegation vectors; earlier the same day: 2026-11-20 (RFC-007 slice 4, VT-13 and VT-14: base58's vectors, the verify page's Solana chain read on a fake endpoint set and a manual clock; slices 2 and 3, T-40 and T-41: the Solana tip check against `fixtures/fake-solana-rpc.ts`, the Wrapper transport's Solana calls; RFC-007 slice 1, T-39: the chain kind's parity cases, `production-cluster` in both validators, `tools/solana-clusters.test.ts`, the fail-closed guards' tests over self-consistent rounds (the verify page's `fixtures/issued-round.ts`); earlier: 2026-11-18, `tools/commit-msg-hook.test.ts` over `.githooks/commit-msg`, a `test:tools` input; 2026-11-17, T-36: the play token's lifecycle in the browser, `t36-token-lifecycle.spec.ts`, on a page clock paused before load; the fake's `advanceServerTime`, `setTokenLifetime` (`harness/fake-play-time.ts`), and `Served.tokenIndex`; the paused-clock caveat re-checked in Chromium, WebKit, and Firefox, and corrected; RFC-006 slice S3: T-37 and T-38, `signing`'s `key-delegation*.test.ts` and `same-hex.test.ts` over the provisional constants in `fixtures/provisional-key-delegation.ts` until S2 vendors the `key-delegation/v1` vectors; the production check before publish: `tools/pages-prod-check-workflow.test.ts`, `tools/pages-prod-check-scripts.test.ts`, `tools/pages-config-origins.test.ts`, `apps/wrapper/src/pages-config-rules.test.ts`; contracts sync: `book-table.test.ts` validates `book.table`, `verify-api-patterns.test.ts` holds `BookTableRow` and the 250,000-row cap to the document, `contracts-lock.test.ts`'s `KERNEL_SETS` gains `book-table-commitment`, the e2e fakes list nine kernel sets and carry a made-up `table`; 2026-11-13, RFC-005: T-29 to T-35; the shell's `controller-layout.test.ts`, `autoplay-run.test.ts` over `fixtures/autoplay.ts`, `play-session-autoplay.test.ts`; the Wrapper's `bet-stepper.test.ts`, `fairness.test.ts`, `fairness-view.test.ts`, `autoplay-bar.test.ts`, `bar-controls.test.ts`, `stage-layout.test.ts`, `environment-config-autoplay.test.ts`, the rewritten `stylesheet-contrast.test.ts`; `fixtures/screen.ts`'s `controls` leaves out the bar's furniture; `wired` takes a document and a stage layout; earlier: 2026-11-10, ADR-011: a framed Wrapper whose `location.ancestorOrigins` proves a single listed parent opens with no `hello`, still required where the list is missing; earlier: 2026-11-09, the Snapshot schema's `cashOutValue` and its vectors synced from se-backend `c4a4801`, the Wrapper's rendering of it now live; T-12 and `t27-cash-out-amount.spec.ts` over the vendored quote vector; earlier: 2026-11-03, VT-12, `earlierPins`: `tools/config-parity.test.ts` holds the page and the Pages tool to one rule for the field the Wrapper refuses; check 3's tests use the vector's pair as the earlier pair, since it is the only pair with a signature; 2026-10-30, cash-out-value.test.ts, the cash-out value on the bar's control; earlier: 2026-10-30, the single screen, RFC-004: the readiness signal of the e2e helpers, `fixtures/screen.ts`, T-25, T-27, T-28's Wrapper half, `t14a-inert-frame.spec.ts`; earlier: 2026-10-29, kernel sets of se-backend bc4f4adf, #156: check 5 replays `round-secret-hash`; earlier: verify book rounds, #156: VT-11's `book-*.test.ts` over `fixtures/book-body.ts` and `fixtures/book-run.ts`, check 5 and 7 replaying `kernel/public/v1/seed`, the canned book rounds and `verifyRounds: "book"`, `verify-page-book.spec.ts`, VT-6's book round; Snapshot contract re-vendor at se-backend `80ac5b8`: T-5 also checks that every issue of an `invalid/` vector is at or below its `failsAt`; 2026-10-28, #133: the release and production workflow tests of ADR-009; #146 book contract re-vendor: the placeholder filters removed, T-24's `won` and `lost` runs on `valid/book-lifecycle-*` in all three projects, at se-backend `65f9086`; 2026-10-27, preview run evidence: the run at the pin, the browser names not yet measured on the job runner; preview mode of the e2e suite pull request, RFC-002: the `preview` project, `preview-support/`, `preview-guard/`, `tools/e2e-preview-*.test.ts`, the reference game plays any `steps` round; verify e2e rows VT-6 to VT-8 pull request: the link, accessibility, and policy and SRI specs, the `verifyPolicy` option; recorded verify rounds pull request: the backend's won and lost rounds in the e2e fake; verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify e2e fake pull request: the fake verify API, the canned rounds, VT-5's rows; verify page states pull request: the states, view, checks 1 to 4, and verify API read tests of `apps/verify`; operator launch contract pull request, #42: T-9a's unit, component, and e2e cases, the fake operator page, the mutation checks; verify kernel pull request: `apps/verify` replays `kernelVectors.v1`; re-read after a drop pull request: T-20, `snapshot-reread.test.ts`, the fake's `snapshot-version`; fairness kernel vectors pull request: `kernelVectors.v1`, replayed by no test until the verify page; e2e fake round pull request: the round harness, the fake RPC, the round rows; reference game import guard pull request: the exact Vite helper ids and the copied-asset cases of `build.test.ts`; shell cancel fold-in pull request: the session cancel tests over disagreeing RPC endpoints, the Wrapper's cancel-states tests, the mutation checks; Wrapper session pull request: the session's tests on a manual wall clock, the Wrapper's fake session, the browser rows on the release bundle, `redeemAgain`; reference game pull request: the game's unit, component, and build tests, the game-page e2e smoke, the type-only subpath check; release dry run pull request: the tarball check, the tar module, the Wrapper artifact; shell round flows pull request: the scripted Play API transport and the typedData vectors through the flow; e2e harness pull request: the fake Play API, the secret scan, axe, the network control; Wrapper configuration and rendering pull request: the component tests; play-client cancel pull request: the cancel cases; shell entropy chain id pull request: the tip check's chain id; play-client operations pull request: the fake Play API server)))
 ---
 
 # Testing (agent context)
@@ -123,11 +123,115 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   and Vitest types); `tsconfig.json` covers the shipped source only, so the
   source cannot use Node or DOM globals. oxlint forbids conditionals in test
   bodies: put branching in module-level helpers. `KeyDelegation`'s tests (T-37,
-  T-38) pin the backend's published values from
-  `src/fixtures/provisional-key-delegation.ts` (no key, no notice text) until
-  S2 vendors the `key-delegation/v1` vectors and replaces that file; the
-  wallet-signature cases are derived from its signature, and the zero-address
-  case mocks Keccak-256 in its own file, as `zero-address.test.ts` does.
+  T-38, T-51) replay the vendored `key-delegation/v1 vectors` from
+  `contracts`' test-only entry (S2 deleted
+  `src/fixtures/provisional-key-delegation.ts`; `src/fixtures/key-delegation-vectors.ts`
+  narrows the file): the accepted case, the refused high-`s` twin and `v` 0
+  normalized to its canonical signature, `v` 1 read as 28 (another wallet),
+  and the refused cases a caller refuses (`key-delegation-vectors.test.ts`);
+  `readKeyDelegationNotices` on `contracts`' runtime entry and refused variants
+  (`key-delegation-notices.test.ts`); the zero-address case mocks Keccak-256 in
+  its own file, as `zero-address.test.ts` does. The sync's notices rule:
+  `tools/contracts-notices.test.ts` (matched by id) and
+  `tools/contracts-notices-closed.test.ts` (fail-closed cases), over
+  `tools/fixtures/contracts-sync.ts`; `snapshot`'s
+  `key-delegation-codes.test.ts` holds the three `KEY_DELEGATION_*` codes.
+- **The wallet delegation** (#220; T-43 to T-51, VT-16): no real wallet and
+  no key. The accepted key-delegation vector's action key is the
+  signed-action test key the seeded random source already gives, so a fake
+  redeem of the vector's session and expiry makes the shell's typed data the
+  vector's own. That expiry, 1795000000 (2026-11-18 11:06:40 UTC), is
+  already past, so unit tests start their injected clock before it, and T-50
+  fixes the browser clock before it with `page.clock` before the page loads,
+  as the round rows do. A **replay wallet** (a stub EIP-1193 provider announced
+  through EIP-6963) answers the vector's `wallet` and, only for exactly the
+  vector's `typedData`, its signature. Waits (10 s for `ready`, 500 ms
+  `closed` polling, the signing page's 10 s, 1 s discovery, and 3 s revoke)
+  run on injected clocks. T-50 serves the release's `signer/` at its own e2e
+  origin under its real `headers.json` policy. T-43 (S4) spans three suites:
+  `play-client`'s `operations-start-delegation.test.ts` and its fake's strict
+  `keyDelegation` decoding, the e2e fake's (`fake-play-key-delegation.spec.ts`,
+  vectors read by `harness/key-delegation-vectors.ts`), and the Wrapper's alert
+  for the three codes (`key-delegation-errors.test.ts`). T-44 and T-45 (S5)
+  are the shell's: `fixtures/delegation.ts` opens a session keyed with the
+  signed-action test key (its bytes read from `contracts`' test-only entry at
+  run time into `scriptedRandom`, never written down), a redeem of the
+  vector's session and expiry, `signingPageOrigin`, and pending notices
+  accepted, and gives a fake window that records `postMessage` and `close`;
+  `delegation-*.test.ts`, `session-delegation*.test.ts`,
+  `round-verification-delegation.test.ts`, and `round-flow-delegation.test.ts`
+  hold them. A 422 the shell reads must be a valid `PlayProblem`
+  (`retryable: false` outside 503), or it is `rejected`, not a refusal. Since
+  S5 the key is drawn at the session's open, so a test that counts draws sees
+  one right after the open (T-3, T-13). T-46 (S6) is the Wrapper's:
+  `fixtures/fake-delegation.ts` scripts the use case on the fake session and
+  gives jsdom's `HTMLDialogElement` the `showModal` and `close` it lacks
+  (`installDialog`; jsdom has no `matchMedia` either, so the media queries are
+  injected); `fixtures/delegation-ui.ts` wires the UI with a recording
+  `window.open`; `delegation-*.test.ts`, `consent-dialog.test.ts`, and
+  `environment-config-delegation.test.ts` hold it, and the shared documents of
+  `tools/fixtures/config-delegation-documents.ts` hold the verify page to the
+  same verdicts. The dialog's axe audit runs in the browser: T-50's Wrapper
+  half (`t50-delegation.spec.ts`, S6: the dialog, and a blocked window with
+  `window.open` stubbed to record its call and the click's
+  `navigator.userActivation`). T-47 (S6b) is the page's own Vitest suite in
+  `apps/signing-page/src/`: a manual clock (`fixtures/fake-clock.ts`), a stub
+  provider (`fixtures/stub-wallet.ts`), the accepted vector read at run time
+  (`fixtures/accepted-vector.ts`), a jsdom host whose fetch settles in
+  microtasks (`fixtures/page-host.ts`), the wallet port's zero-call test, and
+  a text scan of the page's sources (`page-sources.test.ts`). The vector
+  spells the action key in lowercase and the expiry as a number, the page
+  sends EIP-55 and a decimal string: compare them as signing's own vector
+  test does. T-50's signing-page half (S6b) is two specs:
+  `t50-signing-page.spec.ts` opens the page from a click on a stand-in at
+  `PAGES_ORIGIN` (`harness/signer-opener.ts`) and audits each state, and a
+  COOP header leaves it without its opener (skipped in Playwright's WebKit,
+  which keeps the opener); `t50-delegation-signed.spec.ts`
+  runs the Wrapper on the round harness (`harness/delegation-round.ts`: the
+  fake's `redeemAs` answers the vector's session, `page.clock` is installed at
+  `FAKE_NOW`, before the vector's expiry). `harness/signing-page.ts` serves
+  `signer/` as the deploy lays it out, `harness/replay-wallet.ts` is the
+  wallet (`hold` keeps its signature or revoke back for the waiting states).
+  The 1 s of looking for a wallet is too short to audit. Once it answers,
+  the page closes its own window (SP-9: Chromium and WebKit do not let the
+  Wrapper close a window that dropped its opener), so a test reads the
+  window's state (the wallet's calls) before releasing the answer. No T-50
+  test waits in real time: the states spec installs `context.clock` at
+  `FAKE_NOW` (one clock for the stand-in and the popup) and runs it forward
+  (`runFor` 10 s and 1 s); the round harness's `openSigningWindow` and the
+  window-closed case use `advanceUntil` and `runFor`. VT-16 (S7) is the
+  verify page's: check 9 reads no clock (the expiry is compared with
+  `acceptedAt`, never the time), so its tests inject none.
+  `key-delegation-check.test.ts` reads the vendored
+  `coinflip-active-key-delegation` vector's object from a body
+  (`fixtures/verify-body.ts`' `delegatedBody`: the won body, the same round
+  and `newRound`) and passes the check a test list of notices for the
+  unlisted and retired cases; the refused `key-delegation/v1` vectors give the
+  high-`s` and `v` 0 or 1 signatures, and the whole set replays through the
+  check in `key-delegation-vectors.test.ts`, each refused vector pinned to the
+  comparisons it fails (`a notice not in the list` fails on `noticeHash`: the
+  vector carries no notice text). The shared helpers (`run`, `failing`) are in
+  `fixtures/delegation-check.ts`. A changed `noticeHash`, `sessionId`, `expiry`,
+  or `actionKey` makes the canonical signature recover another wallet (`wallet`
+  fails, `signature` still matches). `verify-body-closed.test.ts` adds a field
+  at every closed object of the document; it deep-copies the base body first,
+  since the book fixture shares `BOOK_TABLE`'s rows between bodies.
+  `tools/verify-api-fields.test.ts` holds each reader's exported `*_FIELDS`
+  object to its schema's `properties` in the vendored document (a line-based
+  read of the YAML, no parser, shared in `tools/verify-api-document.ts`) and
+  fails on a nested object other than `KeyDelegationEvidence.domain`;
+  `verify-body-maximal.test.ts` reads a body with every optional field, the list
+  derived from the document (`properties` less `required`). A signature that
+  recovers to the zero address cannot be made for the page's `signing` build, so
+  `key-delegation-check-zero-address.test.ts` replaces `recoverKeyDelegation`
+  with `signing`'s `zero-address` refusal (proven in `signing`'s own test). The
+  browser rows (`verify-page-key-delegation.spec.ts`, axe included) serve
+  `harness/verify-delegated-rounds.ts`, the canned matching round plus the
+  vector's `proofs.keyDelegation`.
+- **WebKit on macOS does not Tab onto buttons** (its default keyboard
+  setting), so local `SE_E2E_PROJECT=webkit` runs of the keyboard specs fail
+  on a Mac (14 known failures, also on `main`); CI's Linux WebKit is the
+  reference.
 - **e2e** (Playwright): win, loss, cash-out, offline, typed errors, two tabs,
   the sandbox, accessibility, the play token's lifecycle, and a scan that no
   secret reaches the page, logs, or storage. They run against an in-repo
@@ -832,8 +936,8 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
 - `tools/import-direction.test.ts` is the proof that the dependency-direction
   and other lint rules fail on a violation: it runs the real oxlint binary and
   `.oxlintrc.json` over scratch files, with the cases in
-  `tools/fixtures/` (`import-direction-cases.ts`, `lint-rule-cases.ts`,
-  `style-rule-cases.ts`, merged by the test). Add a case there with every new
+  `tools/fixtures/` (`import-direction-cases.ts`, `shell-contracts-cases.ts`,
+  `lint-rule-cases.ts`, `style-rule-cases.ts`, merged by the test). Add a case there with every new
   package or rule; write the expectation from the spec, not from the config.
 - `tools/css-lint.test.ts` does the same for `stylelint.config.mjs` with CSS
   snippets (the stylelint API with the real config). Add a case with a new CSS
@@ -875,7 +979,9 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   `readTree` on a real temporary directory with symbolic links to a file and to
   a directory. Wrapper tests write their own files only under `tmpdir()` and
   remove them: `read-tree` (per test), `release-verify` (a fake verify build in
-  each test that needs one, one with a symbolic link), `build-refusals` (planted
+  each test that needs one, one with a symbolic link), `release-signer` (the
+  same for the signing page, S6b; `release-signer-headers` holds the
+  `/signer/*` rule and the COOP refusal, T-49), `build-refusals` (planted
   env files), and the test-only entry guard's scratch project
   (`fixtures/guard-scratch.ts`, per file; its Vite build uses `write: false`).
   Loading the real `vite.config.ts` (`build-refusals`, the guard) also makes

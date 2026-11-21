@@ -75,6 +75,11 @@ signer.destroy(); // at the end of the session
     `sessionIdBytes32` (a `ses_` session id as `bytes32`); with the types
     `KeyDelegation`, `KeyDelegationMessage`, `KeyDelegationTypedData`, and
     `RecoveredKeyDelegation`.
+  - `readKeyDelegationNotices`: reads the published `key-delegation/v1` notices
+    list (data of unknown shape) and returns its entries, frozen and in order,
+    each with its `id`, `text`, `noticeHash` (checked against the text), and
+    `status`; with the types `KeyDelegationNotice` and `NoticeStatus`. Choosing
+    a notice by status, or looking one up by hash, is the caller's.
   - `sameHex`: whether two hex values hold the same bytes, in either case (an
     EIP-55 address and its lowercase spelling match); not constant-time, for
     public values only, never a secret.

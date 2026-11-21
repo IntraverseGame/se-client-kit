@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 import {
   measureWrapperOutput,
   RELEASE_BUDGET,
+  SIGNER_OUTPUT,
+  SIGNER_PAGE_GZIP,
   sizeBudgetProblems,
   sizeBudgetRows,
   sizeBudgetTable,
@@ -181,7 +183,8 @@ describe("sizeBudgetTable", () => {
 const HTML = bytes("<!doctype html>");
 const WRAPPER_PAGE: [string, Uint8Array] = ["index.html", HTML];
 const VERIFY_PAGE: [string, Uint8Array] = ["verify/index.html", HTML];
-const PAGES = [WRAPPER_PAGE, VERIFY_PAGE];
+const SIGNER_PAGE: [string, Uint8Array] = ["signer/index.html", HTML];
+const PAGES = [WRAPPER_PAGE, VERIFY_PAGE, SIGNER_PAGE];
 
 describe("releaseSizeReport", () => {
   it("passes a small output and reports its rows and table", () => {
@@ -192,6 +195,8 @@ describe("releaseSizeReport", () => {
       WRAPPER_PAGE_GZIP,
       VERIFY_OUTPUT,
       VERIFY_PAGE_GZIP,
+      SIGNER_OUTPUT,
+      SIGNER_PAGE_GZIP,
     ]);
     expect(report.table).toEqual(sizeBudgetTable(report.rows));
   });
@@ -202,6 +207,7 @@ describe("releaseSizeReport", () => {
         ["index.html", new Uint8Array(1)],
         ["headers.json", new Uint8Array(286_720)],
         VERIFY_PAGE,
+        SIGNER_PAGE,
       ]),
     );
     expect(report.problems).toEqual([
@@ -210,16 +216,25 @@ describe("releaseSizeReport", () => {
   });
 
   it.each<[string, Map<string, Uint8Array>, string[]]>([
-    ["an empty output", new Map(), ["index.html", "verify/index.html"]],
+    [
+      "an empty output",
+      new Map(),
+      ["index.html", "verify/index.html", "signer/index.html"],
+    ],
     [
       "an output without its pages",
       new Map([["assets/a.js", bytes("1")]]),
-      ["index.html", "verify/index.html"],
+      ["index.html", "verify/index.html", "signer/index.html"],
     ],
     [
       "an output without the verify page",
-      new Map([WRAPPER_PAGE]),
+      new Map([WRAPPER_PAGE, SIGNER_PAGE]),
       ["verify/index.html"],
+    ],
+    [
+      "an output without the signing page",
+      new Map([WRAPPER_PAGE, VERIFY_PAGE]),
+      ["signer/index.html"],
     ],
   ])("reports %s, however small", (_, files, missing) => {
     expect(releaseSizeReport(files).problems).toEqual(
@@ -236,6 +251,8 @@ describe("releaseSizeReport", () => {
       "wrapper page, gzip: not measured, so its size budget cannot pass",
       "verify output: not measured, so its size budget cannot pass",
       "verify page, gzip: not measured, so its size budget cannot pass",
+      "signer output: not measured, so its size budget cannot pass",
+      "signer page, gzip: not measured, so its size budget cannot pass",
     ]);
   });
 });

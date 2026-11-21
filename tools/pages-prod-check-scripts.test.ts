@@ -12,7 +12,8 @@ import { prod, prodCheck, stepRun } from "./release-workflow-lines.ts";
 // ADR-009, amendment note of 2026-11-17), run as Actions runs them
 // (tools/fixtures/workflow-step.ts): `deploy-check`'s settings step, which is
 // `deploy-prod`'s own (the deploy credential and the project names set, the
-// names Pages project names, and different), and `config-check`'s last two
+// signing page's only when production names one, the names Pages project
+// names, and different), and `config-check`'s last two
 // steps, which lay out the sites from the Wrapper's built `headers.json` and
 // production's configuration document and run the deploy's own headers step
 // on them, so a `_headers` line over the Pages limit fails before publish.
@@ -124,6 +125,49 @@ describe("deploy-check's settings step", () => {
     expect(result.status).toBe(1);
     expect(result.output).toBe(
       "::error::The pages-prod environment's WRAPPER_PROJECT and VERIFIER_PROJECT name the same project.\n",
+    );
+  });
+
+  describe("the signing page's project", () => {
+    const DIGEST = `sha256:${"a".repeat(64)}`;
+
+    it("is required only when production names a signing page", () => {
+      expect(settings({ SIGNER_CONFIG_DIGEST: DIGEST })).toEqual({
+        status: 1,
+        output:
+          "::error::The pages-prod environment has no SIGNER_PROJECT, and production's configuration names a signing page (runbook/client-kit-release.md, Turning on the wallet delegation).\n",
+      });
+      expect(
+        settings({
+          SIGNER_CONFIG_DIGEST: DIGEST,
+          SIGNER_PROJECT: "signer-site",
+        }),
+      ).toEqual({ status: 0, output: "" });
+      expect(settings({ SIGNER_PROJECT: "signer-site" })).toEqual({
+        status: 0,
+        output: "",
+      });
+    });
+
+    it("is a Pages project name, never printed", () => {
+      const result = settings({ SIGNER_PROJECT: "Signer_Site" });
+      expect(result).toEqual({
+        status: 1,
+        output:
+          "::error::The pages-prod environment's SIGNER_PROJECT is not a Pages project name (lowercase letters, digits, and inner dashes, at most 63 characters).\n",
+      });
+    });
+
+    it.each(["WRAPPER_PROJECT", "VERIFIER_PROJECT"])(
+      "is not the project of %s",
+      name => {
+        expect(
+          settings({ SIGNER_PROJECT: SETTINGS_ENV[name as "WRAPPER_PROJECT"] }),
+        ).toEqual({
+          status: 1,
+          output: `::error::The pages-prod environment's ${name} and SIGNER_PROJECT name the same project.\n`,
+        });
+      },
     );
   });
 

@@ -1,4 +1,4 @@
-// Writes the two Pages sites' environment configuration documents
+// Writes the Pages sites' environment configuration documents
 // (pages-config.ts) from the environment's values, for the Pages workflow's
 // `config-stage` job, and with `--production` (production's own rule too:
 // `environment` must be `production`, pages-config-rules.ts) for the
@@ -8,8 +8,11 @@
 //   pnpm exec tsx apps/wrapper/pages-config-cli.ts [--production] --out <empty directory>
 //
 // It writes `wrapper-environment-config.json` and
-// `verifier-environment-config.json` into `--out`, and prints no value: on a
-// problem it prints each problem's input or field and code, and exits 1.
+// `verifier-environment-config.json` into `--out`, and, only with
+// `PAGES_SIGNER_ORIGIN`, `signer-environment-config.json`, which the job then
+// checks with the signing page's own validator
+// (apps/signing-page/config-check-cli.ts). It prints no value: on a problem it
+// prints each problem's input or field and code, and exits 1.
 
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -40,6 +43,8 @@ const result = buildPagesConfigs(
     PAGES_RPC_ORIGINS: process.env["PAGES_RPC_ORIGINS"],
     PAGES_GAME_ORIGINS: process.env["PAGES_GAME_ORIGINS"],
     PAGES_OPERATOR_ORIGINS: process.env["PAGES_OPERATOR_ORIGINS"],
+    PAGES_SIGNER_ORIGIN: process.env["PAGES_SIGNER_ORIGIN"],
+    PAGES_ACCEPT_PENDING_NOTICES: process.env["PAGES_ACCEPT_PENDING_NOTICES"],
   },
   { production: values.production },
 );
@@ -56,4 +61,14 @@ writeFileSync(
   join(out, "verifier-environment-config.json"),
   result.configs.verifier,
 );
-console.log("Wrote and validated both environment configuration documents.");
+if (result.configs.signer === undefined) {
+  console.log("Wrote and validated both environment configuration documents.");
+} else {
+  writeFileSync(
+    join(out, "signer-environment-config.json"),
+    result.configs.signer,
+  );
+  console.log(
+    "Wrote and validated the Wrapper's and the verifier's environment configuration documents, and wrote the signing page's.",
+  );
+}

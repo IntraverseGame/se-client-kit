@@ -122,10 +122,12 @@ and deposit anchors (`operator-links.ts`). ADR-006 is accepted.
     source is the Wrapper's own window is dropped. It is dropped when the
     Wrapper is framed too: wallet extensions inject into the Wrapper's document
     and post their own messages to that window (RFC-006's spike), and none of
-    them is read. The signing window adds a third route, its handle, when it is
-    built (proposed, RFC-006; from S5). The two channels share no state and no
-    schema; no operator message is forwarded to the game and no game message to
-    the operator.
+    them is read. While a signing window is open, its handle is a third route,
+    to the shell's side of `se.delegation/1`
+    ([The wallet delegation](./the-wallet-delegation.md), W-67). The channels
+    share no state and no schema; no operator message is forwarded to the game
+    or the signing window, and no game or signing-window message to the
+    operator.
   - **No secret in any message, in either direction:** no action key, play
     token, launch code, signature, proof, `CreateRoundAuth`, header, session id,
     round id, or amount. No `se.operator/1` message carries money; a later
@@ -363,9 +365,9 @@ and deposit anchors (`operator-links.ts`). ADR-006 is accepted.
 
 ## The embedding page's opener policy
 
-- **W-49g.** (Proposed,
-  [RFC-006](../../rfcs/active/RFC-006-wallet-delegated-action-key.md).) The
-  operator page that embeds the Wrapper MUST NOT send
+- **W-49g.**
+  ([RFC-006](../../rfcs/archived/RFC-006-wallet-delegated-action-key.md),
+  accepted 2026-11-20.) The operator page that embeds the Wrapper MUST NOT send
   `Cross-Origin-Opener-Policy: same-origin`; `same-origin-allow-popups`, or no
   such header, is allowed. Under `same-origin`, a window the Wrapper opens is
   cut off from it: `window.open` returns `null`, yet the window may still open,
@@ -374,11 +376,15 @@ and deposit anchors (`operator-links.ts`). ADR-006 is accepted.
   result. It treats a `null` from `window.open` as a blocked window, tells the
   player the signing window could not connect (and to close it if it opened),
   and plays on without a delegation, on the shell's key; the signing page does
-  nothing in a window that has no opener. The rule matters to the wallet
-  delegation RFC-006 proposes only, which is not built yet: today the Wrapper
-  opens no window it talks to (the verify and deposit links open with no
-  opener). A `sandbox` attribute on the Wrapper's iframe without `allow-popups`
-  blocks the window too; the operator guidance already asks for no `sandbox`.
+  nothing in a window that has no opener (W-66;
+  [Signing page](../signing-page.md), SP-4). The rule matters to the wallet
+  delegation only: the signing window is the one window the Wrapper opens and
+  talks to (the verify and deposit links open with no opener). A `sandbox`
+  attribute on the Wrapper's iframe without `allow-popups` blocks the window
+  too; the operator guidance already asks for no `sandbox`. The Wrapper's own
+  site sends no `Cross-Origin-Opener-Policy` either: on a standalone launch it
+  is the top page, and its release build refuses the header
+  ([client-kit.md](../client-kit.md#how-the-wrapper-reaches-the-superengine-origin)).
 
 ## What is logged
 
@@ -480,14 +486,14 @@ HTML must not be listed. On that iframe set no `sandbox` attribute, no
 origin from the Wrapper, which refuses), and no `allow` feature the Wrapper's
 `Permissions-Policy` turns off.
 
-**A future feature: linking a wallet (proposed, RFC-006; not built yet).** This
-concerns a feature that is still a draft proposal: it may change or not ship,
-and nothing the Wrapper does today depends on it. If it ships, the Wrapper will
-open a window in which a player links a wallet to the game, and your page must
-then not send `Cross-Origin-Opener-Policy: same-origin`;
-`same-origin-allow-popups`, or no such header, is fine. With `same-origin`, that
-window is cut off from the Wrapper, and the player plays on without linking one
-(W-49g).
+**Linking a wallet.** A player may link a browser wallet to the session: the
+Wrapper opens a window on a separate SuperEngine page, where the player's wallet
+signs one statement for the session. For it to work, your page must not send
+`Cross-Origin-Opener-Policy: same-origin`; `same-origin-allow-popups`, or no
+such header, is fine. With `same-origin`, that window is cut off from the
+Wrapper, and the player plays on without linking one (W-49g). The feature is
+offered only on a desktop browser, and only where SuperEngine has turned it on
+for the environment; where it is off, nothing changes for your page.
 
 **Say hello (recommended; required where the browser cannot tell the Wrapper
 your origin).** When your page embeds the Wrapper directly, from a listed

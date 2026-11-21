@@ -5,10 +5,10 @@
 // list, or a body of the wrong shape, does not compile); every route but the
 // redeem requires the play token as `Authorization: Bearer <token>`, as the
 // document's `security` says (`UNAUTHENTICATED` otherwise); and request bodies
-// are decoded strictly (request-shapes.ts: an unknown or missing field, or a
-// body where none is taken, is `INVALID_ARGUMENT`). Field values are not
-// checked against their patterns. It is an injected `fetch`: no network, no
-// timer, no clock of its own.
+// are decoded strictly (request-shapes.ts: an unknown or missing field, the
+// start's `keyDelegation` included, or a body where none is taken, is
+// `INVALID_ARGUMENT`). Field values are not checked against their patterns. It
+// is an injected `fetch`: no network, no timer, no clock of its own.
 
 import type {
   ErrorCode,
@@ -70,6 +70,8 @@ export type Served = {
   readonly headers: Readonly<Record<string, string>>;
   /** The decoded JSON body, or `undefined` when none was sent. */
   readonly body: unknown;
+  /** The body's bytes as sent, or `undefined` when none was sent. */
+  readonly rawBody: string | undefined;
 };
 
 export type FakePlayServer = {
@@ -147,6 +149,7 @@ export const createFakePlayServer = (): FakePlayServer => {
       method: init.method,
       headers: { ...init.headers },
       body: decode(init),
+      rawBody: init.body,
     });
     if (operationId === undefined) {
       return Promise.resolve(

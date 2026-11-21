@@ -3,7 +3,9 @@
 // strict `Content-Security-Policy` (no `unsafe-inline`, no `unsafe-eval`,
 // `connect-src` limited to the SE origin and the configured RPCs, `frame-src`
 // the game origins), `Referrer-Policy: no-referrer`, and a
-// `Permissions-Policy`.
+// `Permissions-Policy`. The signing page's rule (`/signer/*`) is its own
+// (specs/signing-page.md, SP-13), and no rule holds a
+// `Cross-Origin-Opener-Policy` header: the build refuses one.
 //
 // The build is the same for every environment, so the origins that differ per
 // environment are placeholders in the headers file; `contentSecurityPolicyFor`
@@ -131,22 +133,96 @@ export const verifyHeaders = (): Readonly<Record<string, string>> =>
     "Content-Security-Policy": VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE,
   });
 
-/** The path pattern of the Wrapper's headers and the verify page's. */
+/**
+ * The signing page's directives (specs/signing-page.md, SP-13). They hold in
+ * every environment: `connect-src 'self'` is for its one request, its
+ * configuration document; there is no `img-src` (no wallet icon is shown).
+ */
+const SIGNER_DIRECTIVES: readonly string[] = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "connect-src 'self'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "require-trusted-types-for 'script'",
+  "trusted-types 'none'",
+];
+
+/** The signing page's header policy: no page may frame it. */
+export const SIGNER_CONTENT_SECURITY_POLICY: string =
+  SIGNER_DIRECTIVES.join("; ");
+
+/**
+ * The signing page's `<meta>` policy: the header's without `frame-ancestors`,
+ * which a `<meta>` element cannot carry.
+ */
+export const SIGNER_META_CONTENT_SECURITY_POLICY: string =
+  SIGNER_DIRECTIVES.filter(
+    directive => !directive.startsWith("frame-ancestors "),
+  ).join("; ");
+
+/**
+ * The signing page's response headers (SP-13): its own policy, no referrer, no
+ * sniffing, and the Wrapper's `Permissions-Policy`. No
+ * `Cross-Origin-Opener-Policy`, on purpose: it would cut the page's opener.
+ */
+export const signerHeaders = (): Readonly<Record<string, string>> =>
+  Object.freeze({
+    "Content-Security-Policy": SIGNER_CONTENT_SECURITY_POLICY,
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+    // The `/*` rule's own value, so the two cannot drift.
+    "Permissions-Policy": PERMISSIONS_POLICY,
+  });
+
+/** The path patterns of the Wrapper's headers and of its two other pages. */
 export const WRAPPER_HEADERS_PATH = "/*";
 export const VERIFY_HEADERS_PATH = "/verify/*";
+export const SIGNER_HEADERS_PATH = "/signer/*";
+
+/** The headers file: the headers by path pattern. */
+export type HeadersFile = Readonly<
+  Record<string, Readonly<Record<string, string>>>
+>;
+
+const OPENER_POLICY = "cross-origin-opener-policy";
+
+/**
+ * Refuses a headers file any of whose rules holds a
+ * `Cross-Origin-Opener-Policy` header, by any spelling of its name: the
+ * Wrapper's own would cut the signing window's opener (W-49g), and the signing
+ * page's would cut its own (SP-13).
+ */
+export const refuseOpenerPolicy = (file: HeadersFile): void => {
+  for (const [path, headers] of Object.entries(file)) {
+    if (
+      Object.keys(headers).some(name => name.toLowerCase() === OPENER_POLICY)
+    ) {
+      throw new Error(
+        `The release headers' ${path} rule has a Cross-Origin-Opener-Policy header, which would cut the signing window's opener; the build is refused.`,
+      );
+    }
+  }
+};
 
 /**
  * The headers file of the release bundle (`headers.json`): the headers by path
- * pattern. The more specific pattern, `/verify/*`, replaces the Wrapper's
- * headers for the verify page, it does not add to them.
+ * pattern. The more specific patterns, `/verify/*` and `/signer/*`, replace the
+ * Wrapper's headers for those pages, they do not add to them. No rule holds a
+ * `Cross-Origin-Opener-Policy` header (`refuseOpenerPolicy`).
  */
-export const headersFile = (): Readonly<
-  Record<string, Readonly<Record<string, string>>>
-> =>
-  Object.freeze({
+export const headersFile = (): HeadersFile => {
+  const file: HeadersFile = Object.freeze({
     [WRAPPER_HEADERS_PATH]: wrapperHeaders(),
     [VERIFY_HEADERS_PATH]: verifyHeaders(),
+    [SIGNER_HEADERS_PATH]: signerHeaders(),
   });
+  refuseOpenerPolicy(file);
+  return file;
+};
 
 const originOf = (url: string): string => new URL(url).origin;
 

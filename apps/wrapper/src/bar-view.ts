@@ -192,7 +192,7 @@ export const createBarView = (
         snapshot?.presentation === "playback",
     );
 
-    const error = alertContent(m, state);
+    const error = alertContent(m, state, options.delegation);
     const alertChanged = showAlert(input, error);
 
     // A state on the cover that stops the round shows only what W-57's table
@@ -232,6 +232,7 @@ export const createBarView = (
       key,
       options.calling === true,
       options.autoplay ?? null,
+      options.delegation?.holdsStart === true,
     ]);
     const changed = key !== barKey;
     if (changed || controlsKey !== controlsShown) {

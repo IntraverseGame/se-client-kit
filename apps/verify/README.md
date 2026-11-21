@@ -78,6 +78,21 @@ kernel version this page implements, with no failed check, therefore reads "This
 round's draw was not recomputed", and its result, drawn row, multiplier, and
 payout are shown as the verify API reports them.
 
+**The wallet link** (check 9) appears for a round whose player linked a browser
+wallet to the session: the wallet signed a statement that the session's key acts
+for it, with a notice the wallet showed. The page checks that the notice's text
+hashes to the hash the wallet signed, that the signature recovers to the wallet
+and is in its canonical form, that the key it names is the round's action key,
+and that its expiry is after the time the engine accepted it. It then looks the
+notice up, by its hash, in this page's own copy of the published notices,
+retired ones included: a notice it holds must have the same id and text, and a
+notice newer than this page's copy is shown as not checked, never as a mismatch.
+The check does not wait for the round's end, and it shows the wallet, the notice
+as text, its status in the list, and the times as dates in your browser's
+locale. A book round never has one. The page accepts exactly the fields and
+check names the vendored verify API document defines: an answer with any other
+field, at any level, is one it cannot read.
+
 SHA-256 comes from the browser's Web Crypto, and Keccak-256 from
 `@intraverse/se-client-signing`. Every derivation is keyed on the round's kernel
 version: a round of a version this page does not implement is reported as not
@@ -89,11 +104,13 @@ public vectors.
 The page labels as not checked the binding of the payout terms (the signed
 `payoutTermsHash` is not tied to the terms the payout is computed from), a
 payout on a round that did not end `won` or `lost`, the round's player key
-(`newRound.actionKey`, which the page has no player key to compare with), and,
-when the evidence carries them, the on-chain record, a ZK proof's status, and
-links from the evidence, which are shown as text. The vendored verify API
-document has no field for the on-chain record, the proofs, or such links today:
-its checks for the record and the proofs are "not available yet".
+(`newRound.actionKey`, which the page has no player key to compare with), a
+wallet link's acceptance time (the engine's statement) and session (the page has
+no session to compare it with), and, when the evidence carries them, the
+on-chain record, a ZK proof's status, and links from the evidence, which are
+shown as text. The vendored verify API document has no field for the on-chain
+record, the proofs, or such links today: its checks for the record and the
+proofs are "not available yet".
 
 The page holds no key, no token, and no session, and it never loads the code
 that holds the player's key.

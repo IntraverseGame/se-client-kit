@@ -12,22 +12,29 @@ import type {
   StepEvidence,
   TermsNodeEvidence,
 } from "./round-evidence.ts";
-import { amount, bet, payout } from "./verify-amount.ts";
+import { bet, payout } from "./verify-amount.ts";
 import {
   book,
   bookOf,
   contradictsBook,
-  drawnRow,
   hasNoRoundKind,
 } from "./verify-book.ts";
+import { keyDelegation } from "./verify-delegation.ts";
 import { game } from "./verify-game.ts";
-import { newRound } from "./verify-new-round.ts";
+import {
+  check,
+  commitment,
+  entropy,
+  kernel,
+  recomputed,
+  reveal,
+  signedAction,
+} from "./verify-parts.ts";
 import {
   Bad,
   bool,
   int,
   list,
-  nested,
   object,
   oneOf,
   optional,
@@ -42,102 +49,9 @@ type Wire = VerifyApiComponents["schemas"];
 const STATUSES: ReadonlySet<string> = new Set<
   Wire["RoundVerification"]["status"]
 >(["idle", "starting", "active", "won", "lost", "canceled", "resolving"]);
-const ACTION_KINDS: ReadonlySet<string> = new Set<Wire["SignedAction"]["kind"]>(
-  ["action", "cash_out", "cancel"],
-);
-const RESULTS: ReadonlySet<string> = new Set<
-  NonNullable<Wire["Check"]["result"]>
->(["passed", "failed", "not_applicable"]);
-const REPLAY_KINDS: ReadonlySet<string> = new Set<
-  Wire["Recomputation"]["kind"]
->(["none", "lost", "won", "cashed_out"]);
 const CLOSE_REASONS: ReadonlySet<string> = new Set<
   NonNullable<Wire["RoundVerification"]["closeReason"]>
 >(["expired"]);
-
-const kernel = nested(s =>
-  shape(s, {
-    name: v => text(v),
-    version: v => int(v, 1),
-    vectorSets: list(v => text(v)),
-  }),
-);
-
-const signedAction = nested(s =>
-  shape(s, {
-    sequence: v => int(v, 1),
-    kind: v => oneOf(v, ACTION_KINDS),
-    action: v => text(v),
-    path: list(v => int(v, 0, 255)),
-    previous: v => text(v, PATTERN.hex32),
-    signature: v => text(v, PATTERN.signature),
-  }),
-);
-
-const check = nested(s =>
-  shape(s, {
-    name: v => text(v),
-    result: v => oneOf(v, RESULTS),
-    detail: v => optional(v, x => text(x)),
-  }),
-);
-
-const replayStep = nested(s =>
-  shape(s, {
-    node: v => int(v, 0),
-    option: v => int(v, 0),
-    losers: list(v => int(v, 0)),
-    survived: bool,
-  }),
-);
-
-const recomputed = nested(s =>
-  shape(s, {
-    kind: v => oneOf(v, REPLAY_KINDS),
-    payout: v => optional(v, amount),
-    steps: list(replayStep),
-    draw: v => optional(v, drawnRow),
-  }),
-);
-
-const entropy = nested(s =>
-  shape(s, {
-    source: v => optional(v, x => text(x)),
-    chainId: v => optional(v, x => int(x, 0)),
-    block: v => optional(v, x => int(x, 0)),
-    value: v => optional(v, x => text(x, PATTERN.hex32)),
-  }),
-);
-
-const commitment = nested(s =>
-  shape(s, {
-    roundSecretHash: v => optional(v, x => text(x, PATTERN.hex32)),
-    commitmentRef: v => optional(v, x => text(x)),
-    createRoundAuth: v =>
-      optional(
-        v,
-        nested(a =>
-          shape(a, {
-            newRound,
-            prepareWindow: x => int(x, 0),
-            expiryUnix: x => int(x, 0),
-            signature: x => text(x, PATTERN.signature),
-          }),
-        ),
-      ),
-    registryChainId: v => optional(v, x => int(x, 0)),
-    registryAddress: v => optional(v, x => text(x, PATTERN.address)),
-    adminSigner: v => optional(v, x => text(x, PATTERN.address)),
-  }),
-);
-
-const reveal = nested(s =>
-  shape(s, {
-    roundSecret: v => text(v, PATTERN.hex32),
-    seed: v => optional(v, x => text(x, PATTERN.hex32)),
-    configuration: v => optional(v, x => text(x, PATTERN.hexBytes)),
-  }),
-);
 
 /**
  * The steps the replay played, each with its node's option count: a step whose
@@ -173,33 +87,40 @@ const closureOf = (
   return rejectCode === undefined ? {} : { closure: "refused" };
 };
 
+/**
+ * `RoundVerification`'s fields, each with its reader; any other field fails the
+ * body. Exported for `tools/verify-api-fields.test.ts`.
+ */
+export const ROUND_VERIFICATION_FIELDS = {
+  roundId: (v: unknown) => text(v, PATTERN.roundId),
+  status: (v: unknown) => oneOf(v, STATUSES),
+  closeReason: (v: unknown) => optional(v, x => oneOf(x, CLOSE_REASONS)),
+  voidReason: (v: unknown) => optional(v, x => text(x)),
+  rejectCode: (v: unknown) => optional(v, x => text(x)),
+  closed: bool,
+  kernel,
+  game,
+  shape: list(v => int(v, 1, 25)),
+  bet,
+  payout,
+  commitment: (v: unknown) => optional(v, commitment),
+  entropy: (v: unknown) => optional(v, entropy),
+  seedHash: (v: unknown) => optional(v, x => text(x, PATTERN.hex32)),
+  readyHash: (v: unknown) => optional(v, x => text(x, PATTERN.hex32)),
+  reveal: (v: unknown) => optional(v, reveal),
+  actions: list(signedAction),
+  transcriptHash: (v: unknown) => optional(v, x => text(x, PATTERN.hex32)),
+  recomputed: (v: unknown) => optional(v, recomputed),
+  book: (v: unknown) => optional(v, book),
+  keyDelegation: (v: unknown) => optional(v, keyDelegation),
+  checks: list(check),
+};
+
 /** The body as evidence, or `undefined` when it does not validate. */
 export const parseEvidence = (body: unknown): RoundEvidence | undefined => {
   const source = object(body);
   if (source === Bad) return undefined;
-  const top = shape(source, {
-    roundId: v => text(v, PATTERN.roundId),
-    status: v => oneOf(v, STATUSES),
-    closeReason: v => optional(v, x => oneOf(x, CLOSE_REASONS)),
-    voidReason: v => optional(v, x => text(x)),
-    rejectCode: v => optional(v, x => text(x)),
-    closed: bool,
-    kernel,
-    game,
-    shape: list(v => int(v, 1, 25)),
-    bet,
-    payout,
-    commitment: v => optional(v, commitment),
-    entropy: v => optional(v, entropy),
-    seedHash: v => optional(v, x => text(x, PATTERN.hex32)),
-    readyHash: v => optional(v, x => text(x, PATTERN.hex32)),
-    reveal: v => optional(v, reveal),
-    actions: list(signedAction),
-    transcriptHash: v => optional(v, x => text(x, PATTERN.hex32)),
-    recomputed: v => optional(v, recomputed),
-    book: v => optional(v, book),
-    checks: list(check),
-  });
+  const top = shape(source, ROUND_VERIFICATION_FIELDS);
   if (top === Bad) return undefined;
   if (contradictsBook(top) || hasNoRoundKind(top)) return undefined;
   const steps = playedSteps(top.game.terms, top.recomputed?.steps ?? []);
@@ -279,5 +200,8 @@ export const parseEvidence = (body: unknown): RoundEvidence | undefined => {
     ...(top.book === undefined
       ? {}
       : { book: bookOf(top.book, top.game.packageHash, top) }),
+    ...(top.keyDelegation === undefined
+      ? {}
+      : { keyDelegation: top.keyDelegation }),
   };
 };

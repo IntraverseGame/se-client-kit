@@ -240,3 +240,17 @@ export const checkAnswer = (id: PlayOperationId, answer: Answer): void => {
     );
   }
 };
+
+const API_SUFFIX = "/play/v1";
+
+/**
+ * The path below which the Play API's document paths sit at `playApiBaseUrl`:
+ * the document's paths start with `/play/v1`, and the base may sit below a
+ * prefix. A base that does not end with `/play/v1` is refused.
+ */
+export const playApiPrefix = (playApiBaseUrl: string): string => {
+  if (!playApiBaseUrl.endsWith(API_SUFFIX)) {
+    throw new Error("playApiBaseUrl must end with /play/v1");
+  }
+  return new URL(playApiBaseUrl).pathname.slice(0, -API_SUFFIX.length);
+};

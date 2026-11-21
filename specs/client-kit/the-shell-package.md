@@ -14,8 +14,9 @@ the round's verdict that combines them with the tip check; then the
 move, cash-out, the required cancel, the W-16 resend, and the W-19
 resynchronization), the pick use case, and the UI's Snapshot reader; then the
 session (the launch code, the redeem, the play token and its refresh, and the
-UI's use cases over the round flows). The Wrapper requirements each rule serves
-are in brackets.
+UI's use cases over the round flows); then the wallet delegation (the use case,
+the Wrapper's side of `se.delegation/1`, and the delegation check; slice S5 of
+#220). The Wrapper requirements each rule serves are in brackets.
 
 - **Public API.** The redacting logger (`createLogger` and its types),
   `REDACTED`, `ShellError` with its `ShellErrorCode`, the chain configuration's
@@ -46,13 +47,21 @@ are in brackets.
   `RoundState.cancel` gives); autoplay's types (RFC-005, W-61):
   `AutoplayRequest`, `AutoplayState`, `AutoplayStop`, `AutoplayOutsideStop`,
   `AutoplayRefusal`, `AutoplayBegin`, with `AUTOPLAY_MAX_COUNT` (1000) and
-  `AUTOPLAY_MAX_INTERVAL_MS` (600 000); `isRoundOver` with `RoundEnd`; and the
-  re-exported platform types of `play-client` the session takes (`Clock`,
-  `FetchLike`, `RefreshConfig`, `TimerHandle`), since the Wrapper imports only
-  `shell`. The validation is public because the Wrapper applies W-26a's boot
-  rule before it starts; the transport types because the Wrapper supplies the
-  transport (it owns `fetch` and the Content Security Policy); the bridge
-  because the Wrapper mounts the game iframe and owns the window it talks
+  `AUTOPLAY_MAX_INTERVAL_MS` (600 000); the wallet delegation's use case types
+  (W-62 to W-72, slice S5): `DelegationState`, `DelegationFailureReason`,
+  `DelegationRefusalCode` (W-71's three codes), `DelegationWindow`,
+  `DelegationEvent` (the parts of a `message` event it reads),
+  `DelegationNotice`, `DelegationOffer`, `DelegationBegin`, `DelegationFailure`
+  (the round's `delegation` failure cause), and the `se.delegation/1` message
+  types (`DELEGATION_SCHEMA`, `DelegationReady`, `DelegationRequest`,
+  `DelegationResult`, `DelegationFailed`), with `DELEGATION_READY_TIMEOUT_MS`
+  (10 000) and `DELEGATION_CLOSED_POLL_MS` (500); `isRoundOver` with `RoundEnd`;
+  and the re-exported platform types of `play-client` the session takes
+  (`Clock`, `FetchLike`, `RefreshConfig`, `TimerHandle`), since the Wrapper
+  imports only `shell`. The validation is public because the Wrapper applies
+  W-26a's boot rule before it starts; the transport types because the Wrapper
+  supplies the transport (it owns `fetch` and the Content Security Policy); the
+  bridge because the Wrapper mounts the game iframe and owns the window it talks
   through; the operator channel because the Wrapper routes the parent window's
   messages to it and awaits its handshake before it opens the session; the
   reader because the Wrapper UI renders only what the shell validated (decided
@@ -93,6 +102,9 @@ are in brackets.
     once and never repeated (W-2); the code is forgotten after the redeem;
   - `other-tab` or `unsupported` when the page does not get the signer lock
     (W-14): the token is forgotten and nothing is read, refreshed, or signed;
+  - `key-generation` when the action key, drawn at the open (W-9), cannot be
+    drawn (Key custody, below): the Wrapper shows the session-ended state, which
+    asks for a relaunch, and a relaunch draws again;
   - `open` with the `PlaySession`. The signing session's domain is the
     configuration's `registryDomain` with the published name and version. The
     token keeper holds the play token sealed and gives the transport its
@@ -160,23 +172,24 @@ are in brackets.
   - `round()`: `RoundState`, the read-only state of the current round: the
     verdict (`checking`, `ready`, `failed` with what is shown, and, when
     `failed`, `failure`, which check refused it: W-26's five check reasons,
-    `reissued`, `tip-check` with `tipFailure`, W-26b's cause or `bind`, or
-    `changed` for a book round, W-52; machine codes the Wrapper labels, W-48,
-    RFC-005), whether it is out of sync, whether a cash-out is offered
-    (`cashOutOffered`: the flow's gate and legality, with nothing signed), the
-    required cancel's state (`cancel`: `none` until it is reached; W-25, W-33,
-    W-35), and, only while it holds, `unconfirmed` (`move` or `cash-out`): the
-    flow's `unconfirmed()`, the move or cash-out not confirmed (W-16, below);
-    and `pending` (`move` or `cash-out`; RFC-004, 2026-10-30), the flow's
-    `pending()`, derived and read only: the round signer's pending move or
-    cash-out (`RoundSigner.pending()`, never a cancel) while the signer's phase
-    (`phase()`) is `open` or `adopted`, and absent otherwise: set from the
-    signature (recorded before its send) until a Snapshot shows the action
-    applied; absent once a final answer has held signing (`stale` after a 400 or
-    409, W-19, where the action stays pending inside the signer until a read
-    shows it applied or out of sync), once the round is out of sync, re-issued,
-    failed, or over, and once the session has ended; kept beside `unconfirmed`
-    after the lost resend; with no signature, key, or bytes
+    `reissued`, `tip-check` with `tipFailure`, W-26b's cause or `bind`,
+    `delegation` with `delegationFailure` (W-72), or `changed` for a book round,
+    W-52; machine codes the Wrapper labels, W-48, RFC-005), whether it is out of
+    sync, whether a cash-out is offered (`cashOutOffered`: the flow's gate and
+    legality, with nothing signed), the required cancel's state (`cancel`:
+    `none` until it is reached; W-25, W-33, W-35), and, only while it holds,
+    `unconfirmed` (`move` or `cash-out`): the flow's `unconfirmed()`, the move
+    or cash-out not confirmed (W-16, below); and `pending` (`move` or
+    `cash-out`; RFC-004, 2026-10-30), the flow's `pending()`, derived and read
+    only: the round signer's pending move or cash-out (`RoundSigner.pending()`,
+    never a cancel) while the signer's phase (`phase()`) is `open` or `adopted`,
+    and absent otherwise: set from the signature (recorded before its send)
+    until a Snapshot shows the action applied; absent once a final answer has
+    held signing (`stale` after a 400 or 409, W-19, where the action stays
+    pending inside the signer until a read shows it applied or out of sync),
+    once the round is out of sync, re-issued, failed, or over, and once the
+    session has ended; kept beside `unconfirmed` after the lost resend; with no
+    signature, key, or bytes
     ([A pick during an error or offline](../wrapper/the-single-screen.md#a-pick-during-an-error-or-offline));
   - `gameOrigin()` and `mountGame(options)`: the controller bridge for D with
     the session's pick use case, which answers the game and reports the answer's
@@ -226,6 +239,19 @@ are in brackets.
     focus for them, also for the answer that stopped the run (W-61). While a run
     goes `start` answers `refused` `busy`. The run lives in memory; nothing is
     stored, logged, or sent but the starts;
+  - **the wallet delegation** (W-62 to W-72, slice S5; below): `delegation()` is
+    the read-only `DelegationState`; `delegationOffer()` answers whether the
+    shell offers the menu item (W-64's first two conditions) and, when it does,
+    the chosen notice (`DelegationNotice`: `id`, `text`, `status`);
+    `beginDelegation(handle)` takes the window handle `window.open` returned (or
+    `null`) and answers `DelegationBegin` (`started`, or `refused` with `busy`,
+    `not-offered`, or `session-ended`); `receiveDelegation(event)` takes the
+    `message` events the Wrapper routes from that handle; `dropDelegation()` is
+    "Continue without" (W-71); `onDelegation` reports each change. While the
+    state is `refused`, or a "Sign again" attempt begun from it is open (W-71),
+    `start` answers `refused` with the `ShellErrorCode` `delegation-refused`
+    (listed under Errors, below), as it answers `refused` with `round-exists`,
+    and sends nothing;
   - `onChange` (each answer outside a call with its `ChangeSource`), `onEnd`,
     `ended()`, and `end()`. Every answer is a validated Snapshot, a validated
     typed error, or a closed code: no key, token, launch code, signature, or
@@ -283,8 +309,9 @@ are in brackets.
   itself logs nothing yet.
 - **Errors.** `ShellError` has a stable `code` (`lock-not-held`,
   `session-ended`, `invalid-input`, `key-generation`, `round-exists`,
-  `equivocation`, `round-stopped`, `snapshot-rejected`, `use-case-failed`) and a
-  fixed message per code that never carries an input value (W-41).
+  `equivocation`, `round-stopped`, `snapshot-rejected`, `use-case-failed`,
+  `delegation-refused`) and a fixed message per code that never carries an input
+  value (W-41).
 - **The chain configuration (W-26a, W-26b, the Wrapper's Configuration).**
   `validateChainConfig(document)` reads the chain part of the parsed environment
   configuration document and returns `{ ok: true, config }` (typed, deeply
@@ -519,6 +546,31 @@ are in brackets.
   verdict `checking` until check 5 decides. A re-issue fails the round at any
   point, with `cancel` `false`, even after `ready` or after a tip-check failure
   that required a cancel.
+
+  **The delegation check** (W-72, slice S5) is a second input beside the tip
+  decision: `createRoundVerification` is given, with the round, the delegation
+  the start carried (or none), the shell's action key address, the redeem's
+  `sessionId` as `bytes32`, and the chosen notice's `id` and text. On each
+  Snapshot of the round it reads `proofs.keyDelegation`: present, it is compared
+  with what was sent by value (`signing`'s `sameHex` for `wallet`, `actionKey`,
+  `sessionId`, `noticeHash`, and `signature`; `expiry` as an integer; `noticeId`
+  and `notice` exactly) and the first object read is kept; absent, it fails as
+  `missing` only once the round's Snapshot is past `starting` and a delegation
+  was sent. The failure is `delegation` with its `DelegationFailure`
+  (`mismatch`, `missing`, `unexpected`, or `changed`). `mismatch`, `missing`,
+  and `unexpected` count as the tip check's failure does for `cancel`: `cancel`
+  is `true` exactly when `T_0` is settled, the only failures are the tip check's
+  and the delegation check's (other than `changed`), the round's latest Snapshot
+  is `active`, and there was no re-issue; a delegation failure before check 5
+  has run leaves the verdict `checking` until check 5 decides. `unexpected` is
+  judged on the round's first read past `starting`. `changed` (a later object
+  that differs, field by field as validated JSON, from the first one kept; or an
+  object on a round started without a delegation, after a read past `starting`
+  carried none, decided 2026-11-20) is handled as a re-issue: the round fails
+  with `cancel` `false` at any point, nothing more is signed, the game's picks
+  get `reject`, no cash-out is offered, and a W-16 resend of an action already
+  signed still goes out. The round's evidence keeps each distinct object read.
+
 - **The game bridge (W-37, W-38, W-23's pre-check).**
   `createControllerBridge(options)` takes the game origin D, the configuration's
   `gameOrigins` and `environment`, the Wrapper's own origin, the game frame's
@@ -639,13 +691,98 @@ are in brackets.
   token, and no launch code, and logs nothing; the Wrapper logs the refusal
   (`embedding.refused`). `state()` is `recording`, `waiting`, `open`, or
   `refused`.
+- **The wallet delegation (W-62 to W-72, slice S5;
+  [The wallet delegation](../wrapper/the-wallet-delegation.md)).** The session's
+  delegation use case (`session-delegation.ts`) and the Wrapper's side of
+  `se.delegation/1` (`delegation-channel.ts`, which, like the operator channel,
+  touches no global: it is given the window handle, the configured
+  `signingPageOrigin`, and the session's clock).
+  - **Its inputs, fixed at open.** `PlaySessionOptions` gains
+    `signingPageOrigin` and `acceptPendingNotices`, copied from the validated
+    configuration at open, never from a later call. The shell relies on that
+    validation and does not check the two again: the configuration's validator
+    (S6) refuses `acceptPendingNotices: true` with `environment: "production"`
+    (`pending-notices-in-production`, W-63), so the shell has no production
+    guard of its own. The notices are read from `contracts`' runtime entry
+    (`keyDelegationNotices`) through `signing`'s `readKeyDelegationNotices`,
+    once, at the open, and the notice is chosen by W-63 (the last `approved`;
+    else, with `acceptPendingNotices`, the last `pending`; never `retired`). A
+    list the reader refuses offers nothing (fail closed). `shell` takes
+    `contracts`' runtime entry for this alone ([Packages](./packages.md)). The
+    redeem's `sessionId` and `sessionExpiresAt` give the request's `sessionId`
+    and `expiry`: `sessionExpiresAt`, an RFC 3339 date-time (the Play API
+    document's `date-time`, which does not exclude fractional seconds), is read
+    with `play-client`'s `parseDeadline` as milliseconds since the epoch (the
+    server's instant, never corrected by the clock offset), divided by 1000 and
+    floored (`Math.floor(parseDeadline(sessionExpiresAt) / 1000)`), so
+    fractional seconds are dropped; it must be a safe integer of at least 1,
+    else nothing is offered.
+  - **The offer.** `delegationOffer()` is `offered` with the notice only when a
+    notice was chosen, `signingPageOrigin` is set, the session is open, the
+    state is `offered`, `declined`, `failed`, or `refused` (so "Sign again" can
+    begin), the latest Snapshot the session read is not `playback`, and a
+    `start` would not be refused `round-exists` (no round held, or the held one
+    over, and no cancel in `in-flight`, `settling`, or `check-later`); otherwise
+    `not-offered` with the first failing reason (`no-notice`, `not-configured`,
+    `ended`, `in-progress` while `signing` or `registered`, `book`,
+    `round-open`; `not-configured` also when the redeem's `sessionId` or
+    `sessionExpiresAt` cannot form a request). The pointer and hover conditions
+    are the Wrapper's.
+  - **`begin`.** Refused (`busy`) while the state is `signing`, and
+    (`not-offered`) when the offer is not `offered`; a refused `begin` closes
+    the handle it was given (never the one already open) and posts nothing to
+    it; then, with `null`, the state is `failed` `blocked` and nothing else
+    happens; with a handle, the state is `signing`, the 10 s wait for `ready`
+    starts on the session's clock, and the handle's `closed` is read every 500
+    ms. The first valid `ready` (W-67's source, origin, and schema checks) is
+    answered with the one `request`, posted to the handle with `targetOrigin`
+    `signingPageOrigin`; later `ready` messages are ignored. A valid `result` or
+    `failed` after the request ends the wait: the shell closes the window (the
+    fallback: the page has already closed itself, SP-9), stops polling, and, for
+    a `result`, checks it (W-68: `recoverKeyDelegation` over the `KeyDelegation`
+    it asked for, then `sameHex` with `wallet`) and registers it or sets
+    `failed` `wallet-mismatch`; for a `failed`, sets `failed` with its reason.
+    `closed` before an answer is `declined`, at the read after the first one
+    that saw it, so an answer queued behind the page's own close still counts
+    (W-66; decided by the human, 2026-11-21); no `ready` in 10 s is `failed`
+    `no-ready` with the window closed; the session's end while `signing` closes
+    the window and is `failed` `session-ended`. A message on this route that
+    fails W-67's rules is ignored and never answered.
+  - **The registered delegation** is
+    `{ wallet, expiry, noticeHash, signature }`, `wallet` and `signature` in
+    lowercase hex, `signature` the canonical form `recoverKeyDelegation`
+    returned; it lives in the session's closure, is never returned to the UI but
+    for `wallet` (W-64's line), and is forgotten at the session's end, by
+    `dropDelegation()`, and when a new registration replaces it. A state of
+    `registered` or `refused` reads `offered` once its delegation is forgotten
+    (by `dropDelegation()` or the session's end).
+  - **The starts.** The start flow takes the registered delegation, if any, when
+    it builds the start's body, so the body's `keyDelegation` is fixed with the
+    body and W-22's resend repeats it (W-70). A book session never registers one
+    (`begin` answers `not-offered` while the latest Snapshot is `playback`). A
+    start answered 422 with one of the three `KEY_DELEGATION_*` codes (a typed
+    error that passed validation, W-42), when it carried a delegation, sets the
+    state to `refused` with the code, the delegation kept (W-71); another
+    refusal, the same code on another status included, changes nothing in the
+    delegation. From `refused`, a new `begin` that ends `declined` or `failed`
+    returns the state to `refused` with the kept delegation (after reporting the
+    attempt's outcome through `onDelegation`), and one that registers replaces
+    it. While that attempt is open (`signing`, begun from `refused`), `start` is
+    still refused `delegation-refused` and sends nothing (decided 2026-11-20);
+    "Continue without" during it releases the starts.
+  - **It logs nothing**, and no error or state carries the signature, the
+    session id, or the expiry; only `registered` carries `wallet` (W-73).
 - **Key custody (W-9 to W-13).** A session generates its action key with
-  `signing`'s `createSigner` on the first need (the first `address()` or
-  signature), from the injected random source (the platform's
-  `crypto.getRandomValues` by default): 32 bytes, redrawn while zero or not
-  below the curve order, refused with `key-generation` after 16 invalid draws.
-  The session exposes the address and the round states, never the key or a
-  function that signs a digest; it is frozen and prints `[redacted]`. Its end
+  `signing`'s `createSigner` at its open, once it holds the signer lock (W-9,
+  slice S5; before S5 it was drawn on the first need), from the injected random
+  source (the platform's `crypto.getRandomValues` by default): 32 bytes, redrawn
+  while zero or not below the curve order, refused with `key-generation` after
+  16 invalid draws: the opening then resolves with a fourth outcome,
+  `key-generation`, the lock is released, the token forgotten, and nothing is
+  read or signed; the Wrapper shows the session-ended state, which asks for a
+  relaunch, and a relaunch draws again. A page that did not get the lock draws
+  no key. The session exposes the address and the round states, never the key or
+  a function that signs a digest; it is frozen and prints `[redacted]`. Its end
   zeroes the key bytes (best effort), releases the lock, and refuses every later
   signature with `session-ended`; the signed actions stay readable for the
   player-started export (W-27). Nothing is written to storage, a cookie, a URL,
@@ -709,10 +846,11 @@ are in brackets.
     `adopted`, and `reissued` phases, never while `stale`, and never a cancel
     (W-25). Snapshots are still read, so an applied move still advances `T`.
 - **The round flows (W-16, W-19, W-22 to W-26).** `startRoundFlow` sends `start`
-  with a fresh idempotency key, the bet (validated as an `AmountRequest`), and
-  the action key's address; a page without the signer lock is `lock-not-held`
-  before anything is sent, and an answer that is not a valid Snapshot of a round
-  is `snapshot-rejected`. It signs nothing. A start whose round may exist
+  with a fresh idempotency key, the bet (validated as an `AmountRequest`), the
+  action key's address, and the registered delegation's `keyDelegation` when
+  there is one (W-70); a page without the signer lock is `lock-not-held` before
+  anything is sent, and an answer that is not a valid Snapshot of a round is
+  `snapshot-rejected`. It signs nothing. A start whose round may exist
   (`startMayBeStored`: no response, a 503 `UNAVAILABLE` whatever its
   `retryable`, a bare 503, or a 500 `INTERNAL`) is sent once more, right away,
   with the same key and body (the Play API document since se-backend `075b850`:
@@ -995,6 +1133,17 @@ are in brackets.
     above, read from the Snapshot's `newRound.roundId`. It numbers the n-th
     accepted action n and does not tie a sequence to the Snapshot's progress, so
     the reading rule above stays the shell's.
+- **The delegation's tests** (T-44, T-45) use a fake window handle (its
+  `closed`, `close`, `focus`, and `postMessage` recorded), message events built
+  with a given `source` and `origin`, the session's injected clock, and the
+  vendored `key-delegation/v1 vectors` from `contracts`' test-only entry: the
+  accepted vector's action key is the signed-action test key, which the
+  session's scripted random source gives (its bytes read from `contracts`'
+  test-only entry at run time, never copied into a file; AGENTS.md lets the
+  shell's unit tests do this, as the e2e suite does), and a fake redeem answers
+  its session and expiry, so its signature registers as it is and in its refused
+  high-`s` and `v` forms. That expiry (1795000000, 2026-11-18 11:06:40 UTC) is
+  already past, so these tests start the injected clock before it.
 - **Tests** are unit tests with injected fakes: a seeded random source that
   keeps a copy of each draw (so a test knows the key's bytes), seeded UUIDs, and
   an in-memory lock manager shared between sessions to stand for tabs. The

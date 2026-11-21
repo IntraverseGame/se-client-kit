@@ -62,9 +62,12 @@ export default defineConfig(({ command, mode }) => {
       : [
           testOnlyEntryGuard(),
           // The verify page's own build goes into the release under `verify/`
-          // (specs/verify-page.md, V-16); this build depends on it.
+          // (specs/verify-page.md, V-16), and the signing page's under
+          // `signer/` (specs/signing-page.md, SP-14); this build depends on
+          // both.
           releaseIntegrity({
             verifyDist: resolve(import.meta.dirname, "../verify/dist"),
+            signerDist: resolve(import.meta.dirname, "../signing-page/dist"),
           }),
         ],
     // Vite bundles a worker with its own plugin pipeline, which does not inherit

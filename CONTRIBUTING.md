@@ -97,7 +97,7 @@ root script it does not reach Playwright: `pnpm test:e2e --repeat-each=3` and
 
 ```text
 packages/    contracts (data only), signing, snapshot, play-client, shell
-apps/        wrapper (the UI), reference-game (Coin Flip), verify (the verify page), pages-proxy (the Pages API proxy)
+apps/        wrapper (the UI), reference-game (Coin Flip), verify (the verify page), signing-page (the wallet signing page), pages-proxy (the Pages API proxy)
 e2e/         Playwright suite, its T-row specs, and the fake Play API
 tools/       repository checks and their tests (allow-list, contracts entry, lint rules)
 specs/       current behavior and contracts (source of truth)
@@ -110,14 +110,14 @@ runbook/     how to develop, release, and operate
 
 Dependency direction between packages is one way: `contracts` (data only) is a
 leaf; `snapshot` and `play-client` depend on it; `signing` has no kit dependency
-at run time; `shell` depends on `signing`, `snapshot`, and `play-client`; the
-`wrapper` app depends on `shell`; `reference-game` depends on nothing but the
-controller protocol's types; the `verify` app depends on `signing` (and may take
+at run time; `shell` depends on `signing`, `snapshot`, and `play-client`, and on
+`contracts`' runtime entry for the key-delegation notices alone; the `wrapper`
+app depends on `shell`; `reference-game` depends on nothing but the controller
+protocol's types; the `verify` app depends on `signing` (and may take
 `snapshot`, `play-client`, and `contracts`' runtime entry), never on `shell`;
-the `pages-proxy` app imports nothing. See
-[`.ai/memories/architecture.md`](./.ai/memories/architecture.md). The edges that
-RFC-006 and ADR-012 propose (a `signing-page` app, and `shell` on `contracts`'
-runtime entry) are not rules yet; `AGENTS.md` lists them apart.
+the `signing-page` app depends on nothing but `signing` and `contracts`' runtime
+entry, never on `shell`; the `pages-proxy` app imports nothing. See
+[`.ai/memories/architecture.md`](./.ai/memories/architecture.md).
 
 ## Development flow
 

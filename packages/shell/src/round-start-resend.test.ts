@@ -5,8 +5,9 @@
 // read as a first answer would be. Any other failure is thrown as it was, with
 // one send, and a page that lost the signer lock before the resend sends nothing
 // more. A `ROUND_ACTIVE` answer to the resend and a session that ended before
-// it, through the session, are in play-session-play.test.ts. Scripted Play
-// API, fake locks, no clock.
+// it, through the session, are in play-session-play.test.ts. A delegated
+// start's resend repeats its `keyDelegation`, and its three 422 codes are
+// sent once (W-70, W-71). Scripted Play API, fake locks, no clock.
 
 import {
   NetworkError,
@@ -16,6 +17,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { ShellError } from "./errors.ts";
+import { carrying, expectedOf } from "./fixtures/delegation.ts";
 import { createFakeLockManager, flush } from "./fixtures/fake-locks.ts";
 import { lost, ok, problem, type Responder } from "./fixtures/fake-play.ts";
 import { bodyOf, type FlowSetup, setUpFlow } from "./fixtures/round-flow.ts";
@@ -215,6 +217,54 @@ describe("any other failed start is thrown, with one send", () => {
     );
     expect(thrown).toBeInstanceOf(kind);
     expect(thrown).toMatchObject(shape);
+    expect(setup.play.sent("startRound")).toHaveLength(1);
+  });
+});
+
+/**
+ * Starts the set-up round with the vector's delegation (for its key), each
+ * answer built from the round's Snapshot carrying that delegation.
+ */
+const delegatedWith = async (
+  ...answers: ((carried: ReturnType<FlowSetup["read"]>) => Responder)[]
+): Promise<{
+  readonly setup: FlowSetup;
+  readonly done: Promise<unknown>;
+}> => {
+  const setup = await setUpFlow();
+  const key = setup.actionKey.toLowerCase();
+  const carried = setup.read(carrying(o => (o["actionKey"] = key)));
+  setup.play.answer("startRound", ...answers.map(answer => answer(carried)));
+  const sent = { ...expectedOf(), actionKey: setup.actionKey };
+  const done = startRoundFlow(
+    { ...setup.options, delegation: sent },
+    setup.hooks,
+  ).catch((error: unknown) => error);
+  return { setup, done };
+};
+
+describe("a delegated start (W-70, W-71)", () => {
+  it("is sent once more with the same keyDelegation after a lost answer", async () => {
+    const { setup, done } = await delegatedWith(
+      () => lost,
+      carried => ok(carried),
+    );
+    expect(await done).toMatchObject({ verdict: expect.any(Function) });
+    const bodies = startBodies(setup);
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).toEqual(bodies[0]);
+    expect(bodies[0]).toMatchObject({ keyDelegation: expect.any(Object) });
+  });
+
+  it.each([
+    "KEY_DELEGATION_INVALID",
+    "KEY_DELEGATION_EXPIRED",
+    "KEY_DELEGATION_NOTICE_UNKNOWN",
+  ])("a 422 %s is thrown, with one send, even marked retryable", async code => {
+    const { setup, done } = await delegatedWith(() => problem(422, code, true));
+    const thrown = await done;
+    expect(thrown).toBeInstanceOf(ProblemError);
+    expect(thrown).toMatchObject({ problem: { status: 422, code } });
     expect(setup.play.sent("startRound")).toHaveLength(1);
   });
 });

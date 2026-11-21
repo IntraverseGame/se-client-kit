@@ -14,10 +14,13 @@ import {
   hex,
   MANIFEST_FILE,
   PAGE,
+  SIGNER_DIR,
+  SIGNER_PAGE,
   TAG,
   VERIFY_DIR,
   VERIFY_PAGE,
 } from "./release-files.ts";
+import { type HeadersFile, refuseOpenerPolicy } from "./release-headers.ts";
 
 const WRAPPER_OUTPUT = "The Wrapper's release output";
 
@@ -45,7 +48,7 @@ const extensionOf = (file: string): string => {
 
 /** Refuses a file whose type the release output does not allow. */
 const checkType = (file: string, named: ReadonlySet<string>): void => {
-  if (file === PAGE || file === VERIFY_PAGE) {
+  if (file === PAGE || file === VERIFY_PAGE || file === SIGNER_PAGE) {
     return;
   }
   const extension = extensionOf(file);
@@ -61,26 +64,28 @@ const checkType = (file: string, named: ReadonlySet<string>): void => {
     return;
   }
   fail(
-    `has ${file}, whose type is not on the output allow-list (.js and .css loaded by a page, ${MANIFEST_FILE}, ${HEADERS_FILE}, ${PAGE}, and ${VERIFY_PAGE})`,
+    `has ${file}, whose type is not on the output allow-list (.js and .css loaded by a page, ${MANIFEST_FILE}, ${HEADERS_FILE}, ${PAGE}, ${VERIFY_PAGE}, and ${SIGNER_PAGE})`,
   );
 };
 
 export type VerifyOutputOptions = {
   /** The output must hold the verify page (`verify/index.html`). */
   readonly requireVerify?: boolean;
+  /** The output must hold the signing page (`signer/index.html`). */
+  readonly requireSigner?: boolean;
 };
 
 /**
  * Adds to `named` the files a page loads by a tag that carries `integrity` (by
- * path relative to `base`). A reference not under `scope`, or under `excluded`
- * when given, fails the build.
+ * path relative to `base`). A reference not under `scope`, or under one of
+ * `excluded`, fails the build.
  */
 const addLoaded = (
   named: Set<string>,
   page: Uint8Array,
   base: string,
   scope: string,
-  excluded?: string,
+  excluded: readonly string[] = [],
 ): void => {
   for (const match of new TextDecoder().decode(page).matchAll(TAG)) {
     const attributes = attributesOf(match[2] ?? "");
@@ -89,8 +94,9 @@ const addLoaded = (
       if (!reference.startsWith(scope)) {
         fail(`has a page that loads ${reference}, outside ${scope}`);
       }
-      if (excluded !== undefined && reference.startsWith(excluded)) {
-        fail(`has a page that loads ${reference}, inside ${excluded}`);
+      const inside = excluded.find(prefix => reference.startsWith(prefix));
+      if (inside !== undefined) {
+        fail(`has a page that loads ${reference}, inside ${inside}`);
       }
       named.add(reference.slice(base.length));
     }
@@ -116,19 +122,32 @@ export const verifyOutput = async (
   const listed = manifest.files ?? {};
   const page = files.get(PAGE) ?? fail(`has no ${PAGE}`);
   const named = new Set<string>();
-  // The Wrapper's page loads nothing of the verify page's: each page's files
-  // are its own.
-  addLoaded(named, page, base, base, `${base}${VERIFY_DIR}/`);
-  const verifyPage = files.get(VERIFY_PAGE);
-  const hasVerifyFiles = [...files.keys()].some(file =>
-    file.startsWith(`${VERIFY_DIR}/`),
-  );
-  if (verifyPage === undefined && (hasVerifyFiles || options.requireVerify)) {
-    fail(`has no ${VERIFY_PAGE}`);
+  // The Wrapper's page loads nothing of the verify page's or the signing
+  // page's: each page's files are its own.
+  addLoaded(named, page, base, base, [
+    `${base}${VERIFY_DIR}/`,
+    `${base}${SIGNER_DIR}/`,
+  ]);
+  const carried = [
+    [VERIFY_DIR, VERIFY_PAGE, options.requireVerify === true],
+    [SIGNER_DIR, SIGNER_PAGE, options.requireSigner === true],
+  ] as const;
+  for (const [dir, pagePath, required] of carried) {
+    const carriedPage = files.get(pagePath);
+    const hasFiles = [...files.keys()].some(file => file.startsWith(`${dir}/`));
+    if (carriedPage === undefined && (hasFiles || required)) {
+      fail(`has no ${pagePath}`);
+    }
+    if (carriedPage !== undefined) {
+      // A carried page loads only what is under its own directory.
+      addLoaded(named, carriedPage, base, `${base}${dir}/`);
+    }
   }
-  if (verifyPage !== undefined) {
-    // The verify page loads only what is under its own directory.
-    addLoaded(named, verifyPage, base, `${base}${VERIFY_DIR}/`);
+  const headers = files.get(HEADERS_FILE);
+  if (headers !== undefined) {
+    refuseOpenerPolicy(
+      JSON.parse(new TextDecoder().decode(headers)) as HeadersFile,
+    );
   }
   for (const file of files.keys()) {
     checkType(file, named);

@@ -1,4 +1,4 @@
-// The environment configuration documents of the two Pages sites (ADR-008;
+// The environment configuration documents of the Pages sites (ADR-008;
 // specs/client-kit.md, The Pages sites' configuration): built from the
 // configuration environment's values (`pages-stage`, or `pages-prod-config`
 // for production) and validated with the Wrapper's own validator
@@ -24,6 +24,9 @@
 //   (V-3b in specs/verify-page.md). The Wrapper's validator refuses the field,
 //   so each document is validated without it, and each entry is validated under
 //   the same rule as the current pair.
+// - `signingPageOrigin` and `acceptPendingNotices`: the Wrapper's only, and
+//   only with `PAGES_SIGNER_ORIGIN`, which also builds a third document, the
+//   signing page's (pages-signer-config.ts; specs/signing-page.md, SP-15).
 // The chain pins, the RPC endpoints, and the game and operator origins are the
 // same in both, and the deploy job derives each site's CSP lists from these
 // documents, so the policy and the configuration cannot disagree.
@@ -34,12 +37,17 @@
 import { headersOriginIssues, productionIssues } from "./pages-config-rules.ts";
 import { earlierPinIssues } from "./pages-earlier-pins.ts";
 import {
+  type SignerInputs,
+  signerInputIssues,
+  signerPlan,
+} from "./pages-signer-config.ts";
+import {
   ENVIRONMENT_CONFIG_FIELDS,
   validateEnvironmentConfig,
 } from "./src/environment-config.ts";
 
 /** The inputs, by the names of the environment's secrets and variables. */
-export type PagesConfigInputs = {
+export type PagesConfigInputs = SignerInputs & {
   /** Secret: the Wrapper site's origin. */
   readonly PAGES_WRAPPER_ORIGIN?: string | undefined;
   /** Secret: the verifier site's origin. */
@@ -85,6 +93,11 @@ export type PagesConfigs = {
   readonly wrapper: string;
   /** The verifier site's `environment-config.json`. */
   readonly verifier: string;
+  /**
+   * The signing page site's `environment-config.json`, only with
+   * `PAGES_SIGNER_ORIGIN`; validated by the page's own validator in the job.
+   */
+  readonly signer?: string;
 };
 
 export type PagesConfigResult =
@@ -195,6 +208,13 @@ export const buildPagesConfigs = (
       "PAGES_RPC_ORIGINS: not exactly the origins of PAGES_RPC_ENDPOINTS",
     );
   }
+  issues.push(
+    ...signerInputIssues(inputs, {
+      wrapperOrigin: wrapperOrigin ?? "",
+      verifierOrigin: verifierOrigin ?? "",
+      production,
+    }),
+  );
   if (
     issues.length > 0 ||
     wrapperOrigin === undefined ||
@@ -225,14 +245,24 @@ export const buildPagesConfigs = (
   // before the field, and absent means empty to the page.
   const verifierOnly: Document =
     Array.isArray(earlierPins) && earlierPins.length > 0 ? { earlierPins } : {};
+  const signer = signerPlan(inputs, {
+    wrapperOrigin,
+    verifierOrigin,
+    environment: currentPins["environment"],
+    production,
+  });
+  // Each site's fields beyond the shared ones: validated with the document (the
+  // Wrapper's delegation fields), or written after it (the verifier's
+  // `earlierPins`, which the Wrapper's validator refuses).
   const sites = [
-    ["wrapper", wrapperOrigin, {}],
-    ["verifier", verifierOrigin, verifierOnly],
+    ["wrapper", wrapperOrigin, signer.wrapperFields, {}],
+    ["verifier", verifierOrigin, {}, verifierOnly],
   ] as const;
-  const documents = sites.map(([site, origin, only]) => {
+  const documents = sites.map(([site, origin, checked, only]) => {
     const document: Document = {
       ...shared,
       verifyApiBaseUrl: `${origin}/verify/v1`,
+      ...checked,
     };
     const result = validateEnvironmentConfig(document, origin);
     if (!result.ok) {
@@ -247,5 +277,14 @@ export const buildPagesConfigs = (
   const [wrapper, verifier] = documents;
   return issues.length > 0 || wrapper === undefined || verifier === undefined
     ? { ok: false, issues }
-    : { ok: true, configs: { wrapper, verifier } };
+    : {
+        ok: true,
+        configs: {
+          wrapper,
+          verifier,
+          ...(signer.signerDocument === undefined
+            ? {}
+            : { signer: signer.signerDocument }),
+        },
+      };
 };

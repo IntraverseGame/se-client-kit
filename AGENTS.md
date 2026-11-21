@@ -126,26 +126,27 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   is one way: `contracts` (data only, no logic) is a leaf; `snapshot` and
   `play-client` depend on it; `signing` has no kit dependency at run time and
   reads vectors from `contracts` in tests only; `shell` depends on `signing`,
-  `snapshot`, and `play-client`; the `wrapper` app depends on `shell`;
+  `snapshot`, and `play-client`, and on `contracts`' runtime entry for the
+  key-delegation notices alone; the `wrapper` app depends on `shell`;
   `reference-game` depends on nothing but the controller protocol's types; the
   `verify` app depends on `signing` (and may take `snapshot`, `play-client`, and
-  `contracts`' runtime entry), never on `shell`; the `pages-proxy` app (the
-  Pages sites' API proxy) imports nothing. No cycles; a package never imports an
-  app. `contracts` has a runtime entry (schemas and generated types) and a
+  `contracts`' runtime entry), never on `shell`; the `signing-page` app (the
+  wallet signing page, on its own origin; ADR-012) depends on nothing but
+  `signing` and `contracts`' runtime entry, never on `shell`, and no package or
+  app imports it; the `pages-proxy` app (the Pages sites' API proxy) imports
+  nothing. No cycles; a package never imports an app. `contracts` has a runtime
+  entry (schemas, generated types, and the key-delegation notices) and a
   test-only entry (vectors): only tests may import the test-only entry (the
   consumers are the tests of `signing`, `snapshot`, and `shell`, the Wrapper's
-  component tests, the verify page's unit tests, and the e2e fake Play API; all
-  development dependencies), and no vector may reach a bundle or a published
-  tarball. A new package must pass the checks in
+  component tests, the verify page's and the signing page's unit tests, and the
+  e2e suite: its fake Play API and its replay wallet; all development
+  dependencies), and no vector may reach a bundle or a published tarball. A new
+  package must pass the checks in
   [`add-a-package`](./.ai/skills/add-a-package/SKILL.md).
-- **Proposed, not enforced (RFC-006, ADR-012).** These edges are not rules yet:
-  no lint enforces them, and the rule above wins until ADR-012 is accepted and
-  the slice named lands with its lint change. From slice S2, `contracts`'
-  runtime entry holds the key-delegation notices; from S5, `shell` takes that
-  runtime entry for them (today's lint refuses the import); from S6b, a
-  `signing-page` app (the wallet signing page, on its own origin) depends on
-  nothing but `signing` and `contracts`' runtime entry, never on `shell`, and no
-  package or app imports it.
+- **The signing page is the only code that talks to a wallet**, on its own
+  origin, through its wallet port's allow-list; the Wrapper has no wallet code
+  and never holds a wallet connection
+  ([specs/signing-page.md](./specs/signing-page.md)).
 - **The shell is the only code that touches a credential** (the action key and
   the play token). The UI receives use cases and read-only state, never a
   secret.
@@ -189,9 +190,9 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   `packages/signing/src/fixtures/keys.ts` and in the vendored `signed-action/`
   vectors in `packages/contracts` (`src/vectors/snapshot/signed-action/`), which
   embed the same public test key (anvil account 3, test-only, never funded) and
-  cannot be edited. The e2e suite may pass the signed-action vector's test key
-  to its seeded random stub, read from `contracts`' test-only entry at run time,
-  and never copies it into a file.
+  cannot be edited. The e2e suite and the `shell` package's unit tests may pass
+  the signed-action vector's test key to their seeded random stub, read from
+  `contracts`' test-only entry at run time, and never copy it into a file.
 - **Money amounts are strings or `bigint`, never JS `number`**, at every
   boundary and in every type. Arithmetic on amounts uses `bigint` in base units.
   A decimal value (a rate, a fee) is never a ledger amount; converting one to
@@ -204,9 +205,9 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   schema and vectors, the signing vectors, the public vector bundle of the
   SuperEngine fairness kernel, kernelVersion 1 (its sets `kernel/public/v1/*`),
   and the key-delegation contract `key-delegation/v1` (its notices and their
-  vectors; proposed, RFC-006) are copied into the `contracts` package, not
-  imported from another repository. Each copy is pinned in a lock file with its
-  source commit and a content hash. No git submodules.
+  vectors) are copied into the `contracts` package, not imported from another
+  repository. Each copy is pinned in a lock file with its source commit and a
+  content hash. No git submodules.
 - **Vectors are append-only.** A released version's vector files are never
   edited; a vendored vector file records the source commit it came from.
 - Never write to `localStorage`, cookies, or any persistent storage from the
@@ -244,10 +245,10 @@ add, in any file, commit, issue, pull request, log, or agent output:
 - credentials, tokens, private keys (other than the public development keys the
   vectors were signed with, in `packages/signing/src/fixtures/keys.ts` and in
   the vendored `signed-action/` vectors of `packages/contracts`, which embed the
-  same public test key and cannot be edited; the e2e suite may pass that test
-  key to its seeded random stub, read from `contracts`' test-only entry at run
-  time, and never copies it into a file), connection strings, npm or deploy
-  credentials;
+  same public test key and cannot be edited; the e2e suite and the `shell`
+  package's unit tests may pass that test key to their seeded random stub, read
+  from `contracts`' test-only entry at run time, and never copy it into a file),
+  connection strings, npm or deploy credentials;
 - internal hostnames or URLs, dashboard links, cloud account or resource
   identifiers;
 - unpublished backend internals: only the player-facing contracts (the Play API
@@ -255,7 +256,7 @@ add, in any file, commit, issue, pull request, log, or agent output:
   specification, the signing vectors, the public vector bundle of the
   SuperEngine fairness kernel, kernelVersion 1, its sets `kernel/public/v1/*`,
   and the key-delegation contract `key-delegation/v1`, its notices and their
-  vectors, proposed in RFC-006) are shared, and only as copies;
+  vectors) are shared, and only as copies;
 - personal data, or the names, emails, or handles of people unless they are
   already public as maintainers or authors;
 - attribution to an AI model or agent (a co-author trailer, a "Generated with"

@@ -207,6 +207,15 @@ body {
   color: var(--vp-mismatch);
 }
 
+.vp-notice {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 0.25rem solid var(--vp-border);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.vp-unchecked,
 .vp-degraded {
   display: flex;
   align-items: center;

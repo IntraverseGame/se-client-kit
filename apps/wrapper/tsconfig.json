@@ -17,9 +17,12 @@
     "release-output-check.ts",
     "release-sri.ts",
     "release-verify.ts",
+    "release-signer.ts",
+    "release-page-copy.ts",
     "pages-config.ts",
     "pages-earlier-pins.ts",
     "pages-config-rules.ts",
+    "pages-signer-config.ts",
     "pages-config-cli.ts"
   ]
 }

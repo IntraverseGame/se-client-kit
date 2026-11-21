@@ -277,8 +277,8 @@ export const buildWrapperArtifact = (root: string): WrapperArtifact =>
   );
 
 /**
- * `root`'s built Wrapper and verify page held to their size budgets
- * (tools/size-budget.ts).
+ * `root`'s built Wrapper, verify page, and signing page held to their size
+ * budgets (tools/size-budget.ts).
  */
 export const checkReleaseSize = (root: string): ReleaseSizeReport => {
   const built =

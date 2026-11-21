@@ -6,8 +6,12 @@ name: Pages
 # own hostname, each with the same-origin API proxy (apps/pages-proxy) as its
 # `_worker.js` and its own `environment-config.json`; and the reference game
 # (apps/reference-game) to `se-games-stage`, at its root, static only (no
-# worker, no routes, no configuration document). Three jobs, split like the
-# release (ADR-005): the job that uses the token runs no repository code.
+# worker, no routes, no configuration document); and, only when the
+# environment names it (`PAGES_SIGNER_ORIGIN`), the wallet signing page to
+# `se-signer-stage` (specs/signing-page.md, SP-15): the artifact's `signer/`
+# with a copy of its page at the root, its own configuration document, and no
+# worker, routes, or redirects. Three jobs, split like the release (ADR-005):
+# the job that uses the token runs no repository code.
 #   - `build` (`contents: read`, no environment, no secret) runs the release
 #     dry run, which builds the Wrapper artifact twice and requires one digest,
 #     makes the reference game's artifact from the same two builds and
@@ -18,16 +22,19 @@ name: Pages
 #     ADR-008, Risks accepted) builds the
 #     two sites' environment configuration documents from the environment's
 #     values and validates them with the Wrapper's own validator
-#     (apps/wrapper/pages-config-cli.ts), and hands them on with their digests;
+#     (apps/wrapper/pages-config-cli.ts), and, with `PAGES_SIGNER_ORIGIN`, a
+#     third, the signing page's, which it validates with the page's own
+#     validator (apps/signing-page/config-check-cli.ts), and hands them on with
+#     their digests;
 #   - `deploy-stage` (environment `pages-stage`) runs no repository script and
 #     no build: it checks every download against its digest, unpacks the
-#     artifacts, lays out the three sites, adds the worker, the Wrapper's and
-#     the verifier's configuration documents and `_routes.json`, and each
-#     site's `_headers` (from the Wrapper artifact's `headers.json`, with the
-#     CSP lists read from the configuration documents; the game's with
-#     `frame-ancestors` the Wrapper's and the operators' origins, from the
-#     same document), and
-#     uploads them, unbundled, with the `wrangler` the lockfile pins.
+#     artifacts, lays out the three sites (four with the signing page's), adds
+#     the worker, the Wrapper's and the verifier's configuration documents and
+#     `_routes.json`, the signing page's document, and each site's `_headers`
+#     (from the Wrapper artifact's `headers.json`, with the CSP lists read from
+#     the configuration documents; the game's with `frame-ancestors` the
+#     Wrapper's and the operators' origins, from the same document), and uploads
+#     them, unbundled, with the `wrangler` the lockfile pins.
 # Production is .github/workflows/pages-prod.yml (ADR-009): the attested
 # release tar, deployed by the release workflow after a release, or redeployed
 # by its tag by hand, in the `pages-prod` environment and concurrency group;
@@ -162,7 +169,7 @@ jobs:
   # environment, referencing only the configuration values below, never the
   # token. Running repository code in the environment that holds the token is
   # accepted for staging only (ADR-008, Risks accepted); production builds its
-  # configuration in a separate environment. The two documents are public once
+  # configuration in a separate environment. The documents are public once
   # deployed (each site serves its own); the upload is kept one day.
   config-stage:
     name: config-stage
@@ -175,6 +182,8 @@ jobs:
     outputs:
       wrapper-config-digest: ${{ steps.config.outputs.wrapper-config-digest }}
       verifier-config-digest: ${{ steps.config.outputs.verifier-config-digest }}
+      # Empty without a signing page (no PAGES_SIGNER_ORIGIN).
+      signer-config-digest: ${{ steps.config.outputs.signer-config-digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -194,12 +203,23 @@ jobs:
           PAGES_RPC_ORIGINS: ${{ secrets.PAGES_RPC_ORIGINS }}
           PAGES_GAME_ORIGINS: ${{ secrets.PAGES_GAME_ORIGINS }}
           PAGES_OPERATOR_ORIGINS: ${{ secrets.PAGES_OPERATOR_ORIGINS }}
+          PAGES_SIGNER_ORIGIN: ${{ secrets.PAGES_SIGNER_ORIGIN }}
+          PAGES_ACCEPT_PENDING_NOTICES:
+            ${{ secrets.PAGES_ACCEPT_PENDING_NOTICES }}
         shell: bash
         run: |
           set -euo pipefail
           out="$RUNNER_TEMP/pages-config"
           pnpm exec tsx apps/wrapper/pages-config-cli.ts --out "$out"
-          for site in wrapper verifier; do
+          sites="wrapper verifier"
+          # The signing page's document, written only with PAGES_SIGNER_ORIGIN
+          # (specs/signing-page.md, SP-15), checked by the page's own validator.
+          if [ -f "$out/signer-environment-config.json" ]; then
+            pnpm exec tsx apps/signing-page/config-check-cli.ts \
+              --file "$out/signer-environment-config.json"
+            sites="$sites signer"
+          fi
+          for site in $sites; do
             digest="sha256:$(sha256sum "$out/${site}-environment-config.json" | cut -d ' ' -f 1)"
             echo "${site}-config-digest=${digest}" >> "$GITHUB_OUTPUT"
             echo "${site} configuration document: ${digest}"
@@ -213,6 +233,14 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           path: ${{ runner.temp }}/pages-config/verifier-environment-config.json
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+      # The signing page's document, only when the job wrote one.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.config.outputs.signer-config-digest != ''
+        with:
+          path: ${{ runner.temp }}/pages-config/signer-environment-config.json
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -232,6 +260,7 @@ jobs:
       WRAPPER_PROJECT: se-wrapper-stage
       VERIFIER_PROJECT: se-verifier-stage
       GAME_PROJECT: se-games-stage
+      SIGNER_PROJECT: se-signer-stage
     steps:
       # Fails at once, by name, when the token or the account id is missing;
       # prints no value. Both are secrets, so the logs mask them.
@@ -278,6 +307,11 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: verifier-environment-config.json
+          path: ${{ runner.temp }}/download
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.config-stage.outputs.signer-config-digest != ''
+        with:
+          name: signer-environment-config.json
           path: ${{ runner.temp }}/download
       # The same bytes the build job made (its digests): the artifact unpacked unchanged as
       # the Wrapper's site. The verifier's site is the artifact's `verify/`
@@ -371,9 +405,76 @@ jobs:
           echo "Unpacked ${WRAPPER_FILE_NAME} (${actual})."
           echo "Deploying ${WRAPPER_FILE_NAME}, ${actual}, the reference game, ${GAME_DIGEST}, and the API proxy worker, ${WORKER_DIGEST}, built from ${GITHUB_SHA}." \
             >> "$GITHUB_STEP_SUMMARY"
+      # The signing page's site (specs/signing-page.md, SP-15), only when the
+      # configuration job wrote its document (PAGES_SIGNER_ORIGIN): the
+      # artifact's `signer/` directory, unchanged, plus a copy of its page at
+      # the root (its files are referenced under `/signer/`, its build base, and
+      # Pages serves the root page for every other path; the Wrapper opens
+      # `<signingPageOrigin>/`, W-66), and its own configuration document. No
+      # worker, routes, or redirects. A Wrapper document that names a signing
+      # page with no signing page document, or a signing page document with a
+      # Wrapper document that names none, fails the job before any upload.
+      # With or without that site, `signer/` then leaves the Wrapper's site:
+      # the Wrapper's origin never serves the wallet page. The same script in
+      # pages.yml and pages-prod.yml (tools/pages-signer-site.test.ts runs it).
+      - name: Lay out the signing page's site
+        env:
+          SIGNER_CONFIG_DIGEST:
+            ${{ needs.config-stage.outputs.signer-config-digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          wrapper="$RUNNER_TEMP/sites/wrapper"
+          signer="$RUNNER_TEMP/sites/signer"
+          if [ ! -d "$wrapper" ]; then
+            echo "::error::There is no Wrapper site to take the signing page from."
+            exit 1
+          fi
+          if [ -e "$signer" ]; then
+            echo "::error::A signing page site is already laid out."
+            exit 1
+          fi
+          # The Wrapper's document and the signing page's document go
+          # together: one names the other's origin, or neither exists.
+          if ! named="$(jq --raw-output 'type == "object" and has("signingPageOrigin")' \
+            "$wrapper/environment-config.json")"; then
+            echo "::error::The Wrapper site's environment-config.json cannot be read."
+            exit 1
+          fi
+          if [ "$named" = "true" ] && [ -z "${SIGNER_CONFIG_DIGEST:-}" ]; then
+            echo "::error::The Wrapper's configuration names a signing page, and there is no signing page document."
+            exit 1
+          fi
+          if [ "$named" != "true" ] && [ -n "${SIGNER_CONFIG_DIGEST:-}" ]; then
+            echo "::error::There is a signing page document, and the Wrapper's configuration names no signing page."
+            exit 1
+          fi
+          if [ -n "${SIGNER_CONFIG_DIGEST:-}" ]; then
+            document="$RUNNER_TEMP/download/signer-environment-config.json"
+            if ! [[ $SIGNER_CONFIG_DIGEST =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::No digest for signer-environment-config.json."
+              exit 1
+            fi
+            if [ ! -f "$document" ] \
+              || [ "sha256:$(sha256sum "$document" | cut -d ' ' -f 1)" != "$SIGNER_CONFIG_DIGEST" ]; then
+              echo "::error::The downloaded signer-environment-config.json is not the one its job made."
+              exit 1
+            fi
+            if [ ! -f "$wrapper/signer/index.html" ]; then
+              echo "::error::The Wrapper artifact has no signer/index.html."
+              exit 1
+            fi
+            mkdir -p "$signer"
+            cp -R "$wrapper/signer" "$signer/signer"
+            cp "$wrapper/signer/index.html" "$signer/index.html"
+            cp "$document" "$signer/environment-config.json"
+            echo "Laid out the signing page's site."
+          fi
+          rm -rf "$wrapper/signer"
       # Each site's Pages `_headers` file from the artifact's `headers.json`
       # (specs/client-kit.md, How the Wrapper reaches the SuperEngine origin).
-      # The Wrapper's site: every rule in the file's order, a more specific
+      # The Wrapper's site: every rule but `/signer/*` (it never serves the
+      # signing page), in the file's order, a more specific
       # rule detaching every header of the broader rules before it sets its
       # own (Pages applies every matching rule), so `/verify/*` replaces the
       # Wrapper's headers instead of adding to them. The verifier's site: the
@@ -395,12 +496,14 @@ jobs:
       # the Wrapper's own `Permissions-Policy` (its `/*` rule); and
       # `Referrer-Policy: no-referrer` and `X-Content-Type-Options: nosniff`,
       # on `/*`.
+      # The signing page's site, where there is one: the `/signer/*` rule's
+      # headers on `/*`.
       # Refuses a `headers.json` that is not path patterns of one-line strings
-      # or has no `/verify/*` rule, a placeholder it does not know, a document
-      # with no Wrapper origin, a `headers.json` with no `Permissions-Policy`
-      # in its `/*` rule, a line over the Pages limit, or an existing
-      # `_headers`.
-      # tools/pages-headers.test.ts runs this script.
+      # or has no `/verify/*` rule (or no `/signer/*` rule for a signing page
+      # site), a Cross-Origin-Opener-Policy header in any rule, a placeholder it
+      # does not know, a document with no Wrapper origin, a `headers.json` with
+      # no `Permissions-Policy` in its `/*` rule, a line over the Pages limit,
+      # or an existing `_headers`. tools/pages-headers.test.ts runs this script.
       - name: Write the Pages headers files
         env:
           SITES: ${{ runner.temp }}/sites
@@ -426,6 +529,14 @@ jobs:
             and has("/verify/*")
             ' "$headers_json" > /dev/null; then
             echo "::error::headers.json is not path patterns of one-line string headers with a /verify/* rule."
+            exit 1
+          fi
+          # No rule may set an opener policy: the Wrapper's would cut the
+          # signing window's opener, and the signing page's its own (W-49g,
+          # SP-13); the release build refuses one too.
+          if jq --exit-status '[.[] | keys[] | ascii_downcase]
+            | index("cross-origin-opener-policy") != null' "$headers_json" > /dev/null; then
+            echo "::error::headers.json sets a Cross-Origin-Opener-Policy header."
             exit 1
           fi
           origin='^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:[0-9]{1,5})?$'
@@ -519,7 +630,9 @@ jobs:
             fi
             echo "Wrote $target: $(grep -c '^/' "$target") rules."
           }
-          write_headers '.' "$SITES/wrapper/_headers"
+          # The Wrapper's site never serves `signer/`, so it takes every rule
+          # but the signing page's.
+          write_headers 'del(.["/signer/*"])' "$SITES/wrapper/_headers"
           write_headers '{"/*": .["/verify/*"]}' "$SITES/verifier/_headers"
           # The game's site, where there is one (staging; production serves
           # no game, and pages-prod.yml runs this same script). The game's
@@ -538,10 +651,48 @@ jobs:
                 "X-Content-Type-Options": "nosniff"
               }}' "$SITES/game/_headers"
           fi
+          # The signing page's site, where there is one (with
+          # PAGES_SIGNER_ORIGIN): the `/signer/*` rule's headers on `/*`
+          # (SP-13: its own policy, with `connect-src 'self'` and
+          # `frame-ancestors 'none'`; no placeholder to fill).
+          if [ -d "$SITES/signer" ]; then
+            if ! jq --exit-status '.["/signer/*"] | type == "object"' \
+              "$headers_json" > /dev/null; then
+              echo "::error::headers.json has no /signer/* rule."
+              exit 1
+            fi
+            write_headers '{"/*": .["/signer/*"]}' "$SITES/signer/_headers"
+          fi
+      # Right before the upload (specs/signing-page.md, SP-15; ADR-012): the
+      # Wrapper's and the verifier's sites never hold `signer/`, or their
+      # origins would serve the wallet page; the signing page's site holds no
+      # worker, routes, or redirects, so its `'self'` reaches nothing but its
+      # static files and its configuration document. The same script in
+      # pages.yml and pages-prod.yml (tools/pages-signer-site.test.ts runs it).
+      - name: Check the signing page's place
+        shell: bash
+        run: |
+          set -euo pipefail
+          sites="$RUNNER_TEMP/sites"
+          for site in wrapper verifier; do
+            if [ -e "$sites/$site/signer" ]; then
+              echo "::error::The ${site} site holds signer/; its origin would serve the signing page."
+              exit 1
+            fi
+          done
+          if [ -d "$sites/signer" ]; then
+            for file in _worker.js _routes.json _redirects; do
+              if [ -e "$sites/signer/$file" ]; then
+                echo "::error::The signing page's site has a ${file}."
+                exit 1
+              fi
+            done
+          fi
       # From an empty working directory, so wrangler reads no configuration,
       # .env file, or functions/ directory of the repository; each site holds
-      # only its artifact's files and `_headers`, and the Wrapper's and the
-      # verifier's also the worker, `_routes.json`, and their configuration.
+      # only its artifact's files and `_headers`, the Wrapper's and the
+      # verifier's also the worker, `_routes.json`, and their configuration,
+      # and the signing page's its configuration.
       # `--no-bundle`: the worker is uploaded as the build job made it, never
       # bundled here. No metrics.
       - name: Deploy to Pages
@@ -556,9 +707,17 @@ jobs:
           mv "$RUNNER_TEMP/sites/wrapper" "$workdir/wrapper"
           mv "$RUNNER_TEMP/sites/verifier" "$workdir/verifier"
           mv "$RUNNER_TEMP/sites/game" "$workdir/game"
+          sites="wrapper verifier game"
+          # The signing page's site first, when there is one, so the Wrapper
+          # uploaded after it never names a signing page of an earlier release.
+          if [ -d "$RUNNER_TEMP/sites/signer" ]; then
+            mv "$RUNNER_TEMP/sites/signer" "$workdir/signer"
+            sites="signer $sites"
+          fi
           cd "$workdir"
-          for site in wrapper verifier game; do
+          for site in $sites; do
             case "$site" in
+              signer) project="$SIGNER_PROJECT" ;;
               wrapper) project="$WRAPPER_PROJECT" ;;
               verifier) project="$VERIFIER_PROJECT" ;;
               game) project="$GAME_PROJECT" ;;

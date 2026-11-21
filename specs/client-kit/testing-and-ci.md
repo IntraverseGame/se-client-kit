@@ -6,13 +6,13 @@ Part of the [Client kit spec](../client-kit.md), section
 The kit's tests are the executable half of
 [wrapper.md's test plan](../wrapper.md#test-plan).
 
-| Level     | Tool                                 | What                                                                                                                                           |
-| --------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit      | Vitest                               | per package; the signing, Snapshot, transcript, and fairness kernel vectors (the verify page's); the token schedule; redaction                 |
-| Component | Vitest and jsdom                     | the Wrapper renders every `valid/` Snapshot (the payout ones too); the reference game's message handling and rendering per status              |
-| e2e       | Playwright                           | win, loss, cash-out, offline, typed errors, two tabs, the sandbox, accessibility, the no-secret scan, the token lifecycle                      |
-| Static    | oxlint, stylelint, oxfmt, TypeScript | lint (oxlint for TypeScript, stylelint for CSS), format check (oxfmt, for every file type it supports), `tsc --noEmit`, import-direction rules |
-| Tooling   | Vitest, tsx                          | `tools/`: the lint fixtures that prove a violation fails (TypeScript and CSS), the allow-list check, the test-only-entry check                 |
+| Level     | Tool                                 | What                                                                                                                                             |
+| --------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Unit      | Vitest                               | per package; the signing, Snapshot, transcript, and fairness kernel vectors (the verify page's); the token schedule; redaction                   |
+| Component | Vitest and jsdom                     | the Wrapper renders every `valid/` Snapshot (the payout ones too); the reference game's message handling and rendering per status                |
+| e2e       | Playwright                           | win, loss, cash-out, offline, typed errors, two tabs, the sandbox, accessibility, the no-secret scan, the token lifecycle, the wallet delegation |
+| Static    | oxlint, stylelint, oxfmt, TypeScript | lint (oxlint for TypeScript, stylelint for CSS), format check (oxfmt, for every file type it supports), `tsc --noEmit`, import-direction rules   |
+| Tooling   | Vitest, tsx                          | `tools/`: the lint fixtures that prove a violation fails (TypeScript and CSS), the allow-list check, the test-only-entry check                   |
 
 **CI jobs** (GitHub Actions, one required aggregate job `ci-ok`): `lint` and
 `format`; `typecheck`; `unit` (`pnpm test`); `allow-list` (the dependency
@@ -149,11 +149,26 @@ make room for the Solana read (RFC-007 slice 4), about 25% over the 150909 and
   file under `verify/`, each compressed on its own with gzip at zlib's default
   level and summed.
 
+**The signing page's budget** (SP-14 of [the signing page](../signing-page.md))
+is held apart from both the same way: the files under `signer/` count in neither
+of the four measurements above, and have two of their own, checked by the same
+three places with the same rules. Their limits are set by the human from the
+first build of the real page, about 25% over its measurement, as the verify
+page's were; the first build, on 2026-11-21, measured 62565 and 23469 bytes, and
+the limits below were set from it (approved by the human, 2026-11-21; this list
+and `tools/size-budget.ts` change together):
+
+- signer output: 78848 bytes. Every file under `signer/`, uncompressed.
+- signer page, gzip: 29696 bytes. `signer/index.html` and every `.js` and `.css`
+  file under `signer/`, each compressed on its own with gzip at zlib's default
+  level and summed.
+
 A budget with no measurement, a measurement with no budget, a missing Wrapper
-`dist/`, and an output without `index.html` or `verify/index.html` (an empty
-`dist/` included) are failures too, never a pass. Raising a limit is a reviewed
-change to `tools/size-budget.ts` and this list together (a test keeps them
-equal). The packages' tarballs have no budget (decided).
+`dist/`, and an output without `index.html`, `verify/index.html`, or
+`signer/index.html` (an empty `dist/` included) are failures too, never a pass.
+Raising a limit is a reviewed change to `tools/size-budget.ts` and this list
+together (a test keeps them equal). The packages' tarballs have no budget
+(decided).
 
 ## Task orchestration and caching
 
@@ -283,10 +298,17 @@ development-only, so it may import the test-only entry of `contracts`.
   at the game origin D, `https://game.e2e-games.test`, on another registrable
   domain (W-37), for every test (`e2e/tests/harness/serve-origins.ts`): it is
   the fake Play API's redeem `gameOrigin` and the configuration's only
-  `gameOrigins` entry, so every Wrapper session mounts it. A test that serves
-  another game at D registers its route after these. The bundle holds no
-  environment values, so the harness also serves the Wrapper's environment
-  configuration document at the path the Wrapper reads
+  `gameOrigins` entry, so every Wrapper session mounts it. The release's signing
+  page (`apps/wrapper/dist/signer/`, unmodified, with a root copy of its page)
+  is served at `https://signer.e2e-signer.test`, on another registrable domain
+  than the Wrapper's, with the `/signer/*` rule's headers of the release's
+  `headers.json` as response headers and its own configuration document
+  (`wrapperOrigins` the Wrapper's origin, `acceptPendingNotices` `true`); the
+  Wrapper's document names it as `signingPageOrigin` only in the tests of the
+  wallet delegation (T-50), so every other test runs with no delegation offered,
+  as before. A test that serves another game at D registers its route after
+  these. The bundle holds no environment values, so the harness also serves the
+  Wrapper's environment configuration document at the path the Wrapper reads
   (`/environment-config.json`, provisional like the Wrapper's own path): a valid
   `preview` document (`e2e/tests/harness/environment-config.ts`) whose
   `playApiBaseUrl` is the fake Play API's and whose other hosts are all under
@@ -378,25 +400,26 @@ development-only, so it may import the test-only entry of `contracts`.
   and each request body's fields are tables held to the Play API document's
   generated types at compile time, so a document change breaks the fake instead
   of loosening it. Request bodies are decoded strictly (an unknown or missing
-  field is `INVALID_ARGUMENT`), and every route but the redeem needs a valid
-  play token (`UNAUTHENTICATED` otherwise). A test scripts each operation's
-  answers in order: a Snapshot is a `valid/` Snapshot vector, sent as vendored;
-  a problem is a `valid/` `PlayProblem` vector, sent with its own status, which
-  must be one the operation lists; a `network-failure` aborts the connection; a
-  `hang` never answers. A script that names an unknown vector, a vector of the
-  wrong definition, or an unlisted status is refused when it is queued. The
-  redeem and refresh answers are the fake's own, typed by the document: one
-  single-use launch code (`redeemAgain()` allows one more redeem of it, for the
-  same session id with a new token: the cloned tab of T-17), play tokens that a
-  refresh rotates (the older ones revoked), `Cache-Control: no-store`, the
-  `Date` header and the deadlines from the fake's server time, and the redeem's
-  `gameOrigin`, the one origin on the suite's `gameOrigins`, with the `gamePath`
-  `/` (the document's server always sends one; the reference game is served at
-  D's root). The server time is fixed (`FAKE_NOW`) and moves only when a test
-  moves it, as the server's clock moves with the page's
-  (`advanceServerTime(ms)`, T-36); every token it issues lives 15 minutes
-  (`FAKE_TOKEN_LIFETIME_MS`) unless a test sets another lifetime for the tokens
-  issued after (`setTokenLifetime(ms)`); both live in
+  field is `INVALID_ARGUMENT`, in the body or in the start's `keyDelegation`,
+  which is `null` or an object, T-43), and every route but the redeem needs a
+  valid play token (`UNAUTHENTICATED` otherwise). A test scripts each
+  operation's answers in order: a Snapshot is a `valid/` Snapshot vector, sent
+  as vendored; a problem is a `valid/` `PlayProblem` vector, sent with its own
+  status, which must be one the operation lists; a `network-failure` aborts the
+  connection; a `hang` never answers. A script that names an unknown vector, a
+  vector of the wrong definition, or an unlisted status is refused when it is
+  queued. The redeem and refresh answers are the fake's own, typed by the
+  document: one single-use launch code (`redeemAgain()` allows one more redeem
+  of it, for the same session id with a new token: the cloned tab of T-17), play
+  tokens that a refresh rotates (the older ones revoked),
+  `Cache-Control: no-store`, the `Date` header and the deadlines from the fake's
+  server time, and the redeem's `gameOrigin`, the one origin on the suite's
+  `gameOrigins`, with the `gamePath` `/` (the document's server always sends
+  one; the reference game is served at D's root). The server time is fixed
+  (`FAKE_NOW`) and moves only when a test moves it, as the server's clock moves
+  with the page's (`advanceServerTime(ms)`, T-36); every token it issues lives
+  15 minutes (`FAKE_TOKEN_LIFETIME_MS`) unless a test sets another lifetime for
+  the tokens issued after (`setTokenLifetime(ms)`); both live in
   `e2e/tests/harness/fake-play-time.ts`. Each request the fake serves is
   recorded with whether its token was valid and which of the issued tokens it
   was, by issue order (`tokenIndex`, 0 the redeem's), never the token itself.

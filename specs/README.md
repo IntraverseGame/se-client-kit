@@ -22,9 +22,9 @@ spec, and a behavior change updates its spec in the same pull request
   key-delegation contract `key-delegation/v1`) are referred to by name. The Play
   API document, the Snapshot schema bundle, the signing vectors, the public
   vector bundle of the SuperEngine fairness kernel, and `key-delegation/v1`'s
-  notices and their vectors (proposed, RFC-006) are used as copies pinned in a
-  lock file; the signed-action specification is not copied, and its vectors are.
-  They are not redefined here, and no private source is linked.
+  notices and their vectors are used as copies pinned in a lock file; the
+  signed-action specification is not copied, and its vectors are. They are not
+  redefined here, and no private source is linked.
 - Public: no secrets, internal hostnames, or personal data.
 
 ## Index
@@ -36,6 +36,9 @@ spec, and a behavior change updates its spec in the same pull request
 - [`verify-page.md`](./verify-page.md) — the verify page: a round id in, the
   round recomputed in the browser (specified; only the fairness kernel's
   derivations of checks 5 and 7 are built).
+- [`signing-page.md`](./signing-page.md) — the wallet signing page: the one page
+  that talks to a browser wallet, on its own origin, opened by the Wrapper as a
+  popup (RFC-006, ADR-012).
 
 ## Table of contents
 
@@ -98,7 +101,7 @@ the specs' headings.
   - [Session open and the play token](./wrapper/session-open-and-the-play-token.md)
     — W-1 to W-8
   - [The action key and what may be stored](./wrapper/the-action-key-and-what-may-be-stored.md)
-    — W-9 to W-13 (with a wallet's delegation to the key, proposed, RFC-006)
+    — W-9 to W-13 (with a wallet's delegation to the key)
   - [Two tabs](./wrapper.md#two-tabs) — W-14
   - [The transcript](./wrapper.md#the-transcript) — W-15 to W-19
   - [Signing start, move, cash-out, and cancel](./wrapper/signing-start-move-cash-out-and-cancel.md)
@@ -120,13 +123,18 @@ the specs' headings.
   - [Accessibility](./wrapper.md#accessibility) — W-45 to W-48
   - [Operator embedding](./wrapper/operator-embedding.md) — W-49 to W-49g: the
     framing check, the `se.operator/1` handshake, `resize`, the lobby and
-    deposit navigations, the embedding page's opener policy (W-49g, proposed,
-    RFC-006), the operator guidance, and T-9a's test plan
+    deposit navigations, the embedding page's opener policy (W-49g), the
+    operator guidance, and T-9a's test plan
+  - [The wallet delegation](./wrapper/the-wallet-delegation.md) — W-62 to W-73
+    (#220, RFC-006, accepted 2026-11-20): the opt-in and production's gating,
+    the notice, the menu entry and the consent dialog, the signing window,
+    `se.delegation/1`, the states, every start carrying it, a refused delegated
+    start, and the delegation check
   - [Configuration](./wrapper.md#configuration)
 - [Errors and edge cases](./wrapper.md#errors-and-edge-cases) ·
   [Security](./wrapper.md#security) ·
   [Observability](./wrapper.md#observability) ·
-  [Test plan](./wrapper.md#test-plan) (T-1 to T-28) ·
+  [Test plan](./wrapper.md#test-plan) (T-1 to T-51) ·
   [What this spec does not own](./wrapper.md#what-this-spec-does-not-own) ·
   [Decided questions](./wrapper.md#decided-questions) (OQ-1 to OQ-8) ·
   [References](./wrapper.md#references)
@@ -144,6 +152,9 @@ the specs' headings.
     V-11
   - [What the page recomputes](./verify-page.md#what-the-page-recomputes-v-12-v-13)
     — V-12, V-12a, V-13
+  - [Book rounds](./verify-page.md#book-rounds-v-18-to-v-21) — V-18 to V-21
+  - [The key delegation](./verify-page.md#the-key-delegation-v-22) — V-22, check
+    9
   - [What is built](./verify-page.md#what-is-built)
   - [Accessibility](./verify-page.md#accessibility-v-14) — V-14
   - [Build and release](./verify-page.md#build-and-release-v-15-to-v-17) — V-15
@@ -151,6 +162,31 @@ the specs' headings.
 - [Errors and edge cases](./verify-page.md#errors-and-edge-cases) ·
   [Security](./verify-page.md#security) ·
   [Observability](./verify-page.md#observability) ·
-  [Test plan](./verify-page.md#test-plan) (VT-1 to VT-10) ·
+  [Test plan](./verify-page.md#test-plan) (VT-1 to VT-16) ·
   [Decisions](./verify-page.md#decisions) (D-1 to D-9) ·
   [References](./verify-page.md#references)
+
+### [Signing page](./signing-page.md)
+
+- [Purpose](./signing-page.md#purpose) · [Scope](./signing-page.md#scope) ·
+  [Boundary](./signing-page.md#boundary)
+- [Vocabulary](./signing-page.md#vocabulary)
+- [Contract](./signing-page.md#contract)
+  - [The app and its origin](./signing-page.md#the-app-and-its-origin-sp-1-sp-2)
+    — SP-1, SP-2
+  - [Its configuration](./signing-page.md#its-configuration-sp-3) — SP-3
+  - [The protocol, its side](./signing-page.md#the-protocol-its-side-sp-4-to-sp-6)
+    — SP-4 to SP-6
+  - [The notice it signs](./signing-page.md#the-notice-it-signs-sp-7) — SP-7
+  - [The wallet](./signing-page.md#the-wallet-sp-8-sp-9) — SP-8, SP-9
+  - [States and texts](./signing-page.md#states-and-texts-sp-10-sp-11) — SP-10,
+    SP-11
+  - [What it keeps, and its headers](./signing-page.md#what-it-keeps-and-its-headers-sp-12-sp-13)
+    — SP-12, SP-13
+  - [Build, release, and deploy](./signing-page.md#build-release-and-deploy-sp-14-sp-15)
+    — SP-14, SP-15
+- [Errors and edge cases](./signing-page.md#errors-and-edge-cases) ·
+  [Security](./signing-page.md#security) ·
+  [Observability](./signing-page.md#observability) ·
+  [Test plan](./signing-page.md#test-plan) ·
+  [References](./signing-page.md#references)

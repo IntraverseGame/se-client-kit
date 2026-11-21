@@ -26,7 +26,7 @@ decision 5).
 | The Snapshot schema `se.snapshot/1`, its golden vectors, and the published bundle      | `snapshot`                                            | in `contracts`: the schema, types (runtime entry), and the `valid/`, `invalid/`, `signature/`, `typed-data/`, and `signed-action/` vectors (test-only entry; a `signature/` vector is a valid Snapshot with the verdict of the shell's W-26 checks; a `typed-data/` vector is the fields of a signed action and its canonical `typedData` bytes, which `signing` replays; a `signed-action/` vector is one such action signed by an independent signer, Foundry `cast`, with its EIP-712 message, hashes, digest, public test key, and signature, and a test checks that its `typedData` and message are those of the `typed-data/` vector it names). <!-- TODO(Snapshot bundle): the backend specifies a content-hashed bundle (schema plus vectors) for TypeScript consumers; until it is published the kit copies the schema file and the vectors by the same procedure, with the same lock entry. -->                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | The signing vectors (`test/vectors/signing.json`) and the signed-action spec's vectors | `signing`                                             | in `contracts`: the files, unchanged, on the test-only entry                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | The SuperEngine fairness kernel, kernelVersion 1: its public vector sets               | the verify page (VT-2)                                | in `contracts`: the sets `kernel/public/v1/seed` (Seed and SeedHash), `kernel/public/v1/shuffle-draw` (ShuffleDraw alone, with the rule stated in its description), `kernel/public/v1/steps-derive` (StepsDerive over ShuffleDraw), and `kernel/public/v1/derive` (the step losers along a path), `kernel/public/v1/round-secret-hash` (the round secret's commitment), `kernel/public/v1/coin-flip-payout` (Coin Flip's payout schedule), `kernel/public/v1/weighted-draw` (the draw over a book table's weights), `kernel/public/v1/book-draw` (a book round's draw and payout), and `kernel/public/v1/book-table-commitment` (a book table's leaves, Merkle root, entry count, and total weight), one file each under `vectors/kernel/v1/`, unchanged, on the test-only entry (`kernelVectors.v1`); `seed` and `shuffle-draw` locked at se-backend `9294d22`, `steps-derive` and `derive` at `ad36bc4`, the next four at `bc4f4adf`, and `book-table-commitment` at the commit the lock records (`contracts.lock.json` records each set's commit). The verify page's unit tests (`apps/verify`) replay `seed`, `shuffle-draw`, `steps-derive`, `derive`, `round-secret-hash`, and `coin-flip-payout` against its kernel derivations (check 7 recomputes Coin Flip's payout); the page does not redraw a book round, recompute its table's commitment, or recompute its payout (the verify API now carries the mode's rows, which the page validates and does not use yet), so no test replays `weighted-draw`, `book-draw`, or `book-table-commitment` yet ([verify page](../verify-page.md#what-the-page-recomputes-v-12-v-13)), and the kit holds no other kernel logic. |
-| The key-delegation contract `key-delegation/v1`: its notices and their vectors         | `signing`, `shell`, the signing page, the verify page | proposed, RFC-006; from S2. In `contracts`: the notices (`key-delegation/v1 notices`) on the runtime entry, read by `shell`, the signing page, and the verify page; the vectors (`key-delegation/v1 vectors`) on the test-only entry, which `signing` replays                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| The key-delegation contract `key-delegation/v1`: its notices and their vectors         | `signing`, `shell`, the signing page, the verify page | in `contracts` since slice S2 of #220: the notices (`key-delegation/v1 notices`, `src/schemas/key-delegation/v1/notices.json`) on the runtime entry (`keyDelegationNotices`), read through `signing`'s `readKeyDelegationNotices` by `shell`, the signing page, and the verify page; the vectors (`key-delegation/v1 vectors`, `src/vectors/key-delegation/v1/vectors.json`) on the test-only entry (`keyDelegationVectors`), which `signing`, `shell`, the signing page's and the verify page's tests, and the e2e suite replay. The backend serves both under its published contracts location as `key-delegation/v1/notices.json` and `key-delegation/v1/vectors.json`, named so in its manifest. The notices list keeps every entry, matched by id, as the vectors stay (rule 1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | The environment configuration schema                                                   | the Wrapper                                           | owned by the kit (in `shell`), not copied and not in `contracts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 Rules:
@@ -52,22 +52,31 @@ Rules:
    `kernel/public/v1/derive`, `kernel/public/v1/round-secret-hash`,
    `kernel/public/v1/coin-flip-payout`, `kernel/public/v1/weighted-draw`,
    `kernel/public/v1/book-draw`, and `kernel/public/v1/book-table-commitment`,
-   each the `set` its file names): a path inside a private repository is
-   unpublished backend layout and is never recorded, and a test fails on a name
-   that is not one of these. The local checkouts and the paths in them are given
-   in a file named by `--sources`, kept outside this repository. Vectors are
-   append-only: the script refuses to change or remove a locked vector unless it
-   is given `--allow-vector-change`, which is legitimate only before the first
-   release. The flag was used six times: for the pre-release exception of rule
-   4, for the signing vectors of contracts release 1.0.0 (their `_comment`
-   changed), for the kernel's `kernel/public/v1/seed` set at se-backend
-   `9294d22` (its reference vector's description now names the `shuffle-draw`
-   set; its inputs and expected values are unchanged), for a book round's status
-   flow at se-backend `dee6000` and its follow-up at `65f9086`, and for the
-   invalid vectors' own-rule sync at se-backend `80ac5b8` (rule 4). A sync that
-   changes no locked vector needs no flag and is not counted here, the one of
-   2026-11-17 among them (rule 4). Generated files are rewritten by
-   `tools/generate-contracts.ts --write`.
+   each the `set` its file names, and `key-delegation/v1 notices` and
+   `key-delegation/v1 vectors`, the manifest's names): a path inside a private
+   repository is unpublished backend layout and is never recorded, and a test
+   fails on a name that is not one of these. The local checkouts and the paths
+   in them are given in a file named by `--sources`, kept outside this
+   repository. Vectors are append-only: the script refuses to change or remove a
+   locked vector unless it is given `--allow-vector-change`, which is legitimate
+   only before the first release. The key-delegation notices are not vectors,
+   and their file may change, but only as the backend's contract lets it, with
+   entries matched by id as the backend's own check matches them: the script
+   refuses a notices file that removes or renames an entry of the locked one,
+   changes an entry's `text` or `keccak256`, moves a status back (a status moves
+   only from `pending` to `approved` or `retired`, or from `approved` to
+   `retired`), holds an unknown status, or repeats an `id` or a hash; a new
+   entry may appear anywhere in any known status, the order does not matter, a
+   file it cannot read fails, and no flag lifts this rule. The flag was used six
+   times: for the pre-release exception of rule 4, for the signing vectors of
+   contracts release 1.0.0 (their `_comment` changed), for the kernel's
+   `kernel/public/v1/seed` set at se-backend `9294d22` (its reference vector's
+   description now names the `shuffle-draw` set; its inputs and expected values
+   are unchanged), for a book round's status flow at se-backend `dee6000` and
+   its follow-up at `65f9086`, and for the invalid vectors' own-rule sync at
+   se-backend `80ac5b8` (rule 4). A sync that changes no locked vector needs no
+   flag and is not counted here, the one of 2026-11-17 among them (rule 4).
+   Generated files are rewritten by `tools/generate-contracts.ts --write`.
 2. **Verify offline.** The `contracts` job recomputes each copied file's SHA-256
    and fails when it differs from the lock, and fails when the generated types
    in `contracts` differ from a regeneration of the committed documents.
@@ -460,6 +469,72 @@ Rules:
    uses none of them yet (V-21; [Verify page](../verify-page.md)), so no test
    replays the new set.
 
+   **The key delegation** (slice S2 of #220; every se-backend group synced from
+   the backend's `main` at `e14dddc` on 2026-11-20, the lock recording the last
+   commit that touched each file: `15c9014` for the key-delegation files and the
+   new Snapshot vectors, `21c392f` for the Play API document and the Snapshot
+   schema, `87551a7` for the verify API document; the signing vectors stay at
+   the commit above). Two new groups, `key-delegation/v1 notices` (a runtime
+   file, not a vector) and `key-delegation/v1 vectors` (append-only), in
+   `tools/contracts-groups.ts`. The notices list holds one entry, `en-draft-1`,
+   with status `pending`: its text is a draft waiting for the backend's legal
+   review, so no environment that refuses pending notices (production, W-63)
+   offers a delegation until a later sync brings an `approved` entry. The
+   vectors are one accepted case (a wallet's signature for the `en-draft-1`
+   notice, the signed-action test key's address as the action key, one session,
+   and one expiry, with its `eth_signTypedData_v4` typed data, struct hash, and
+   digest) and eight refused ones with the code the backend answers (the
+   high-`s` twin, `v` as 0, `v` as 1, another session, another action key, and a
+   zero wallet, each `KEY_DELEGATION_INVALID`; an expiry not after the start,
+   `KEY_DELEGATION_EXPIRED`; a notice not in the list,
+   `KEY_DELEGATION_NOTICE_UNKNOWN`). The documents gain, additively within `/1`:
+   - **the Play API document:** `StartRoundRequest.keyDelegation`, a closed
+     `KeyDelegationRequest` (`wallet`, `expiry` from 1 to 2^53 − 1,
+     `noticeHash`, `signature`, hex of either case; a `null` is the same as
+     leaving it out, and the kit always leaves it out rather than send `null`);
+     the start's description of the delegation and its codes; and the three
+     codes in the `ErrorCode` list;
+   - **the Snapshot schema:** `FairnessContext.keyDelegation` (a closed
+     `KeyDelegation`: `wallet`, `actionKey`, `sessionId` as `bytes32`, `expiry`,
+     `noticeId`, `noticeHash`, `notice`, `signature`, `domain`, and
+     `acceptedAt`, every hex value lowercase) and `KeyDelegationDomain`; a rule
+     that a `book` round carries none; and `KEY_DELEGATION_INVALID`,
+     `KEY_DELEGATION_EXPIRED`, and `KEY_DELEGATION_NOTICE_UNKNOWN` in the closed
+     `ErrorCode` list, so the kit accepts the codes from S2 on (W-28; before the
+     sync a problem with one of them failed validation and showed the generic
+     error, W-42); with one new `valid/` vector,
+     `coinflip-active-key-delegation`, and seven new `invalid/` ones
+     (`key-delegation-domain-with-chain`, `-empty`, `-missing-notice`, `-null`,
+     `-on-book`, `-signature-uppercase`, `-unknown-field`); no locked vector
+     changed, so no `--allow-vector-change` was needed;
+   - **the verify API document:** `RoundVerification.keyDelegation`, a closed
+     `KeyDelegationEvidence` (the Snapshot's fields, present on a config round
+     started with a delegation, absent otherwise, never `null` or empty), and
+     `key_delegation` in the closed list of check names, with its description:
+     `passed` when the delegation names a published notice, `noticeHash` is the
+     hash of its `notice`, the signature is canonical and recovers to `wallet`
+     over `noticeHash`, the round's `actionKey`, `sessionId`, and `expiry`, and
+     `expiry` is after `acceptedAt`; `not_applicable` for a round without a
+     delegation and for every book round.
+
+   The same sync brings description-only changes the backend made meanwhile,
+   which change no field, status, or code: `suggestedBets` now describes the
+   bets offered (the minimum bet's multiples 1, 2, 5, 10, 20, 50, and 100 up to
+   `maxBet`, empty when `maxBet` is below `minBet`); and the entropy fields name
+   Solana's reading (`entropyChainId` the cluster number 101, 102, or 103; the
+   height `N` a slot, not a block height; the value a slot's blockhash,
+   base58-decoded, a skipped slot taking the first finalized block's at a later
+   slot), as RFC-007 already reads them. The verify API document also says that
+   `entropy.value` is absent for a round released before the engine kept the
+   value and bound to another source or chain than the engine's current one, and
+   that its `seed` check is then `not_applicable`: the verify page already reads
+   a round without `entropy.value` (its check 6 reads block N from the chain,
+   never the API's value; V-12), so nothing changes there. The kit reads
+   `keyDelegation` from S2 on under the kit-first rule (RFC-006): the backend
+   emits the verify API's two additions in an environment only once the kit
+   release that accepts them (the verify page's S7, which lands in the same pull
+   request as S2) is deployed there.
+
 5. **Review before publish.** Every file copied into this public repository is
    reviewed as
    [Never in the public repository](../client-kit.md#never-in-the-public-repository)
@@ -490,6 +565,14 @@ Rules:
    roundSecretHash, WeightedDraw, Draw, Payout, Schedule) and the released games
    Cash or Crash and Coin Flip, and no path, host, person, or unreleased game. A
    `secret` there is a vector's round secret, never a credential.
+
+   The key-delegation files hold the notices' public consent text (one paragraph
+   of English each), their hashes and statuses, and, in the vectors, typed data,
+   hashes, signatures, a made-up session id, and the address of the public
+   development account that signed them (the default local development
+   mnemonic's account 1; its key is not in the file, and none is needed to
+   recover). They name no host, person, or path; the review checks that the next
+   sync's do not either.
 
    Accepted (human review, 2026-10-16): the signing vectors' `_comment` fields
    name the contracts repository's test tooling. These are names, not contents;

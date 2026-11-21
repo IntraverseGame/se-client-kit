@@ -19,6 +19,7 @@ import {
   verifyHeaders,
   wrapperHeaders,
   headersFile,
+  signerHeaders,
 } from "../release-headers.ts";
 import {
   type EnvironmentConfig,
@@ -233,10 +234,11 @@ describe("the verify page's recommended headers", () => {
     });
   });
 
-  it("is the headers file's entry for /verify/*, beside the Wrapper's for /*", () => {
+  it("is the headers file's entry for /verify/*, beside the Wrapper's for /* and the signing page's for /signer/*", () => {
     expect(headersFile()).toEqual({
       "/*": wrapperHeaders(),
       "/verify/*": verifyHeaders(),
+      "/signer/*": signerHeaders(),
     });
   });
 });

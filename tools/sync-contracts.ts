@@ -19,6 +19,7 @@ import {
   planSync,
   readLock,
 } from "./contracts-lock.ts";
+import { lockedFilesIn } from "./contracts-notices.ts";
 
 const root = join(import.meta.dirname, "..");
 const packageDir = join(root, "packages", "contracts");
@@ -71,6 +72,7 @@ const main = (): void => {
     previous.entries,
     gitReader,
     { allowVectorChange: args.includes("--allow-vector-change") },
+    lockedFilesIn(packageDir),
   );
   applySync(packageDir, plan);
   console.log(

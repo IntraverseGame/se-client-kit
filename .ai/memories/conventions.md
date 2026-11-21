@@ -1,6 +1,6 @@
 ---
 description: TypeScript, error, money, secret, logging, and naming conventions. Read before writing code.
-last-verified: 2026-11-18 (commits carry no AI or agent attribution, refused by the `commit-msg` hook that `pnpm hooks` installs, ADR-003 amendment note; 2026-11-16, the `wireit@0.15.0` release-age waiver removed, once 0.15.0 was past the window; one exact-version exception left, `chokidar@4.0.3`; 2026-11-03, #193: `unicorn/require-module-specifiers` is on; 2026-10-28, #143: the two exact-version supply-chain exceptions; 2026-10-16, toolchain pull request; the TypeScript rules are accepted in ADR-001 and enforced by oxlint, and stylelint for CSS)
+last-verified: 2026-11-21 (#220: the test-key rule also lets the `shell` package's unit tests pass the signed-action vector's test key to their seeded random stub, read from `contracts`' test-only entry at run time; 2026-11-18, commits carry no AI or agent attribution, refused by the `commit-msg` hook that `pnpm hooks` installs, ADR-003 amendment note; 2026-11-16, the `wireit@0.15.0` release-age waiver removed, once 0.15.0 was past the window; one exact-version exception left, `chokidar@4.0.3`; 2026-11-03, #193: `unicorn/require-module-specifiers` is on; 2026-10-28, #143: the two exact-version supply-chain exceptions; 2026-10-16, toolchain pull request; the TypeScript rules are accepted in ADR-001 and enforced by oxlint, and stylelint for CSS)
 ---
 
 # Conventions
@@ -72,10 +72,11 @@ This note records the patterns behind them.
   the only keys that may appear in the repository, and only in
   `packages/signing/src/fixtures/keys.ts` and in the vendored `signed-action/`
   vectors of `packages/contracts`, which embed the same public test key (anvil
-  account 3, test-only, never funded) and cannot be edited. The e2e suite may
-  pass the signed-action vector's test key to its seeded random stub, read from
-  `contracts`' test-only entry at run time (`e2e/tests/harness/vectors.ts`), and
-  never copies it into a file, a fixture, or a comment.
+  account 3, test-only, never funded) and cannot be edited. The e2e suite and
+  the `shell` package's unit tests may pass the signed-action vector's test key
+  to their seeded random stub, read from `contracts`' test-only entry at run
+  time (`e2e/tests/harness/vectors.ts`; `packages/shell/src/fixtures/delegation.ts`),
+  and never copy it into a file, a fixture, or a comment.
 - **Errors:** typed errors with a stable `code`; callers branch on `code`, never
   on message text. Do not leak internals or secrets in messages. Errors from the
   backend are mapped from its published error codes.

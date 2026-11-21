@@ -172,6 +172,19 @@ sends a grant.
   signed action from another: the shell guarantees that `continueRound` carries
   only a `PlayerAction` and `cashOutRound` only a `PlayerCashOut`, never a
   `PlayerCancel` (W-23, W-25).
+- **The start's delegation** (slice S4 of #220; W-70, W-71). `startRound`'s body
+  is the document's `StartRoundRequest`, which since the S2 sync has the
+  optional `keyDelegation` (`wallet`, `expiry`, `noticeHash`, `signature`).
+  `play-client` passes it through as the shell built it and never reads, checks,
+  or normalizes it (the shell checked the signature, W-68); a body without it
+  has no such field, never `null`. The start's repeats send the same bytes, the
+  delegation included. The three codes the backend answers a bad delegation
+  with, `422` `KEY_DELEGATION_INVALID`, `KEY_DELEGATION_EXPIRED`, and
+  `KEY_DELEGATION_NOTICE_UNKNOWN`, are `ProblemError`s like any other problem
+  (the start's `422` was already listed), never repeated: a `422` is not a
+  repeat class; a `409` `CONFLICT` (one key with another delegation) likewise.
+  `play-client` does not map them; the shell (W-71) and the Wrapper's
+  typed-error table (W-42) do.
 - **The cancel is never repeated** (W-25). `cancelRound` takes the body of a
   move (`RoundActionRequest`), carrying the signed `PlayerCancel` the shell
   built, and is sent once whatever the failure. The document does not answer a
@@ -210,7 +223,11 @@ sends a grant.
   plain string field for it, that the seal is called once per answer (a refresh
   resent after a lost response too) and never for an answer that does not match
   the document, and that the case table's problem statuses equal the document's
-  for each operation (a type test).
+  for each operation (a type test). For the start's delegation (T-43): the field
+  sent byte for byte and absent when not given, a repeat with the same bytes,
+  and each `KEY_DELEGATION_*` code and a `409` `CONFLICT` surfaced with one
+  send; the fake server decodes `keyDelegation` strictly as the document does
+  (an unknown field in it is `INVALID_ARGUMENT`).
 
 ## The verify API read
 

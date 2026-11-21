@@ -3,6 +3,8 @@
 // and
 // AGENTS.md, not derived from .oxlintrc.json, so a weakened rule fails.
 
+import { shellContractsCases } from "./shell-contracts-cases.ts";
+
 export type Case = {
   readonly name: string;
   /** Path of the importing file, relative to the scratch tree. */
@@ -79,18 +81,18 @@ export const cases: readonly Case[] = [
     importing(src("packages/play-client"), `@intraverse/se-client-${p}`, true),
   ),
 
-  // shell: signing, snapshot, play-client; contracts only through them.
+  // shell: signing, snapshot, play-client, and contracts' runtime entry for the
+  // key-delegation notices (#220, slice S5), by that one name only
+  // (shell-contracts-cases.ts); never its test-only entry.
   ...["signing", "snapshot", "play-client"].map(p =>
     importing(src("packages/shell"), `@intraverse/se-client-${p}`, false),
   ),
-  ...["contracts", "contracts/testing"].map(p =>
-    importing(src("packages/shell"), `@intraverse/se-client-${p}`, true),
+  ...shellContractsCases,
+  ...["contracts/testing", "contracts/testing/vectors"].map(p =>
+    importing("packages/shell/src/a.ts", `@intraverse/se-client-${p}`, true),
   ),
-  importing(src("packages/shell"), "@intraverse/se-client-wrapper", true),
-  importing(
-    src("packages/shell"),
-    "@intraverse/se-client-reference-game",
-    true,
+  ...["wrapper", "reference-game"].map(p =>
+    importing(src("packages/shell"), `@intraverse/se-client-${p}`, true),
   ),
 
   // wrapper (app): the shell only.

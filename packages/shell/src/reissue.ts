@@ -6,7 +6,8 @@ import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
 import type { CreateRoundAuthProof } from "./create-round-auth.ts";
 
-const sameJson = (a: unknown, b: unknown): boolean => {
+/** Whether two validated JSON values are equal, field by field. */
+export const sameJson = (a: unknown, b: unknown): boolean => {
   if (a === b) return true;
   if (
     typeof a !== "object" ||

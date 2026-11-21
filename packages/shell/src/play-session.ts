@@ -36,7 +36,7 @@ import type {
 import { createPlaySession } from "./session-play.ts";
 import { sessionTipCheck } from "./session-tip.ts";
 import type { SessionOpening } from "./session-types.ts";
-import { openSigningSession } from "./signing-session.ts";
+import { openKeyedSession } from "./signing-session.ts";
 import { createTokenKeeper } from "./token-keeper.ts";
 
 /** The path of a game at its origin's root, when the redeem answer has none. */
@@ -96,7 +96,8 @@ export const openSessionOver = async (
   const gamePath = redeemed.body.gamePath ?? ROOT_GAME_PATH;
 
   const { registryDomain } = options.config;
-  const signing = await openSigningSession({
+  // The key is drawn here, once the lock is held (W-9).
+  const signing = await openKeyedSession({
     sessionId,
     locks: options.locks,
     randomUuid: options.randomUuid,
@@ -108,6 +109,11 @@ export const openSessionOver = async (
       verifyingContract: registryDomain.verifyingContract,
     },
   });
+  if (signing === "key-generation") {
+    // The lock is released; nothing is read, refreshed, or signed.
+    disposeSecret(playToken);
+    return opening("key-generation");
+  }
   const lock = signing.state();
   if (lock !== "signing") {
     disposeSecret(playToken);
@@ -169,6 +175,15 @@ export const openSessionOver = async (
     ended: keeper.ended,
     end: keeper.end,
     clock: options.clock,
+    // The wallet delegation's inputs, fixed at open (W-62 to W-67).
+    delegation: {
+      signingPageOrigin: options.signingPageOrigin,
+      acceptPendingNotices: options.acceptPendingNotices === true,
+      sessionId,
+      sessionExpiresAt: redeemed.body.sessionExpiresAt,
+      actionKey: signing.address,
+      clock: options.clock,
+    },
   });
   ending.notify = handle.notifyEnd;
   return Object.freeze({ kind: "open", session: handle.session });

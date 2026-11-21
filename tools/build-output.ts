@@ -46,6 +46,7 @@ const PACKAGE_FILE = /\.(?:js|js\.map|d\.ts)$/u;
 const VITE_APPS: ReadonlySet<string> = new Set([
   "wrapper",
   "verify",
+  "signing-page",
   "reference-game",
 ]);
 const FORBIDDEN_FILE = /(?:\.(?:test|spec)\.|tsbuildinfo)/u;

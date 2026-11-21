@@ -119,6 +119,15 @@ paths:
         is `CONFLICT`. A game that cannot be played free is
         `FAILED_PRECONDITION`.
 
+        **Key delegation.** A player who links an EVM wallet sends
+        `keyDelegation`: the wallet's one signature for the session, sent with
+        every start of the session. It covers this start's `actionKey` and the
+        token's session, which it does not repeat. The engine checks it before
+        the round exists: a bad one is `KEY_DELEGATION_INVALID`,
+        `KEY_DELEGATION_EXPIRED` or `KEY_DELEGATION_NOTICE_UNKNOWN` (422), and a
+        book game's start with one is `INVALID_ARGUMENT`. It is part of the
+        request: the same key with another `keyDelegation` is `CONFLICT`.
+
         After a lost response, `UNAVAILABLE` or `INTERNAL`, the round may
         already have been started: the same key and body answer it, so sending
         them again is safe. A resend may fail the same way;
@@ -441,6 +450,42 @@ components:
             maximum: 25
         grantId:
           $ref: "#/components/schemas/GrantId"
+        keyDelegation:
+          $ref: "#/components/schemas/KeyDelegationRequest"
+    KeyDelegationRequest:
+      description: |
+        The player's wallet's EIP-712 signature of
+        `KeyDelegation(string notice,address actionKey,bytes32 sessionId,uint64 expiry)`
+        under the domain `{name: "SuperEngine KeyDelegation", version: "1"}`,
+        which names no chain. `notice` is the text of a notice from the
+        published notice list, `actionKey` this start's, `sessionId` the
+        session's 16 UUIDv7 bytes (the 32 hex digits after `ses_`)
+        left-aligned and zero-padded. Sign once per session; send the same
+        object with every start, or leave the field out (a `null` is the same
+        as leaving it out).
+      type: object
+      nullable: true
+      additionalProperties: false
+      required: [wallet, expiry, noticeHash, signature]
+      properties:
+        wallet:
+          type: string
+          description: The address that signed, `0x` + 40 hex digits (either case).
+          pattern: "^0x[0-9a-fA-F]{40}$"
+        expiry:
+          type: integer
+          format: int64
+          description: The signed expiry, Unix seconds. Set it to the session's `sessionExpiresAt`, rounded down; it must be after the start.
+          minimum: 1
+          maximum: 9007199254740991
+        noticeHash:
+          type: string
+          description: keccak256 of the signed notice's text, `0x` + 64 hex digits (either case).
+          pattern: "^0x[0-9a-fA-F]{64}$"
+        signature:
+          type: string
+          description: The wallet's signature, 65 bytes `r || s || v` with a low `s` and `v` 27 or 28, `0x` + 130 hex digits (either case).
+          pattern: "^0x[0-9a-fA-F]{130}$"
     GrantId:
       type: string
       description: The id of a free-bet grant, a UUIDv7 in lowercase. Send one of `GET /play/v1/grants` to play the round as a free bet; leave it out for a round paid from the balance.
@@ -680,6 +725,7 @@ components:
         maxBet:
           $ref: "#/components/schemas/Amount"
         suggestedBets:
+          description: "The bets the player is offered, in ascending order of value: the minimum bet's multiples 1, 2, 5, 10, 20, 50 and 100 that are at most maxBet. Empty when maxBet is below minBet (no bet of the game fits). Each carries the server's formatted text; a client offers these and never builds an amount of its own."
           type: array
           maxItems: 16
           items:
@@ -802,6 +848,8 @@ components:
           $ref: "#/components/schemas/CreateRoundAuth"
         record:
           $ref: "#/components/schemas/OnChainRecord"
+        keyDelegation:
+          $ref: "#/components/schemas/KeyDelegation"
     FairnessProof:
       description: "Config rounds only."
       type: object
@@ -826,6 +874,7 @@ components:
           type: string
           pattern: "^[a-z0-9][a-z0-9:_-]{0,63}$"
         blockNumber:
+          description: "The entropy height N the round is bound to: the block number on an EVM chain; the slot on Solana (source solana), not the block height."
           type: integer
           minimum: 0
         blockValue:
@@ -852,6 +901,55 @@ components:
           $ref: "#/components/schemas/Hash32"
         explorerUrl:
           $ref: "#/components/schemas/HttpsUrl"
+    KeyDelegation:
+      description: "Config rounds started with a key delegation only: the player's wallet's EIP-712 KeyDelegation(string notice,address actionKey,bytes32 sessionId,uint64 expiry) for the round's action key, under the domain {name: SuperEngine KeyDelegation, version: 1}, which names no chain. Absent on a round without one: never null and never empty. Recover the signer from notice, actionKey, sessionId and expiry and compare it with wallet; actionKey is the one createRoundAuth.newRound names."
+      type: object
+      required: [wallet, actionKey, sessionId, expiry, noticeId, noticeHash, notice, signature, domain, acceptedAt]
+      additionalProperties: false
+      properties:
+        wallet:
+          $ref: "#/components/schemas/Address"
+        actionKey:
+          $ref: "#/components/schemas/Address"
+        sessionId:
+          $ref: "#/components/schemas/Hash32"
+        expiry:
+          description: "The signed expiry, Unix seconds."
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        noticeId:
+          description: "The id of the signed notice in the published notice list."
+          type: string
+          pattern: "^[a-z0-9-]{1,64}$"
+        noticeHash:
+          $ref: "#/components/schemas/Hash32"
+        notice:
+          description: "The signed consent text, from the published notice list."
+          type: string
+          minLength: 1
+          maxLength: 512
+        signature:
+          $ref: "#/components/schemas/Signature65"
+        domain:
+          $ref: "#/components/schemas/KeyDelegationDomain"
+        acceptedAt:
+          description: "When the engine accepted the delegation with the start, Unix seconds; expiry is after it. The engine's statement."
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+    KeyDelegationDomain:
+      description: "The key delegation's EIP-712 domain, EIP712Domain(string name,string version): no chainId and no verifyingContract."
+      type: object
+      required: [name, version]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          enum: ["SuperEngine KeyDelegation"]
+        version:
+          type: string
+          enum: ["1"]
     CreateRoundAuth:
       description: "Config rounds only, required from the bind on: the round creation authorization, an EIP-712 signature by the registry admin key over CreateRoundAuth(bytes32 created,uint40 prepareWindow,uint256 expiry), where created = keccak256(abi.encode(newRound)). The same object on every read of the round. domain and signer are the round's own values; a client trusts them only when they equal the values pinned in its own configuration."
       type: object
@@ -861,7 +959,7 @@ components:
         newRound:
           $ref: "#/components/schemas/NewRound"
         entropyChainId:
-          description: "Chain of the entropy source. Not signed itself: with randomnessProof.source and blockNumber it recomputes newRound.randomnessTarget."
+          description: "Chain of the entropy source: the EVM chain id, or on Solana the cluster number (101 mainnet-beta, 102 testnet, 103 devnet). Not signed itself: with randomnessProof.source and blockNumber it recomputes newRound.randomnessTarget."
           type: integer
           minimum: 1
           maximum: 9007199254740991
@@ -970,7 +1068,7 @@ components:
           $ref: "#/components/schemas/HttpsUrl"
     ErrorCode:
       type: string
-      x-extensible-enum: [INSUFFICIENT_FUNDS, LIMIT_EXCEEDED, PLAYER_RESTRICTED, FUNDING_UNCONFIRMED, ENTROPY_UNAVAILABLE, PREPARATION_TIMEOUT, SIGNED_START_FAILED, LANE_LIMIT, ROUND_VOIDED, ROUND_ACTIVE, SESSION_EXPIRED, SESSION_REVOKED, STALE_ACTION, INVALID_ARGUMENT, NOT_FOUND, CONFLICT, FAILED_PRECONDITION, UNAUTHENTICATED, PERMISSION_DENIED, UNAVAILABLE, UNIMPLEMENTED, INTERNAL, UNKNOWN]
+      x-extensible-enum: [INSUFFICIENT_FUNDS, LIMIT_EXCEEDED, PLAYER_RESTRICTED, FUNDING_UNCONFIRMED, ENTROPY_UNAVAILABLE, PREPARATION_TIMEOUT, SIGNED_START_FAILED, LANE_LIMIT, ROUND_VOIDED, ROUND_ACTIVE, SESSION_EXPIRED, SESSION_REVOKED, KEY_DELEGATION_INVALID, KEY_DELEGATION_EXPIRED, KEY_DELEGATION_NOTICE_UNKNOWN, STALE_ACTION, INVALID_ARGUMENT, NOT_FOUND, CONFLICT, FAILED_PRECONDITION, UNAUTHENTICATED, PERMISSION_DENIED, UNAVAILABLE, UNIMPLEMENTED, INTERNAL, UNKNOWN]
     PlayProblem:
       description: "Play API error: RFC 9457 problem+json plus a typed code and retryable flag."
       type: object

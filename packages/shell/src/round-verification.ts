@@ -9,9 +9,10 @@
 // - Nothing is signed for the round, and the game is not shown, until the
 //   Snapshot is `active` and every check passes, the tip check included.
 // - A `PlayerCancel` may be signed only when `T_0` is settled and only the tip
-//   check failed, once the round is `active` (W-25, W-26). A tip check that
-//   fails before check 5 has run waits for it; if check 5 then fails, nothing
-//   is signed. After a re-issue nothing more is signed, not even a cancel.
+//   check, the delegation check (W-72), or both failed, once the round is
+//   `active` (W-25, W-26). Either failing before check 5 has run waits for it;
+//   if check 5 then fails, nothing is signed. After a re-issue, or a changed
+//   delegation, nothing more is signed, not even a cancel.
 
 import type { ValidSnapshot } from "@intraverse/se-client-snapshot";
 
@@ -27,8 +28,16 @@ import {
   type SettledInitial,
   type StartRequest,
 } from "./create-round-auth.ts";
+import {
+  type CarriedDelegation,
+  createDelegationCheck,
+} from "./delegation-check.ts";
+import type { DelegationFailure } from "./delegation-types.ts";
 import { isReissue } from "./reissue.ts";
 import type { TipCheckFailure } from "./tip-check.ts";
+
+/** Why the tip check failed (W-26b), or `bind` for the bind rule alone. */
+export type TipFailure = TipCheckFailure | "bind";
 
 /** Why the round failed verification. */
 export type VerificationFailure =
@@ -36,7 +45,12 @@ export type VerificationFailure =
   /** A later read carried a different `proofs.createRoundAuth` (W-26). */
   | "reissued"
   /** Only the tip check (or its bind rule) failed: `T_0` is settled. */
-  | "tip-check";
+  | "tip-check"
+  /**
+   * The delegation check failed (W-72; `delegationFailure` says why): with
+   * `T_0` settled unless it is `changed`, which is handled as a re-issue.
+   */
+  | "delegation";
 
 export type RoundVerdict =
   | {
@@ -63,6 +77,8 @@ export type RoundVerdict =
       readonly failure: VerificationFailure;
       /** The tip check's failure, when `failure` is `tip-check`. */
       readonly tipFailure?: TipCheckFailure | "bind";
+      /** The delegation check's failure, when `failure` is `delegation`. */
+      readonly delegationFailure?: DelegationFailure;
       /**
        * What the player is shown: "this round failed verification", or "could
        * not verify the chain" for a tip check that could not read the chain
@@ -74,9 +90,10 @@ export type RoundVerdict =
       readonly initial?: SettledInitial;
       /**
        * `true` exactly when the shell must sign `PlayerCancel` now: `T_0` is
-       * settled, only the tip check failed, the round is `active`, and there
-       * was no re-issue. Otherwise nothing is signed for the round, not even
-       * `PlayerCancel`, and it ends by its game's expiry rule.
+       * settled, only the tip check, the delegation check (not `changed`), or
+       * both failed, the round is `active`, and there was no re-issue.
+       * Otherwise nothing is signed for the round, not even `PlayerCancel`, and
+       * it ends by its game's expiry rule.
        */
       readonly cancel: boolean;
     };
@@ -96,6 +113,8 @@ export type RoundVerification = {
   readonly observeTip: (decision: ChainDecision) => RoundVerdict;
   readonly verdict: () => RoundVerdict;
   readonly evidence: () => AuthEvidence;
+  /** Each distinct `proofs.keyDelegation` read for the round (W-72). */
+  readonly delegationEvidence: () => readonly CarriedDelegation[];
 };
 
 export type RoundVerificationOptions = {
@@ -108,9 +127,21 @@ export type RoundVerificationOptions = {
 
 const CHECKING: RoundVerdict = Object.freeze({ state: "checking" });
 
+/**
+ * Whether the round was re-issued, or its delegation changed, which is handled
+ * as a re-issue (W-26, W-72): nothing more is signed for it, not even a
+ * cancel.
+ */
+export const isReissued = (verdict: RoundVerdict): boolean =>
+  verdict.state === "failed" &&
+  (verdict.failure === "reissued" || verdict.delegationFailure === "changed");
+
 const failed = (
   failure: VerificationFailure,
-  extra: { readonly initial?: SettledInitial } = {},
+  extra: {
+    readonly initial?: SettledInitial;
+    readonly delegationFailure?: DelegationFailure;
+  } = {},
 ): RoundVerdict =>
   Object.freeze({
     state: "failed",
@@ -130,15 +161,35 @@ export const createRoundVerification = (
   let ready: ReadyCheck | undefined;
   let tip: ChainDecision | undefined;
   let status: ValidSnapshot["status"] | undefined;
+  const delegation = createDelegationCheck(request.delegation);
+  // Which of the tip check and the delegation check failed first: the one the
+  // round's failure names (a cancel is signed once, whichever it is).
+  let firstFailed: "tip" | "delegation" | undefined;
 
   const decide = (): RoundVerdict => {
     const initial = ready?.status === "settled" ? ready.initial : undefined;
     const settled = initial === undefined ? {} : { initial };
     if (reissues.length > 0) return failed("reissued", settled);
+    const delegationFailure = delegation.failure();
+    // A changed delegation is handled as a re-issue (W-72).
+    if (delegationFailure === "changed") {
+      return failed("delegation", { ...settled, delegationFailure });
+    }
     if (auth === undefined || auth.status === "waiting") return CHECKING;
     if (auth.status === "refused") return failed(auth.reason);
     if (ready === undefined || ready.status === "waiting") return CHECKING;
     if (ready.status === "refused") return failed(ready.reason);
+    const cancel = status === "active";
+    if (firstFailed === "delegation" && delegationFailure !== undefined) {
+      return Object.freeze({
+        state: "failed",
+        failure: "delegation",
+        delegationFailure,
+        shown: "verification-failed",
+        initial: ready.initial,
+        cancel,
+      });
+    }
     if (tip === undefined) return CHECKING;
     if (tip.verdict === "fail") {
       return Object.freeze({
@@ -147,7 +198,7 @@ export const createRoundVerification = (
         tipFailure: tip.failure,
         shown: tip.reason,
         initial: ready.initial,
-        cancel: status === "active",
+        cancel,
       });
     }
     return status === "starting" || status === undefined
@@ -182,6 +233,8 @@ export const createRoundVerification = (
     ) {
       ready = checkReady(auth.created, snapshot);
     }
+    delegation.observe(snapshot);
+    if (delegation.failure() !== undefined) firstFailed ??= "delegation";
     current = decide();
     return current;
   };
@@ -189,6 +242,7 @@ export const createRoundVerification = (
   const observeTip = (decision: ChainDecision): RoundVerdict => {
     // The round has one tip check; a second decision does not replace it.
     tip ??= decision;
+    if (tip.verdict === "fail") firstFailed ??= "tip";
     current = decide();
     return current;
   };
@@ -199,5 +253,6 @@ export const createRoundVerification = (
     verdict: () => current,
     evidence: (): AuthEvidence =>
       Object.freeze({ first, reissues: Object.freeze([...reissues]) }),
+    delegationEvidence: delegation.evidence,
   });
 };

@@ -5,8 +5,11 @@
 import type { ChainReadFailure } from "./chain-read.ts";
 import type { Comparison } from "./fairness-checks.ts";
 
-/** The checks of V-12 and V-19, by their number; 8 is a book round's only. */
-export type CheckId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+/**
+ * The checks of V-12, V-19, and V-22, by their number; 8 is a book round's
+ * only, and 9 a delegated config round's only.
+ */
+export type CheckId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export type CheckStatus =
   /** Every comparison matches. */
@@ -27,6 +30,23 @@ export type CheckStatus =
 /** A labelled value, e.g. `created`, or what one RPC endpoint answered. */
 export type Detail = { readonly label: string; readonly value: string };
 
+/** Check 9 only: what the page shows of the round's key delegation (V-22). */
+export type DelegationShown = {
+  /** As published: lowercase, in full. */
+  readonly wallet: string;
+  /** The signed text, shown as text, never markup. */
+  readonly notice: string;
+  readonly noticeId: string;
+  /** The notice's status in this page's list, or `unlisted` (item 5). */
+  readonly listed: "approved" | "pending" | "retired" | "unlisted";
+  /** Unix seconds. */
+  readonly expiry: number;
+  /** Unix seconds: the engine's statement, shown as given (V-13). */
+  readonly acceptedAt: number;
+  /** The items the page did not check, each with why (V-13). */
+  readonly unchecked: readonly string[];
+};
+
 export type CheckResult = {
   readonly id: CheckId;
   /** A short name, e.g. "Block N". */
@@ -41,6 +61,8 @@ export type CheckResult = {
   readonly degraded?: boolean | undefined;
   /** Check 6 only, when `unverified`: why the chain read failed. */
   readonly chainFailure?: ChainReadFailure | undefined;
+  /** Check 9 only: the delegation, as the page shows it (V-22). */
+  readonly delegation?: DelegationShown | undefined;
 };
 
 export const CHECK_TITLES: Readonly<Record<CheckId, string>> = {
@@ -52,6 +74,7 @@ export const CHECK_TITLES: Readonly<Record<CheckId, string>> = {
   6: "Block N",
   7: "Seed and outcome",
   8: "The draw",
+  9: "Wallet link",
 };
 
 export const compare = (
@@ -69,7 +92,7 @@ export const compare = (
 export const settled = (
   id: CheckId,
   comparisons: readonly Comparison[],
-  extra: Pick<CheckResult, "note" | "details" | "degraded"> = {},
+  extra: Pick<CheckResult, "note" | "details" | "degraded" | "delegation"> = {},
 ): CheckResult => ({
   id,
   title: CHECK_TITLES[id],
