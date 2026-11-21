@@ -10,16 +10,18 @@ description: Use when reviewing a change before merge. Software architecture and
 Review strictly against [specs/](../../specs/), [decisions/](../../decisions/),
 and [AGENTS.md](../../AGENTS.md). **Block** on:
 
-- package boundaries: an import against the dependency direction
-  (`contracts` is a data-only leaf; `snapshot` and `play-client` depend on it;
-  `signing` has no kit dependency at run time; `shell` depends on `signing`,
-  `snapshot`, and `play-client`; the `wrapper` app depends on `shell`), a cycle,
+- package boundaries: an import against the dependency direction (`contracts` is
+  a data-only leaf; `snapshot` and `play-client` depend on it; `signing` has no
+  kit dependency at run time; `shell` depends on `signing`, `snapshot`, and
+  `play-client`, and on `contracts`' runtime entry for the key-delegation
+  notices alone; the `wrapper` app depends on `shell`; the `verify` and
+  `signing-page` apps never depend on `shell`; see `AGENTS.md`'s architecture
+  rules for the full graph), wallet code outside the signing page, a cycle,
   logic added to `contracts`, an import of its test-only entry from non-test
-  code, a vector reaching a bundle, an import of another
-  package's internals instead of its public entry point, a package importing an
-  app, a new package without the checks of
-  [add-a-package](../skills/add-a-package/SKILL.md), or business or key logic
-  outside the shell;
+  code, a vector reaching a bundle, an import of another package's internals
+  instead of its public entry point, a package importing an app, a new package
+  without the checks of [add-a-package](../skills/add-a-package/SKILL.md), or
+  business or key logic outside the shell;
 - **key and token handling:** the action key or play token logged, serialized,
   put in a URL, `localStorage`, cookies, an error message, a thrown object, or
   test output; a secret reachable from the UI layer; a non-redacting type

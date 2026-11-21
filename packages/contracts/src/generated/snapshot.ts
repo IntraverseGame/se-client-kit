@@ -85,7 +85,7 @@ export type Uint128 = string
  * Non-negative integer that is not money, base-10, no sign, no leading zeros, at most 2^256-1: the grammar of BaseUnits.
  */
 export type Uint256 = string
-export type ErrorCode = ("INSUFFICIENT_FUNDS" | "LIMIT_EXCEEDED" | "PLAYER_RESTRICTED" | "FUNDING_UNCONFIRMED" | "ENTROPY_UNAVAILABLE" | "PREPARATION_TIMEOUT" | "SIGNED_START_FAILED" | "LANE_LIMIT" | "ROUND_VOIDED" | "ROUND_ACTIVE" | "SESSION_EXPIRED" | "SESSION_REVOKED" | "STALE_ACTION" | "INVALID_ARGUMENT" | "NOT_FOUND" | "CONFLICT" | "FAILED_PRECONDITION" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "UNAVAILABLE" | "UNIMPLEMENTED" | "INTERNAL" | "UNKNOWN")
+export type ErrorCode = ("INSUFFICIENT_FUNDS" | "LIMIT_EXCEEDED" | "PLAYER_RESTRICTED" | "FUNDING_UNCONFIRMED" | "ENTROPY_UNAVAILABLE" | "PREPARATION_TIMEOUT" | "SIGNED_START_FAILED" | "LANE_LIMIT" | "ROUND_VOIDED" | "ROUND_ACTIVE" | "SESSION_EXPIRED" | "SESSION_REVOKED" | "KEY_DELEGATION_INVALID" | "KEY_DELEGATION_EXPIRED" | "KEY_DELEGATION_NOTICE_UNKNOWN" | "STALE_ACTION" | "INVALID_ARGUMENT" | "NOT_FOUND" | "CONFLICT" | "FAILED_PRECONDITION" | "UNAUTHENTICATED" | "PERMISSION_DENIED" | "UNAVAILABLE" | "UNIMPLEMENTED" | "INTERNAL" | "UNKNOWN")
 /**
  * ROUND_ACTIVE only: the open round, so the client can resume it.
  */
@@ -163,6 +163,8 @@ balance: Amount
 minBet: Amount
 maxBet: Amount
 /**
+ * The bets the player is offered, in ascending order of value: the minimum bet's multiples 1, 2, 5, 10, 20, 50 and 100 that are at most maxBet. Empty when maxBet is below minBet (no bet of the game fits). Each carries the server's formatted text; a client offers these and never builds an amount of its own.
+ * 
  * @maxItems 16
  */
 suggestedBets: []|[Amount]|[Amount, Amount]|[Amount, Amount, Amount]|[Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]|[Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount, Amount]
@@ -271,6 +273,7 @@ fairnessProof?: FairnessProof
 randomnessProof: RandomnessProof
 createRoundAuth?: CreateRoundAuth
 record?: OnChainRecord
+keyDelegation?: KeyDelegation
 }
 /**
  * Config rounds only.
@@ -299,8 +302,14 @@ export type RandomnessProof = {
  * Entropy source identifier.
  */
 source: string
+/**
+ * The entropy height N the round is bound to: the block number on an EVM chain; the slot on Solana (source solana), not the block height.
+ */
 blockNumber: number
-blockValue?: Hash32
+/**
+ * 32 bytes, 0x-prefixed lowercase hex.
+ */
+blockValue?: string
 blockExplorerUrl?: HttpsUrl
 roundSecretHash: Hash32
 /**
@@ -315,7 +324,7 @@ zkProof?: ZKProofRef
 export type CreateRoundAuth = {
 newRound: NewRound
 /**
- * Chain of the entropy source. Not signed itself: with randomnessProof.source and blockNumber it recomputes newRound.randomnessTarget.
+ * Chain of the entropy source: the EVM chain id, or on Solana the cluster number (101 mainnet-beta, 102 testnet, 103 devnet). Not signed itself: with randomnessProof.source and blockNumber it recomputes newRound.randomnessTarget.
  */
 entropyChainId: number
 /**
@@ -399,6 +408,52 @@ chainId: number
 roundId: RoundIdBytes32
 txHash: Hash32
 explorerUrl?: HttpsUrl
+}
+/**
+ * Config rounds started with a key delegation only: the player's wallet's EIP-712 KeyDelegation(string notice,address actionKey,bytes32 sessionId,uint64 expiry) for the round's action key, under the domain {name: SuperEngine KeyDelegation, version: 1}, which names no chain. Absent on a round without one: never null and never empty. Recover the signer from notice, actionKey, sessionId and expiry and compare it with wallet; actionKey is the one createRoundAuth.newRound names.
+ */
+export type KeyDelegation = {
+/**
+ * The address that signed the delegation.
+ */
+wallet: string
+/**
+ * The round's action key.
+ */
+actionKey: string
+/**
+ * 32 bytes, 0x-prefixed lowercase hex.
+ */
+sessionId: string
+/**
+ * The signed expiry, Unix seconds.
+ */
+expiry: number
+/**
+ * The id of the signed notice in the published notice list.
+ */
+noticeId: string
+/**
+ * 32 bytes, 0x-prefixed lowercase hex.
+ */
+noticeHash: string
+/**
+ * The signed consent text, from the published notice list.
+ */
+notice: string
+signature: Signature65
+domain: KeyDelegationDomain
+/**
+ * When the engine accepted the delegation with the start, Unix seconds; expiry is after it. The engine's statement.
+ */
+acceptedAt: number
+}
+/**
+ * The key delegation's EIP-712 domain, EIP712Domain(string name,string version): no chainId and no verifyingContract.
+ */
+export type KeyDelegationDomain = {
+name: "SuperEngine KeyDelegation"
+version: "1"
 }
 /**
  * An amount sent by the client. Only the money-bearing fields; normalized and formatted are response-only and rejected. decimals is optional and, when present, must equal the registry scale of unit (checked by the server, not by this schema).

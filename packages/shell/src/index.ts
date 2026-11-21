@@ -80,6 +80,26 @@ export {
   type WrapperMessage,
 } from "./controller-protocol.ts";
 export { ShellError, type ShellErrorCode } from "./errors.ts";
+export type { DelegationNotice } from "./delegation-notice.ts";
+export {
+  DELEGATION_CLOSED_POLL_MS,
+  DELEGATION_READY_TIMEOUT_MS,
+  DELEGATION_SCHEMA,
+  type DelegationFailed,
+  type DelegationReady,
+  type DelegationRequest,
+  type DelegationResult,
+} from "./delegation-protocol.ts";
+export type {
+  DelegationBegin,
+  DelegationEvent,
+  DelegationFailure,
+  DelegationFailureReason,
+  DelegationOffer,
+  DelegationRefusalCode,
+  DelegationState,
+  DelegationWindow,
+} from "./delegation-types.ts";
 export {
   createOperatorChannel,
   HANDSHAKE_TIMEOUT_MS,

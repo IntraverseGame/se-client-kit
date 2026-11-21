@@ -10,11 +10,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  catalogSource,
-  toTypeAliases,
-  withoutReferenceNotes,
-} from "./generate-contracts.ts";
+import { catalogSource } from "./contracts-catalog.ts";
+import { toTypeAliases, withoutReferenceNotes } from "./generate-contracts.ts";
 import { operationRoutes } from "./play-routes.ts";
 
 const generatedSnapshotTypes = (): string =>
@@ -217,6 +214,11 @@ const withVectors = (run: (packageDir: string) => void): void => {
       writeFileSync(join(vectors, folder, file), "{}\n");
     }
     writeFileSync(join(vectors, "signing.json"), "{}\n");
+    mkdirSync(join(vectors, "key-delegation", "v1"), { recursive: true });
+    writeFileSync(
+      join(vectors, "key-delegation", "v1", "vectors.json"),
+      "{}\n",
+    );
     run(packageDir);
   } finally {
     rmSync(packageDir, { recursive: true, force: true });
@@ -273,6 +275,21 @@ describe("catalogSource", () => {
       const snapshot = /export const snapshotVectors[^;]*;/u.exec(source)?.[0];
       expect(snapshot).toBeDefined();
       expect(snapshot).not.toContain("vector5");
+    });
+  });
+
+  it("exports the key-delegation/v1 vectors file as keyDelegationVectors.v1, of unknown shape", () => {
+    withVectors(packageDir => {
+      const source = catalogSource(packageDir);
+      expect(source).toContain(
+        'import keyDelegationV1 from "./key-delegation/v1/vectors.json" with { type: "json" };',
+      );
+      expect(source).toContain(
+        "export const keyDelegationVectors: KeyDelegationVectors = { v1: keyDelegationV1 };",
+      );
+      expect(source).toContain(
+        "export type KeyDelegationVectors = {\n  /** The key-delegation contract `key-delegation/v1`: its vectors file. */\n  readonly v1: unknown;\n};",
+      );
     });
   });
 });

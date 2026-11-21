@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { caught, codeOf, playerSigner, withByte } from "./fixtures/helpers.ts";
-import { provisionalKeyDelegation as vector } from "./fixtures/provisional-key-delegation.ts";
+import { acceptedDelegation as vector } from "./fixtures/key-delegation-vectors.ts";
 import { sameHex } from "./hex.ts";
 import {
   type KeyDelegation,
@@ -42,7 +42,7 @@ const withRecoveryBit = (sig: string): string =>
 const unflippedTwin = withByte(highSTwin(signature), 64, vOf(signature));
 
 describe("recoverKeyDelegation", () => {
-  it("recovers the provisional vector's signature to its wallet, in EIP-55", () => {
+  it("recovers the accepted vector's signature to its wallet, in EIP-55", () => {
     expect(recoverKeyDelegation(delegation, signature)).toEqual({
       wallet: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
       signature,

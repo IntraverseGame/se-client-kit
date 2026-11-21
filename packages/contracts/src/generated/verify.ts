@@ -91,6 +91,7 @@ export type components = {
       transcriptHash?: components["schemas"]["Hex32"];
       recomputed?: components["schemas"]["Recomputation"];
       book?: components["schemas"]["BookVerification"];
+      keyDelegation?: components["schemas"]["KeyDelegationEvidence"];
       /** @description Every check, once, in this order. */
       checks: components["schemas"]["Check"][];
     };
@@ -161,6 +162,43 @@ export type components = {
       /** @description The address that signed `createRoundAuth`. */
       adminSigner?: components["schemas"]["Address"];
     };
+    /**
+     * @description The player's wallet's EIP-712 signature of
+     * `KeyDelegation(string notice,address actionKey,bytes32 sessionId,uint64 expiry)`
+     * for the round's action key, under the domain
+     * `{name: "SuperEngine KeyDelegation", version: "1"}`, which names no
+     * chain. Present on a config round started with a key delegation, from
+     * the start on; absent otherwise, never null or empty.
+     */
+    KeyDelegationEvidence: {
+      /** @description The address that signed the delegation. */
+      wallet: components["schemas"]["Address"];
+      /** @description The round's action key, the one `newRound` names. */
+      actionKey: components["schemas"]["Address"];
+      /** @description The session's bytes32 form, its 16 UUIDv7 bytes left-aligned and zero-padded. */
+      sessionId: components["schemas"]["Hex32"];
+      /**
+       * Format: int64
+       * @description The signed expiry, Unix seconds.
+       */
+      expiry: number;
+      /** @description The id of the signed notice in the published notice list. */
+      noticeId: string;
+      /** @description keccak256 of the notice's text. */
+      noticeHash: components["schemas"]["Hex32"];
+      /** @description The signed consent text. */
+      notice: string;
+      signature: components["schemas"]["Signature"];
+      domain: {
+        name: string;
+        version: string;
+      };
+      /**
+       * Format: int64
+       * @description When the engine accepted the delegation with the start, Unix seconds. The engine's statement.
+       */
+      acceptedAt: number;
+    };
     CreateRoundAuth: {
       /**
        * @description `abi.encode(NewRound)`, 352 bytes. It names the round secret's
@@ -176,11 +214,27 @@ export type components = {
     Entropy: {
       /** @description The entropy source's name. */
       source?: string;
-      /** Format: int64 */
+      /**
+       * Format: int64
+       * @description The entropy chain: the EVM chain id, or on Solana the cluster
+       * number (101 mainnet-beta, 102 testnet, 103 devnet).
+       */
       chainId?: number;
-      /** Format: int64 */
+      /**
+       * Format: int64
+       * @description The height `N` the round is bound to: the block number on an EVM
+       * chain; the slot on Solana (`source` `solana`), not the block height.
+       */
       block?: number;
-      /** @description The block's value; set once the round is closed with a seed. */
+      /**
+       * @description The value of `block` the seed uses; set once the round is closed
+       * with a seed. On Solana: the slot's blockhash, base58-decoded; a
+       * skipped slot takes the blockhash of the first finalized block at a
+       * later slot.
+       * Absent for a round released before the engine kept the value and
+       * bound to another source or chain than the engine's current one: its
+       * `seed` check is then `not_applicable`.
+       */
       value?: components["schemas"]["Hex32"];
     };
     /** @description Published at the close. Absent when nothing was committed, and for `ROOT_LOST`. */
@@ -315,10 +369,17 @@ export type components = {
        * settled payout. A book round has no `newRound`, `seedHash`,
        * `readyHash` or actions, so the checks on them are `not_applicable`.
        * `onchain_record` and `proofs` are not available yet.
+       * `key_delegation`: the round's `keyDelegation` names a notice of
+       * the published notice list, `noticeHash` is the hash of its
+       * `notice`, and its signature is canonical and recovers to `wallet`
+       * under the delegation domain over `noticeHash`, the round's
+       * `actionKey`, `sessionId` and `expiry`; and `expiry` is after
+       * `acceptedAt`. `not_applicable` for a round without a key
+       * delegation, and for every book round.
        *
        * @enum {string}
        */
-      name: "secret_commitment" | "randomness_target" | "seed" | "seed_commitment" | "ready_hash" | "transcript" | "action_signatures" | "configuration" | "payout" | "onchain_record" | "proofs";
+      name: "secret_commitment" | "randomness_target" | "seed" | "seed_commitment" | "ready_hash" | "transcript" | "action_signatures" | "configuration" | "payout" | "onchain_record" | "proofs" | "key_delegation";
       /** @enum {string} */
       result: "passed" | "failed" | "not_applicable";
       /** @description Why the check did not pass, in words. */

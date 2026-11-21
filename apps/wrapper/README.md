@@ -50,7 +50,12 @@ over the bottom of the stage: a game that declares the `inset` capability in its
 book rounds is offered only when the environment configuration's `autoplay`
 field turns it on; it stops on any error, a connection problem, a changed round,
 a balance below the bet, or when the page is hidden, and keeps nothing past the
-page.
+page. Linking a wallet to the session is offered only when the environment
+configuration names a signing page (`signingPageOrigin`) and the build holds a
+notice it may offer: the menu's "Link a wallet" opens a consent dialog that
+shows the exact text the wallet signs, then a window on the signing page, where
+the wallet is reached; the Wrapper itself holds no wallet code, and nothing
+about the link is stored.
 
 ## What it guarantees
 

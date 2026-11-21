@@ -1,7 +1,8 @@
 // T-9a, 11: the Wrapper's one `message` listener routes by `event.source`
 // before anything parses: the parent to the operator route, the game frame to
-// the game route, anything else dropped; with no parent (a standalone page) a
-// message from the page's own window reaches neither.
+// the game route, an open signing window to the delegation route (W-67),
+// anything else dropped; a message from the page's own window reaches none,
+// framed or not.
 
 import { describe, expect, it } from "vitest";
 
@@ -65,5 +66,46 @@ describe("createMessageDispatch (W-49b)", () => {
     page.fire(self, "x");
     page.fire(undefined, "y");
     expect(operator).toEqual([]);
+  });
+
+  it("routes the signing window to the delegation route, and nothing else to it (W-67)", () => {
+    const page = target();
+    const self = {};
+    const parent = {};
+    const frame = {};
+    const handle = {};
+    const dispatch = createMessageDispatch(page, parent);
+    const operator: unknown[] = [];
+    const game: unknown[] = [];
+    const signer: unknown[] = [];
+    dispatch.onOperator(message => operator.push(message.data));
+    dispatch.onGame(frame, message => game.push(message.data));
+    const stop = dispatch.onSigner(handle, message =>
+      signer.push(message.data),
+    );
+    page.fire(handle, "h");
+    // The page's own window on a framed page, the frame, and the parent never
+    // reach the signing route.
+    page.fire(self, "own");
+    page.fire(frame, "f");
+    page.fire(parent, "p");
+    expect(signer).toEqual(["h"]);
+    expect(game).toEqual(["f"]);
+    expect(operator).toEqual(["p"]);
+    stop();
+    page.fire(handle, "after");
+    expect(signer).toEqual(["h"]);
+  });
+
+  it("drops the page's own window on a standalone page, a signing window open", () => {
+    const page = target();
+    const self = {};
+    const dispatch = createMessageDispatch(page);
+    const signer: unknown[] = [];
+    dispatch.onSigner({}, message => signer.push(message.data));
+    page.fire(self, "own");
+    expect(signer).toEqual([]);
+    dispatch.close();
+    expect(page.count()).toBe(0);
   });
 });

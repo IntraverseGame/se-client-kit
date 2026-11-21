@@ -20,6 +20,11 @@ export {
   sessionIdBytes32,
 } from "./key-delegation.ts";
 export {
+  type KeyDelegationNotice,
+  type NoticeStatus,
+  readKeyDelegationNotices,
+} from "./key-delegation-notices.ts";
+export {
   type CloseRoundAuth,
   type CreateRoundAuth,
   type Domain,

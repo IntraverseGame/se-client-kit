@@ -128,7 +128,10 @@ export const startControl = (args: StartArgs): HTMLElement => {
   // Busy, not removed: the control keeps its place and width (RFC-005).
   start.setAttribute("aria-disabled", String(busy));
   if (busy) start.setAttribute("aria-busy", "true");
-  start.disabled = model.selected() === undefined;
+  // A refused delegated start holds the next one until the player chooses
+  // "Sign again" or "Continue without" (W-71).
+  start.disabled =
+    model.selected() === undefined || options.delegation?.holdsStart === true;
   start.addEventListener("click", () => {
     const bet = model.selected();
     if (busy || bet === undefined) return;

@@ -1,7 +1,8 @@
-// CLI: hold the Wrapper's built release output (the verify page in it included) to its size budgets
-// (tools/size-budget.ts; specs/client-kit/testing-and-ci.md). Run after the
-// Wrapper's build by `pnpm run check:size-budget`, part of `pnpm check`, and by
-// the `build` CI job. The release dry run and the publish step apply the same
+// CLI: hold the Wrapper's built release output (the verify page and the
+// signing page in it included) to its size budgets (tools/size-budget.ts;
+// specs/client-kit/testing-and-ci.md). Run after the Wrapper's build by
+// `pnpm run check:size-budget`, part of `pnpm check`, and by the `build` CI
+// job. The release dry run and the publish step apply the same
 // check themselves (`checkReleaseSize`), so they report a problem once.
 
 import { join } from "node:path";

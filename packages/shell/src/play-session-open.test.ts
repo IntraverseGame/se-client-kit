@@ -1,7 +1,8 @@
 // T-4a and T-17's shell half: the launch code is taken out of the URL before
 // the first request, redeemed once and never repeated; a tab without the
-// signer lock opens nothing; and the public options carry no typedData
-// encoder. Scripted Play API, manual clock, fake locks.
+// signer lock opens nothing and draws no key; the key is drawn at the open
+// (W-9), and one that cannot be drawn opens nothing; and the public options
+// carry no typedData encoder. Scripted Play API, manual clock, fake locks.
 
 import { describe, expect, expectTypeOf, it } from "vitest";
 
@@ -16,6 +17,7 @@ import {
   redeemed,
   sessionOf,
 } from "./fixtures/play-session.ts";
+import { recordingRandom } from "./fixtures/seeded.ts";
 import type { PlaySessionOptions, SessionParts } from "./session-options.ts";
 
 describe("session open (W-1, W-1a, W-2)", () => {
@@ -109,6 +111,37 @@ describe("the signer lock (W-14)", () => {
     const opened = await open({ locks: undefined });
     expect(opened.opening.kind).toBe("unsupported");
     expect(opened.clock.dueTimes()).toEqual([]);
+  });
+
+  it("a key that cannot be drawn at the open opens nothing, the lock released (W-9)", async () => {
+    const locks = createFakeLockManager();
+    const opened = await open({
+      locks,
+      random: (length: number): Uint8Array => new Uint8Array(length),
+    });
+    expect(opened.opening.kind).toBe("key-generation");
+    // Only the redeem: nothing is read or refreshed.
+    expect(opened.play.all()).toHaveLength(1);
+    expect(opened.clock.dueTimes()).toEqual([]);
+    // The lock is released: another page of the session may open.
+    expect((await open({ locks })).opening.kind).toBe("open");
+  });
+
+  it("a tab without the lock draws no key (W-9, W-14)", async () => {
+    const locks = createFakeLockManager();
+    await open({ locks });
+    const random = recordingRandom(5);
+    const second = await open({ locks, random });
+    expect(second.opening.kind).toBe("other-tab");
+    expect(random.draws()).toHaveLength(0);
+  });
+
+  it("draws the key at the open, before any start (W-9)", async () => {
+    const random = recordingRandom(5);
+    const opened = await open({ random });
+    expect(opened.opening.kind).toBe("open");
+    expect(random.draws().map(draw => draw.length)).toEqual([32]);
+    expect(opened.play.sent("startRound")).toHaveLength(0);
   });
 });
 

@@ -11,8 +11,9 @@
 //      pending, while a library is still `private` or at 0.0.0, while the
 //      Wrapper is at 0.0.0, while the Wrapper build is not the one the dry run
 //      reported
-//      (`--expect-wrapper-digest`, required), or while the Wrapper or the
-//      verify page in it is over its size budget (tools/size-budget.ts);
+//      (`--expect-wrapper-digest`, required), or while the Wrapper, or the
+//      verify page or the signing page in it, is over its size budget
+//      (tools/size-budget.ts);
 //   3. asks the registry about each version: a version the registry already
 //      has is skipped only when the registry holds exactly these bytes; other
 //      bytes fail;

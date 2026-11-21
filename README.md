@@ -37,15 +37,18 @@ names are on npm so far; do not install them.
 | `reference-game` | app     | a minimal sandboxed game for tests and as a sample                          |
 | `verify`         | app     | the verify page: a round recomputed in the browser from its public evidence |
 | `pages-proxy`    | app     | the Pages sites' same-origin API proxy (a worker; imports nothing)          |
+| `signing-page`   | app     | the wallet signing page, on its own origin: the kit's only wallet code      |
 
 Dependencies point one way: `contracts` (data only) ← `snapshot` and
 `play-client` ← `shell` ← `wrapper`; `signing` ← `shell`; `reference-game` takes
 nothing but the controller protocol's types; `signing` ← `verify`, which may
 also take `snapshot`, `play-client`, and `contracts`' runtime entry, and never
-takes `shell`; `pages-proxy` imports nothing; `signing`'s tests read the vectors
-from `contracts`' test-only entry (read only by tests; the consumers are listed
-in the [client kit spec](./specs/client-kit/the-contracts-package.md)). No
-cycles. The design lives in `specs/` ([client kit](./specs/client-kit.md) and
+takes `shell`; `contracts`' runtime entry ← `shell` for the key-delegation
+notices alone; `signing` and `contracts`' runtime entry ← `signing-page`, which
+never takes `shell`; `pages-proxy` imports nothing; `signing`'s tests read the
+vectors from `contracts`' test-only entry (read only by tests; the consumers are
+listed in the [client kit spec](./specs/client-kit/the-contracts-package.md)).
+No cycles. The design lives in `specs/` ([client kit](./specs/client-kit.md) and
 [Wrapper](./specs/wrapper.md)) and `decisions/`.
 
 ## Where to go next

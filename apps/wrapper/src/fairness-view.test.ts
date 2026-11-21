@@ -92,6 +92,8 @@ describe("the chip's popover (T-30)", () => {
       "reissued",
       "tip-check",
       "changed",
+      // W-72's delegation check (S5), labelled in W-48's catalogue (S6).
+      "delegation",
     ];
     const tips: readonly NonNullable<ChipPlan["tipFailure"]>[] = [
       "unknown-source",

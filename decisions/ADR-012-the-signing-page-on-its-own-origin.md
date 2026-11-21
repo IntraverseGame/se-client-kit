@@ -1,11 +1,12 @@
 # ADR-012 — The signing page on its own origin
 
-- Status: proposed (the decision taken by the human on 2026-11-17, in #220, and
+- Status: accepted (the decision taken by the human on 2026-11-17, in #220, and
   its open points, RFC-006 Q1, Q2, Q4, Q5, and Q-e, answered by the code owner
-  the same day; this record awaits the human's acceptance, and the specs cite it
-  as "proposed, ADR-012" until then)
-- Date: 2026-11-17
-- Relates to: [RFC-006](../rfcs/active/RFC-006-wallet-delegated-action-key.md)
+  the same day; accepted by the human on 2026-11-20 with RFC-006, with decision
+  3's hosting set to two Pages projects at their `pages.dev` origins and no
+  custom domain)
+- Date: 2026-11-20 (proposed 2026-11-17)
+- Relates to: [RFC-006](../rfcs/archived/RFC-006-wallet-delegated-action-key.md)
   (the wallet-delegated action key),
   [ADR-001](./ADR-001-toolchain-and-signing.md) (no new runtime dependency),
   [ADR-005](./ADR-005-release-attestation-and-artifact-upload.md) and
@@ -49,19 +50,23 @@
    holds everywhere is the same-origin policy: another origin's memory is not
    readable. The separate process is defense in depth; Safari is untested. The
    Wrapper's validator also refuses a `signingPageOrigin` equal to the verify
-   page's origin (`verifyBaseUrl`'s origin) and, proposed in RFC-006, one equal
-   to an entry of `operatorOrigins` or `gameOrigins`: those two lists of the
-   same configuration are the only operator and game origins the validator
-   knows.
+   page's origin (`verifyBaseUrl`'s origin) and one equal to an entry of
+   `operatorOrigins` or `gameOrigins`: those two lists of the same configuration
+   are the only operator and game origins the validator knows.
 3. **Configuration from one input.** The Wrapper's environment configuration
    names the page (`signingPageOrigin`). The signing page's own configuration
    document holds `environment`, the Wrapper origins it serves, and the same
    pending-notice flag as the Wrapper's, which its validator refuses in
    production, as the Wrapper's does. The Pages configuration job builds both
    documents from one input, as it builds the sites' policies, so they cannot
-   disagree; the two sites deploy together and roll back together.
-   Infrastructure adds a Pages project and a custom domain per environment.
-   <!-- TODO(infra, #220): owner: infrastructure owner. The signing page's Pages project and custom domain for staging and for production. The origins are configuration values, set by the infrastructure owner and never written in this repository. -->
+   disagree; the two sites deploy together and roll back together. Hosting
+   (decided by the human, 2026-11-20): Cloudflare Pages, the project
+   `se-signer-stage` for staging and, for production, the production project
+   (the `pages-prod` secret `PAGES_SIGNER_PROJECT`), each served at its own
+   `pages.dev` origin, with no custom domain. A `pages.dev` origin is on another
+   registrable domain than the Wrapper's custom hostname, so it meets
+   decision 2. The origins are configuration values, set by the infrastructure
+   owner and never written in this repository.
 4. **Opened only as the Wrapper's popup**, unnamed, from the player's confirm
    click, and it talks to the Wrapper only through `se.delegation/1`, with
    source and origin checks on both sides (RFC-006 section 4). It takes its
@@ -110,8 +115,8 @@
   defense in depth; Safari is untested.
 - **Contained requests.** `frame-ancestors 'none'`: no page can frame it and lay
   a decoy over the wallet's buttons. `connect-src 'self'`, with no API on its
-  site, and `default-src 'none'` for every other load (proposed, RFC-006 section
-  5): no fetch, image, or other subresource request from the page reaches
+  site, and `default-src 'none'` for every other load (the signing page's spec,
+  SP-13): no fetch, image, or other subresource request from the page reaches
   another origin. `Referrer-Policy: no-referrer`: the page's requests and
   navigations send no `Referer` header, so its own URL is not passed on; it does
   not stop data the page puts in a URL. Navigations are not limited by CSP
@@ -123,8 +128,11 @@
   (`window.opener.location`). That ends the session, and it can put a page of
   its own inside the operator's frame. The decided order narrows that window
   (RFC-006): the page revokes its wallet connection (best effort, at most about
-  3 s), then posts `result` or `failed`, then sets `window.opener = null`, and
-  the Wrapper closes the popup when the answer arrives.
+  3 s), then posts `result` or `failed`, then sets `window.opener = null`, then
+  closes its own window, and the Wrapper closes the popup when the answer
+  arrives, as the fallback (amended 2026-11-21, decided by the human: Chromium
+  and WebKit no longer let the opener close a window that has dropped its
+  opener, so the page closes itself; SP-9, W-66).
 - **Navigation can carry data out.** Because CSP does not limit navigations, a
   compromised signing page can navigate itself, or the Wrapper's frame while it
   holds the opener, to another origin with what it holds in the URL: the action
@@ -179,11 +187,13 @@
   on, undelegated.
 - A compromised signing page can navigate the Wrapper's frame while it holds the
   opener (Security reasoning); the decided order (revoke, answer, drop the
-  opener; the Wrapper closes the popup) shortens that window.
-- The architecture docs name the new app from now, marked proposed:
-  `AGENTS.md`'s architecture rules, the packages spec's dependency direction,
-  and the client-kit spec's layout. The import-direction lint and its fixtures
-  follow when it lands (S6b).
+  opener, close the window; the Wrapper's close of the popup the fallback)
+  shortens that window.
+- The architecture docs name the new app: `AGENTS.md`'s architecture rules, the
+  packages spec's dependency direction, and the client-kit spec's layout; the
+  import-direction lint and its fixtures enforce it from S6b, which lands with
+  this record's acceptance (the specs:
+  [signing-page.md](../specs/signing-page.md)).
 - The Wrapper's release build carries a third page, and its deploy must keep
   that page off the Wrapper's site.
 - The dependency allow-list does not change.
@@ -191,9 +201,13 @@
 
 ## References
 
-- [RFC-006](../rfcs/active/RFC-006-wallet-delegated-action-key.md): the design,
-  the spike's evidence, the slices, the residual risk, and the answered
-  questions.
+- [RFC-006](../rfcs/archived/RFC-006-wallet-delegated-action-key.md) (archived):
+  the design, the spike's evidence, the slices, the residual risk, and the
+  answered questions.
+- [specs/signing-page.md](../specs/signing-page.md) (the page, its
+  configuration, headers, release, and deploy) and
+  [specs/wrapper/the-wallet-delegation.md](../specs/wrapper/the-wallet-delegation.md)
+  (the Wrapper's side).
 - [specs/wrapper/operator-embedding.md](../specs/wrapper/operator-embedding.md)
   (W-49b, W-49g, the operator guidance).
 - [specs/client-kit.md](../specs/client-kit.md) (the Pages sites' configuration,

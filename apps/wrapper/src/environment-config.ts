@@ -10,7 +10,8 @@
 // field the schema does not list, and applies the disjoint-origins rule:
 // `operatorOrigins` and `gameOrigins` share no entry, and neither holds the
 // Wrapper's own origin (the SE origin), so no origin is both an embedder and a
-// game (W-49, specs/wrapper/operator-embedding.md).
+// game (W-49, specs/wrapper/operator-embedding.md). The wallet delegation's
+// two optional fields are delegation-config.ts's (W-62, W-63, ADR-012).
 
 import {
   type ChainConfig,
@@ -19,6 +20,18 @@ import {
 } from "@intraverse/se-client-shell";
 
 import { type AutoplayConfig, readAutoplayConfig } from "./autoplay-config.ts";
+import {
+  isRecord,
+  own,
+  readOrigins,
+  readPlayApiBase,
+  readVerifyApiBase,
+  readVerifyBase,
+} from "./config-urls.ts";
+import {
+  type DelegationConfigIssueCode,
+  readDelegationConfig,
+} from "./delegation-config.ts";
 
 /** A document that passed `validateEnvironmentConfig`, frozen. */
 export type EnvironmentConfig = {
@@ -39,6 +52,10 @@ export type EnvironmentConfig = {
   readonly operatorOrigins: readonly string[];
   /** Autoplay of book rounds, when the deployment turns it on (RFC-005). */
   readonly autoplay?: AutoplayConfig;
+  /** The signing page's origin (W-62); without it nothing is delegated. */
+  readonly signingPageOrigin?: string;
+  /** Whether a `pending` notice may be offered (W-63); `false` when absent. */
+  readonly acceptPendingNotices?: boolean;
 };
 
 /** Why a document was refused: the shell's chain codes, and the Wrapper's. */
@@ -65,7 +82,9 @@ export type EnvironmentConfigIssueCode =
    */
   | "overlapping-origins"
   /** `autoplay` is present and malformed (RFC-005). */
-  | "invalid-autoplay";
+  | "invalid-autoplay"
+  /** One of the wallet delegation's two fields (W-62, W-63). */
+  | DelegationConfigIssueCode;
 
 export type EnvironmentConfigIssue = {
   readonly code: EnvironmentConfigIssueCode;
@@ -93,104 +112,9 @@ export const ENVIRONMENT_CONFIG_FIELDS: readonly string[] = Object.freeze([
   "gameOrigins",
   "operatorOrigins",
   "autoplay",
+  "signingPageOrigin",
+  "acceptPendingNotices",
 ]);
-
-const PLAY_API_SUFFIX = "/play/v1";
-const VERIFY_API_SUFFIX = "/verify/v1";
-const LOOPBACK_HOSTS: ReadonlySet<string> = new Set([
-  "localhost",
-  "127.0.0.1",
-  "[::1]",
-]);
-
-const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const own = (record: Readonly<Record<string, unknown>>, key: string): unknown =>
-  Object.hasOwn(record, key) ? record[key] : undefined;
-
-/**
- * An absolute `https:` URL, or `http:` on a loopback host (the shell's rule for
- * RPC endpoints), with no credentials, query, or fragment.
- */
-const readUrl = (value: unknown): URL | undefined => {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    return undefined;
-  }
-  const secure =
-    url.protocol === "https:" ||
-    (url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname));
-  // `href` is the parser's serialization: a value that is not already written
-  // that way (a trailing `?` or `#`, odd casing) is refused, not repaired.
-  const canonical = url.href === value || url.href === `${value}/`;
-  const plain =
-    url.username === "" &&
-    url.password === "" &&
-    url.search === "" &&
-    url.hash === "";
-  return secure && canonical && plain ? url : undefined;
-};
-
-const readPlayApiBase = (value: unknown): string | undefined => {
-  const url = readUrl(value);
-  return url !== undefined &&
-    typeof value === "string" &&
-    url.href === value &&
-    url.pathname.endsWith(PLAY_API_SUFFIX)
-    ? value
-    : undefined;
-};
-
-/**
- * The verify API base (verify-page.md V-3, V-3a, D-4, D-10): `playApiBaseUrl`'s
- * rule with the `/verify/v1` suffix, on `ownOrigin` only (the verify API sends
- * no CORS headers, so it is read same-origin). Required, never derived or
- * defaulted. The Wrapper validates it for the verify page, which reads the same
- * document, and does not use it.
- */
-const readVerifyApiBase = (
-  value: unknown,
-  ownOrigin: string,
-): string | undefined => {
-  const url = readUrl(value);
-  return url !== undefined &&
-    typeof value === "string" &&
-    url.href === value &&
-    url.origin === ownOrigin &&
-    url.pathname.endsWith(VERIFY_API_SUFFIX)
-    ? value
-    : undefined;
-};
-
-const readVerifyBase = (value: unknown): string | undefined =>
-  readUrl(value) === undefined ? undefined : (value as string);
-
-/** An origin, written exactly as `URL.origin` serializes it. */
-const readOrigin = (value: unknown): string | undefined => {
-  const url = typeof value === "string" ? readUrl(value) : undefined;
-  return url !== undefined && url.origin === value ? value : undefined;
-};
-
-const readOrigins = (
-  value: unknown,
-  minimum: number,
-): readonly string[] | undefined => {
-  if (!Array.isArray(value) || value.length < minimum) {
-    return undefined;
-  }
-  const origins = (value as readonly unknown[]).map(entry => readOrigin(entry));
-  if (origins.some(origin => origin === undefined)) {
-    return undefined;
-  }
-  const list = origins as string[];
-  return new Set(list).size === list.length ? Object.freeze(list) : undefined;
-};
 
 /** The disjoint-origins rule's issues, given both lists as read. */
 const overlaps = (
@@ -266,6 +190,17 @@ export const validateEnvironmentConfig = (
   if (autoplay === undefined) {
     issues.push({ code: "invalid-autoplay", field: "autoplay" });
   }
+  const { issues: delegationIssues, ...delegation } = readDelegationConfig(
+    fields,
+    {
+      ownOrigin,
+      environment: own(fields, "environment"),
+      verifyBaseUrl,
+      gameOrigins,
+      operatorOrigins,
+    },
+  );
+  issues.push(...delegationIssues);
   if (
     !chain.ok ||
     issues.length > 0 ||
@@ -290,6 +225,7 @@ export const validateEnvironmentConfig = (
       gameOrigins,
       operatorOrigins,
       ...(autoplay === null || autoplay === undefined ? {} : { autoplay }),
+      ...delegation,
     }),
   });
 };

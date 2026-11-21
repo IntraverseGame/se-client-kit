@@ -229,6 +229,19 @@ importers:
         specifier: 8.3.5
         version: 8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)
 
+  apps/signing-page:
+    dependencies:
+      '@intraverse/se-client-contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@intraverse/se-client-signing':
+        specifier: workspace:*
+        version: link:../../packages/signing
+    devDependencies:
+      vite:
+        specifier: 8.3.5
+        version: 8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)
+
   apps/verify:
     dependencies:
       '@intraverse/se-client-contracts':
@@ -280,6 +293,9 @@ importers:
 
   packages/shell:
     dependencies:
+      '@intraverse/se-client-contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@intraverse/se-client-play-client':
         specifier: workspace:*
         version: link:../play-client
@@ -289,10 +305,6 @@ importers:
       '@intraverse/se-client-snapshot':
         specifier: workspace:*
         version: link:../snapshot
-    devDependencies:
-      '@intraverse/se-client-contracts':
-        specifier: workspace:*
-        version: link:../contracts
 
   packages/signing:
     dependencies:

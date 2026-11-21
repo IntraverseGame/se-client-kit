@@ -4,6 +4,7 @@
 // the read-only `RoundState` the UI is given of it.
 
 import type { FailReason } from "./chain-decision.ts";
+import type { DelegationFailure } from "./delegation-types.ts";
 import type { RoundFlow } from "./round-flow.ts";
 import type { VerificationFailure } from "./round-verification.ts";
 import type { RoundState } from "./session-types.ts";
@@ -25,6 +26,8 @@ export type FlowVerdict =
       readonly failure: VerificationFailure | "changed";
       /** The tip check's failure, when `failure` is `tip-check` (W-26b). */
       readonly tipFailure?: TipCheckFailure | "bind";
+      /** The delegation check's, when `failure` is `delegation` (W-72). */
+      readonly delegationFailure?: DelegationFailure;
     };
 
 /**
@@ -68,6 +71,9 @@ export const roundStateOf = (flow: SessionRound): RoundState => {
           ...(verdict.tipFailure === undefined
             ? {}
             : { tipFailure: verdict.tipFailure }),
+          ...(verdict.delegationFailure === undefined
+            ? {}
+            : { delegationFailure: verdict.delegationFailure }),
         }
       : {}),
     outOfSync: flow.phase() === "out-of-sync",

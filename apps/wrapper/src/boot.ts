@@ -85,6 +85,14 @@ export type BootOptions = {
    * with it (a refused configuration or framing): it is never redeemed.
    */
   readonly discardLaunchCode?: () => void;
+  /**
+   * The wallet delegation's platform parts (W-64, W-66), used when the
+   * configuration names a signing page; without them nothing is offered.
+   */
+  readonly delegation?: Omit<
+    NonNullable<SessionWiringOptions["delegation"]>,
+    "signingPageOrigin"
+  >;
 };
 
 export type BootResult =
@@ -155,6 +163,11 @@ export const boot = (options: BootOptions): Promise<BootResult> => {
       opening = { kind: "redeem-failed" };
     }
     const session = showOpening(app, opening);
+    const { signingPageOrigin } = config;
+    const delegation =
+      options.delegation === undefined || signingPageOrigin === undefined
+        ? undefined
+        : { ...options.delegation, signingPageOrigin };
     if (session !== undefined) {
       wireSession(
         {
@@ -165,6 +178,7 @@ export const boot = (options: BootOptions): Promise<BootResult> => {
           ...(options.stageLayout === undefined
             ? {}
             : { layout: options.stageLayout() }),
+          ...(delegation === undefined ? {} : { delegation }),
         },
         session,
       );

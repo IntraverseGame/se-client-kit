@@ -200,6 +200,20 @@ describe("other output", () => {
     expect(problems).toEqual([]);
   });
 
+  it("accepts the pages of the verify and signing page apps", () => {
+    const page = {
+      "index.html": "<!doctype html>",
+      "assets/index-AAAA.js": "console.log(1)",
+      "assets/index-BBBB.css": "body{}",
+    };
+    expect(
+      findBuildOutputProblems([
+        dist("verify", page),
+        dist("signing-page", page),
+      ]),
+    ).toEqual([]);
+  });
+
   it("fails when a package or the bundle mentions the test-only entry", () => {
     const shell = dist("shell", {
       "index.js": 'import "@intraverse/se-client-contracts/testing";\n',

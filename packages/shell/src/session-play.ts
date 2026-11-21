@@ -12,18 +12,19 @@
 // session-presentation.ts): one that changes the session is not read in, the
 // game's bridge is closed, and from then until the page is reloaded every use
 // case answers `session-changed` with nothing read, signed, started, or
-// forwarded. Every answer is a validated Snapshot, a validated typed error, or
-// a closed code; nothing here returns the key, the token, a signature, or the
-// transcript. It logs nothing.
-
-import type { Clock, RandomUuid } from "@intraverse/se-client-play-client";
+// forwarded. The wallet delegation (W-62 to W-71, session-delegation.ts) adds
+// its use case, the delegation every start carries while it is registered, and
+// the refusal of a start while a delegated one stands refused. Every answer is
+// a validated Snapshot, a validated typed error, or a closed code; nothing here
+// returns the key, the token, a signature, or the transcript. It logs nothing.
 
 import { createAutoplayRun } from "./autoplay-run.ts";
 import { createPickUseCase } from "./pick-use-case.ts";
 import { redacting } from "./redaction.ts";
-import type { RoundFlowOptions } from "./round-flow.ts";
 import { type Bet, startSessionRound } from "./round-start.ts";
+import { createSessionDelegation } from "./session-delegation.ts";
 import { createGameMounting, type GameMountingHost } from "./session-mount.ts";
+import type { PlaySessionHandle, PlaySessionParts } from "./session-parts.ts";
 import {
   beforeOf,
   CHANGED,
@@ -32,7 +33,6 @@ import {
   FRESH,
   readOfError,
   refused,
-  type SessionReads,
   type SessionReadsHost,
 } from "./session-reads.ts";
 import type {
@@ -41,42 +41,6 @@ import type {
   SessionRead,
 } from "./session-types.ts";
 import { createSnapshotReader } from "./snapshot-read.ts";
-
-export type PlaySessionParts = {
-  /** The round flows' options: the signing session, transport, token, checks. */
-  readonly flow: RoundFlowOptions;
-  readonly randomUuid: RandomUuid;
-  /** D, the redeem answer's `gameOrigin`, fixed at open (W-37). */
-  readonly gameOrigin: string;
-  /**
-   * The path of the game's page on D, the redeem answer's `gamePath` (`/` when
-   * it has none), fixed at open (W-37). Not a trust boundary: messages are
-   * matched by D only.
-   */
-  readonly gamePath: string;
-  /** The configuration's allow-list of game origins, fixed at open (W-37). */
-  readonly gameOrigins: readonly string[];
-  /** The Wrapper's own origin, the SE origin, fixed at open. */
-  readonly ownOrigin: string;
-  /** The configuration's `environment`, for W-37's loopback exemption. */
-  readonly environment: GameMountingHost["environment"];
-  readonly ended: () => boolean;
-  readonly end: () => void;
-  /** The session's clock: autoplay's interval between rounds (RFC-005). */
-  readonly clock: Pick<Clock, "setTimeout" | "clearTimeout">;
-};
-
-export type PlaySessionHandle = {
-  readonly session: PlaySession;
-  /** Tells the session's listeners it ended, and closes the game's bridge. */
-  readonly notifyEnd: () => void;
-  /**
-   * What a changed session kept (W-53, W-27): the first and the differing
-   * values of the four fields, and nothing else. Internal: the shell's own
-   * evidence, never handed to the UI.
-   */
-  readonly change: SessionReads["change"];
-};
 
 export const createPlaySession = (
   parts: PlaySessionParts,
@@ -107,6 +71,20 @@ export const createPlaySession = (
     },
   });
   const { see, settle, read, holdsOpenRound, admit, changed } = reads;
+  // The newest of the round's own latest and the last read (W-29).
+  const latest = (): ReturnType<typeof reader.latest> => {
+    const last = reader.latest();
+    const own = current?.latest();
+    return own === undefined ||
+      (last !== undefined && last.version > own.version)
+      ? last
+      : own;
+  };
+  const delegation = createSessionDelegation(parts.delegation, {
+    ended,
+    playback: () => latest()?.presentation === "playback",
+    roundOpen: holdsOpenRound,
+  });
 
   /**
    * Runs one start or cash-out at a time: while one is in flight, another is
@@ -127,12 +105,15 @@ export const createPlaySession = (
   const startOnce = async (bet: Bet): Promise<SessionRead> => {
     // A new round beside the open one the shell holds is never started.
     if (holdsOpenRound()) return refused("round-exists");
+    // Fixed with the body, so W-22's resend repeats it (W-70).
+    const carried = delegation.carried();
     try {
       const flow = await startSessionRound({
         ...flowOptions,
         admit,
         randomUuid: parts.randomUuid,
         bet,
+        ...(carried === undefined ? {} : { delegation: carried }),
         // The round is the session's before its first Snapshot is read, so a
         // read during the cancel that Snapshot requires is held (W-25).
         onFlow: started => {
@@ -148,6 +129,10 @@ export const createPlaySession = (
       if (ended()) return ENDED;
       if (!(error instanceof Error)) throw error;
       const outcome = readOfError(error);
+      if (outcome.kind === "problem" && carried !== undefined) {
+        const { status, code } = outcome.problem;
+        delegation.startRefused(carried, status, code);
+      }
       if (
         outcome.kind === "problem" &&
         outcome.problem.snapshot !== undefined
@@ -168,7 +153,10 @@ export const createPlaySession = (
   };
 
   const startNow = (bet: Bet): Promise<SessionRead> => {
-    const answer = closed();
+    // While a delegated start stands refused, nothing is sent (W-71).
+    const answer =
+      closed() ??
+      (delegation.refusesStart() ? refused("delegation-refused") : undefined);
     return answer === undefined
       ? oneAtATime(() => startOnce(bet))
       : Promise.resolve(answer);
@@ -178,15 +166,7 @@ export const createPlaySession = (
   // and sees every answer the session gives; its starts' answers reach the UI
   // through `onChange`.
   const autoplay = createAutoplayRun({
-    // The newest of the round's own latest and the last read (W-29).
-    latest: () => {
-      const last = reader.latest();
-      const own = current?.latest();
-      return own === undefined ||
-        (last !== undefined && last.version > own.version)
-        ? last
-        : own;
-    },
+    latest,
     start: startNow,
     failure: () => reads.round()?.failure,
     closed: () => closed() !== undefined,
@@ -253,6 +233,7 @@ export const createPlaySession = (
 
   const notifyEnd = (): void => {
     autoplay.stop("session-ended");
+    delegation.end();
     mounting.close();
     for (const listener of endListeners) listener();
     endListeners.clear();
@@ -264,6 +245,7 @@ export const createPlaySession = (
     checkAgain: () => seen(read()),
     start,
     cashOut: () => seen(cashOut()),
+    ...delegation.useCase,
     autoplay: autoplay.begin,
     stopAutoplay: autoplay.stop,
     autoplayState: autoplay.state,

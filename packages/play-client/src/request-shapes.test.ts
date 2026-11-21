@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  KEY_DELEGATION_SHAPE,
   REQUEST_SHAPES,
   type RequestShapes,
 } from "./fixtures/request-shapes.ts";
@@ -20,6 +21,22 @@ describe("the request-body tables", () => {
       { launchCode: "optional" },
     ];
     expect(wrong).toHaveLength(3);
+  });
+
+  it("hold the start's keyDelegation to the document's type", () => {
+    const wrong: readonly (typeof KEY_DELEGATION_SHAPE)[] = [
+      // @ts-expect-error -- the document's keyDelegation has no field `extra`
+      { ...KEY_DELEGATION_SHAPE, extra: "optional" },
+      // @ts-expect-error -- `signature` is required, not optional
+      { ...KEY_DELEGATION_SHAPE, signature: "optional" },
+    ];
+    expect(wrong).toHaveLength(2);
+    expect(Object.values(KEY_DELEGATION_SHAPE)).toEqual([
+      "required",
+      "required",
+      "required",
+      "required",
+    ]);
   });
 
   it("take no body where the document takes none", () => {

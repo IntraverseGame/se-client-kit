@@ -159,6 +159,27 @@ export type BookEvidence = {
   readonly seed?: string | undefined;
 };
 
+/**
+ * The player's wallet's key delegation (`keyDelegation`, V-22): the wallet's
+ * signature of the round's action key, its session, and its expiry, with the
+ * notice it signed. Its `domain` is fixed by the document and not kept.
+ */
+export type KeyDelegationEvidence = {
+  readonly wallet: string;
+  readonly actionKey: string;
+  /** The session as `bytes32`, used as it is (the page has no session). */
+  readonly sessionId: string;
+  /** Unix seconds: a time, never an amount. */
+  readonly expiry: number;
+  readonly noticeId: string;
+  readonly noticeHash: string;
+  /** The signed text, shown as text, never markup. */
+  readonly notice: string;
+  readonly signature: string;
+  /** Unix seconds: the engine's statement, shown as given (V-13). */
+  readonly acceptedAt: number;
+};
+
 /** The round's public evidence, from the verify API's `RoundVerification`. */
 export type RoundEvidence = {
   readonly roundId: string;
@@ -196,6 +217,8 @@ export type RoundEvidence = {
   readonly record?: RecordEvidence | undefined;
   /** Set for a book round only: a body that carries `book` (V-18). */
   readonly book?: BookEvidence | undefined;
+  /** Set for a config round started with a key delegation only (V-22). */
+  readonly keyDelegation?: KeyDelegationEvidence | undefined;
 };
 
 /**

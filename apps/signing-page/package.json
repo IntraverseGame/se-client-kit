@@ -1,0 +1,120 @@
+{
+  "name": "@intraverse/se-client-signing-page",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The wallet signing page: one KeyDelegation signature from an injected browser wallet, on its own origin.",
+  "type": "module",
+  "scripts": {
+    "build": "wireit",
+    "typecheck": "wireit",
+    "test": "wireit"
+  },
+  "wireit": {
+    "build": {
+      "command": "tsx ../../tools/check-kit-dist.ts build && vite build",
+      "env": {
+        "NODE_ENV": {
+          "external": true
+        }
+      },
+      "files": [
+        "index.html",
+        "public/**",
+        "src/**",
+        "!src/**/*.test.ts",
+        "*.ts",
+        "package.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json",
+        "postcss.config.*",
+        ".postcssrc",
+        ".postcssrc.*",
+        "../../package.json",
+        "../../pnpm-workspace.yaml",
+        ".env",
+        ".env.*",
+        "../../tools/check-kit-dist.ts",
+        "../../tools/kit-dist.ts",
+        "../../tools/kit-dist-fs.ts",
+        "../../tools/test-only-entry-guard.ts",
+        "../../tools/guard-text.ts"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "clean": "if-file-deleted",
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ],
+      "dependencies": [
+        "../../packages/signing:build",
+        "../../packages/contracts:build"
+      ]
+    },
+    "typecheck": {
+      "command": "tsx ../../tools/check-kit-dist.ts typecheck && tsc -p tsconfig.json",
+      "files": [
+        "index.html",
+        "public/**",
+        "src/**",
+        "*.ts",
+        "package.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json",
+        "../../package.json",
+        "../../pnpm-workspace.yaml",
+        ".env",
+        ".env.*",
+        "../../tools/check-kit-dist.ts",
+        "../../tools/kit-dist.ts",
+        "../../tools/kit-dist-fs.ts",
+        "../../tools/test-only-entry-guard.ts",
+        "../../tools/guard-text.ts"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ],
+      "dependencies": [
+        "../../packages/signing:build",
+        "../../packages/contracts:build"
+      ]
+    },
+    "test": {
+      "command": "tsx ../../tools/check-kit-dist.ts test && vitest run",
+      "files": [
+        "index.html",
+        "public/**",
+        "src/**",
+        "*.ts",
+        "package.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json",
+        "../../package.json",
+        "../../pnpm-workspace.yaml",
+        ".env",
+        ".env.*",
+        "../../tools/check-kit-dist.ts",
+        "../../tools/kit-dist.ts",
+        "../../tools/kit-dist-fs.ts",
+        "../../tools/test-only-entry-guard.ts",
+        "../../tools/guard-text.ts"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ],
+      "dependencies": [
+        "../../packages/signing:build",
+        "../../packages/contracts:build"
+      ]
+    }
+  },
+  "dependencies": {
+    "@intraverse/se-client-contracts": "workspace:*",
+    "@intraverse/se-client-signing": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "8.3.5"
+  }
+}

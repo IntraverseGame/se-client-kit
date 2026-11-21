@@ -23,7 +23,12 @@ import {
   droppedLower,
   readQuietly,
 } from "./snapshot-reread.ts";
-import type { ChangeCause, Intents, ViewOptions } from "./view-options.ts";
+import type {
+  ChangeCause,
+  DelegationView,
+  Intents,
+  ViewOptions,
+} from "./view-options.ts";
 import type {
   RoundIntents,
   WrapperApp,
@@ -50,6 +55,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
   let verifyBaseUrl: string | undefined;
   let links: ViewOptions["links"];
   let calling = false;
+  let delegation: DelegationView | undefined;
   const extras = createAppExtras(options.timers.now);
   let readSnapshot: (() => Promise<SnapshotRead>) | undefined;
   let roundIntents: RoundIntents = {};
@@ -146,6 +152,7 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
       ...(calling ? { calling } : {}),
       ...(autoplay === undefined ? {} : { autoplay }),
       ...(summary === undefined ? {} : { summary }),
+      ...(delegation === undefined ? {} : { delegation }),
     };
   };
 
@@ -268,6 +275,13 @@ export const createWrapperApp = (options: WrapperAppOptions): WrapperApp => {
     gameCapable: (inset: boolean): void => {
       const { gameInset: _was, ...rest } = state;
       apply(inset ? { ...state, gameInset: true } : rest, "poll");
+    },
+    delegation: (next): void => {
+      delegation = next;
+      view.update(state, "poll");
+    },
+    dismissProblem: (): void => {
+      apply(clearProblem(state), "poll");
     },
     readQuiet,
     dispose: (): void => {

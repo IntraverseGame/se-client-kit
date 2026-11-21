@@ -8,17 +8,17 @@ Part of the [Wrapper spec](../wrapper.md), section
   redrawn when zero or not below the curve order). Its address is the Ethereum
   address of its public key (Keccak-256 of the uncompressed public key without
   the prefix byte, the last 20 bytes).
-  - **When** (proposed,
-    [RFC-006](../../rfcs/active/RFC-006-wallet-delegated-action-key.md)): at
-    session open, once the shell holds the signer lock (W-14), or when the
-    player chooses to delegate a wallet, and in any case before the first
-    `start`, so the address exists before a delegation is signed. Not built yet
-    (slice S5): until then the shell generates the key on the first need, before
-    the first `start`.
+  - **When**
+    ([RFC-006](../../rfcs/archived/RFC-006-wallet-delegated-action-key.md),
+    accepted 2026-11-20; slice S5): at session open, once the shell holds the
+    signer lock (W-14), and so before the first `start` and before a delegation
+    is signed (W-66 to W-68): the delegation names the key's address. A page
+    that does not get the lock draws no key (W-14).
   - Importing a key (a player-supplied key) is out of scope. A wallet MAY
-    delegate to this key (proposed, RFC-006): the wallet signs a `KeyDelegation`
-    that names the key's address. The key is still generated and held by the
-    shell under W-9 to W-13, and the wallet never receives it.
+    delegate to this key ([The wallet delegation](./the-wallet-delegation.md)):
+    the wallet signs a `KeyDelegation` that names the key's address. The key is
+    still generated and held by the shell under W-9 to W-13, and the wallet
+    never receives it.
 - **W-10.** The private key MUST exist only inside the shell's closure, as a
   value of the redacting key type (W-4). It MUST NOT be exported, returned,
   serialized, sent in a `postMessage`, attached to `window` or any global, or
@@ -42,20 +42,21 @@ Part of the [Wrapper spec](../wrapper.md), section
     a key kept across a reload would not let the player move in that round. What
     a lost key costs is already the backend's rule: the round runs to its time
     limit and ends by its game's expiry rule, with no recovery path.
-  - **A wallet's delegation is memory-only too** (proposed, RFC-006; not built
-    yet). The shell holds the delegation, the wallet's address, and the
-    signature in memory for the session, and nothing stores them; the player
-    signs again in each session. The Wrapper's origin never holds a wallet
-    connection: the signing page, on its own origin, connects and then tries to
-    revoke the connection, best effort; where the wallet refuses or does not
-    support `wallet_revokePermissions`, the grant to the signing page's origin
-    can remain (proposed,
-    [ADR-012](../../decisions/ADR-012-the-signing-page-on-its-own-origin.md)).
+  - **A wallet's delegation is memory-only too** (W-68, W-73). The shell holds
+    the delegation, the wallet's address, and the signature in memory for the
+    session, and nothing stores them; the player signs again in each session.
+    The Wrapper's origin never holds a wallet connection: the signing page, on
+    its own origin, connects and then tries to revoke the connection, best
+    effort; where the wallet refuses or does not support
+    `wallet_revokePermissions`, the grant to the signing page's origin can
+    remain
+    ([ADR-012](../../decisions/ADR-012-the-signing-page-on-its-own-origin.md);
+    [Signing page](../signing-page.md), SP-9).
 - **W-12.** What the Wrapper MAY keep after a page is gone: nothing. In
   particular no key, token, launch code, `CreateRoundAuth`, or signed action, no
-  wallet address or delegation (proposed, RFC-006), and no identifier derived
-  from them. The one exception is a download the **player starts** (the evidence
-  export of W-27): the file goes to the player, and the page holds no copy of it
+  wallet address or delegation (W-73), and no identifier derived from them. The
+  one exception is a download the **player starts** (the evidence export of
+  W-27): the file goes to the player, and the page holds no copy of it
   afterwards. A persistent evidence store is deferred with the post-round
   evidence check ([OQ-1](../wrapper.md#decided-questions)).
 - **W-13.** The shell MUST serialize the key's use behind its Web Lock (W-14)

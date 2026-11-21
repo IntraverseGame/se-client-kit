@@ -1,6 +1,11 @@
 # RFC-006 — The wallet-delegated action key
 
-- Status: draft
+- Status: archived
+- Archived: 2026-11-20 (accepted by the human, with ADR-012, and folded into the
+  specs: [The wallet delegation](../../specs/wrapper/the-wallet-delegation.md),
+  [Signing page](../../specs/signing-page.md), and the specs listed under
+  [Decisions (2026-11-20)](#decisions-2026-11-20); this file keeps the reasoning
+  for history and is not canonical)
 - Author: the documenter agent, for human review
 - Created: 2026-11-17
 - Relates to: se-client-kit#220 (the kit's part of the backend's key-delegation
@@ -34,9 +39,11 @@ was answered by the code owner the same day (Q1 to Q8 and Q-a to Q-e in
 
 A player-supplied key (a key the player imports) stays out of scope.
 
-**Status** (Q-a). This RFC stays `draft` and ADR-012 stays `proposed` until the
-human accepts them. Every spec line and `AGENTS.md` rule that relies on them
-says so: "(proposed, RFC-006)" or "(proposed, ADR-012)".
+**Status** (Q-a, superseded on 2026-11-20). This RFC stayed `draft` and ADR-012
+`proposed` until the human accepted them, on 2026-11-20; the "(proposed,
+RFC-006)" and "(proposed, ADR-012)" marks were removed from the specs and
+`AGENTS.md` then. The specs are canonical; where this file and a spec differ,
+the spec holds.
 
 **Where the rules live.** The spec edits of slice S0 are small: the Wrapper's
 scope and boundary, W-9, W-11, W-12, the dispatch rule of W-49b, the operator's
@@ -325,9 +332,14 @@ A closed protocol of its own, beside `se.operator/1` and `se.controller/1`.
   origins it serves, and the same pending-notice flag as the Wrapper's, under
   the Wrapper's rule: its validator refuses the flag with
   `environment: "production"`, so it never signs a `pending` notice in
-  production. The Wrapper's gains `signingPageOrigin`. Infrastructure adds a
-  Pages project and a custom domain per environment.
-  <!-- TODO(infra, #220): owner: infrastructure owner. The signing page's Pages project and custom domain for staging and for production; its origins are configuration values (the Wrapper's `signingPageOrigin`, the signing page's list of Wrapper origins), set by the infrastructure owner and never written in this repository. -->
+  production. The Wrapper's gains `signingPageOrigin`. Hosting (decided by the
+  human, 2026-11-20): Cloudflare Pages, the project `se-signer-stage` for
+  staging and, for production, the production project (the `pages-prod` secret
+  `PAGES_SIGNER_PROJECT`), each at its own `pages.dev` origin, with no custom
+  domain. Its origins are configuration values (the Wrapper's
+  `signingPageOrigin`, the signing page's list of Wrapper origins), set by the
+  infrastructure owner and never written in this repository.
+
 - **One input for both documents.** The Wrapper's `signingPageOrigin`, the
   signing page's list of Wrapper origins, and both pending flags are built from
   one input by the Pages configuration job, as it already builds the sites'
@@ -740,7 +752,10 @@ check list, and `RoundVerification.keyDelegation`.
   `parseEvidence` with the test fixture); tests pin it for the `key_delegation`
   check name and a top-level `keyDelegation` (`verify-body.test.ts`). S7 narrows
   it to the two additions, so it then matches V-10 for everything else, and
-  changes those tests and the one that ignores an unknown top-level `verified`.
+  changes those tests and the one that ignores an unknown top-level `verified`
+  (done in S7: `verify-body.test.ts` reads both on their own merits and refuses
+  `verified`, and `verify-body-closed.test.ts` refuses an unknown field at every
+  level and an unknown check name).
 
 ## Migration considerations
 
@@ -861,3 +876,55 @@ Decided by the code owner the same day, while S3 was built:
 - **S3's order and the expiry's form.** S3 lands before S2, on provisional
   constants that S2 replaces with the vendored vectors; the typed data writes
   `expiry` as a decimal string (code owner, 2026-11-17).
+
+## Decisions (2026-11-20)
+
+Decided by the human, the code owner, on 2026-11-20:
+
+- **Accepted.** RFC-006 and ADR-012 are accepted, and #220's remaining slices
+  (S2, S4, S5, S6, S6b, and S7) are built in one pull request, from the specs
+  this RFC was folded into. S3 was merged before (#231).
+- **Hosting.** The signing page is served by Cloudflare Pages, from the project
+  `se-signer-stage` for staging and, for production, the production project (the
+  `pages-prod` secret `PAGES_SIGNER_PROJECT`), each at its own `pages.dev`
+  origin, with no custom domain (this replaces "a Pages project and a custom
+  domain per environment" in section 5 and in ADR-012's decision 3). The origins
+  stay configuration values, never written in this repository.
+- **Production.** The only notice in the backend's published list is
+  `en-draft-1`, `pending` (legal review), and production accepts no pending
+  notice. The kit ships all the code; a production build offers the wallet only
+  once a release vendors an `approved` notice, and plays exactly as before until
+  then.
+- **The UI.** The consent dialog (S6) and the signing page (S6b) are built now
+  to the specs' texts and behavior, in the Wrapper's one dark theme; a designed
+  UI comes later from a separate design issue (se-client-kit#256), as a
+  follow-up change.
+
+Where each part now lives:
+
+| Part of this RFC                                                    | Spec or ADR that holds it                                                                                                                                                |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Section 1 (what the player signs), the notices                      | [The cryptography](../../specs/client-kit/the-cryptography.md); [How the kit gets its contracts](../../specs/client-kit/how-the-kit-gets-its-contracts.md) (the S2 sync) |
+| Sections 2, 3, 4 (the Wrapper's side), and 7; section 9             | [The wallet delegation](../../specs/wrapper/the-wallet-delegation.md), W-62 to W-73; W-9, W-11, W-12, W-22, W-25, W-26, W-42, W-49b, W-49g; the `shell` package's spec   |
+| Sections 4 (the signing page's side), 5, and 6                      | [Signing page](../../specs/signing-page.md), SP-1 to SP-15; [ADR-012](../../decisions/ADR-012-the-signing-page-on-its-own-origin.md), accepted                           |
+| Section 8 (the verify page) and the kit-first rule's verify part    | [Verify page](../../specs/verify-page.md), V-22 (check 9) and The evidence                                                                                               |
+| The configuration fields and the one input of the configuration job | [Configuration](../../specs/wrapper.md#configuration); [client-kit.md](../../specs/client-kit.md#the-pages-sites-configuration); SP-3, SP-15                             |
+| The start's field and codes (S4)                                    | [The `play-client` request layer](../../specs/client-kit/the-play-client-request-layer.md)                                                                               |
+| The tests                                                           | the Wrapper's test plan, T-43 to T-51; the verify page's VT-16                                                                                                           |
+| The residual risk                                                   | [Signing page](../../specs/signing-page.md#security), and ADR-012's Security reasoning                                                                                   |
+
+Two points of this RFC were refined when it was folded into the specs:
+
+- **The evidence names the notice's id.** Section 8 says the evidence carries
+  `noticeHash` and the text "but no id". The backend's published object also
+  carries `noticeId`. The verify page still looks a notice up by its hash, in
+  the whole list, `retired` entries included; it then requires the list's `id`
+  to equal `noticeId` (V-22), and the shell's delegation check compares it too
+  (W-72).
+- **Names left to the slices** are now fixed in the specs: the pending flag is
+  `acceptPendingNotices` (in the Wrapper's and the signing page's documents);
+  the signing page ships under `signer/` in the Wrapper's artifact and is opened
+  at its origin's root; its announced wallet icons are not shown (no `img-src`,
+  SP-8); the shell's states add `refused` for a delegated start answered 422
+  `KEY_DELEGATION_*` (W-71); and the configuration job's inputs are
+  `PAGES_SIGNER_ORIGIN` and `PAGES_ACCEPT_PENDING_NOTICES`.

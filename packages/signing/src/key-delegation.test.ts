@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { encodeType, hashStruct, typedDataDigest, typeHash } from "./eip712.ts";
 import { codeOf } from "./fixtures/helpers.ts";
-import { provisionalKeyDelegation as vector } from "./fixtures/provisional-key-delegation.ts";
+import {
+  acceptedDelegation as vector,
+  keyDelegation,
+} from "./fixtures/key-delegation-vectors.ts";
 import { type Address, type Bytes32, encodeHex } from "./hex.ts";
 import { keccak256 } from "./keccak.ts";
 import {
@@ -42,13 +45,15 @@ const structHashOfText = (expiry: number): Bytes32 =>
 
 describe("the KeyDelegation type and its domain", () => {
   it("reproduces the type string and its type hash", () => {
-    expect(encodeType(KEY_DELEGATION)).toBe(vector.encodeType);
-    expect(typeHash(KEY_DELEGATION)).toBe(vector.typeHash);
+    expect(encodeType(KEY_DELEGATION)).toBe(keyDelegation.encodeType);
+    expect(typeHash(KEY_DELEGATION)).toBe(keyDelegation.typeHash);
   });
 
   it("reproduces the chainless domain and its separator", () => {
-    expect(encodeType(KEY_DELEGATION_DOMAIN)).toBe(vector.domainEncodeType);
-    expect(keyDelegationDomainSeparator()).toBe(vector.domainSeparator);
+    expect(encodeType(KEY_DELEGATION_DOMAIN)).toBe(
+      keyDelegation.domainEncodeType,
+    );
+    expect(keyDelegationDomainSeparator()).toBe(keyDelegation.domainSeparator);
   });
 });
 
@@ -60,7 +65,7 @@ describe("hashKeyDelegation and keyDelegationDigest", () => {
 
   it("is the 0x1901 digest of the struct hash over the chainless domain", () => {
     expect(keyDelegationDigest(delegation)).toBe(
-      typedDataDigest(vector.domainSeparator, vector.structHash),
+      typedDataDigest(keyDelegation.domainSeparator, vector.structHash),
     );
   });
 
@@ -199,10 +204,10 @@ describe("noticeHash", () => {
   });
 
   it.each([
-    ["composed and decomposed accents", "café", "café"],
+    ["composed and decomposed accents", `caf\u00E9`, `cafe\u0301`],
     ["LF and CRLF", "a\nb", "a\r\nb"],
     ["a trailing space", NOTICE, `${NOTICE} `],
-    ["a space and a no-break space", "a b", "a b"],
+    ["a space and a no-break space", "a b", `a\u00A0b`],
     ["case", "Notice", "notice"],
   ])("does not normalize %s", (_name, a, b) => {
     expect(noticeHash(a)).not.toBe(noticeHash(b));

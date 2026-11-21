@@ -1,7 +1,9 @@
 // Key custody for one session (W-9 to W-14): the signer lock, the action key,
-// and the transcript state of each round the session signs for. The key lives
-// only in the closure of the `signing` package's signer, which this module
-// holds and never returns; every use of it goes through the lock check.
+// and the transcript state of each round the session signs for. The key is
+// drawn at the open, once the lock is held (W-9, #220's slice S5: a wallet's
+// delegation names its address before any start). It lives only in the
+// closure of the `signing` package's signer, which this module holds and never
+// returns; every use of it goes through the lock check.
 
 import type { RandomUuid } from "@intraverse/se-client-play-client";
 import {
@@ -79,8 +81,8 @@ export type RoundOptions = {
 export type SigningSession = {
   readonly state: () => SessionState;
   /**
-   * The action key's address (EIP-55). The key is generated on the first call
-   * (W-9), only while this page holds the lock.
+   * The action key's address (EIP-55), only while this page holds the lock. The
+   * key was drawn at the open (W-9).
    */
   readonly address: () => Address;
   /** Opens the transcript state of a round (W-15); one per round. */
@@ -109,8 +111,10 @@ const separatorOf = (domain: Domain): Bytes32 => {
 
 /**
  * Opens the session's key custody: requests the signer lock once (W-14) and
- * resolves when the platform answers. A page that did not get the lock gets a
- * session that refuses every signature with `lock-not-held`.
+ * resolves when the platform answers, with the key drawn once the lock is held
+ * (W-9). A page that did not get the lock draws no key and gets a session that
+ * refuses every signature with `lock-not-held`. A random source that never
+ * yields a valid key rejects with `key-generation`, the lock released.
  */
 export const openSigningSession = async (
   options: SigningSessionOptions,
@@ -138,20 +142,23 @@ export const openSigningSession = async (
     if (current !== "signing") throw new ShellError("lock-not-held");
   };
 
+  // Drawn at the open, while the lock is held (W-9); none without it.
+  if (state() === "signing") {
+    try {
+      signer = createSigner(
+        options.random === undefined ? {} : { random: options.random },
+      );
+    } catch (error) {
+      lock.release();
+      if (error instanceof SigningError) throw new ShellError("key-generation");
+      throw error;
+    }
+  }
+
   const key = (): Signer => {
     assertLive();
-    if (signer === undefined) {
-      try {
-        signer = createSigner(
-          options.random === undefined ? {} : { random: options.random },
-        );
-      } catch (error) {
-        if (error instanceof SigningError) {
-          throw new ShellError("key-generation");
-        }
-        throw error;
-      }
-    }
+    // Held while the session is live: the end clears it.
+    if (signer === undefined) throw new ShellError("lock-not-held");
     return signer;
   };
 
@@ -187,4 +194,21 @@ export const openSigningSession = async (
       lock.release();
     },
   });
+};
+
+/**
+ * `openSigningSession`, answering `key-generation` when the random source never
+ * yields a valid key (W-9): the lock is then released.
+ */
+export const openKeyedSession = async (
+  options: SigningSessionOptions,
+): Promise<SigningSession | "key-generation"> => {
+  try {
+    return await openSigningSession(options);
+  } catch (error) {
+    if (error instanceof ShellError && error.code === "key-generation") {
+      return "key-generation";
+    }
+    throw error;
+  }
 };

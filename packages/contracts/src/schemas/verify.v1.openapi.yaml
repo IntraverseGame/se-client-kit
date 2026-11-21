@@ -171,6 +171,7 @@ components:
           description: The struct hash of the last signed action, `T_last`.
         recomputed: { $ref: "#/components/schemas/Recomputation" }
         book: { $ref: "#/components/schemas/BookVerification" }
+        keyDelegation: { $ref: "#/components/schemas/KeyDelegationEvidence" }
         checks:
           type: array
           description: Every check, once, in this order.
@@ -269,6 +270,59 @@ components:
         adminSigner:
           allOf: [{ $ref: "#/components/schemas/Address" }]
           description: The address that signed `createRoundAuth`.
+    KeyDelegationEvidence:
+      type: object
+      additionalProperties: false
+      description: |
+        The player's wallet's EIP-712 signature of
+        `KeyDelegation(string notice,address actionKey,bytes32 sessionId,uint64 expiry)`
+        for the round's action key, under the domain
+        `{name: "SuperEngine KeyDelegation", version: "1"}`, which names no
+        chain. Present on a config round started with a key delegation, from
+        the start on; absent otherwise, never null or empty.
+      required: [wallet, actionKey, sessionId, expiry, noticeId, noticeHash, notice, signature, domain, acceptedAt]
+      properties:
+        wallet:
+          allOf: [{ $ref: "#/components/schemas/Address" }]
+          description: The address that signed the delegation.
+        actionKey:
+          allOf: [{ $ref: "#/components/schemas/Address" }]
+          description: The round's action key, the one `newRound` names.
+        sessionId:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: The session's bytes32 form, its 16 UUIDv7 bytes left-aligned and zero-padded.
+        expiry:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 9007199254740991
+          description: The signed expiry, Unix seconds.
+        noticeId:
+          type: string
+          pattern: "^[a-z0-9-]{1,64}$"
+          description: The id of the signed notice in the published notice list.
+        noticeHash:
+          allOf: [{ $ref: "#/components/schemas/Hex32" }]
+          description: keccak256 of the notice's text.
+        notice:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: The signed consent text.
+        signature: { $ref: "#/components/schemas/Signature" }
+        domain:
+          type: object
+          additionalProperties: false
+          required: [name, version]
+          properties:
+            name: { type: string, pattern: "^SuperEngine KeyDelegation$" }
+            version: { type: string, pattern: "^1$" }
+        acceptedAt:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 9007199254740991
+          description: When the engine accepted the delegation with the start, Unix seconds. The engine's statement.
     CreateRoundAuth:
       type: object
       additionalProperties: false
@@ -290,11 +344,30 @@ components:
         source:
           type: string
           description: The entropy source's name.
-        chainId: { type: integer, format: int64, minimum: 0 }
-        block: { type: integer, format: int64, minimum: 0 }
+        chainId:
+          type: integer
+          format: int64
+          minimum: 0
+          description: |
+            The entropy chain: the EVM chain id, or on Solana the cluster
+            number (101 mainnet-beta, 102 testnet, 103 devnet).
+        block:
+          type: integer
+          format: int64
+          minimum: 0
+          description: |
+            The height `N` the round is bound to: the block number on an EVM
+            chain; the slot on Solana (`source` `solana`), not the block height.
         value:
           allOf: [{ $ref: "#/components/schemas/Hex32" }]
-          description: The block's value; set once the round is closed with a seed.
+          description: |
+            The value of `block` the seed uses; set once the round is closed
+            with a seed. On Solana: the slot's blockhash, base58-decoded; a
+            skipped slot takes the blockhash of the first finalized block at a
+            later slot.
+            Absent for a round released before the engine kept the value and
+            bound to another source or chain than the engine's current one: its
+            `seed` check is then `not_applicable`.
     Reveal:
       type: object
       additionalProperties: false
@@ -470,6 +543,7 @@ components:
             - payout
             - onchain_record
             - proofs
+            - key_delegation
           description: |
             `secret_commitment`: `SHA-256(roundSecret)` is `roundSecretHash`,
             the hash `newRound` names. `randomness_target`: the entropy block
@@ -488,6 +562,13 @@ components:
             settled payout. A book round has no `newRound`, `seedHash`,
             `readyHash` or actions, so the checks on them are `not_applicable`.
             `onchain_record` and `proofs` are not available yet.
+            `key_delegation`: the round's `keyDelegation` names a notice of
+            the published notice list, `noticeHash` is the hash of its
+            `notice`, and its signature is canonical and recovers to `wallet`
+            under the delegation domain over `noticeHash`, the round's
+            `actionKey`, `sessionId` and `expiry`; and `expiry` is after
+            `acceptedAt`. `not_applicable` for a round without a key
+            delegation, and for every book round.
         result:
           type: string
           enum: [passed, failed, not_applicable]

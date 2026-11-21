@@ -36,7 +36,14 @@ export type ShellErrorCode =
    * A use case failed with no answer to show (a run of autoplay's start that
    * rejected, RFC-005): the generic error.
    */
-  | "use-case-failed";
+  | "use-case-failed"
+  /**
+   * A delegated start was refused with a 422 `KEY_DELEGATION_*` code and the
+   * player has not yet signed again (a "Sign again" attempt still open counts
+   * as not yet) or chosen to continue without the wallet (W-71): nothing is
+   * sent.
+   */
+  | "delegation-refused";
 
 // One fixed message per code. A message never carries an input value, so no
 // key, token, launch code, or signed bytes can reach an error (W-4, W-41).
@@ -50,6 +57,7 @@ const MESSAGES: Readonly<Record<ShellErrorCode, string>> = {
   "round-stopped": "this round takes no new signatures",
   "snapshot-rejected": "the response is not a valid Snapshot of the round",
   "use-case-failed": "the request failed with no answer to show",
+  "delegation-refused": "the wallet link was refused; sign again or continue",
 };
 
 /** The error the shell throws. Its message is fixed per `code`. */

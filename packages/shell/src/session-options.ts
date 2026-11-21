@@ -1,8 +1,9 @@
 // What the Wrapper's composition root gives the session (play-session.ts):
 // platform pieces and validated configuration only. None of it is a secret
-// the UI can read: the launch code is sealed, and the key is drawn later,
-// inside the shell. No option carries a typedData encoder: the round flows'
-// test hooks are reachable only through internal constructors (typed-data.ts).
+// the UI can read: the launch code is sealed, and the key is drawn inside the
+// shell, at the open (W-9). No option carries a typedData encoder: the round
+// flows' test hooks are reachable only through internal constructors
+// (typed-data.ts).
 
 import type {
   Clock,
@@ -54,6 +55,19 @@ export type SessionParts = {
   readonly gameOrigins: readonly string[];
   /** The Wrapper's own origin, the SE origin, fixed at open (W-37). */
   readonly ownOrigin: string;
+  /**
+   * The configuration's `signingPageOrigin` (W-62), copied at open: the signing
+   * window's origin, which every `se.delegation/1` message is checked against.
+   * Without it no delegation is offered (fail closed).
+   */
+  readonly signingPageOrigin?: string;
+  /**
+   * The configuration's `acceptPendingNotices` (W-63), copied at open: whether
+   * a `pending` notice may be offered when none is `approved`. `false` when
+   * absent. The shell relies on the configuration's validator, which refuses
+   * `true` in production, and does not check it again.
+   */
+  readonly acceptPendingNotices?: boolean;
 };
 
 export type PlaySessionOptions = SessionParts & {

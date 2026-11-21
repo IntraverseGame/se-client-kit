@@ -77,7 +77,11 @@ describe("the production deploy workflow", () => {
       "config-prod": "[release-check, prod-verify]",
       "deploy-prod": "[release-check, prod-verify, prod-worker, config-prod]",
     });
-    expect(valuesOf(prod, "if")).toEqual(["github.ref == 'refs/heads/main'"]);
+    expect(valuesOf(prod, "if")).toEqual([
+      "github.ref == 'refs/heads/main'",
+      "steps.config.outputs.signer-config-digest != ''",
+      "needs.config-prod.outputs.signer-config-digest != ''",
+    ]);
   });
 
   it("gives each job exactly its permissions, and no token at the top", () => {
@@ -138,6 +142,7 @@ describe("the production deploy workflow", () => {
       "CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
       "WRAPPER_PROJECT: ${{ secrets.PAGES_WRAPPER_PROJECT }}",
       "VERIFIER_PROJECT: ${{ secrets.PAGES_VERIFIER_PROJECT }}",
+      "SIGNER_PROJECT: ${{ secrets.PAGES_SIGNER_PROJECT }}",
     ];
     for (const step of ["Require the Pages settings", "Deploy to Pages"]) {
       expect(stepEnv("deploy-prod", step, prod)).toEqual(
@@ -160,7 +165,7 @@ describe("the production deploy workflow", () => {
     const secrets = prod
       .filter(line => line.text.includes("secrets."))
       .map(line => line.text);
-    expect(secrets).toHaveLength(deploy.length * 2 + 7);
+    expect(secrets).toHaveLength(deploy.length * 2 + 9);
     expect(secrets.filter(text => /CLOUDFLARE|PROJECT/u.test(text))).toEqual([
       ...deploy,
       ...deploy,
@@ -171,7 +176,7 @@ describe("the production deploy workflow", () => {
   it("writes no production value: no project name, hostname, or account", () => {
     for (const line of prod.filter(entry => !entry.text.startsWith("#"))) {
       expect(line.text).not.toMatch(
-        /se-(?:wrapper|verifier|games)-|https:\/\/[a-z0-9-]+\./u,
+        /se-(?:wrapper|verifier|games|signer)-|https:\/\/[a-z0-9-]+\./u,
       );
     }
   });
@@ -204,6 +209,7 @@ describe("the production deploy workflow", () => {
     expect(usesOf("deploy-prod", prod)).toEqual([
       CHECKOUT,
       SETUP,
+      DOWNLOAD,
       DOWNLOAD,
       DOWNLOAD,
       DOWNLOAD,
@@ -242,9 +248,10 @@ describe("the production deploy workflow", () => {
     expect(unpack).not.toContain("game");
   });
 
-  it("deploys the Wrapper's and the verifier's sites, unbundled, from the tag's commit", () => {
+  it("deploys the Wrapper's and the verifier's sites (and the signing page's), unbundled, from the tag's commit", () => {
     const deploy = stepRun("deploy-prod", "Deploy to Pages", prod);
-    expect(deploy).toContain("for site in wrapper verifier; do");
+    expect(deploy).toContain('sites="wrapper verifier"');
+    expect(deploy).toContain("for site in $sites; do");
     expect(deploy).toContain("--no-bundle");
     expect(deploy).toContain('--commit-hash "$COMMIT"');
     expect(deploy).toContain('cd "$workdir"');

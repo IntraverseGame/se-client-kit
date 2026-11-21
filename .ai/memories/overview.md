@@ -1,6 +1,6 @@
 ---
 description: What se-client-kit is, why it is public, the package map, and its boundary to the backend. Read first on any task.
-last-verified: 2026-11-17 (RFC-006, proposed: `key-delegation/v1` on the list of copied contracts, to be vendored in S2; earlier: 2026-11-03, #193: the package map, with `pages-proxy`, and the current state: the packages and apps are built; 2026-10-27, #3: CODEOWNERS names the org owners, the npm org `intraverse` is claimed, trusted publishing; open-marker deferrals: hosting is #133; verify page states pull request: `verify` takes `contracts`' runtime entry and holds its checks, states, and view; verify kernel pull request: the `verify` app; the signed-action specification is used by name, not copied; fairness kernel vectors pull request: the public kernel vector bundle joins the shared contracts; play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004)
+last-verified: 2026-11-20 (#220: RFC-006 accepted; `key-delegation/v1` vendored in S2, the signing page an app; earlier: 2026-11-17 (RFC-006, proposed: `key-delegation/v1` on the list of copied contracts, to be vendored in S2; earlier: 2026-11-03, #193: the package map, with `pages-proxy`, and the current state: the packages and apps are built; 2026-10-27, #3: CODEOWNERS names the org owners, the npm org `intraverse` is claimed, trusted publishing; open-marker deferrals: hosting is #133; verify page states pull request: `verify` takes `contracts`' runtime entry and holds its checks, states, and view; verify kernel pull request: the `verify` app; the signed-action specification is used by name, not copied; fairness kernel vectors pull request: the public kernel vector bundle joins the shared contracts; play-client operations pull request: current state, with the Play API operations, and the decisions to ADR-004))
 ---
 
 # Overview
@@ -33,11 +33,17 @@ world-readable and cannot be taken back, so what may be committed is limited
 | `reference-game` | app            | a minimal sandboxed game for tests and as a sample                      |
 | `verify`         | app            | the verify page: its checks, states, and view; with its HTML and build    |
 | `pages-proxy`    | app            | the Pages sites' same-origin API proxy (one worker module)              |
+| `signing-page`   | app            | the wallet signing page, on its own origin (the only wallet code)      |
 
 Dependency direction: `contracts` ← `snapshot` and `play-client` ← `shell` ←
-`wrapper`; `signing` ← `shell`; `reference-game` takes nothing but the controller protocol's types; `signing` ← `verify`, which may also take `snapshot`, `play-client`, and `contracts`' runtime entry, and never takes `shell`; `pages-proxy` imports nothing; tests
-read vectors from `contracts`' test-only entry. The npm names are `@intraverse/se-client-<name>` (the `intraverse` npm
-organization is claimed; nothing is published yet).
+`wrapper`; `signing` ← `shell`; `contracts`' runtime entry ← `shell` for the
+key-delegation notices alone; `signing` and `contracts`' runtime entry ←
+`signing-page`, which never takes `shell`; `reference-game` takes nothing but
+the controller protocol's types; `signing` ← `verify`, which may also take
+`snapshot`, `play-client`, and `contracts`' runtime entry, and never takes
+`shell`; `pages-proxy` imports nothing; tests read vectors from `contracts`'
+test-only entry. The npm names are `@intraverse/se-client-<name>` (the
+`intraverse` npm organization is claimed; nothing is published yet).
 
 Details: [architecture.md](./architecture.md).
 
@@ -48,8 +54,8 @@ repository and are **copied** here as documents: the Play API document, the
 Snapshot schema and vectors, the signing vectors, the public vector bundle of
 the SuperEngine fairness kernel, kernelVersion 1 (its sets
 `kernel/public/v1/*`), and the key-delegation contract `key-delegation/v1` (its
-notices and their vectors; proposed, RFC-006, to be vendored in slice S2). The
-signed-action specification is not copied: the kit refers to it by name and
+notices and their vectors; RFC-006, accepted 2026-11-20, vendored in slice S2).
+The signed-action specification is not copied: the kit refers to it by name and
 implements it, and its vectors are copied (the signing vectors and the
 `signed-action/` Snapshot vector). Neither side imports the other's code. Refer
 to those contracts by name only; never paste private text or link to private
@@ -68,7 +74,11 @@ Play API operations, and the verify API read), `shell` (key custody, the
 transcript, the tip check, the W-26 `CreateRoundAuth` and `T_0` checks and the
 round's verdict, the game bridge and the operator channel, the start, move,
 cash-out, and cancel flows, and the session), the Wrapper UI, the reference game,
-the verify page, and `pages-proxy`.
+the verify page, and `pages-proxy`. The wallet delegation (#220: S3 merged;
+S2, S4 to S7, and the `signing-page` app built by #220's pull request) is
+specified in `specs/wrapper/the-wallet-delegation.md` and
+`specs/signing-page.md`; production offers it only once a release vendors an
+`approved` notice.
 
 ## Where things are
 

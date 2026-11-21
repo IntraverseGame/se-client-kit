@@ -52,8 +52,8 @@ The kit is a repository of packages and apps. These are its ownership lines.
   - the Snapshot schema `se.snapshot/1` and its golden vectors;
   - the signed-action spec and its vectors;
   - the key-delegation contract `key-delegation/v1`: its notices and their
-    vectors (proposed,
-    [RFC-006](../rfcs/active/RFC-006-wallet-delegated-action-key.md));
+    vectors ([RFC-006](../rfcs/archived/RFC-006-wallet-delegated-action-key.md),
+    accepted; vendored since slice S2 of #220);
   - every rule of what the backend accepts, and its error codes;
   - the preview stack the end-to-end tests run against, and the deploy of a
     released Wrapper to the SuperEngine origin.
@@ -81,7 +81,7 @@ se-client-kit/
     reference-game/ a minimal sandboxed game for tests and as a sample
     verify/         the verify page (Vite)
     pages-proxy/    the Pages sites' same-origin API proxy (one worker module)
-    signing-page/   the wallet signing page, its own origin (proposed, RFC-006)
+    signing-page/   the wallet signing page, on its own origin (Vite)
   e2e/              Playwright suite and the fake Play API
   tools/            repository checks and their tests (allow-list, test-only entry)
   .changeset/       pending release notes
@@ -104,13 +104,16 @@ reference game,
 [Verify page](./verify-page.md#build-and-release-v-15-to-v-17)), `typecheck`,
 and `test` (Vitest); `apps/pages-proxy` (`@intraverse/se-client-pages-proxy`,
 private) has `build` (`tsc`, its one worker module), `typecheck`, and `test`
-(Vitest) ([The Pages API proxy](#the-pages-api-proxy)). **A package gets a
-`test` script with its first real test**, not before: a `test` script that
-passes with no tests would be a green check that checks nothing, so `contracts`,
-which has no test of its own, has none. The root `test` runs every workspace's
-`test` but `e2e`'s (the root `test:e2e` runs that one), the `tools/` tests
-(`test:tools`), and `check:readmes`. The pull request that adds a package's
-first test adds its `test` script and its entry in the root `test` dependencies.
+(Vitest) ([The Pages API proxy](#the-pages-api-proxy)); `apps/signing-page`
+(`@intraverse/se-client-signing-page`, private) has `build` (Vite,
+[Signing page](./signing-page.md#build-release-and-deploy-sp-14-sp-15)),
+`typecheck`, and `test` (Vitest with jsdom). **A package gets a `test` script
+with its first real test**, not before: a `test` script that passes with no
+tests would be a green check that checks nothing, so `contracts`, which has no
+test of its own, has none. The root `test` runs every workspace's `test` but
+`e2e`'s (the root `test:e2e` runs that one), the `tools/` tests (`test:tools`),
+and `check:readmes`. The pull request that adds a package's first test adds its
+`test` script and its entry in the root `test` dependencies.
 
 Directories are `packages/<name>` and `apps/<name>`. The npm names are
 `@intraverse/se-client-<name>` (scope `@intraverse`, decided in
@@ -235,27 +238,34 @@ another origin.
    headers file with the recommended `Content-Security-Policy` (no
    `unsafe-inline`, no `unsafe-eval`, `connect-src` limited to the SE origin and
    the configured RPCs, `frame-src` the game origins),
-   `Referrer-Policy: no-referrer`, and a `Permissions-Policy`. The bundle is one
-   file, `se-client-wrapper-<version>.tar` (a deterministic tar of the build
-   output), identified by its **digest**, `sha256:` and the SHA-256 of that
-   file; the release dry run requires two builds of the same commit to give the
-   same digest ([Supply chain](./client-kit/supply-chain.md), Reproducible
-   build). A published release attaches the tar and its `.sha256` to a GitHub
-   release (tag `@intraverse/se-client-wrapper@<version>`), the released
-   Wrapper's durable home; its build-provenance attestation, of the tar's
-   digest, is stored on the repository and in the public Sigstore transparency
-   log
+   `Referrer-Policy: no-referrer`, and a `Permissions-Policy`, and no
+   `Cross-Origin-Opener-Policy` (the build refuses one: it would cut the signing
+   window's opener, W-49g). The bundle carries the verify page under `verify/`
+   and the signing page under `signer/` ([Signing page](./signing-page.md),
+   SP-14). The bundle is one file, `se-client-wrapper-<version>.tar` (a
+   deterministic tar of the build output), identified by its **digest**,
+   `sha256:` and the SHA-256 of that file; the release dry run requires two
+   builds of the same commit to give the same digest
+   ([Supply chain](./client-kit/supply-chain.md), Reproducible build). A
+   published release attaches the tar and its `.sha256` to a GitHub release (tag
+   `@intraverse/se-client-wrapper@<version>`), the released Wrapper's durable
+   home; its build-provenance attestation, of the tar's digest, is stored on the
+   repository and in the public Sigstore transparency log
    ([ADR-005](../decisions/ADR-005-release-attestation-and-artifact-upload.md);
    [Supply chain](./client-kit/supply-chain.md), Provenance).
 2. This repository's CI **deploys `main` to Cloudflare Pages**
    ([ADR-008](../decisions/ADR-008-pages-deploy-with-wrangler.md), which
-   supersedes ADR-001 decision 9; `.github/workflows/pages.yml`), to three
-   staging projects on three hostnames: the Wrapper's (`se-wrapper-stage`), the
-   verifier's (`se-verifier-stage`), and the reference game's (`se-games-stage`,
-   at `https://se-games-stage.pages.dev`, a public origin on another registrable
-   domain than the Wrapper's, W-37; see [The game's site](#the-games-site)).
-   **Every push to `main` deploys staging**, with no switch (no repository
-   variable gates a job; the human, 2026-10-27). **Production**
+   supersedes ADR-001 decision 9; `.github/workflows/pages.yml`), to four
+   staging projects on four hostnames: the Wrapper's (`se-wrapper-stage`), the
+   verifier's (`se-verifier-stage`), the reference game's (`se-games-stage`, at
+   `https://se-games-stage.pages.dev`, a public origin on another registrable
+   domain than the Wrapper's, W-37; see [The game's site](#the-games-site)), and
+   the signing page's (`se-signer-stage`, at its own `pages.dev` origin, with no
+   custom domain, on another registrable domain than the Wrapper's; see
+   [The signing page's site](#the-signing-pages-site)), the last only when its
+   origin is configured (`PAGES_SIGNER_ORIGIN`). **Every push to `main` deploys
+   staging**, with no switch (no repository variable gates a job; the human,
+   2026-10-27). **Production**
    ([ADR-009](../decisions/ADR-009-production-pages-deploy-trigger-and-source.md);
    `.github/workflows/pages-prod.yml`): the release workflow runs
    `changesets/action` on every push to `main`; with pending changesets it opens
@@ -263,33 +273,45 @@ another origin.
    publishes and creates a tag and a GitHub release per released package. In the
    same run, separate jobs attest the Wrapper tar, attach it and its `.sha256`
    to the Wrapper's release, and deploy production (no reference game:
-   production frames the real game origins): a job with no secret downloads the
-   tar by tag, checks its digest, and runs `gh attestation verify` against the
-   tag's commit; the proxy worker is built with `tsc` at the tag's commit; the
-   configuration is built in the environment `pages-prod-config`, which holds no
-   deploy credential, in production mode (below); and the deploy job
-   (`pages-prod`, no required reviewer, alone in the concurrency group
-   `pages-prod`) refuses any other digest. **Before it publishes**, the release
-   checks production's settings (`.github/workflows/pages-prod-check.yml`, which
-   the `publish` job needs; ADR-009, amendment note of 2026-11-17): the same
-   production configuration build in the same environment at the release commit,
-   followed by the deploy's own headers step on the documents (which also
-   refuses a `_headers` line over the Pages limit of 2,000 characters), and, in
+   production frames the real game origins; the signing page's site, the
+   production project (the `pages-prod` secret `PAGES_SIGNER_PROJECT`), only
+   when production's `PAGES_SIGNER_ORIGIN` is set): a job with no secret
+   downloads the tar by tag, checks its digest, and runs `gh attestation verify`
+   against the tag's commit; the proxy worker is built with `tsc` at the tag's
+   commit; the configuration is built in the environment `pages-prod-config`,
+   which holds no deploy credential, in production mode (below); and the deploy
+   job (`pages-prod`, no required reviewer, alone in the concurrency group
+   `pages-prod`) refuses any other digest. Production's signing page project
+   name is the `pages-prod` secret `PAGES_SIGNER_PROJECT`, beside the two
+   others, and is required only with `PAGES_SIGNER_ORIGIN`. **Before it
+   publishes**, the release checks production's settings
+   (`.github/workflows/pages-prod-check.yml`, which the `publish` job needs;
+   ADR-009, amendment notes of 2026-11-17 and 2026-11-21): the same production
+   configuration build in the same environment at the release commit, followed
+   by the deploy's own headers step on the documents (which also refuses a
+   `_headers` line over the Pages limit of 2,000 characters), and, in
    `pages-prod` with no repository code, the deploy's own settings step (the
    token, the account id, and the two project names set, the names Pages project
-   names, and different). A missing or refused production value stops the
-   release before anything reaches npm. A person can redeploy a released tag by
-   dispatching the same workflow, which refuses while a release run is not
-   completed. Production cannot deploy before the publish path is on (#154).
-   Staging:
+   names, and different; and, when production names a signing page,
+   `PAGES_SIGNER_PROJECT` set, a Pages project name, and different from the
+   other two). The settings check runs after the configuration check
+   (`deploy-check` needs `config-check`, whose one output is the digest of the
+   signing page's document, empty without one), so a missing
+   `PAGES_SIGNER_PROJECT` stops the release too. A missing or refused production
+   value stops the release before anything reaches npm. A person can redeploy a
+   released tag by dispatching the same workflow, which refuses while a release
+   run is not completed. Production cannot deploy before the publish path is on
+   (#154). Staging:
    - A build job with a read-only token and no secret builds the Wrapper
      artifact twice (the release dry run) and requires one digest, makes the
      reference game's artifact from the dry run's two builds and requires one
      digest, and builds the [API proxy](#the-pages-api-proxy) worker with `tsc`.
    - A config job, in the same environment, referencing only its configuration
      secrets and never the token, builds and validates the
-     [sites' configuration documents](#the-pages-sites-configuration). It runs
-     repository code in the environment that holds the token: accepted for
+     [sites' configuration documents](#the-pages-sites-configuration), the
+     signing page's with `apps/signing-page/config-check-cli.ts` on the written
+     document (no app may import the page, so its own validator runs there). It
+     runs repository code in the environment that holds the token: accepted for
      staging only (ADR-008, Risks accepted); production builds its configuration
      in a separate environment with no deploy credential.
    - A deploy job that runs no repository script downloads all of them, refuses
@@ -299,14 +321,24 @@ another origin.
      verifier's site is the artifact's `verify/` directory plus a copy of its
      page at the root (the page's files are referenced under `/verify/`, its
      build base, and Pages serves the root page for every path that is not a
-     file). The game's site is the reference game's artifact, unchanged.
+     file). The game's site is the reference game's artifact, unchanged. The
+     signing page's site is the artifact's `signer/` directory plus a copy of
+     its page at the root, as the verifier's is; the Wrapper's and the
+     verifier's sites leave `signer/` out, and the deploy refuses an upload of
+     either that holds it (SP-15). Before any upload, the layout step also
+     refuses a Wrapper document that names `signingPageOrigin` with no signing
+     page document, and a signing page document with a Wrapper document that
+     names none (SP-15; decided by the human, 2026-11-21).
 
    The Wrapper's and the verifier's sites also get the proxy as their
    `_worker.js`, their own `environment-config.json`, and a `_routes.json` that
    sends only their API paths to the proxy; every site gets its `_headers`
-   (below). The job uploads each site, unbundled, with the `wrangler` the
-   lockfile pins, and logs every digest. A released version keeps its tag,
-   digest, and attestation (step 1); Pages serves `main`.
+   (below). The signing page's site gets its own `environment-config.json` and
+   its `_headers`, and no proxy, `_routes.json`, or `_redirects`
+   ([The signing page's site](#the-signing-pages-site)). The job uploads each
+   site, unbundled, with the `wrangler` the lockfile pins, and logs every
+   digest. A released version keeps its tag, digest, and attestation (step 1);
+   Pages serves `main`.
 
 3. The **deploy credential** (a Cloudflare API token scoped to Pages) exists
    only as a secret of the protected GitHub environment `pages-stage`,
@@ -317,8 +349,11 @@ another origin.
    this repository or CI. No hostname is written in this repository.
 4. A rollback is a Pages rollback to an earlier deployment, per project
    ([runbook](../runbook/client-kit-release.md#deploy-to-cloudflare-pages)). The
-   next push to `main` deploys again; to hold a rollback, the workflow is
-   disabled until the fix is merged.
+   Wrapper's and the signing page's projects are rolled back together, to
+   deployments of the same release, so the Wrapper's `signingPageOrigin` never
+   names a signing page of another release (SP-15). The next push to `main`
+   deploys again; to hold a rollback, the workflow is disabled until the fix is
+   merged.
 
 #### The Pages API proxy
 
@@ -383,14 +418,16 @@ covers them.
 Each site serves its own environment configuration document
 ([wrapper.md](./wrapper.md#configuration), and the verify page's V-3),
 `environment-config.json` next to its page, written by the deploy; the
-artifact's bytes and digest are unchanged. The config job builds both from the
+artifact's bytes and digest are unchanged. The config job builds them from the
 `pages-stage` secrets (`PAGES_WRAPPER_ORIGIN`, `PAGES_VERIFIER_ORIGIN`,
 `PAGES_CHAIN_PINS`, `PAGES_RPC_ENDPOINTS`, `PAGES_RPC_ORIGINS`,
-`PAGES_GAME_ORIGINS`, `PAGES_OPERATOR_ORIGINS`) with
-`apps/wrapper/pages-config.ts` (with `pages-earlier-pins.ts`), and validates
-each with the Wrapper's own validator for its site's origin (the verifier's
-without `earlierPins`, below); any issue fails the job, naming an input or a
-field, never a value.
+`PAGES_GAME_ORIGINS`, `PAGES_OPERATOR_ORIGINS`, and the two optional ones of the
+wallet delegation, `PAGES_SIGNER_ORIGIN` and `PAGES_ACCEPT_PENDING_NOTICES`)
+with `apps/wrapper/pages-config.ts` (with `pages-earlier-pins.ts`), and
+validates each with its own page's validator for its site's origin (the
+Wrapper's and the verifier's with the Wrapper's, the verifier's without
+`earlierPins`, below; the signing page's with the signing page's, SP-3); any
+issue fails the job, naming an input or a field, never a value.
 
 **The tool's own rules** (`apps/wrapper/pages-config-rules.ts`; ADR-009,
 amendment note of 2026-11-17), beyond the validator's, so that a configuration
@@ -409,15 +446,15 @@ job refuses what its deploy would refuse later:
   the same values to hold the two to one verdict
   (`tools/pages-config-origins.test.ts`).
 - **In production mode** (`pages-config-cli.ts --production`, from the
-  `pages-prod-config` secrets, the same seven names), `environment` must also be
-  `production` (code `not-production`, at `PAGES_CHAIN_PINS`' `environment`), so
-  W-26a's boot rule applies to the documents: `minRpcQuorum` at least 2, its
-  default when unset (the validator's `production-quorum`), so every RPC source
-  needs at least two endpoints (W-26b), and every `solana` source (its
-  `entropyChainKind` entry `solana`) on cluster 101, mainnet-beta (the
-  validator's `production-cluster`, at `entropyChainId.<source>`; RFC-007, Q10),
-  so a test cluster's entropy never reaches production. Production mode adds no
-  rule of its own for the cluster: the Wrapper's and the verify page's
+  `pages-prod-config` secrets, the same names as staging's), `environment` must
+  also be `production` (code `not-production`, at `PAGES_CHAIN_PINS`'
+  `environment`), so W-26a's boot rule applies to the documents: `minRpcQuorum`
+  at least 2, its default when unset (the validator's `production-quorum`), so
+  every RPC source needs at least two endpoints (W-26b), and every `solana`
+  source (its `entropyChainKind` entry `solana`) on cluster 101, mainnet-beta
+  (the validator's `production-cluster`, at `entropyChainId.<source>`; RFC-007,
+  Q10), so a test cluster's entropy never reaches production. Production mode
+  adds no rule of its own for the cluster: the Wrapper's and the verify page's
   validators refuse it in a `production` document, at boot as here. A
   staging-like `preview` or `local` document, or a quorum of 1, never reaches
   production. Staging runs as `preview`, without the flag; its `solana` source,
@@ -452,6 +489,33 @@ a list entry by its index) with the code, never a value.
   endpoints' origins, the game origins, and the operator origins for `_headers`
   from the Wrapper's document, so the policy and the configuration cannot
   disagree.
+- **The wallet delegation's documents come from one input** (SP-15). With
+  `PAGES_SIGNER_ORIGIN` set (an `https` origin of the headers step's pattern,
+  `not-https-origin` otherwise, and not one of the other sites' origins,
+  `overlapping-origins`): the Wrapper's document gets `signingPageOrigin` (that
+  origin) and, when `PAGES_ACCEPT_PENDING_NOTICES` is `true`,
+  `acceptPendingNotices: true` (with the input unset the field is not written,
+  and absent reads as `false`, as the job writes `earlierPins` and `autoplay`
+  only when they hold something; any other value of the input fails the job,
+  `PAGES_ACCEPT_PENDING_NOTICES: neither unset nor true`, with or without the
+  origin; an empty value is unset); the verifier's document gets neither (the
+  verify page does not use them); and the job builds a third document, the
+  signing page's `environment-config.json`: `environment` (`PAGES_CHAIN_PINS`'
+  `environment`), `wrapperOrigins` (`[PAGES_WRAPPER_ORIGIN]`, the Wrapper's site
+  alone), and `acceptPendingNotices` exactly as the Wrapper's document has it,
+  validated by the signing page's validator for its own origin
+  (`apps/signing-page/config-check-cli.ts`, which the job runs on the written
+  document: an issue names its field and code, never a value). Without
+  `PAGES_SIGNER_ORIGIN`, none of the three is written, the job builds no third
+  document, and the deploy uploads no signing page site, so the environment
+  offers no delegation (W-62); `PAGES_ACCEPT_PENDING_NOTICES` alone changes
+  nothing. Production mode refuses `PAGES_ACCEPT_PENDING_NOTICES` set to `true`,
+  with or without `PAGES_SIGNER_ORIGIN` (the validators'
+  `pending-notices-in-production`; decided by the human, 2026-11-21), so
+  production never offers a `pending` notice. The values are set by the
+  infrastructure owner, never written in this repository; the release runbook
+  says when to set them
+  ([Turning on the wallet delegation](../runbook/client-kit-release.md#turning-on-the-wallet-delegation)).
 
 The Wrapper's build produces these files itself (`apps/wrapper`,
 `release-integrity.ts` and `release-headers.ts`), and fails closed if the page
@@ -465,28 +529,35 @@ would need a looser policy:
   (`script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; require-trusted-types-for 'script'; trusted-types 'none'`),
   so it holds even where a header is missing;
 - `headers.json` holds the recommended headers by path pattern: `/*` for the
-  Wrapper's, and `/verify/*` for the verify page's
-  ([verify page](./verify-page.md), V-16 and Security), which replace the
-  Wrapper's for that path rather than add to them. That holds only if the host
-  applies the most specific rule; a host that merges every matching rule (some
-  do) would send both policies, and the browser would enforce both: the
-  Wrapper's `connect-src` does not list the verify API's origin, so the page
-  could not reach a verify API on another origin. The hosting step therefore
-  excludes `/verify/*` from `/*`, or serves the Wrapper's rule only with headers
-  safe on every path, and checks the real response headers of a preview deploy.
-  Pages merges every matching rule, so the Pages deploy writes each more
-  specific rule as a detach (`! Name`) of every header of the broader rules,
-  then its own headers: `/verify/*` then carries only the verify page's. The
-  verifier's site gets the `/verify/*` rule's headers on `/*`. The Wrapper's
-  policy is `default-src 'none'`, `'self'` for scripts, styles, images, and
-  fonts, `base-uri`, `form-action`, and `object-src` `'none'`, Trusted Types
-  required, and three placeholders the deploy side fills from the environment's
-  document (the Pages deploy fills them from each site's configuration document:
-  the RPC endpoints' origins, the game origins, and the operator origins, each
-  sorted and unique; an empty RPC list leaves `connect-src 'self'`, an empty
-  game or operator list is `'none'`; the Play and verify APIs are same-origin
-  there, through the proxy): `connect-src 'self' {{connectOrigins}}` (the Play
-  API's and the RPC endpoints' origins), `frame-src {{gameOrigins}}`, and
+  Wrapper's, `/verify/*` for the verify page's ([verify page](./verify-page.md),
+  V-16 and Security), and `/signer/*` for the signing page's
+  ([signing page](./signing-page.md), SP-13), which replace the Wrapper's for
+  that path rather than add to them. No rule holds a
+  `Cross-Origin-Opener-Policy` header, and the build refuses one
+  (`release-headers.ts`, and `release-output-check.ts` again on the written
+  `headers.json`; the deploy's headers step refuses one too): the Wrapper is the
+  top page on a standalone launch and its opener policy would cut the signing
+  window's opener, and the signing page's own would cut its opener too (W-49g,
+  SP-13). That holds only if the host applies the most specific rule; a host
+  that merges every matching rule (some do) would send both policies, and the
+  browser would enforce both: the Wrapper's `connect-src` does not list the
+  verify API's origin, so the page could not reach a verify API on another
+  origin. The hosting step therefore excludes `/verify/*` from `/*`, or serves
+  the Wrapper's rule only with headers safe on every path, and checks the real
+  response headers of a preview deploy. Pages merges every matching rule, so the
+  Pages deploy writes each more specific rule as a detach (`! Name`) of every
+  header of the broader rules, then its own headers: `/verify/*` then carries
+  only the verify page's. The verifier's site gets the `/verify/*` rule's
+  headers on `/*`. The Wrapper's policy is `default-src 'none'`, `'self'` for
+  scripts, styles, images, and fonts, `base-uri`, `form-action`, and
+  `object-src` `'none'`, Trusted Types required, and three placeholders the
+  deploy side fills from the environment's document (the Pages deploy fills them
+  from each site's configuration document: the RPC endpoints' origins, the game
+  origins, and the operator origins, each sorted and unique; an empty RPC list
+  leaves `connect-src 'self'`, an empty game or operator list is `'none'`; the
+  Play and verify APIs are same-origin there, through the proxy):
+  `connect-src 'self' {{connectOrigins}}` (the Play API's and the RPC endpoints'
+  origins), `frame-src {{gameOrigins}}`, and
   `frame-ancestors {{operatorOrigins}}` (`'none'` when the list is empty).
   `contentSecurityPolicyFor` computes the filled policy for a validated
   document; `verifyContentSecurityPolicyFor` does the same for the verify page's
@@ -500,6 +571,11 @@ would need a looser policy:
   under `verify/` with the same rules: its own `<meta>` policy (the one above
   with `worker-src 'none'`), SRI on every script and stylesheet, which must lie
   under `verify/`, and its files in the manifest (`release-verify.ts`);
+- the signing page (`apps/signing-page`, built on its own) is copied into the
+  output under `signer/` with the same rules (`release-signer.ts`): its own
+  `<meta>` policy (SP-13, without `frame-ancestors`), SRI on every script and
+  stylesheet, which must lie under `signer/`, and its files in the manifest. The
+  Wrapper's site never serves it (SP-15);
 - `integrity-manifest.json` holds the SHA-256 of every other file;
 - the Wrapper has no public directory (`publicDir: false`), so every file goes
   through the build;
@@ -512,11 +588,12 @@ would need a looser policy:
   hash. The file types are an allow-list, compared in lower case: `.js` and
   `.css`, each loaded by a tag of the page that carries `integrity` (a dynamic
   `import()` chunk, which would load without SRI, fails the build); `.json` for
-  `integrity-manifest.json` and `headers.json` only; and `index.html` and
-  `verify/index.html`, each written exactly so, as the only HTML. Every other
-  type fails the build (another HTML spelling such as `Evil.HTML`, `.htm`, or
-  `.xhtml`, an `.svg`, which can hold a script, a `.cjs`, an image, a font); a
-  type the Wrapper needs is added to the allow-list explicitly.
+  `integrity-manifest.json` and `headers.json` only; and `index.html`,
+  `verify/index.html`, and `signer/index.html`, each written exactly so, as the
+  only HTML. Every other type fails the build (another HTML spelling such as
+  `Evil.HTML`, `.htm`, or `.xhtml`, an `.svg`, which can hold a script, a
+  `.cjs`, an image, a font); a type the Wrapper needs is added to the allow-list
+  explicitly.
 
 #### The game's site
 
@@ -596,6 +673,34 @@ the infrastructure owner, never written in this repository.
 
 <!-- TODO(hosting, #133): deferred to #133 (owner: infrastructure owner). Production's RPC provider list (two independent providers per entropy source), with its CORS behavior and `connect-src` entries. Reason: production is to come; the list is shared out of band, never written in this repository. -->
 
+#### The signing page's site
+
+The wallet signing page ([signing-page.md](./signing-page.md);
+se-client-kit#220, slice S6b) has a site of its own per environment, on another
+registrable domain than the Wrapper's (SP-2, ADR-012).
+
+- **Projects and origins** (decided by the human, 2026-11-20): the Pages project
+  `se-signer-stage` for staging and, for production, the production project,
+  each served at its own `pages.dev` origin, with no custom domain. The origins
+  are configuration (`PAGES_SIGNER_ORIGIN` in `pages-stage` and in
+  `pages-prod-config`), set by the infrastructure owner, never written in this
+  repository; production's project name is the `pages-prod` secret
+  `PAGES_SIGNER_PROJECT`, as the other production names are, and staging's is
+  written in `pages.yml`, as the other staging names are.
+- **Layout.** From the attested Wrapper artifact, unchanged: `signer/` at
+  `/signer/`, a copy of `signer/index.html` at the root, its
+  `environment-config.json` (the configuration job's third document), and
+  `_headers` with the `/signer/*` rule's headers of `headers.json` on `/*`
+  (SP-13: its Content Security Policy with `connect-src 'self'` and
+  `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`,
+  `X-Content-Type-Options: nosniff`, the Wrapper's `Permissions-Policy`, and no
+  `Cross-Origin-Opener-Policy`). No proxy and no API: the deploy refuses a
+  `_worker.js`, `_routes.json`, or `_redirects` on this site, as on the game's.
+  The Wrapper opens its root (W-66).
+- **Together with the Wrapper.** The deploy job uploads it in the same run as
+  the Wrapper's site, from the same artifact, only when `PAGES_SIGNER_ORIGIN` is
+  set; a rollback rolls both back to the same release (step 4 above).
+
 ### Never in the public repository
 
 A public repository cannot take content back once it is cloned, forked, or
@@ -606,20 +711,21 @@ request, workflow log, agent output, or release note:
   signed with are public by design and are the only exception: in
   `packages/signing/src/fixtures/keys.ts`, and in the vendored `signed-action/`
   vectors, which embed the same public test key and cannot be edited; the e2e
-  suite may pass the signed-action vector's test key to its seeded random stub,
-  read from `contracts`' test-only entry at run time, and never copies it into a
-  file), connection strings, signing keys, npm or deploy credentials;
+  suite and the `shell` package's unit tests may pass the signed-action vector's
+  test key to their seeded random stub, read from `contracts`' test-only entry
+  at run time, and never copy it into a file), connection strings, signing keys,
+  npm or deploy credentials;
 - internal hostnames, internal URLs, dashboard links, account identifiers, cloud
   resource names;
 - unpublished backend internals: only the player-facing contracts (the Play API
   document, the Snapshot schema bundle, the signed-action specification, the
   signing vectors, the public vector bundle of the SuperEngine fairness kernel,
   kernelVersion 1 (its sets `kernel/public/v1/*`), and the key-delegation
-  contract `key-delegation/v1`, its notices and their vectors, proposed in
-  RFC-006) are shared, and only as copies; no operator, wallet, or admin API
-  document, no internal module names or designs. That "wallet" names a backend
-  API document; `key-delegation/v1` is not one: it is the player-facing contract
-  a player's own browser wallet signs (proposed, RFC-006), and it may be copied;
+  contract `key-delegation/v1`, its notices and their vectors) are shared, and
+  only as copies; no operator, wallet, or admin API document, no internal module
+  names or designs. That "wallet" names a backend API document;
+  `key-delegation/v1` is not one: it is the player-facing contract a player's
+  own browser wallet signs (RFC-006), and it may be copied;
 - anything about an operator's credentials or contracts, or a player's data;
 - unreleased security findings (they go through `SECURITY.md`).
 
@@ -644,7 +750,10 @@ single-RPC gap of the first release cannot ship by accident. This is an
 `environment: production` and `minRpcQuorum` below 2
 ([wrapper.md](./wrapper.md#contract), W-26a). The configuration schema, and so
 the fixture check, also refuses an entropy source with fewer configured
-endpoints than `minRpcQuorum` (W-26b).
+endpoints than `minRpcQuorum` (W-26b), and `acceptPendingNotices: true` with
+`environment: production` (W-63). The signing page has a configuration document
+of its own, with a schema of its own in `apps/signing-page`, built from the same
+inputs as the Wrapper's ([signing-page.md](./signing-page.md), SP-3, SP-15).
 
 ### Bootstrap
 
@@ -710,4 +819,7 @@ workflow's logs are public and hold no secret.
 - Backend-owned contracts, by name and version: the Play API `/play/v1`; the
   Snapshot schema `se.snapshot/1` and its bundle; the signed-action spec; the
   signing vectors; the key-delegation contract `key-delegation/v1`, its notices
-  and their vectors (proposed, RFC-006).
+  and their vectors.
+- [signing-page.md](./signing-page.md) (the wallet signing page),
+  [RFC-006](../rfcs/archived/RFC-006-wallet-delegated-action-key.md),
+  [ADR-012](../decisions/ADR-012-the-signing-page-on-its-own-origin.md).

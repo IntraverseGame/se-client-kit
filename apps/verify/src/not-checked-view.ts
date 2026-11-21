@@ -1,9 +1,12 @@
 // What the page shows and does not check (V-13): the payout terms, the action
 // key, and the links, record, and proofs a round may carry, as text; for a
 // book round (V-20), its mode, drawn row, table, cost, and package hash, a
-// field the body does not carry shown as "not reported".
+// field the body does not carry shown as "not reported"; for a round with a
+// key delegation (V-22), its `acceptedAt`, its session, and, for a notice not
+// in this page's list, whether it is a published notice.
 
-import type { Detail } from "./check-result.ts";
+import type { CheckResult, Detail } from "./check-result.ts";
+import { dateAndSeconds } from "./delegation-view.ts";
 import type { Child } from "./dom.ts";
 import { MESSAGES as M } from "./messages.ts";
 import type {
@@ -95,8 +98,36 @@ const bookRows = (book: BookEvidence): Detail[] => [
   { label: M["notChecked.binding"], value: M["check.notChecked"] },
 ];
 
+/** V-22's values the page shows and cannot check (V-13). */
+const delegationRows = (
+  evidence: RoundEvidence,
+  checks: readonly CheckResult[],
+): Detail[] => {
+  const delegation = evidence.keyDelegation;
+  if (delegation === undefined) return [];
+  const listed = checks.find(c => c.id === 9)?.delegation?.listed;
+  return [
+    {
+      label: M["notChecked.acceptedAt"],
+      value: dateAndSeconds(delegation.acceptedAt),
+    },
+    { label: M["notChecked.session"], value: delegation.sessionId },
+    ...(listed === "unlisted"
+      ? [
+          {
+            label: M["notChecked.noticePublished"],
+            value: M["check.notChecked"],
+          },
+        ]
+      : []),
+  ];
+};
+
 /** V-13: what the page shows and does not check. */
-const notCheckedRows = (evidence: RoundEvidence): Detail[] => {
+const notCheckedRows = (
+  evidence: RoundEvidence,
+  checks: readonly CheckResult[],
+): Detail[] => {
   const { randomnessProof, fairnessProof, createRoundAuth, record } = evidence;
   const out: Detail[] =
     evidence.book === undefined ? [] : bookRows(evidence.book);
@@ -133,6 +164,7 @@ const notCheckedRows = (evidence: RoundEvidence): Detail[] => {
   out.push(
     ...zkRows(M["notChecked.randomnessZk"], randomnessProof?.zkProof),
     ...zkRows(M["notChecked.fairnessZk"], fairnessProof?.zkProof),
+    ...delegationRows(evidence, checks),
   );
   return out;
 };
@@ -140,8 +172,9 @@ const notCheckedRows = (evidence: RoundEvidence): Detail[] => {
 export const notCheckedSection = (
   p: Parts,
   evidence: RoundEvidence,
+  checks: readonly CheckResult[],
 ): readonly Child[] => {
-  const entries = notCheckedRows(evidence);
+  const entries = notCheckedRows(evidence, checks);
   return entries.length === 0
     ? []
     : [

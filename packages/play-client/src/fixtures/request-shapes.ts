@@ -4,7 +4,9 @@
 // (every field listed, none added, each one's optionality as the type has
 // it), so a document change breaks the fake instead of loosening it. The
 // document decodes bodies strictly: an unknown field, a missing required one,
-// or a body on an operation that takes none is a 400.
+// or a body on an operation that takes none is a 400. The start's
+// `keyDelegation`, a closed object the document allows as `null`, is decoded
+// as strictly (T-43): `null`, or an object of exactly its fields.
 
 import type { PlayOperationId, PlayRequestBody } from "../play-api.ts";
 
@@ -30,6 +32,7 @@ export const REQUEST_SHAPES: RequestShapes = {
     actionKey: "required",
     shape: "optional",
     grantId: "optional",
+    keyDelegation: "optional",
   },
   continueRound: {
     idempotencyKey: "required",
@@ -53,18 +56,53 @@ export const REQUEST_SHAPES: RequestShapes = {
   listGrants: undefined,
 };
 
+type KeyDelegationRequest = NonNullable<
+  PlayRequestBody<"startRound">["keyDelegation"]
+>;
+
+/** The fields of the start's `keyDelegation`, as the document's type has them. */
+export const KEY_DELEGATION_SHAPE: Presence<KeyDelegationRequest> = {
+  wallet: "required",
+  expiry: "required",
+  noticeHash: "required",
+  signature: "required",
+};
+
+type Shape = Readonly<Record<string, string>>;
+
+/**
+ * The object fields decoded as strictly as their body, by operation: each
+ * field's own shape. The document allows each one as `null`.
+ */
+const NESTED_SHAPES: {
+  readonly [Id in PlayOperationId]?: Readonly<Record<string, Shape>>;
+} = { startRound: { keyDelegation: KEY_DELEGATION_SHAPE } };
+
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Whether `body` is a body the document accepts for operation `id`. */
-export const isAcceptedBody = (id: PlayOperationId, body: unknown): boolean => {
-  const shape: Readonly<Record<string, string>> | undefined =
-    REQUEST_SHAPES[id];
-  if (shape === undefined) return body === undefined;
-  if (!isRecord(body)) return false;
-  const known = Object.keys(body).every(key => Object.hasOwn(shape, key));
+/** Whether `value` is an object of exactly `shape`'s fields. */
+const fits = (
+  shape: Shape,
+  value: unknown,
+): value is Readonly<Record<string, unknown>> => {
+  if (!isRecord(value)) return false;
+  const known = Object.keys(value).every(key => Object.hasOwn(shape, key));
   const complete = Object.entries(shape).every(
-    ([key, presence]) => presence === "optional" || Object.hasOwn(body, key),
+    ([key, presence]) => presence === "optional" || Object.hasOwn(value, key),
   );
   return known && complete;
+};
+
+/** Whether `body` is a body the document accepts for operation `id`. */
+export const isAcceptedBody = (id: PlayOperationId, body: unknown): boolean => {
+  const shape: Shape | undefined = REQUEST_SHAPES[id];
+  if (shape === undefined) return body === undefined;
+  if (!fits(shape, body)) return false;
+  return Object.entries(NESTED_SHAPES[id] ?? {}).every(
+    ([key, nested]) =>
+      !Object.hasOwn(body, key) ||
+      body[key] === null ||
+      fits(nested, body[key]),
+  );
 };

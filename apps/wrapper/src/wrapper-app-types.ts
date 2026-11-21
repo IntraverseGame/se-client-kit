@@ -6,7 +6,12 @@ import type { EnvironmentConfig } from "./environment-config.ts";
 import type { SnapshotRead } from "./round-input.ts";
 import type { PollConfig } from "./snapshot-poller.ts";
 import type { Timers } from "./timers.ts";
-import type { ChangeCause, Intents, ViewOptions } from "./view-options.ts";
+import type {
+  ChangeCause,
+  DelegationView,
+  Intents,
+  ViewOptions,
+} from "./view-options.ts";
 import type { BlockingState, WrapperState } from "./wrapper-state.ts";
 
 export type WrapperAppOptions = {
@@ -59,6 +64,10 @@ export type WrapperApp = {
   readonly autoplayInterval: (count: number) => number | undefined;
   /** The game's accepted `hello` declared `inset`, or not (RFC-005). */
   readonly gameCapable: (inset: boolean) => void;
+  /** The wallet delegation as the UI shows it (W-62 to W-71). */
+  readonly delegation: (view: DelegationView) => void;
+  /** Clears the typed error the player set aside ("Continue without", W-71). */
+  readonly dismissProblem: () => void;
   /** One quiet read of the session's Snapshot (RFC-001 Q16); see `readQuiet`. */
   readonly readQuiet: () => Promise<void>;
   readonly dispose: () => void;

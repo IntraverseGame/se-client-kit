@@ -33,6 +33,7 @@
     }
   },
   "dependencies": {
+    "@intraverse/se-client-contracts": "workspace:*",
     "@intraverse/se-client-play-client": "workspace:*",
     "@intraverse/se-client-signing": "workspace:*",
     "@intraverse/se-client-snapshot": "workspace:*"
@@ -48,7 +49,8 @@
       "dependencies": [
         "../signing:build",
         "../snapshot:build",
-        "../play-client:build"
+        "../play-client:build",
+        "../contracts:build"
       ],
       "files": [
         "src/**",
@@ -115,8 +117,5 @@
         "pnpm-lock.yaml"
       ]
     }
-  },
-  "devDependencies": {
-    "@intraverse/se-client-contracts": "workspace:*"
   }
 }

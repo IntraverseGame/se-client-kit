@@ -113,6 +113,34 @@ export const MESSAGES = {
   "check.earlierContract": "Earlier registry's address",
   "check.earlierSigner": "Earlier signer",
 
+  // Check 9's texts (V-22) and its V-13 rows below: staging drafts (decided by
+  // the human, 2026-11-20), reviewed before production offers the delegation.
+  "delegation.statement":
+    "This wallet signed, for this round's key, the text below.",
+  "delegation.means":
+    "This means the wallet signed for the session's key. It does not show where the signature was made: any site can ask a wallet for one. The time it was accepted is the engine's statement.",
+  "delegation.wallet": "Wallet",
+  "delegation.noticeId": "Notice id",
+  "delegation.listed": "In this page's list of notices",
+  "delegation.unlisted": "not in this page's list yet",
+  "delegation.expiry": "Expiry",
+  "delegation.acceptedAt": "Accepted at (the engine's statement, as given)",
+  "delegation.seconds": "unix seconds",
+  "delegation.unlistedItem":
+    "The notice is published: not checked: this notice is not in this page's list yet.",
+  "delegation.waitsItem":
+    "The round's key: not checked: it waits for the round's signed authorization.",
+  "delegation.refused": "A value was refused",
+  "delegation.refusedMany": "Values were refused",
+  "delegation.hashOfNotice": "keccak256 of the notice",
+  "delegation.recovered": "recovered from the signature",
+  "delegation.canonical": "canonical form",
+  "delegation.published": "published",
+  "delegation.newRound": "the round's newRound",
+  "delegation.list": "this page's list",
+  "delegation.asGiven": "as given",
+  "delegation.expiryAfter": "expiry after acceptedAt",
+
   "notChecked.heading": "Not checked by this page",
   "notChecked.text":
     "These values are shown as the verification service gave them. This page did not check them, and links from the service are shown as text, not followed.",
@@ -138,6 +166,12 @@ export const MESSAGES = {
   "notChecked.entryCount": "Table's entry count",
   "notChecked.totalWeight": "Table's total weight",
   "notChecked.packageHash": "Game package hash",
+  // V-22's rows (staging drafts, as check 9's texts are).
+  "notChecked.acceptedAt": "Wallet link accepted at (the engine's statement)",
+  "notChecked.session":
+    "Wallet link session (this page has no session to compare it with)",
+  "notChecked.noticePublished":
+    "Wallet link notice is a published notice (not in this page's list yet)",
   "notChecked.binding":
     "Commitment and block N fixed before block N existed (a book round has no signed authorization)",
 

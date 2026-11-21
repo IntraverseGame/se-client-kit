@@ -3,6 +3,7 @@
 // from the API are text, never followed.
 
 import type { CheckResult, Detail } from "./check-result.ts";
+import { delegationPart } from "./delegation-view.ts";
 import type { Child } from "./dom.ts";
 import type { Comparison } from "./fairness-checks.ts";
 import { MESSAGES as M } from "./messages.ts";
@@ -66,6 +67,9 @@ const check = (p: Parts, result: CheckResult): HTMLElement =>
         M["check.degraded"],
       ]),
     result.note !== undefined && paragraph(p, [result.note]),
+    ...(result.delegation === undefined
+      ? []
+      : delegationPart(p, result.delegation)),
     ...result.comparisons.map(c => comparison(p, c)),
     rows(p, result.details ?? []),
   ]);
@@ -177,7 +181,7 @@ export const reportView = (p: Parts, report: RoundReport): View => {
   const verdict: Verdict = report.verdict;
   const details = [
     ...checksList(p, report.checks),
-    ...notCheckedSection(p, report.evidence),
+    ...notCheckedSection(p, report.evidence, report.checks),
   ];
   switch (verdict.kind) {
     case "matches":

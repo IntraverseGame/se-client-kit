@@ -12,6 +12,7 @@ import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { DELEGATION_DOCUMENTS } from "./fixtures/config-delegation-documents.ts";
 import {
   CONFIG_DOCUMENTS,
   configDocument,
@@ -88,7 +89,11 @@ const issuesOf = (result: Result): string[] =>
     ? []
     : result.issues.map(issue => `${issue.code} ${issue.field}`).toSorted();
 
-const DOCUMENTS = [...CONFIG_DOCUMENTS, ...CHAIN_KIND_DOCUMENTS];
+const DOCUMENTS = [
+  ...CONFIG_DOCUMENTS,
+  ...CHAIN_KIND_DOCUMENTS,
+  ...DELEGATION_DOCUMENTS,
+];
 
 describe("one configuration schema (V-3)", () => {
   it("has documents both valid and not", () => {

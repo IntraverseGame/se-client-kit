@@ -26,6 +26,8 @@ const document = readFileSync(
 type Reader = {
   readonly PATTERNS: Readonly<Record<string, string>>;
   readonly BOOK_TABLE_MAX_ROWS: number;
+  readonly NOTICE_MAX_LENGTH: number;
+  readonly CHECK_NAMES: readonly string[];
 };
 const reader = (await import(
   pathToFileURL(join(root, "apps", "verify", "src", "verify-readers.ts")).href
@@ -53,6 +55,17 @@ const patternOf = (name: string, property: string): string | undefined => {
   const end = rest.slice(1).search(/\n {8}[A-Za-z0-9]+:\n/u);
   return patternIn(end < 0 ? rest : rest.slice(0, end + 1));
 };
+
+/** The document's closed list of check names (`Check.name`'s `enum`). */
+const checkNames = (): readonly string[] =>
+  (
+    /name:\n {10}type: string\n {10}enum:\n((?: {12}- [a-z_]+\n)+)/u.exec(
+      schema("Check"),
+    )?.[1] ?? ""
+  )
+    .split("\n")
+    .filter(line => line !== "")
+    .map(line => line.replace(/^ {12}- /u, ""));
 
 describe("the verify page's reader against the vendored verify API document", () => {
   it.each([
@@ -108,6 +121,33 @@ describe("the verify page's reader against the vendored verify API document", ()
     const amount = schema("Amount");
     expect(amount).toMatch(/maxLength: 78\b/u);
     expect(amount).toMatch(/maximum: 77\b/u);
+  });
+
+  it("spells a key delegation's notice id and domain as the document does (V-22)", () => {
+    const delegation = schema("KeyDelegationEvidence");
+    expect(patternOf("KeyDelegationEvidence", "noticeId")).toBe(
+      reader.PATTERNS["noticeId"],
+    );
+    const domain =
+      /\n {12}name: \{ type: string, pattern: "([^"]*)" \}\n {12}version: \{ type: string, pattern: "([^"]*)" \}\n/u.exec(
+        delegation,
+      );
+    expect(domain?.[1]).toBe(reader.PATTERNS["delegationName"]);
+    expect(domain?.[2]).toBe(reader.PATTERNS["delegationVersion"]);
+    expect(delegation).toMatch(
+      new RegExp(
+        `notice:\\n {10}type: string\\n {10}minLength: 1\\n {10}maxLength: ${String(reader.NOTICE_MAX_LENGTH)}\\n`,
+        "u",
+      ),
+    );
+    expect(delegation).toMatch(
+      /required: \[wallet, actionKey, sessionId, expiry, noticeId, noticeHash, notice, signature, domain, acceptedAt\]/u,
+    );
+  });
+
+  it("lists the document's check names, and only those (V-10)", () => {
+    expect(checkNames()).toHaveLength(12);
+    expect(checkNames()).toEqual(reader.CHECK_NAMES);
   });
 
   it("names the kernel version `kernel.version`, an integer from 1", () => {

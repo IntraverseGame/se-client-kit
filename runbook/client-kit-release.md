@@ -178,7 +178,8 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
    `kernel-vectors-shuffle-draw`, `kernel-vectors-steps-derive`,
    `kernel-vectors-derive`, `kernel-vectors-round-secret-hash`,
    `kernel-vectors-coin-flip-payout`, `kernel-vectors-weighted-draw`,
-   `kernel-vectors-book-draw`, `kernel-vectors-book-table-commitment`
+   `kernel-vectors-book-draw`, `kernel-vectors-book-table-commitment`,
+   `key-delegation-notices`, `key-delegation-vectors`
    (`tools/contracts-groups.ts` is the list). Each has `name` (the repository,
    recorded in the lock), `repo` (your local checkout), `ref` (for example the
    default branch on `origin`) and `path` (the file or directory in that
@@ -187,8 +188,16 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
    Keep your sources file for the next sync. Copy only the Play and verify
    OpenAPI documents, the Snapshot schema and vectors, the signing vectors, the
    fairness kernel's public sets (`kernel/public/v1/*`), and
-   `key-delegation/v1`'s notices and vectors (proposed, RFC-006; from its slice
-   S2); never another surface's document.
+   `key-delegation/v1`'s notices and vectors; never another surface's document.
+   The notices keep every entry too, matched by id: the script refuses a notices
+   file that removes or renames an entry, changes an entry's text or hash, moves
+   a status back, holds an unknown status, or repeats an `id` or a hash, and no
+   flag lifts that; a new entry may appear anywhere, and the order does not
+   matter. **A notice that turns `approved`** (after the backend's legal review)
+   reaches players only with a kit release that syncs it: production offers the
+   wallet delegation from that release's deploy on, where `PAGES_SIGNER_ORIGIN`
+   is set
+   ([Turning on the wallet delegation](#turning-on-the-wallet-delegation)).
 3. Run `pnpm exec tsx tools/sync-contracts.ts --sources <file>`. It copies the
    files and rewrites `packages/contracts/contracts.lock.json` together. It
    refuses to change or remove a vector that is already locked; pass
@@ -550,7 +559,7 @@ After publishing:
 
 The Pages workflow (`.github/workflows/pages.yml`,
 [ADR-008](../decisions/ADR-008-pages-deploy-with-wrangler.md)) deploys `main` on
-every push to it, to three staging Pages projects (Direct Upload, production
+every push to it, to four staging Pages projects (Direct Upload, production
 branch `main`), each on its own hostname. Staging only; production is to come.
 
 - `se-wrapper-stage`: the Wrapper at `/`, with its copy of the verify page at
@@ -569,7 +578,14 @@ branch `main`), each on its own hostname. Staging only; production is to come.
   `book-slot-v1` launch is a book round, which the Wrapper and the reference
   game play in the game's base mode (W-50 to W-56, issue #146): the shell checks
   it under W-52, which replaced W-26's `missing` refusal, and signs nothing for
-  it.
+  it;
+- `se-signer-stage`: the wallet signing page
+  ([specs/signing-page.md](../specs/signing-page.md)), at the root of its own
+  `pages.dev` origin (no custom domain; its origin is a secret's value, never
+  written in this repository), laid out from the Wrapper artifact's `signer/`
+  directory with a root copy of its page. The Wrapper opens it as a popup when a
+  player links a wallet. It is deployed only when `PAGES_SIGNER_ORIGIN` is set,
+  and it has no proxy and no API.
 
 The Wrapper's and the verifier's sites carry the same-origin API proxy
 (`apps/pages-proxy`) as their `_worker.js`, their own `environment-config.json`,
@@ -589,17 +605,28 @@ Three jobs:
   required), the reference game's artifact, `se-client-reference-game.tar`, from
   the dry run's two kept builds (one digest required), and the proxy worker
   (`tsc`), with a read-only token and no secret.
-- `config-stage`: the two sites' configuration documents, built from the
-  `pages-stage` configuration secrets and validated with the Wrapper's own
-  validator (`apps/wrapper/pages-config-cli.ts`), which also refuses an origin
-  the headers step would (Production, below). It references only those secrets,
-  never the token, but it runs in the same environment: an accepted risk for
-  staging only (ADR-008, Risks accepted).
-- `deploy-stage`: checks every download against its digest, lays out the three
-  sites, writes the Wrapper's and the verifier's `_routes.json` and every site's
-  `_headers` (the CSP lists and the Wrapper's origin read from the configuration
-  documents), and runs `wrangler pages deploy --no-bundle --branch main` (pinned
-  by the lockfile) once per project. It runs no repository script.
+- `config-stage`: the sites' configuration documents (the Wrapper's, the
+  verifier's, and, with `PAGES_SIGNER_ORIGIN` set, the signing page's), built
+  from the `pages-stage` configuration secrets with
+  `apps/wrapper/pages-config-cli.ts`, the Wrapper's and the verifier's validated
+  with the Wrapper's own validator, which also refuses an origin the headers
+  step would (Production, below), and the signing page's with the page's own
+  (`apps/signing-page/config-check-cli.ts`, run on the written file). Each
+  document is uploaded with its digest, the signing page's only when it was
+  written. It references only those secrets, never the token, but it runs in the
+  same environment: an accepted risk for staging only (ADR-008, Risks accepted).
+- `deploy-stage`: checks every download against its digest, lays out the sites
+  (the signing page's, only with its document, from the artifact's `signer/`
+  with a root copy of its page and its own `environment-config.json`; `signer/`
+  then leaves the Wrapper's site), writes the Wrapper's and the verifier's
+  `_routes.json` and every site's `_headers` (the CSP lists and the Wrapper's
+  origin read from the configuration documents; the signing page's from the
+  `/signer/*` rule of `headers.json`; a `Cross-Origin-Opener-Policy` in any rule
+  is refused), refuses, right before the upload, a Wrapper or verifier site that
+  holds `signer/` and a signing page site with a `_worker.js`, `_routes.json`,
+  or `_redirects`, and runs `wrangler pages deploy --no-bundle --branch main`
+  (pinned by the lockfile) once per project, the signing page's first. It runs
+  no repository script.
 
 **Every push to `main` deploys staging.** There is no switch: no repository
 variable gates a job (the human, 2026-10-27), and every job runs only from
@@ -611,11 +638,13 @@ workflow (below).
 **Setup, once, by the infrastructure owner** (names only here; the values never
 enter this repository, an issue, or a log):
 
-1. In Cloudflare: the three projects, the Wrapper's and the verifier's custom
-   hostnames in the shared zone (`se-games-stage` has none: it is served at its
-   `pages.dev` origin), and an API token with Pages edit on that account and
-   nothing else. Done by the infrastructure owner (`se-games-stage` created
-   2026-10-27).
+1. In Cloudflare: the four projects, the Wrapper's and the verifier's custom
+   hostnames in the shared zone (`se-games-stage` and `se-signer-stage` have
+   none: each is served at its `pages.dev` origin), and an API token with Pages
+   edit on that account and nothing else. Done by the infrastructure owner
+   (`se-games-stage` created 2026-10-27). `se-signer-stage` needs no environment
+   variable (it has no proxy); it must exist before the merge that first deploys
+   it ([Turning on the wallet delegation](#turning-on-the-wallet-delegation)).
 2. In the Wrapper's and the verifier's Pages projects, two plain production
    environment variables (`se-games-stage` needs none: it has no proxy), set by
    the infrastructure owner in their code (below). They take effect only on a
@@ -685,6 +714,22 @@ enter this repository, an issue, or a log):
      deployment.
    - **`PAGES_WRAPPER_ORIGIN`**, **`PAGES_VERIFIER_ORIGIN`**: the two sites'
      origins (`https://host`). Set.
+   - **`PAGES_SIGNER_ORIGIN`** (optional): the signing page's origin, the
+     `pages.dev` origin of `se-signer-stage` (`https://host`, lowercase, no
+     path, no trailing slash). It becomes the Wrapper's `signingPageOrigin` and
+     the signing page's own origin; without it the environment offers no wallet
+     delegation and no signing page is deployed. Set it only once the
+     environment's backend accepts `keyDelegation` on a start (ask the backend
+     team).
+   - **`PAGES_ACCEPT_PENDING_NOTICES`** (optional): `true`, or unset. With
+     `true`, the Wrapper and the signing page may offer and sign a `pending`
+     notice while none is `approved` (staging, so the delegation can be tried
+     before the legal review approves a text). It takes effect only with
+     `PAGES_SIGNER_ORIGIN`, but any other value (`false`, `TRUE`, a space) fails
+     the configuration job either way. Set it to `true` only where the
+     environment's backend accepts pending notices (ask the backend team);
+     otherwise every delegated start is refused `KEY_DELEGATION_NOTICE_UNKNOWN`.
+     Never in production: the configuration job refuses it there.
    - **`PAGES_CHAIN_PINS`**: JSON with exactly `environment`, `runtimeSigner`,
      `registryDomain`, `entropyChainKind`, `entropyChainId`, `minRpcQuorum`, and
      `tipLagMargin` ([wrapper.md](../specs/wrapper.md#configuration)), and
@@ -788,12 +833,12 @@ enter this repository, an issue, or a log):
      `tipLagMargin`; `PAGES_RPC_ORIGINS` must list exactly the origins of its
      URLs. Set.
 
-**The three Pages projects are managed as code by the infrastructure owner**
-(since 2026-10-28): their environment variables, bindings, and compatibility
-date. Nothing changed for the kit's deploys. Ask the infrastructure owner for
-any change to a project setting; never make it in the Cloudflare dashboard,
-because their next apply removes a setting added outside their code. A setting
-reaches a site only with its next deployment, so after such a change, when the
+**The Pages projects are managed as code by the infrastructure owner** (since
+2026-10-28): their environment variables, bindings, and compatibility date.
+Nothing changed for the kit's deploys. Ask the infrastructure owner for any
+change to a project setting; never make it in the Cloudflare dashboard, because
+their next apply removes a setting added outside their code. A setting reaches a
+site only with its next deployment, so after such a change, when the
 infrastructure owner asks, redeploy `main` (**Redeploy**, below) or push to
 `main`.
 
@@ -905,13 +950,13 @@ other workflow). Production serves the Wrapper's and the verifier's sites, each
 with the proxy worker and its configuration document, as on staging; it serves
 no reference game, and frames the real game origins. Its jobs:
 
-| Job             | Permissions                            | Environment         | What it does                                                                                                                                                                                                                                                  |
-| --------------- | -------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `release-check` | `actions: read`                        | none                | checks the tag's shape, refuses a dispatch while a release run is not completed, and resolves the tag's commit (`git ls-remote`; when the release calls it, the release's own commit)                                                                         |
-| `prod-verify`   | `contents: read`, `attestations: read` | none                | downloads the tar and its `.sha256` from the Wrapper's release by tag, checks that the `.sha256` names the tar and matches it, and runs `gh attestation verify` ([Verify before and after](#verify-before-and-after)) with `--source-digest` the tag's commit |
-| `prod-worker`   | `contents: read`                       | none                | after `prod-verify` (the attestation proves the commit before its code runs), builds the proxy worker with `tsc` at the tag's commit, with staging's own script (not attested)                                                                                |
-| `config-prod`   | `contents: read`                       | `pages-prod-config` | after `prod-verify`, builds and validates the two configuration documents from that environment's secrets (the same seven names as staging's) at the tag's commit, in production mode (`--production`); that environment holds no deploy credential           |
-| `deploy-prod`   | `contents: read`                       | `pages-prod`        | runs no repository code: downloads the tar again by tag, refuses any download whose SHA-256 is not its producing job's digest, lays out the two sites, writes their `_headers` with staging's own script, and runs `wrangler pages deploy`                    |
+| Job             | Permissions                            | Environment         | What it does                                                                                                                                                                                                                                                                                                                       |
+| --------------- | -------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `release-check` | `actions: read`                        | none                | checks the tag's shape, refuses a dispatch while a release run is not completed, and resolves the tag's commit (`git ls-remote`; when the release calls it, the release's own commit)                                                                                                                                              |
+| `prod-verify`   | `contents: read`, `attestations: read` | none                | downloads the tar and its `.sha256` from the Wrapper's release by tag, checks that the `.sha256` names the tar and matches it, and runs `gh attestation verify` ([Verify before and after](#verify-before-and-after)) with `--source-digest` the tag's commit                                                                      |
+| `prod-worker`   | `contents: read`                       | none                | after `prod-verify` (the attestation proves the commit before its code runs), builds the proxy worker with `tsc` at the tag's commit, with staging's own script (not attested)                                                                                                                                                     |
+| `config-prod`   | `contents: read`                       | `pages-prod-config` | after `prod-verify`, builds and validates the configuration documents (two, or three with `PAGES_SIGNER_ORIGIN`) from that environment's secrets (the same names as staging's) at the tag's commit, in production mode (`--production`, which refuses `PAGES_ACCEPT_PENDING_NOTICES`); that environment holds no deploy credential |
+| `deploy-prod`   | `contents: read`                       | `pages-prod`        | runs no repository code: downloads the tar again by tag, refuses any download whose SHA-256 is not its producing job's digest, lays out the sites (the signing page's only with its document), writes their `_headers` with staging's own script, and runs `wrangler pages deploy`                                                 |
 
 **The configuration tool's own rules** (specs/client-kit.md, The Pages sites'
 configuration), on staging and production alike: every origin the deploy's
@@ -931,17 +976,21 @@ runs `config-prod`'s steps in `pages-prod-config` at the release commit, then
 the deploy's own headers step on the documents (so a `_headers` line over the
 Pages limit of 2,000 characters, which grows with the number of origins, fails
 here, naming the site and the header), and `deploy-prod`'s own "Require the
-Pages settings" step in `pages-prod`, with no checkout and no repository code;
-`publish` needs it. So a missing or refused value in either environment stops
-the release before npm publishes; `config-prod` and `deploy-prod` check the
-values again at deploy time. The token is only required to be set, not verified
-with Cloudflare (ADR-009, amendment note), so an expired token still fails
-`deploy-prod`: rotate it (Rotate the Pages token, below), then dispatch "Pages
-production" from `main` with the release's tag. After changing a production
-secret, the next release checks it before it publishes; a redeploy by tag checks
-it in `config-prod` and `deploy-prod` before it deploys. A project name must be
-a Pages project name (lowercase letters, digits, and inner dashes, at most 63
-characters), and the two must differ.
+Pages settings" step in `pages-prod`, with no checkout and no repository code,
+after the configuration check, whose output says whether production names a
+signing page; `publish` needs it. So a missing or refused value in either
+environment stops the release before npm publishes; `config-prod` and
+`deploy-prod` check the values again at deploy time. The token is only required
+to be set, not verified with Cloudflare (ADR-009, amendment note), so an expired
+token still fails `deploy-prod`: rotate it (Rotate the Pages token, below), then
+dispatch "Pages production" from `main` with the release's tag. After changing a
+production secret, the next release checks it before it publishes; a redeploy by
+tag checks it in `config-prod` and `deploy-prod` before it deploys. A project
+name must be a Pages project name (lowercase letters, digits, and inner dashes,
+at most 63 characters), and the names must differ. `PAGES_SIGNER_PROJECT` is
+required only when production's configuration names a signing page
+(`PAGES_SIGNER_ORIGIN` set in `pages-prod-config`); when it is set, it is held
+to the same two rules.
 
 Only `deploy-prod` is in the concurrency group `pages-prod`
 (`cancel-in-progress: false`), so production deploys never overlap and a staging
@@ -949,12 +998,15 @@ run never touches them. `pages-prod` has **no required reviewer**: the `release`
 approval of `publish` is the human gate, and the deploy refuses any tar whose
 attestation does not verify. `pages-prod` holds the secrets
 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PAGES_WRAPPER_PROJECT`, and
-`PAGES_VERIFIER_PROJECT` (the production project names); `pages-prod-config`
-holds `PAGES_WRAPPER_ORIGIN`, `PAGES_VERIFIER_ORIGIN`, `PAGES_CHAIN_PINS`,
+`PAGES_VERIFIER_PROJECT` (the production project names), and
+`PAGES_SIGNER_PROJECT` (the signing page's production project name; required
+only once `PAGES_SIGNER_ORIGIN` is set); `pages-prod-config` holds
+`PAGES_WRAPPER_ORIGIN`, `PAGES_VERIFIER_ORIGIN`, `PAGES_CHAIN_PINS`,
 `PAGES_RPC_ENDPOINTS`, `PAGES_RPC_ORIGINS`, `PAGES_GAME_ORIGINS`, and
-`PAGES_OPERATOR_ORIGINS`. Both are created, protected and restricted to `main`,
-before publishing is turned on (Bootstrap step 8). Nothing reaches production
-until the publish path is on (#154).
+`PAGES_OPERATOR_ORIGINS`, and, once production turns the wallet delegation on,
+`PAGES_SIGNER_ORIGIN` (never `PAGES_ACCEPT_PENDING_NOTICES`). Both are created,
+protected and restricted to `main`, before publishing is turned on (Bootstrap
+step 8). Nothing reaches production until the publish path is on (#154).
 
 **Redeploy, roll back, or roll forward by tag.** Run the "Pages production"
 workflow by hand from `main` with the tag
@@ -988,7 +1040,9 @@ skipped and the run ends green with nothing deployed. Fix the cause (a missing
 
 **After the first deploy** (the real test: zone-wide settings can still answer
 with a 403 or a challenge page), checks 1 to 4 on the Wrapper's and the
-verifier's sites and check 5 on the game's site:
+verifier's sites and check 5 on the game's site (the signing page's site has its
+own checks, step 5 of
+[Turning on the wallet delegation](#turning-on-the-wallet-delegation)):
 
 1. A `/play/v1` call through the proxy on the Wrapper's site, and a `/verify/v1`
    call on each of those two sites, return the API's JSON (an API error in JSON
@@ -1049,6 +1103,107 @@ and cancel each (`gh run cancel <id>`). Each deployment records the commit
 the same scope, writes it into the `pages-stage` environment's
 `CLOUDFLARE_API_TOKEN`, runs the workflow by hand on `main` to prove it, and
 revokes the old token. Record the date (the secret name and date only).
+
+#### Turning on the wallet delegation
+
+The wallet delegation (se-client-kit#220;
+[specs/wrapper/the-wallet-delegation.md](../specs/wrapper/the-wallet-delegation.md),
+[specs/signing-page.md](../specs/signing-page.md)) is offered in an environment
+only when its Wrapper's configuration names the signing page
+(`signingPageOrigin`, from `PAGES_SIGNER_ORIGIN`) **and** the release holds a
+notice the environment accepts. Production accepts only `approved` notices, and
+the backend's list holds only `en-draft-1`, `pending` until its legal review: so
+production plays exactly as before until a release vendors an `approved` notice,
+whatever its secrets say.
+
+**Staging, with the pull request that builds it (#220).** For a human maintainer
+with the `pages-stage` secrets, or the infrastructure owner. Staging needs only
+two secrets, both in `pages-stage`: `PAGES_SIGNER_ORIGIN` and
+`PAGES_ACCEPT_PENDING_NOTICES`. Its project name is not a secret: `pages.yml`
+names `se-signer-stage` itself (`SIGNER_PROJECT`), as it names staging's other
+projects. The secrets are set **before the merge**: the Pages workflow before
+#220 does not pass them to any job, so setting them early changes nothing, and
+the push that merges #220 deploys the signing page at once.
+
+1. Ask the backend team to confirm that staging's backend accepts
+   `keyDelegation` on a start and accepts pending notices (its own setting); if
+   it accepts no pending notice, leave `PAGES_ACCEPT_PENDING_NOTICES` unset:
+   staging then offers nothing until an `approved` notice is vendored.
+2. The infrastructure owner creates the Pages project `se-signer-stage` (Direct
+   Upload, production branch `main`, no custom domain, no environment variable)
+   in the same account, and notes its `pages.dev` origin.
+3. When the pull request is approved by every gate and ready to merge, set
+   `PAGES_SIGNER_ORIGIN` (that origin) and `PAGES_ACCEPT_PENDING_NOTICES`
+   (`true`) in `pages-stage`
+   (`gh secret set PAGES_SIGNER_ORIGIN --env pages-stage`, and the same for the
+   other). Never paste a value into an issue, a pull request, or a log.
+4. Merge. Its push to `main` runs the Pages workflow: `config-stage` builds the
+   three documents from one input, and `deploy-stage` deploys the four sites.
+5. Verify: the Wrapper's `<site>/environment-config.json` has
+   `signingPageOrigin` (the signing page's origin) and `acceptPendingNotices`
+   `true`; the verifier's has neither; the signing page's
+   `<signer origin>/environment-config.json` is `environment` `preview`,
+   `wrapperOrigins` the Wrapper's origin alone, and `acceptPendingNotices`
+   `true`; `<signer origin>/` answers the signing page with SP-13's headers (its
+   Content Security Policy with `connect-src 'self'` and
+   `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`, and no
+   `Cross-Origin-Opener-Policy`); and `<Wrapper origin>/signer/` does **not**
+   answer the signing page (the Wrapper's site never serves it). Then, on a
+   desktop browser with a test wallet, open a fresh launch, choose "Link a
+   wallet" in the menu, sign in the window, and start a round: it starts, and
+   its verify page shows check 9, the wallet link, matching.
+
+**A failed configuration job in that window** (a merge or a redeploy between
+steps 3 and 4 does not fail: the old workflow ignores the two secrets) means a
+value is refused: the job names the input and a code, never the value
+(`PAGES_SIGNER_ORIGIN: not-https-origin` or `overlapping-origins`, the same as
+the Wrapper's or the verifier's origin;
+`PAGES_ACCEPT_PENDING_NOTICES: neither unset nor true`), or the document and
+field the Wrapper's validator refuses
+(`wrapper document: signing-page-same-site at signingPageOrigin`, a signing page
+on the Wrapper's registrable domain; `overlapping-origins`, a game's or an
+operator's origin), or the one the signing page's own validator refuses
+(`signer document: <code> at <field>`, from
+`apps/signing-page/config-check-cli.ts`). Fix the secret and redeploy `main`. To
+turn the delegation off again, remove `PAGES_SIGNER_ORIGIN` and redeploy `main`:
+the Wrapper's document loses `signingPageOrigin`, so no new session offers it (a
+session already open keeps the document it booted with), and the deploy uploads
+no signing page; its last deployment stays live but is reached by no Wrapper.
+
+**Production.** Two preconditions, both required, before anyone sets a
+production signer secret:
+
+1. **The texts are reviewed.** The consent dialog's, the player messages', and
+   the signing page's English texts are staging drafts (W-65, W-69, W-71,
+   SP-10); they are reviewed (and changed in a kit release if the review asks)
+   before production's `PAGES_SIGNER_ORIGIN` is set. The notice itself is the
+   backend's and goes through its own legal review.
+2. **The backend is ready.** The backend team confirms that production's first
+   backend release is live and accepts `keyDelegation` on a start.
+
+After both, the infrastructure owner creates the production project as in step
+2, then sets production's two secrets: `PAGES_SIGNER_PROJECT` (its name) in
+`pages-prod` and `PAGES_SIGNER_ORIGIN` (its `pages.dev` origin) in
+`pages-prod-config`. Production reads its project name from a secret, as it does
+its other two. Never set `PAGES_ACCEPT_PENDING_NOTICES` there: the configuration
+job refuses `true` in production mode, even without `PAGES_SIGNER_ORIGIN`, and
+so do the validators. Set both secrets before the next release: with
+`PAGES_SIGNER_ORIGIN` set and no `PAGES_SIGNER_PROJECT`, `deploy-check` stops
+the release before it publishes. The next release's `prod-check` checks the
+values before it publishes, and its deploy (or a redeploy by tag) lays out the
+signing page with the Wrapper. Until a release vendors an `approved` notice,
+production offers no delegation even with these set; the first such release
+turns it on at its deploy. Verify as in step 5, with `environment` `production`
+and no `acceptPendingNotices: true` anywhere.
+
+**Rolling back.** Roll the Wrapper's and the signing page's projects back
+together, to deployments of the same release, never one alone: the Wrapper's
+`signingPageOrigin` must name a signing page of its own release. Do not roll the
+Wrapper or the verifier back below the release that accepts the backend's
+key-delegation additions (the `KEY_DELEGATION_*` codes,
+`RoundVerification.keyDelegation`, and the `key_delegation` check) while the
+backend emits them in that environment (RFC-006's kit-first rule): ask the
+backend team first.
 
 ### Roll back or deprecate
 

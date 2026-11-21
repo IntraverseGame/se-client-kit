@@ -84,6 +84,24 @@ export const startBody: StartRoundRequest = {
   actionKey: `0x${"ab".repeat(20)}`,
 };
 
+/**
+ * A start's wallet delegation (T-43), with placeholder values of the document's
+ * forms in mixed case: `play-client` sends it as given and never reads, checks,
+ * or normalizes it.
+ */
+export const keyDelegation: NonNullable<StartRoundRequest["keyDelegation"]> = {
+  wallet: `0x${"Ab".repeat(20)}`,
+  expiry: 1_795_000_000,
+  noticeHash: `0x${"cD".repeat(32)}`,
+  signature: `0x${"eF".repeat(64)}1c`,
+};
+
+/** `startBody` carrying `keyDelegation`, last, as the shell would add it. */
+export const delegatedStartBody: StartRoundRequest = {
+  ...startBody,
+  keyDelegation,
+};
+
 export const actionBody: RoundActionRequest = {
   idempotencyKey: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   roundId: ROUND_ID,

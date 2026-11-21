@@ -6,7 +6,13 @@
 
 import { describe, expect, it } from "vitest";
 
-import { asRecord, withField, wonBody } from "./fixtures/verify-body.ts";
+import {
+  asRecord,
+  delegatedBody,
+  vectorDelegation,
+  withField,
+  wonBody,
+} from "./fixtures/verify-body.ts";
 import type { RoundEvidence } from "./round-evidence.ts";
 import { formatAmount } from "./verify-amount.ts";
 import { parseEvidence } from "./verify-body.ts";
@@ -130,9 +136,8 @@ describe("a round found", () => {
     ]);
   });
 
-  it("ignores a verdict field the API might add", () => {
-    const evidence = evidenceOf({ ...body(), verified: true });
-    expect(evidence).not.toHaveProperty("verified");
+  it("refuses a verdict field the document does not define (V-10, closed since S7)", () => {
+    expect(parseEvidence({ ...body(), verified: true })).toBeUndefined();
   });
 
   it("reads a config round's `recomputed.draw` as nothing (only a book round has a draw)", () => {
@@ -159,12 +164,11 @@ describe("a round found", () => {
   });
 });
 
-// The verify API may add a key-delegation check, named `key_delegation`, to its
-// `checks`, and a `keyDelegation` field to the body. The page reads a check of
-// any name whose result is one the document names, and ignores a field it does
-// not know, so neither changes the evidence: the API's checks are validated and
-// unused, and the result is the page's own.
-describe("a key-delegation check or field the API may add", () => {
+// The vendored document names a key-delegation check, `key_delegation`, and the
+// body's `keyDelegation` (V-22, The evidence): the page reads the check as it
+// reads every check, validated and unused, and the field as the round's
+// delegation, which check 9 recomputes. Neither is taken as a result.
+describe("the key-delegation check and field of the document", () => {
   it.each(["passed", "failed", "not_applicable"])(
     "reads a `key_delegation` check that is %s, and leaves the evidence as without it",
     result => {
@@ -194,21 +198,30 @@ describe("a key-delegation check or field the API may add", () => {
     expect(evidence).toEqual(plain);
   });
 
-  it("ignores a top-level `keyDelegation` object, a field the page does not know", () => {
-    // A placeholder, as the vendored verify document does not define its shape;
-    // `wallet` and `signature` follow RFC-006's start request, not `KeyDelegation`.
-    const delegation = {
-      actionKey: `0x${"66".repeat(20)}`,
-      sessionId: `0x${"77".repeat(32)}`,
-      expiry: 1_767_225_600,
-      noticeHash: `0x${"88".repeat(32)}`,
-      wallet: `0x${"99".repeat(20)}`,
-      signature: `0x${"aa".repeat(65)}`,
-    };
-    const plain = evidenceOf(body());
-    const evidence = evidenceOf({ ...body(), keyDelegation: delegation });
-    expect(evidence).toEqual(plain);
-    expect(evidence).not.toHaveProperty("keyDelegation");
+  it("reads the round's `keyDelegation`, the vector's object, without its fixed domain", () => {
+    const { domain, ...delegation } = vectorDelegation();
+    expect(domain).toEqual({ name: "SuperEngine KeyDelegation", version: "1" });
+    const evidence = evidenceOf(delegatedBody());
+    expect(evidence.keyDelegation).toEqual(delegation);
+    expect(evidence.keyDelegation?.noticeId).toBe("en-draft-1");
+    expect(evidence.keyDelegation?.expiry).toBe(1_795_000_000);
+    expect(evidence.keyDelegation?.acceptedAt).toBe(1_794_990_000);
+    expect({ ...evidence, keyDelegation: undefined }).toEqual({
+      ...evidenceOf(body()),
+      keyDelegation: undefined,
+    });
+  });
+
+  it("reads a round without `keyDelegation` as having none", () => {
+    expect(evidenceOf(body())).not.toHaveProperty("keyDelegation");
+  });
+
+  it("refuses a check name outside the document's list (V-10)", () => {
+    expect(
+      parseEvidence(
+        withField("checks", [{ name: "wallet", result: "passed" }]),
+      ),
+    ).toBeUndefined();
   });
 });
 

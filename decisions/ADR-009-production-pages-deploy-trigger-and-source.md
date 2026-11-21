@@ -10,7 +10,8 @@
   deploy settings are checked before `publish`, in a reusable workflow
   `.github/workflows/pages-prod-check.yml`; and a failed production deploy, the
   window case included, is recovered by a dispatch from `main` with the tag, not
-  by a re-run)
+  by a re-run; amended 2026-11-21: `deploy-check` needs `config-check`, which
+  outputs the signing page's configuration digest)
 - Deciders: the human maintainer (the release flow, the deploy source, the
   production environment), the infrastructure owner (the production projects,
   the `pages-prod` environments, the token), the org owners (the GitHub and npm
@@ -416,6 +417,21 @@ refuses (a host with an uppercase letter or an `_`). So:
   reaches a release.
 - Both production environments must still exist, protected, before publishing is
   turned on; a missing value now fails before npm instead of after.
+
+Amendment note (2026-11-21, the signing page's settings checked before publish;
+decided by the human, 2026-11-21; RFC-006, ADR-012, SP-15 of
+[the signing page](../specs/signing-page.md)): the two jobs of the check are no
+longer independent. **`deploy-check` now `needs: config-check`**, and
+**`config-check` has one output**, the SHA-256 digest of the signing page's
+configuration document it built (empty when `PAGES_SIGNER_ORIGIN` is not set and
+no such document is built), where above it had no output. `deploy-check` reads
+that output so that it requires `PAGES_SIGNER_PROJECT` (a Pages project name,
+different from the other two) only when production has a signing page, before
+anything is published; without the signing page it requires the same settings as
+before. The output is a digest, never a value, and `deploy-check` still runs no
+repository code and makes no network call. A refused or missing configuration
+value now also skips `deploy-check`, so a run that fails in `config-check`
+reports one failed job instead of two. The rest of this decision is unchanged.
 
 A manual entry point redeploys a given release by its tag through the same
 verification (a redeploy, or a roll back or forward to a released version): a

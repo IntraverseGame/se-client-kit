@@ -39,34 +39,37 @@ Part of the [Wrapper spec](../wrapper.md), section
 - **W-22.** **Start.** The shell starts a round with the Play API's `start`
   verb, a fresh `idempotencyKey` (within the Play API's length limits), the bet
   as an `AmountRequest` (`value`, `unit`, copied from the Snapshot's own
-  `Amount` fields, never typed or computed from a float), and the action key's
-  address. A player-signed `PlayerStart` is **deferred** (a config round's bind
-  needs no signed start), so the first release has no signed start. "Sign start"
-  is read as: the shell generates the key and presents its address in the
-  `start` call (its `actionKey` field), and the round's `CreateRoundAuth` then
-  commits to that address ([OQ-5](../wrapper.md#decided-questions)). The `start`
-  response is the round's Snapshot. **A start whose round may exist is sent once
-  more** (decided in human review, 2026-10-19): when the `start`, after the
-  transport's own repeats, got no response, a 503 `UNAVAILABLE` (whatever its
-  `retryable`), a 503 with no problem body, or a 500 `INTERNAL`, the shell sends
-  it again right away, once, with the same `idempotencyKey` and the same body
-  (W-36). The signer lock is checked again before the resend, as before the
-  first send: a page that lost it sends nothing more (`lock-not-held`), and a
-  session that ended sends nothing more either. The Play API document (since
-  se-backend `075b850`) says that after a lost response, `UNAVAILABLE`, or
-  `INTERNAL` the round may already have been started, that the same key and body
-  answer it (even when it has ended), so sending them again is safe, and that a
-  resend may fail the same way, with `GET /play/v1/snapshot` showing the round
-  either way. A 503 with no problem body is the kit's own reading of a lost
-  response. Without the resend the round could exist while the shell holds
-  nothing, and the player's next start (a new key) would be answered
-  `ROUND_ACTIVE` with a round the shell cannot sign in. The resend's answer is
-  read as a first answer is (the round it answers, an ended one included, is the
-  round the shell holds), and a failure of the resend is handled as a first
-  failure is (a `ROUND_ACTIVE` answer shows that round, which the shell does not
-  hold, W-42); the shell never sends the start a third time (the transport's own
-  repeats aside: `start` is a call it repeats with the same bytes). Nothing else
-  earns the resend: a 500 with another code, a 400, a 409 (`ROUND_ACTIVE` and
+  `Amount` fields, never typed or computed from a float), the action key's
+  address, and, while a wallet's delegation is registered for the session, its
+  `keyDelegation` (`wallet`, `expiry`, `noticeHash`, `signature`; W-70). A
+  player-signed `PlayerStart` is **deferred** (a config round's bind needs no
+  signed start), so the first release has no signed start. "Sign start" is read
+  as: the shell generates the key and presents its address in the `start` call
+  (its `actionKey` field), and the round's `CreateRoundAuth` then commits to
+  that address ([OQ-5](../wrapper.md#decided-questions)). The `start` response
+  is the round's Snapshot. **A start whose round may exist is sent once more**
+  (decided in human review, 2026-10-19): when the `start`, after the transport's
+  own repeats, got no response, a 503 `UNAVAILABLE` (whatever its `retryable`),
+  a 503 with no problem body, or a 500 `INTERNAL`, the shell sends it again
+  right away, once, with the same `idempotencyKey` and the same body (W-36), its
+  `keyDelegation` included, so the resend never causes a 409 `CONFLICT` (W-70).
+  The signer lock is checked again before the resend, as before the first send:
+  a page that lost it sends nothing more (`lock-not-held`), and a session that
+  ended sends nothing more either. The Play API document (since se-backend
+  `075b850`) says that after a lost response, `UNAVAILABLE`, or `INTERNAL` the
+  round may already have been started, that the same key and body answer it
+  (even when it has ended), so sending them again is safe, and that a resend may
+  fail the same way, with `GET /play/v1/snapshot` showing the round either way.
+  A 503 with no problem body is the kit's own reading of a lost response.
+  Without the resend the round could exist while the shell holds nothing, and
+  the player's next start (a new key) would be answered `ROUND_ACTIVE` with a
+  round the shell cannot sign in. The resend's answer is read as a first answer
+  is (the round it answers, an ended one included, is the round the shell
+  holds), and a failure of the resend is handled as a first failure is (a
+  `ROUND_ACTIVE` answer shows that round, which the shell does not hold, W-42);
+  the shell never sends the start a third time (the transport's own repeats
+  aside: `start` is a call it repeats with the same bytes). Nothing else earns
+  the resend: a 500 with another code, a 400, a 409 (`ROUND_ACTIVE` and
   `CONFLICT` included), a 422, an answer that is not a Snapshot of a round, or a
   start voided before any money moved (a 503 of another code, such as
   `FUNDING_UNCONFIRMED` or `ENTROPY_UNAVAILABLE`), which the document says to
@@ -87,11 +90,14 @@ Part of the [Wrapper spec](../wrapper.md), section
   ([OQ-8](../wrapper.md#decided-questions)).
 - **W-25.** **Cancel.** The shell signs `PlayerCancel` (`action = "cancel"`,
   empty path, sequence 1, `previous = T_0`) only when `T_0` is settled (W-26)
-  and either the tip check (W-26b) failed, or the player cancels a round that is
-  `active` with no move made, if the game offers it (config rounds only; W-31
-  offers the control in the `active` row, which is shown only after W-26
-  passes). Without a settled `T_0` it signs no cancel. Neither case applies
-  after a re-issue (W-26), and the cancel control is withdrawn then. A signed
+  and either the tip check (W-26b) failed, or the delegation check (W-72) failed
+  with `mismatch`, `missing`, or `unexpected`, or the player cancels a round
+  that is `active` with no move made, if the game offers it (config rounds only;
+  W-31 offers the control in the `active` row, which is shown only after W-26
+  passes). These are the closed list of cancel cases. Without a settled `T_0` it
+  signs no cancel. None of them applies after a re-issue (W-26) or a changed
+  delegation (W-72, `changed`), and the cancel control is withdrawn then. A
+  round signs at most one cancel, whichever of the checks failed. A signed
   `PlayerCancel` is sent only on its own route, never through `continue` or
   `cashOut`. The route is `POST /play/v1/rounds:cancel` (`cancelRound` in the
   Play API document, sent by `play-client`'s `cancelRound`). Its body has the
@@ -337,17 +343,25 @@ Part of the [Wrapper spec](../wrapper.md), section
      Snapshot as given. Checking it against the registry's record waits on
      anchoring, in a later increment.
   6. **Tip check** (W-26b).
+  7. **Delegation check** (W-72;
+     [The wallet delegation](./the-wallet-delegation.md)): the round's
+     `proofs.keyDelegation` is the delegation the shell sent with the start,
+     compared by value, or absent when it sent none. It sits beside the tip
+     check: neither settles `T_0`, and both follow the branches below.
 
   A past `expiry` is not a failure; the shell checks neither `expiry` nor
   `prepareWindow`. A check this item needs whose field has not been received for
   the round by the time the Snapshot is `active` fails (`missing`); it is never
   skipped. **`T_0` is settled** only when checks 1 to 5 pass. If a check fails:
 
-  - **`T_0` settled** (only the tip check failed): the shell signs
-    `PlayerCancel` (W-25) once the round is `active` and `T_0` is settled; a tip
+  - **`T_0` settled** (only the tip check, the delegation check, or both
+    failed): the shell signs `PlayerCancel` (W-25) once the round is `active`
+    and `T_0` is settled, once whichever failed; a tip check or a delegation
     check that fails before check 5 has run waits for it, and if check 5 then
-    fails the next branch applies. It keeps the round's evidence (W-27). Once
-    the Snapshot shows the round `canceled` (final, W-25), it shows "this round
+    fails the next branch applies. A delegation check that fails as `changed` (a
+    later read's object differs from the first) is handled as a re-issue
+    (below), not by this branch. It keeps the round's evidence (W-27). Once the
+    Snapshot shows the round `canceled` (final, W-25), it shows "this round
     failed verification and was canceled", and the player's bet is returned by
     the cancel. The cancel is signed once and never signed again. A refused
     cancel (a 400 or a 422) is never sent again; a cancel whose outcome is
@@ -365,6 +379,9 @@ Part of the [Wrapper spec](../wrapper.md), section
     an unconfirmed `previous` may be refused and can never be rebuilt at that
     sequence (W-15). It keeps the round's evidence, shows "this round failed
     verification", and the round ends by its game's expiry rule.
+
+  **A changed delegation** (W-72, `changed`) is handled exactly as a re-issue:
+  nothing more is signed for the round, no cancel included.
 
   **Re-issue** (`reissued`). A later read of the same round whose
   `proofs.createRoundAuth` differs, field by field after validation, from the
