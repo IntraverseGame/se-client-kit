@@ -64,16 +64,13 @@ export const exchangesFor = (
     ? relocated(ledger, behavior)
     : ledger.exchanges;
 
-export const solanaAnswer = (
+const recognisedAnswer = (
   behavior: SolanaBehavior,
   method: string,
   params: unknown,
   scene: SolanaScene,
   exchanges: readonly Exchange[],
 ): RpcAnswer | undefined => {
-  if (behavior === "error") {
-    return { error: { code: -32_000, message: "unavailable" } };
-  }
   if (method === "getGenesisHash") {
     return isEmpty(params)
       ? {
@@ -97,6 +94,19 @@ export const solanaAnswer = (
         },
       }
     : found.answer;
+};
+
+export const solanaAnswer = (
+  behavior: SolanaBehavior,
+  method: string,
+  params: unknown,
+  scene: SolanaScene,
+  exchanges: readonly Exchange[],
+): RpcAnswer | undefined => {
+  const answer = recognisedAnswer(behavior, method, params, scene, exchanges);
+  return behavior === "error" && answer !== undefined
+    ? { error: { code: -32_000, message: "unavailable" } }
+    : answer;
 };
 
 export const createFakeSolanaRpc = (

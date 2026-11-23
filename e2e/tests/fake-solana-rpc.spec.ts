@@ -165,6 +165,17 @@ test.describe("the fake Solana RPC: answers by behavior", () => {
     }
   });
 
+  test("error: a request that is no recorded exchange is still unexpected", () => {
+    for (const [method, params] of [
+      ["getBalance", []],
+      ["getSlot", []],
+      ["getGenesisHash", FINALIZED],
+      ["getBlock", [slot + 1, OPTIONS]],
+    ] as const) {
+      expect(ask("error", produced, method, params)).toBeUndefined();
+    }
+  });
+
   test("pruned: -32001 for the block, the rest as agree", () => {
     expect(ask("pruned", produced, "getBlock", [slot, OPTIONS])).toEqual({
       error: {
