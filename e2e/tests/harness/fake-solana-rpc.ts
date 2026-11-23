@@ -56,20 +56,20 @@ const isFinalized = (params: unknown): boolean =>
 const isEmpty = (params: unknown): boolean =>
   Array.isArray(params) && params.length === 0;
 
-const exchangesFor = (
+export const exchangesFor = (
   behavior: SolanaBehavior,
   ledger: SolanaLedger,
-): readonly Exchange[] => {
-  return behavior === "skip" || behavior === "gap"
+): readonly Exchange[] =>
+  behavior === "skip" || behavior === "gap"
     ? relocated(ledger, behavior)
     : ledger.exchanges;
-};
 
 export const solanaAnswer = (
   behavior: SolanaBehavior,
   method: string,
   params: unknown,
   scene: SolanaScene,
+  exchanges: readonly Exchange[],
 ): RpcAnswer | undefined => {
   if (behavior === "error") {
     return { error: { code: -32_000, message: "unavailable" } };
@@ -87,11 +87,7 @@ export const solanaAnswer = (
     const lag = behavior === "lagging" ? scene.lagMargin + 1n : 0n;
     return { result: Number(scene.ledger.finalizedSlot - lag) };
   }
-  const found = findExchange(
-    exchangesFor(behavior, scene.ledger),
-    method,
-    params,
-  );
+  const found = findExchange(exchanges, method, params);
   if (found === undefined) return undefined;
   return behavior === "pruned" && method === "getBlock"
     ? {
@@ -107,6 +103,9 @@ export const createFakeSolanaRpc = (
   options: FakeSolanaRpcOptions,
 ): FakeSolanaRpc => {
   const behaviors = new Map<string, SolanaBehavior>();
+  const exchanges = new Map<SolanaBehavior, readonly Exchange[]>();
+  const exchangesOf = (behavior: SolanaBehavior): readonly Exchange[] =>
+    exchanges.get(behavior) ?? options.ledger.exchanges;
   const calls: RpcCallRecord[] = [];
   const unexpected: string[] = [];
   const cors = {
@@ -130,6 +129,7 @@ export const createFakeSolanaRpc = (
       } catch {
         body = undefined;
       }
+      const behavior = behaviors.get(provider) ?? "agree";
       const method = isRecord(body) ? body["method"] : undefined;
       const params = isRecord(body) ? body["params"] : undefined;
       const answer =
@@ -138,10 +138,11 @@ export const createFakeSolanaRpc = (
         body["jsonrpc"] === "2.0" &&
         typeof method === "string"
           ? solanaAnswer(
-              behaviors.get(provider) ?? "agree",
+              behavior,
               method,
               params,
               options,
+              exchangesOf(behavior),
             )
           : undefined;
       if (answer === undefined) {
@@ -165,8 +166,8 @@ export const createFakeSolanaRpc = (
 
   return {
     behave: (provider, behavior) => {
-      if (behavior === "skip" || behavior === "gap") {
-        relocated(options.ledger, behavior);
+      if (!exchanges.has(behavior)) {
+        exchanges.set(behavior, exchangesFor(behavior, options.ledger));
       }
       behaviors.set(provider, behavior);
     },

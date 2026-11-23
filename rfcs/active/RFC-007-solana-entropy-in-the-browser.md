@@ -1137,8 +1137,8 @@ RFC waits on, not questions):
   `valid/coinflip-won-solana-skipped-slot`, whose `createRoundAuth` carries the
   public test signer's signature over the Solana target; the kit vendored them
   in slice 6. Still pending from the backend: a Solana `signature/` or
-  `signed-action/` vector (se-backend#613), so T-42 does not compare a Solana
-  cancel or pick with a vendored signature.
+  `signed-action/` vector, so T-42 does not compare a Solana cancel or pick with
+  a vendored signature.
 - **Staging's switch to mainnet-beta** (Q11, Q16; section 9, step 8): the
   staging keys on two providers staging's own engine does not read,
   Origin-locked to staging's origins, and staging's secrets (the infrastructure

@@ -531,7 +531,7 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   and a wrong value fails check 5 so the round never reaches `ready`. The verify
   page's rows use `harness/verify-solana-page.ts`'s `test` (`solanaCase`,
   `solanaDocument`, `solanaRpc`, `solanaVerifyPage`) and `solanaBookRound`. No
-  Solana signature vector exists (se-backend#613), so a Solana cancel is
+  Solana signature vector exists yet, so a Solana cancel is
   checked for its round, its `typedData`, and a 65-byte signature, and the
   byte-for-byte row is pending in `pending.spec.ts`.
 - **The verify page's e2e** uses `harness/verify-page.ts`'s `test` (the shared

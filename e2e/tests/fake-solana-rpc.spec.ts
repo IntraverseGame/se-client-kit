@@ -1,4 +1,5 @@
 import {
+  exchangesFor,
   MAINNET_GENESIS,
   solanaAnswer,
   type SolanaBehavior,
@@ -42,7 +43,13 @@ const ask = (
   method: string,
   params: unknown,
 ): ReturnType<typeof solanaAnswer> =>
-  solanaAnswer(behavior, method, params, scene(ledger));
+  solanaAnswer(
+    behavior,
+    method,
+    params,
+    scene(ledger),
+    exchangesFor(behavior, ledger),
+  );
 
 const asRecord = (value: unknown): Record<string, unknown> => {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {

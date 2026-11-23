@@ -1,10 +1,7 @@
 // VT-14, an endpoint's value for slot N in the Solana chain read (RFC-007
 // section 4): a block at N, a skipped N with `getBlocksWithLimit` and
 // `getBlock(M)`, the ledger gaps, the readers' refusals, and the not-found
-// codes. Synthetic answers; the vendored `entropy/v1/solana` reads (a produced
-// slot, -32007, -32009, and a ledger gap) replay in
-// chain-read-solana-vectors.test.ts. The non-32-byte and -32004 cases have no
-// vendored read.
+// codes. Synthetic answers.
 
 import { describe, expect, it } from "vitest";
 

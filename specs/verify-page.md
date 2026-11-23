@@ -1440,7 +1440,9 @@ In `e2e/tests/harness/` (the suite's harness, never shipped):
   from that value as for any book round; the verify page's `connect-src` under
   `verifyPolicy` is filled with the configured endpoints' origins.
   `verify-page-solana.spec.ts` is VT-15 and `fake-solana-rpc.spec.ts` tests the
-  fake, the ledger, and the Solana round of the round tests (no page load).
+  fake, the ledger, and the Solana round of the round tests (no page load);
+  `fake-solana-relocation.spec.ts` pins the skip and gap relocations to the
+  `skipped-slot` and `skipped-slot-ledger-gap` vectors.
 - `verify-page-earlier-pins.spec.ts` is VT-12's browser rows: the served
   document's current pins are another pair, and `earlierPins` lists the canned
   round's own pins or does not.

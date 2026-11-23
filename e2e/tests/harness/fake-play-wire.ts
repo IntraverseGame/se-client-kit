@@ -74,12 +74,7 @@ type AnswerKind<Id extends PlayOperationId> =
       : never)
   | (Id extends SnapshotOperationId
       ? {
-          /**
-           * 200 with a Snapshot the harness built from vendored vectors only
-           * (solana-round.ts): the Solana round's own `createRoundAuth` and
-           * slot laid over an EVM round's `active` or `resolving` vector. The
-           * Wrapper validates it (W-28) as it does every body.
-           */
+          /** 200 with a Snapshot the harness built from vendored vectors. */
           readonly kind: "snapshot-document";
           readonly document: Readonly<Record<string, unknown>>;
         }

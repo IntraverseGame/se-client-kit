@@ -1,7 +1,6 @@
 // VT-14, the Solana chain read (RFC-007 section 4): the calls and their exact
 // options, the configuration it refuses, the genesis hash, and the failure
-// order, against a fake endpoint set. Synthetic answers; the vendored
-// `entropy/v1/solana` reads replay in chain-read-solana-vectors.test.ts.
+// order, against a fake endpoint set. Synthetic answers.
 
 import { describe, expect, it } from "vitest";
 

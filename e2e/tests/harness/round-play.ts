@@ -71,9 +71,8 @@ type RoundFixtures = {
 /**
  * The suite's `test` with the round's session: the random source scripts the
  * Wrapper's key draw and the page's clock is installed. The tip check's chain
- * is left to the test that extends it (`test` below for EVM,
- * solana-round-play.ts for Solana). Overrides `randomDraws` here, so the shared
- * fixtures stay as they are.
+ * is left to the test that extends it. Overrides `randomDraws` here, so the
+ * shared fixtures stay as they are.
  */
 export const roundSession = base.extend<RoundFixtures>({
   // An override keeps the shared fixture's registration (automatic).

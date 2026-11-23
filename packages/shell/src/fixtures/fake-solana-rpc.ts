@@ -1,9 +1,8 @@
 // Test-only: a scripted Solana JSON-RPC transport for the tip check (RFC-007
 // section 3), with fake-rpc.ts's manual clock. No network, no real timers.
-// Its answers are synthetic: the vendored `entropy/v1/solana` reads hold no
-// genesis hash and no shell call (RFC-007 section 9, slice 6). The genesis hashes are the
-// public protocol constants the shell pins; the URLs are reserved example
-// hosts that nothing resolves, with no key.
+// Its answers are synthetic. The genesis hashes are the public protocol
+// constants the shell pins; the URLs are reserved example hosts that nothing
+// resolves, with no key.
 
 import type { CancelSignal } from "@intraverse/se-client-play-client";
 

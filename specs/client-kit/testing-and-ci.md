@@ -626,20 +626,19 @@ development-only, so it may import the test-only entry of `contracts`.
   one row is pending: `e2e/tests/pending.spec.ts` is where a row that cannot run
   yet is declared with `test.fixme`, reported as skipped, never as passed, and
   it lists the part of T-42 that replays a Solana signature vector (the backend
-  has published none, se-backend#613). Every spec file runs in all three
-  projects except the proofs of the blocks (above): `hermetic-workers.spec.ts`
-  in Chromium only, and `hermetic-proxy.spec.ts` and `hermetic-webrtc.spec.ts`
-  in Firefox and WebKit only, each skipped elsewhere with its reason. One
-  browser behavior is pinned per project, since the Wrapper works around it: a
-  parent's `focus()` while its frame has the focus (W-46's move from the game
-  frame to the result or error heading) moves the focus in Chromium, WebKit,
-  and, from Playwright 1.65 (its Firefox 159.0 build), Playwright's Firefox;
-  Playwright 1.64's Firefox build (157.0) left it in the frame. Both Firefox
-  builds run frames in their parent's process
-  (`fission.webContentIsolationStrategy` 0). A release Firefox (159) moves it
-  without the blur, checked by hand. The Wrapper keeps blurring the frame
-  element first so the move does not depend on the browser; with the blur it
-  moves in every project (`focus-from-frame.spec.ts`, `FOCUS_FROM_FRAME` in
+  has published none yet). Every spec file runs in all three projects except the
+  proofs of the blocks (above): `hermetic-workers.spec.ts` in Chromium only, and
+  `hermetic-proxy.spec.ts` and `hermetic-webrtc.spec.ts` in Firefox and WebKit
+  only, each skipped elsewhere with its reason. One browser behavior is pinned
+  per project, since the Wrapper works around it: a parent's `focus()` while its
+  frame has the focus (W-46's move from the game frame to the result or error
+  heading) moves the focus in Chromium, WebKit, and, from Playwright 1.65 (its
+  Firefox 159.0 build), Playwright's Firefox; Playwright 1.64's Firefox build
+  (157.0) left it in the frame. Both Firefox builds run frames in their parent's
+  process (`fission.webContentIsolationStrategy` 0). A release Firefox (159)
+  moves it without the blur, checked by hand. The Wrapper keeps blurring the
+  frame element first so the move does not depend on the browser; with the blur
+  it moves in every project (`focus-from-frame.spec.ts`, `FOCUS_FROM_FRAME` in
   `harness/frame-focus.ts`, one stdout line). T-14 asserts the full W-46 rule in
   every project: the result heading focused, the game's heading not focused, and
   the game's document without focus. T-9a's e2e cases

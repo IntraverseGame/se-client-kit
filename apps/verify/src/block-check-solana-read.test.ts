@@ -1,7 +1,6 @@
 // VT-14, check 6 of a Solana round as the page runs it (RFC-007 section 4):
 // the reader picked by the source's kind, the display, `entropy.value`, and a
-// round not ended. Synthetic answers and rounds; the vendored
-// `entropy/v1/solana` reads replay in chain-read-solana-vectors.test.ts.
+// round not ended. Synthetic answers and rounds.
 
 import { describe, expect, it } from "vitest";
 
