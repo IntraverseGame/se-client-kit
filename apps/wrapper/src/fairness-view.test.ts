@@ -150,10 +150,10 @@ describe("the chip in the bar (T-30)", () => {
     const chip = ui.host.querySelector(".se-chip");
     const roundId = String(snapshotVector("coinflip-won").roundId);
     // Ended: the shortened round id shows; the name says it in full.
-    expect(chip?.textContent).toBe(`…${roundId.slice(-8)}`);
+    expect(chip?.textContent).toBe(`\u2026${roundId.slice(-8)}`);
     // The visible label leads the name (WCAG 2.5.3).
     expect(chip?.getAttribute("aria-label")).toBe(
-      `…${roundId.slice(-8)}. ${m["chip.checked"]}, ${m["receipt.round"]} ${roundId}: ${m["receipt.openEnded"]}`,
+      `\u2026${roundId.slice(-8)}. ${m["chip.checked"]}, ${m["receipt.round"]} ${roundId}: ${m["receipt.openEnded"]}`,
     );
     expect(chip?.getAttribute("aria-expanded")).toBe("false");
   });
