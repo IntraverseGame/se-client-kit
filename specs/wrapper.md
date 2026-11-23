@@ -440,10 +440,10 @@ level AA**.
   result of the book round the player just started (its start answered
   `starting`) moves focus to the result heading, once. When the game's iframe
   element has the focus, the Wrapper takes it back for the result or error
-  heading by blurring the frame element before focusing the heading, since some
-  engines (Firefox with its frames in the parent's process, as in Playwright's
-  Firefox build) do not move the focus out of a focused iframe on `focus()`
-  alone.
+  heading by blurring the frame element before focusing the heading, so the move
+  does not depend on the browser: some engines do not move the focus out of a
+  focused iframe on `focus()` alone (Playwright 1.64's Firefox build did not;
+  from Playwright 1.65 its Firefox build moves it).
   - **Single screen** (RFC-004, decided 2026-10-30; where it differs from the
     text before it, it holds): the live region reads the bar's status line, or
     the cover's heading for a state on the stage's cover; `role="alert"` is the
@@ -906,71 +906,72 @@ after a move in the game, by keyboard or pointer, the focus on the Wrapper's
 result heading (W-46), where it stays once the game has shown the result, since
 the reference game moves focus only while its own document has focus, and the
 game's heading never takes it and the game's document has no focus, in every
-project; `focus-from-frame.spec.ts` shows why the Wrapper blurs the focused
-frame element first: plain `focus()` leaves the focus in the frame in
-Playwright's Firefox build (a release Firefox moves it), and with the frame
-blurred first the heading takes it in every project; and the audit of the
-round's states, the configuration error, and a browser without Web Locks;
-another tab is audited in `t17-two-tabs.spec.ts`, and every other state in its
-own row's spec, as the file lists), T-15 during a signed action
-(`t15-signed-action.spec.ts`: a lost response repeated with the same bytes and
-key; and the browser offline, where every attempt of the move is the same signed
-bytes and key and fails, and the Snapshot is read first when the connection
-returns; the attempts are read from the requests the page sent, which every
-project reports, since offline Playwright's Firefox fails a request before any
-route sees it, and the fake's own records of them, in Chromium and WebKit, are
-each the same move too; `network.spec.ts` proves where an offline request is
-routed), T-15's resend of a move lost offline (`t15-resend-lost.spec.ts`, W-16:
-when the read after the connection returns shows the round `active` at the step
-before the move, the shell sends the same signed bytes and `idempotencyKey` once
-more, and the fake's records agree where its route sees offline requests; the
-resend's answer, the round `won`, is what the Wrapper and the game show; a read
-that shows the move applied sends nothing; a resend that is lost too is the last
-send, so the move goes out twice; each state shown is audited by axe, the
-not-confirmed one in `t15-unconfirmed.spec.ts`; the player's own resend sharing
-the one resend is the shell's unit test (T-4), since the Wrapper calls no
-`resend`), T-15's move not confirmed (`t15-unconfirmed.spec.ts`, W-16: the move
-lost offline and its one resend lost too show "your move hasn't been confirmed"
-with the time limit, the round id, and "check again"; "check again" and the 30 s
-background read each read the round and send no move, a read of the round `won`
-settles it, and each state is audited by axe), T-16's round errors
-(`t16-round-errors.spec.ts`: out of sync, the session-ending codes, and a
-rejected Snapshot, the fake's one deliberate `invalid/` answer), and T-19
-(`t19-cancel-paths.spec.ts`), T-20 (`t20-version-drop.spec.ts`: the move's
-answer at a lower `version`, through the fake's `snapshot-version`), and T-36
-(`t36-token-lifecycle.spec.ts`: the refresh point, the old and the new token,
-the session-ending answers to a refresh, and the deadline), and T-50, the wallet
-delegation (#220, S6 and S6b): `t50-delegation.spec.ts` (the menu, the consent
-dialog, and a blocked window, against `window.open` stubbed);
-`t50-signing-page.spec.ts` (the release's `signer/` served at its own origin,
-`https://signer.e2e-signer.test`, under the `/signer/*` rule of its
-`headers.json` with a root copy of its page and its own configuration document,
-opened from a click on a stand-in for the Wrapper, with the replay wallet: each
-of the page's states and its audit, and a COOP header cutting the opener); and
-`t50-delegation-signed.spec.ts` (the same site with the Wrapper, on the round
-harness: the fake's redeem answers the key-delegation vector's session and hard
-end, `redeemAs`, and the page's clock is installed at the fake's time, before
-the vector's expiry). No row is **pending** now: `e2e/tests/pending.spec.ts`
-declares a row that cannot run yet as a skipped test, never as a passing one,
-and lists none. T-12 runs against the fake (`t12-cash-out.spec.ts`: the
-cash-out, on the round synced from se-backend `6afc690`, and the last surviving
-move, on the round won on its last row, synced from `71edfbe`) and has its
-preview row (below), which plays the cash-out only. The round rows install
-Playwright's `page.clock` before the page loads and move the Wrapper's own
-timers (its polls and the transport's retries) forward with it, so a poll or a
-retry comes at once; the clock is not paused, so those timers also run in real
-time, and no assertion depends on a timer not firing. A clock paused before load
-does not stop the Wrapper: the session opens and a round plays to its result on
-it (`t10-win.spec.ts` in Chromium, WebKit, and Firefox, 2026-11-17). What a
-paused clock stops is anything waiting on a page timer the test does not move:
-every axe audit, and the waits the round rows leave to real time (T-14's
-keyboard play, T-27's typed error and its resize), so the round rows keep it
-running. T-36 audits nothing and asserts when a call is sent, so it pauses the
-clock at the session's open before the page loads, and the session opens to
-`idle` on it with the redeem's answer at a known page time; the test alone then
-moves the clock, in one run where no call is in flight, only once the page has
-read the answer it waits on, and in 2 s steps where failures must time out, and
-reads each Play API call's page time from a record the page keeps (a
+project; `focus-from-frame.spec.ts` pins, per project, where plain `focus()`
+sends the focus (to the heading in every project from Playwright 1.65, whose
+Firefox build moves it; Playwright 1.64's Firefox build left it in the frame; a
+release Firefox moves it), and that with the frame blurred first (the Wrapper
+keeps the blur so the move does not depend on the browser) the heading takes it
+in every project; and the audit of the round's states, the configuration error,
+and a browser without Web Locks; another tab is audited in
+`t17-two-tabs.spec.ts`, and every other state in its own row's spec, as the file
+lists), T-15 during a signed action (`t15-signed-action.spec.ts`: a lost
+response repeated with the same bytes and key; and the browser offline, where
+every attempt of the move is the same signed bytes and key and fails, and the
+Snapshot is read first when the connection returns; the attempts are read from
+the requests the page sent, which every project reports, since offline
+Playwright's Firefox fails a request before any route sees it, and the fake's
+own records of them, in Chromium and WebKit, are each the same move too;
+`network.spec.ts` proves where an offline request is routed), T-15's resend of a
+move lost offline (`t15-resend-lost.spec.ts`, W-16: when the read after the
+connection returns shows the round `active` at the step before the move, the
+shell sends the same signed bytes and `idempotencyKey` once more, and the fake's
+records agree where its route sees offline requests; the resend's answer, the
+round `won`, is what the Wrapper and the game show; a read that shows the move
+applied sends nothing; a resend that is lost too is the last send, so the move
+goes out twice; each state shown is audited by axe, the not-confirmed one in
+`t15-unconfirmed.spec.ts`; the player's own resend sharing the one resend is the
+shell's unit test (T-4), since the Wrapper calls no `resend`), T-15's move not
+confirmed (`t15-unconfirmed.spec.ts`, W-16: the move lost offline and its one
+resend lost too show "your move hasn't been confirmed" with the time limit, the
+round id, and "check again"; "check again" and the 30 s background read each
+read the round and send no move, a read of the round `won` settles it, and each
+state is audited by axe), T-16's round errors (`t16-round-errors.spec.ts`: out
+of sync, the session-ending codes, and a rejected Snapshot, the fake's one
+deliberate `invalid/` answer), and T-19 (`t19-cancel-paths.spec.ts`), T-20
+(`t20-version-drop.spec.ts`: the move's answer at a lower `version`, through the
+fake's `snapshot-version`), and T-36 (`t36-token-lifecycle.spec.ts`: the refresh
+point, the old and the new token, the session-ending answers to a refresh, and
+the deadline), and T-50, the wallet delegation (#220, S6 and S6b):
+`t50-delegation.spec.ts` (the menu, the consent dialog, and a blocked window,
+against `window.open` stubbed); `t50-signing-page.spec.ts` (the release's
+`signer/` served at its own origin, `https://signer.e2e-signer.test`, under the
+`/signer/*` rule of its `headers.json` with a root copy of its page and its own
+configuration document, opened from a click on a stand-in for the Wrapper, with
+the replay wallet: each of the page's states and its audit, and a COOP header
+cutting the opener); and `t50-delegation-signed.spec.ts` (the same site with the
+Wrapper, on the round harness: the fake's redeem answers the key-delegation
+vector's session and hard end, `redeemAs`, and the page's clock is installed at
+the fake's time, before the vector's expiry). No row is **pending** now:
+`e2e/tests/pending.spec.ts` declares a row that cannot run yet as a skipped
+test, never as a passing one, and lists none. T-12 runs against the fake
+(`t12-cash-out.spec.ts`: the cash-out, on the round synced from se-backend
+`6afc690`, and the last surviving move, on the round won on its last row, synced
+from `71edfbe`) and has its preview row (below), which plays the cash-out only.
+The round rows install Playwright's `page.clock` before the page loads and move
+the Wrapper's own timers (its polls and the transport's retries) forward with
+it, so a poll or a retry comes at once; the clock is not paused, so those timers
+also run in real time, and no assertion depends on a timer not firing. A clock
+paused before load does not stop the Wrapper: the session opens and a round
+plays to its result on it (`t10-win.spec.ts` in Chromium, WebKit, and Firefox,
+2026-11-17). What a paused clock stops is anything waiting on a page timer the
+test does not move: every axe audit, and the waits the round rows leave to real
+time (T-14's keyboard play, T-27's typed error and its resize), so the round
+rows keep it running. T-36 audits nothing and asserts when a call is sent, so it
+pauses the clock at the session's open before the page loads, and the session
+opens to `idle` on it with the redeem's answer at a known page time; the test
+alone then moves the clock, in one run where no call is in flight, only once the
+page has read the answer it waits on, and in 2 s steps where failures must time
+out, and reads each Play API call's page time from a record the page keeps (a
 pass-through `fetch` it installs once the session is open, which also marks each
 answer read). The round rows run with tracing off (the key's bytes are an
 init-script argument, which a trace would write to a file). The vendored round

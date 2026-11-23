@@ -1,10 +1,10 @@
 // W-46 with the game frame focused: after the player's own move, the Wrapper
 // blurs the game's iframe element before it focuses the result or error
-// heading, since some engines (Firefox with its frames in the parent's
-// process, as in Playwright's Firefox build) do not move the focus out of a
-// focused iframe on `focus()` alone (e2e: focus-from-frame.spec.ts). Without a
-// focused game frame, or after a poll, nothing more happens. The rest of the
-// focus rule is in accessibility.test.ts.
+// heading, so the move does not depend on the engine: some do not move the
+// focus out of a focused iframe on `focus()` alone (Playwright 1.64's Firefox
+// build did not; e2e: focus-from-frame.spec.ts). Without a focused game frame,
+// or after a poll, nothing more happens. The rest of the focus rule is in
+// accessibility.test.ts.
 
 import { describe, expect, it, vi } from "vitest";
 

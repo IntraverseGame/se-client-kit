@@ -3,12 +3,12 @@
 // the game frame for the Wrapper's controls); after a move in the game, by
 // keyboard or pointer, the focus is on the Wrapper's result heading, and stays
 // there once the game has shown the result too, with nothing in the game
-// focused (the Wrapper blurs the focused frame element first, which
-// Playwright's Firefox needs: focus-from-frame.spec.ts); and the accessibility
-// audit of every status and error state. Audited here: the states a round
-// passes through on its way (idle, starting, the round ready with the game
-// frame, and resolving), the configuration error, and the browser without Web
-// Locks (W-14, W-44).
+// focused (the Wrapper blurs the focused frame element first, so the move
+// does not depend on the browser: focus-from-frame.spec.ts); and the
+// accessibility audit of every status and error state. Audited here: the
+// states a round passes through on its way (idle, starting, the round ready
+// with the game frame, and resolving), the configuration error, and the
+// browser without Web Locks (W-14, W-44).
 // Each other state is audited where its own row produces it:
 // - won: t10-win; lost: t11-loss;
 // - the typed errors, `ROUND_ACTIVE`, the session ended at open, a failed

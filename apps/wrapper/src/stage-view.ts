@@ -30,9 +30,9 @@ export type StageView = {
   readonly frameHasFocus: () => boolean;
   /**
    * Blurs the game's iframe element when it has the focus, so a heading can
-   * take it (W-46): some engines do not move the focus out of a focused frame
-   * on `focus()` alone (Firefox with its frames in the parent's process, as in
-   * Playwright's Firefox build).
+   * take it (W-46) whatever the engine: some do not move the focus out of a
+   * focused frame on `focus()` alone (Playwright 1.64's Firefox build did
+   * not).
    */
   readonly blurFocusedFrame: () => void;
 };
