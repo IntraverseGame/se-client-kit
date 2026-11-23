@@ -6,8 +6,9 @@ project knowledge (`specs/`, `decisions/`, `rfcs/`, `runbook/`,
 those root-level sources would still stand on their own.
 
 Entry point for agents: [`AGENTS.md`](../AGENTS.md). Tool adapters (`CLAUDE.md`,
-`.opencode/skills`, `.claude/skills`, `.agents/skills`, `.claude/agents`,
-`.opencode/agents`) are pointers into this layer and must never contain content.
+`.opencode/skills`, `.claude/skills`, `.omp/skills`, `.agents/skills`,
+`.claude/agents`, `.opencode/agents`, `.omp/agents`) are pointers into this
+layer and must never contain content.
 
 **Approval gate:** no agent stages, commits, or pushes on its own. A change is
 eligible only after a human approves it and then the reviewer agent approves it
