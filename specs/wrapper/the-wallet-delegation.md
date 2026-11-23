@@ -44,14 +44,15 @@ A player-supplied key (a key the player imports) stays out of scope.
 - **W-63. Which notice.** The shell reads the notices, their status, and their
   `keccak256` (the delegation's `noticeHash`) from `contracts`' runtime entry,
   through `signing`'s notice reader, never from the network. It offers the most
-  recent `approved` notice: the last `approved` entry in the list's order. This
-  rests on a contract assumption: the backend appends a new notice at the end of
-  the list, so the list's order is publication order (the backend's own spec
-  says new entries are "appended"; its team's confirmation is pending, and the
-  kit's sync matches the notices by `id`). Only when no entry is `approved`, and
-  the configuration's `acceptPendingNotices` is `true`, it offers the most
-  recent `pending` one instead. It never offers a `retired` one. The
-  configuration's validator refuses `acceptPendingNotices: true` with
+  recent `approved` notice: the last `approved` entry in the list's order. The
+  order is part of the `key-delegation/v1` contract: a new notice goes at the
+  end of the list and no entry ever moves, so the list's order is publication
+  order. The backend's own append-only check refuses a reordered list or an
+  insert before the end (the kit's sync matches the notices by `id` and adds no
+  order check of its own). Only when no entry is `approved`, and the
+  configuration's `acceptPendingNotices` is `true`, it offers the most recent
+  `pending` one instead. It never offers a `retired` one. The configuration's
+  validator refuses `acceptPendingNotices: true` with
   `environment: "production"` (`pending-notices-in-production`), so production
   never offers a pending notice, whatever its list holds; the shell relies on
   that validated configuration and does not check it again. With no notice to
