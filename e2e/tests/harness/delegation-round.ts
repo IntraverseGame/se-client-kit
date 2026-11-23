@@ -98,7 +98,13 @@ export const signInWindow = async (
   page: Page,
   signing: Page,
 ): Promise<void> => {
-  await signing.getByRole("button", { name: DELEGATION_TEXT.wallet }).click();
+  // The replay wallet answers at once, so the click's own effect can close the window (SP-9).
+  await signing
+    .getByRole("button", { name: DELEGATION_TEXT.wallet })
+    .click()
+    .catch((error: unknown) => {
+      if (!signing.isClosed()) throw error;
+    });
   await expect(page.getByText(DELEGATION_TEXT.linked)).toBeVisible();
 };
 
