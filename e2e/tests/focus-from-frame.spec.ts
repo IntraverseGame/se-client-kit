@@ -2,10 +2,12 @@
 // error heading (W-46), per project (harness/frame-focus.ts): a page whose
 // frame, on another site as the game is the Wrapper's (W-37), has the focus
 // calls `focus()` on its own heading. Where plain `focus()` sends the focus is
-// `FOCUS_FROM_FRAME`: it stays in the frame in Playwright's Firefox. The second
-// test is what the Wrapper relies on: with the frame element blurred first,
-// the heading takes the focus in every project. The first outcome is printed
-// as one line on stdout.
+// `FOCUS_FROM_FRAME`: to the heading in every project since Playwright 1.65,
+// whose Firefox build moves it; Playwright 1.64's kept it in the frame. The
+// Wrapper keeps the blur so the move does not depend on the browser. The
+// second test is what the Wrapper relies on: with the frame element blurred
+// first, the heading takes the focus in every project. The first outcome is
+// printed as one line on stdout.
 
 import type { Page } from "@playwright/test";
 
