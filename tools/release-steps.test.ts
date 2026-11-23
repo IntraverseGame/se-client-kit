@@ -116,6 +116,7 @@ describe("checkReleaseSize", () => {
       "index.html": text("<!doctype html>"),
       "assets/index.js": text("console.log(1);"),
       "verify/index.html": text("<!doctype html><title>v</title>"),
+      "signer/index.html": text("<!doctype html><title>s</title>"),
     });
     try {
       const report = checkReleaseSize(root);
@@ -125,9 +126,13 @@ describe("checkReleaseSize", () => {
         "wrapper page, gzip",
         "verify output",
         "verify page, gzip",
+        "signer output",
+        "signer page, gzip",
       ]);
       expect(report.rows.map(row => row.bytes)).toEqual([
         30,
+        expect.any(Number),
+        31,
         expect.any(Number),
         31,
         expect.any(Number),
@@ -142,6 +147,7 @@ describe("checkReleaseSize", () => {
       "index.html": new Uint8Array(1),
       "assets/big.js": new Uint8Array(286_720),
       "verify/index.html": new Uint8Array(1),
+      "signer/index.html": new Uint8Array(1),
     });
     try {
       expect(checkReleaseSize(root).problems).toContain(
@@ -157,6 +163,7 @@ describe("checkReleaseSize", () => {
       "index.html": new Uint8Array(1),
       "verify/index.html": new Uint8Array(1),
       "verify/assets/big.js": new Uint8Array(188_416),
+      "signer/index.html": new Uint8Array(1),
     });
     try {
       expect(checkReleaseSize(root).problems).toEqual([
@@ -173,6 +180,7 @@ describe("checkReleaseSize", () => {
       expect(checkReleaseSize(root).problems).toEqual([
         "the Wrapper output has no index.html, so it is not a release build",
         "the Wrapper output has no verify/index.html, so it is not a release build",
+        "the Wrapper output has no signer/index.html, so it is not a release build",
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -180,7 +188,10 @@ describe("checkReleaseSize", () => {
   });
 
   it("reports an output without the verify page", () => {
-    const root = withDist({ "index.html": text("<!doctype html>") });
+    const root = withDist({
+      "index.html": text("<!doctype html>"),
+      "signer/index.html": text("<!doctype html>"),
+    });
     try {
       expect(checkReleaseSize(root).problems).toEqual([
         "the Wrapper output has no verify/index.html, so it is not a release build",
@@ -198,6 +209,8 @@ describe("checkReleaseSize", () => {
         "wrapper page, gzip: not measured, so its size budget cannot pass",
         "verify output: not measured, so its size budget cannot pass",
         "verify page, gzip: not measured, so its size budget cannot pass",
+        "signer output: not measured, so its size budget cannot pass",
+        "signer page, gzip: not measured, so its size budget cannot pass",
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });

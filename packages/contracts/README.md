@@ -26,16 +26,19 @@ or calling the Play API (use `@intraverse/se-client-play-client`).
 
 ## Entry points
 
-- `@intraverse/se-client-contracts`: the runtime entry, with the Snapshot schema
-  and the generated types of the Snapshot schema and of the Play API document.
-  This is the public API.
+- `@intraverse/se-client-contracts`: the runtime entry, with the Snapshot
+  schema, the key-delegation notices (`keyDelegationNotices`, the
+  `key-delegation/v1` list of consent texts a wallet may sign, as data: read it
+  with `@intraverse/se-client-signing`'s `readKeyDelegationNotices`), and the
+  generated types of the Snapshot schema and of the Play API document. This is
+  the public API.
 - `@intraverse/se-client-contracts/testing`: golden test vectors used by this
   kit's own tests: the signing vectors and the Snapshot vectors (valid, invalid,
   signature, the canonical `typedData` bytes of signed actions, and signed
-  actions made by an independent signer), and the public vectors of the
-  SuperEngine fairness kernel, kernelVersion 1. It is not part of the public
-  API, and the published package will not contain it: vectors never ship in a
-  bundle or a tarball.
+  actions made by an independent signer), the public vectors of the SuperEngine
+  fairness kernel, kernelVersion 1, and the key-delegation vectors
+  (`key-delegation/v1`). It is not part of the public API, and the published
+  package will not contain it: vectors never ship in a bundle or a tarball.
 
 ## Guarantees and constraints
 
@@ -46,13 +49,15 @@ or calling the Play API (use `@intraverse/se-client-play-client`).
 - The files are copies of the backend's published contracts, referenced by name
   and version, never imported as code.
 
-Today the package holds the Snapshot schema and its types, and the Play API
-document's types: `PlayApiPaths` (by path and method), `PlayApiOperations` (by
-`operationId`), `PlayApiComponents` (its schemas and responses), and
-`PlayApiOperationRoutes` (each operation's path and method). The verify API
-document (`GET /verify/v1/rounds/{roundId}`) is here too, with the same four
-kinds of type named `VerifyApiPaths`, `VerifyApiOperations`,
-`VerifyApiComponents`, and `VerifyApiOperationRoutes`.
+Today the package holds the Snapshot schema and its types (the Snapshot's key
+delegation as `SnapshotKeyDelegation` and its domain as `KeyDelegationDomain`),
+the key-delegation notices, and the Play API document's types: `PlayApiPaths`
+(by path and method), `PlayApiOperations` (by `operationId`),
+`PlayApiComponents` (its schemas and responses), and `PlayApiOperationRoutes`
+(each operation's path and method). The verify API document
+(`GET /verify/v1/rounds/{roundId}`) is here too, with the same four kinds of
+type named `VerifyApiPaths`, `VerifyApiOperations`, `VerifyApiComponents`, and
+`VerifyApiOperationRoutes`.
 
 ## More
 

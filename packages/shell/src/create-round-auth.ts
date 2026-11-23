@@ -30,6 +30,7 @@ import {
 
 import { asciiBytes32, roundIdBytes32 } from "./bytes32-text.ts";
 import type { ChainConfig } from "./chain-config.ts";
+import type { ExpectedDelegation } from "./delegation-check.ts";
 
 /** A validated Snapshot's `proofs.createRoundAuth`. */
 export type CreateRoundAuthProof = NonNullable<
@@ -55,6 +56,11 @@ export type StartRequest = {
   readonly actionKey: Address;
   /** The `AmountRequest` sent: base units as a decimal string, and its unit. */
   readonly bet: { readonly value: string; readonly unit: string };
+  /**
+   * The wallet's delegation the start carried as `keyDelegation`, with what the
+   * round's evidence must name (W-70, W-72); absent when it carried none.
+   */
+  readonly delegation?: ExpectedDelegation;
 };
 
 /** The outcome of checks 1 to 4. */

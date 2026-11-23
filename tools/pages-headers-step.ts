@@ -1,10 +1,11 @@
 // Runs the Pages workflow's headers step (.github/workflows/pages.yml, "Write
 // the Pages headers files") for the tests: its own script, read from the
 // workflow, with bash and jq against temporary site directories (the
-// Wrapper's, the verifier's, and the game's, which production has not; the
-// production deploy, .github/workflows/pages-prod.yml, runs the same script).
-// Used by
-// tools/pages-headers.test.ts and tools/pages-game-site.test.ts.
+// Wrapper's, the verifier's, the game's, which production has not, and the
+// signing page's, laid out only with `PAGES_SIGNER_ORIGIN`; the production
+// deploy, .github/workflows/pages-prod.yml, runs the same script). Used by
+// tools/pages-headers.test.ts, tools/pages-game-site.test.ts, and
+// tools/pages-signer-headers.test.ts.
 
 import { spawnSync } from "node:child_process";
 import {
@@ -52,7 +53,7 @@ export type Origins = {
   readonly playApiBaseUrl?: string | null;
 };
 
-export type Site = "wrapper" | "verifier" | "game";
+export type Site = "wrapper" | "verifier" | "game" | "signer";
 
 export type Result = {
   readonly status: number | null;
@@ -68,6 +69,8 @@ export type HeadersStep = {
       readonly existing?: Site | undefined;
       /** `false` lays out no game site, as production (pages-prod.yml). */
       readonly game?: boolean;
+      /** `true` lays out a signing page site (`PAGES_SIGNER_ORIGIN` set). */
+      readonly signer?: boolean;
     },
   ) => Result;
   /** Runs the step on `sites` as they are; returns its status and output. */
@@ -117,10 +120,12 @@ export const headersStep = (): HeadersStep => {
   };
   const run: HeadersStep["run"] = (headers, origins = {}, options = {}) => {
     const sites = directory();
-    for (const site of ["wrapper", "verifier", "game"] as const) {
-      if (site !== "game" || options.game !== false) {
-        mkdirSync(join(sites, site));
-      }
+    for (const site of ["wrapper", "verifier", "game", "signer"] as const) {
+      const laidOut =
+        site === "game"
+          ? options.game !== false
+          : site !== "signer" || options.signer === true;
+      if (laidOut) mkdirSync(join(sites, site));
     }
     writeFileSync(
       join(sites, "wrapper", "headers.json"),
@@ -138,6 +143,7 @@ export const headersStep = (): HeadersStep => {
       wrapper: read(join(sites, "wrapper", "_headers")),
       verifier: read(join(sites, "verifier", "_headers")),
       game: read(join(sites, "game", "_headers")),
+      signer: read(join(sites, "signer", "_headers")),
     };
   };
   const cleanup = (): void => {

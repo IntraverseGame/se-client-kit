@@ -84,7 +84,14 @@ export const createBarChrome = (
     menu.show(
       state.blocking !== undefined && NO_SESSION.has(state.blocking)
         ? undefined
-        : { m, links: leaving ? others : offer, summary: options.summary },
+        : {
+            m,
+            links: leaving ? others : offer,
+            summary: options.summary,
+            ...(options.delegation === undefined
+              ? {}
+              : { delegation: options.delegation }),
+          },
     );
     chip.show(chipOf(state), { el, doc, m, options, announce });
   };

@@ -21,7 +21,8 @@
 //   5. builds the Wrapper release artifact in each copy (the second with
 //      another time zone and locale) and requires the two digests to be equal,
 //      and the two copies' package tarballs to be byte-identical;
-//   6. holds the first copy's Wrapper and verify page to their size budgets (tools/size-budget.ts);
+//   6. holds the first copy's Wrapper, verify page, and signing page to their
+//      size budgets (tools/size-budget.ts);
 //   7. writes the artifact, its `.sha256`, the tarballs, and a report to
 //      `--out`, and prints the digests and the sizes against the budget.
 //

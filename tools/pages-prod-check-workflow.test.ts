@@ -70,6 +70,7 @@ const DEPLOY_SECRETS = [
   "CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
   "WRAPPER_PROJECT: ${{ secrets.PAGES_WRAPPER_PROJECT }}",
   "VERIFIER_PROJECT: ${{ secrets.PAGES_VERIFIER_PROJECT }}",
+  "SIGNER_PROJECT: ${{ secrets.PAGES_SIGNER_PROJECT }}",
 ];
 
 describe("the production check workflow", () => {
@@ -86,7 +87,7 @@ describe("the production check workflow", () => {
     ).toEqual(["uses: ./.github/workflows/pages-prod-check.yml"]);
   });
 
-  it("has two jobs, config-check in pages-prod-config and deploy-check in pages-prod, with no condition, group, or output", () => {
+  it("has two jobs, config-check in pages-prod-config and deploy-check in pages-prod after it, with no condition or group, and one output", () => {
     expect(
       scalarAt(
         prodCheck,
@@ -111,10 +112,18 @@ describe("the production check workflow", () => {
       scalarAt(prodCheck, jobKey("deploy-check", "environment", prodCheck)),
     ).toBe("pages-prod");
     expect(valuesOf(prodCheck, "if")).toEqual([]);
-    expect(valuesOf(prodCheck, "needs")).toEqual([]);
+    expect(valuesOf(prodCheck, "needs")).toEqual(["config-check"]);
+    expect(
+      scalarAt(prodCheck, jobKey("deploy-check", "needs", prodCheck)),
+    ).toBe("config-check");
     expect(valuesOf(prodCheck, "concurrency")).toEqual([]);
     expect(valuesOf(prodCheck, "continue-on-error")).toEqual([]);
-    expect(valuesOf(prodCheck, "outputs")).toEqual([]);
+    // Whether production names a signing page, for deploy-check's settings.
+    expect(
+      mappingAt(prodCheck, jobKey("config-check", "outputs", prodCheck)),
+    ).toEqual([
+      "signer-config-digest: ${{ steps.config.outputs.signer-config-digest }}",
+    ]);
   });
 
   it("checks out the run's own commit without persisted credentials in config-check, and uploads nothing", () => {
@@ -165,36 +174,47 @@ describe("the production check workflow", () => {
     expect(stepRun("deploy-check", SETTINGS_STEP, prodCheck)).toBe(
       stepRun("deploy-prod", SETTINGS_STEP, prod),
     );
-    expect(stepEnv("deploy-check", SETTINGS_STEP, prodCheck)).toEqual(
-      DEPLOY_SECRETS,
-    );
+    // The same settings, and the same answer to whether production names a
+    // signing page, from this run's own configuration job.
+    expect(stepEnv("deploy-check", SETTINGS_STEP, prodCheck)).toEqual([
+      ...DEPLOY_SECRETS,
+      "SIGNER_CONFIG_DIGEST:",
+      "${{ needs.config-check.outputs.signer-config-digest }}",
+    ]);
+    expect(stepEnv("deploy-prod", SETTINGS_STEP, prod)).toEqual([
+      ...DEPLOY_SECRETS,
+      "SIGNER_CONFIG_DIGEST:",
+      "${{ needs.config-prod.outputs.signer-config-digest }}",
+    ]);
     expect(stepRun("deploy-check", SETTINGS_STEP, prodCheck)).not.toMatch(
       /\b(?:pnpm|npm|npx|tsx|tsc|node|curl|wget|wrangler)\b|tools\//u,
     );
   });
 
-  it("reads the seven configuration values in config-check and the deploy settings in deploy-check, and nothing else", () => {
+  it("reads the nine configuration values in config-check and the deploy settings in deploy-check, and nothing else", () => {
     const [configFrom, configTo] = jobRange(prodCheck, "config-check");
     const [deployFrom, deployTo] = jobRange(prodCheck, "deploy-check");
+    // Every secret line of the job is the configuration step's (a value the
+    // formatter folds is on its own line, after its key).
     expect(secretsIn(configFrom, configTo)).toEqual(
       stepEnv(
         "config-check",
         "Build and validate the configuration documents",
         prodCheck,
-      ),
+      ).filter(entry => entry.includes("secrets.")),
     );
-    expect(secretsIn(configFrom, configTo)).toHaveLength(7);
+    expect(secretsIn(configFrom, configTo)).toHaveLength(9);
     expect(secretsIn(deployFrom, deployTo)).toEqual(DEPLOY_SECRETS);
     expect(
       prodCheck.filter(line => line.text.includes("secrets.")),
-    ).toHaveLength(11);
+    ).toHaveLength(14);
     expect(prodCheck.filter(line => /\bvars\./u.test(line.text))).toEqual([]);
   });
 
   it("writes no production value, and no ${{ expression inside a run: script", () => {
     for (const line of prodCheck.filter(entry => !entry.text.startsWith("#"))) {
       expect(line.text).not.toMatch(
-        /se-(?:wrapper|verifier|games)-|https:\/\/[a-z0-9-]+\./u,
+        /se-(?:wrapper|verifier|games|signer)-|https:\/\/[a-z0-9-]+\./u,
       );
     }
     for (const script of valuesOf(prodCheck, "run")) {

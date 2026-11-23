@@ -7,14 +7,18 @@
 
 import type {
   PlaySession,
-  RoundState,
   SessionOpening,
   SessionRead,
 } from "@intraverse/se-client-shell";
 
+import {
+  type DelegationWiringOptions,
+  wireDelegation,
+} from "./delegation-wiring.ts";
 import type { MessageDispatch } from "./message-dispatch.ts";
 import { messagesFor } from "./messages.ts";
-import type { RoundCheck, ShownAmount, SnapshotRead } from "./round-input.ts";
+import type { ShownAmount, SnapshotRead } from "./round-input.ts";
+import { uiReadOf } from "./session-read.ts";
 import type { StageLayout } from "./stage-layout.ts";
 import type { ChangeCause } from "./view-options.ts";
 import type { WrapperApp } from "./wrapper-app.ts";
@@ -32,46 +36,8 @@ export type SessionWiringOptions = {
    * (the bar docks).
    */
   readonly layout?: StageLayout;
-};
-
-/** The shell's checks of the round, as the UI reads them. */
-const checkOf = (round: RoundState): RoundCheck => ({
-  verdict:
-    round.verdict === "failed"
-      ? (round.shown ?? "verification-failed")
-      : round.verdict,
-  ...(round.failure === undefined ? {} : { failure: round.failure }),
-  ...(round.tipFailure === undefined ? {} : { tipFailure: round.tipFailure }),
-  outOfSync: round.outOfSync,
-  cashOutOffered: round.cashOutOffered,
-  cancel: round.cancel,
-  ...(round.unconfirmed === undefined
-    ? {}
-    : { unconfirmed: round.unconfirmed }),
-  ...(round.pending === undefined ? {} : { pending: round.pending }),
-});
-
-/** A session's answer, as the UI's read port gives it. */
-export const uiReadOf = (
-  session: PlaySession,
-  read: SessionRead,
-): SnapshotRead => {
-  switch (read.kind) {
-    case "snapshot": {
-      const round = session.round();
-      return round !== undefined && round.roundId === read.snapshot.roundId
-        ? { kind: "snapshot", snapshot: read.snapshot, check: checkOf(round) }
-        : { kind: "snapshot", snapshot: read.snapshot };
-    }
-    case "refused": {
-      return read.reason === "session-ended"
-        ? { kind: "session-ended" }
-        : { kind: "refused" };
-    }
-    default: {
-      return read;
-    }
-  }
+  /** The wallet delegation, when the configuration names a signing page. */
+  readonly delegation?: DelegationWiringOptions["platform"];
 };
 
 /**
@@ -79,7 +45,8 @@ export const uiReadOf = (
  * opened. No launch code and a failed redeem are the session-ended state with
  * the relaunch instruction (W-1a, W-2); a tab without the signer lock is the
  * "open in another tab" state, and a browser without Web Locks its own state
- * (W-14): neither signs, refreshes, or polls.
+ * (W-14): neither signs, refreshes, or polls. A key that could not be drawn at
+ * the open (W-9) is the session-ended state too.
  */
 export const showOpening = (
   app: WrapperApp,
@@ -97,6 +64,8 @@ export const showOpening = (
       app.block("unsupported-browser");
       return undefined;
     }
+    // `no-launch-code`, `redeem-failed`, and `key-generation` (the key, drawn
+    // at the open, W-9, could not be drawn): a new launch, which draws again.
     default: {
       app.block("session-ended");
       return undefined;
@@ -255,12 +224,19 @@ export const wireSession = (
       session.stopAutoplay("hidden");
     }
   });
+  // The wallet delegation (W-62 to W-71): its start guard notes a delegated
+  // start's refusal.
+  const { delegation: platform, messages } = options;
+  const guard =
+    platform === undefined
+      ? (call: () => Promise<SessionRead>) => call()
+      : wireDelegation({ app, doc: options.doc, messages, platform }, session);
   app.connect({
     readSnapshot: async (): Promise<SnapshotRead> =>
       uiReadOf(session, await session.read()),
     intents: {
       start: (bet: ShownAmount): void => {
-        run(() => session.start(betOf(bet)), true);
+        run(() => guard(() => session.start(betOf(bet))), true);
       },
       cashOut: (): void => {
         run(() => session.cashOut(), true);

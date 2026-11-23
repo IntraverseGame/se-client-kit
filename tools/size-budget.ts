@@ -1,5 +1,5 @@
-// The size budget of the Wrapper's release output and of the verify page in it
-// (specs/client-kit/testing-and-ci.md, the `build` job;
+// The size budget of the Wrapper's release output and of the verify page and
+// the signing page in it (specs/client-kit/testing-and-ci.md, the `build` job;
 // runbook/client-kit-release.md, Verify before and after). The measuring and
 // the judging are pure functions, unit-tested in tools/size-budget.test.ts;
 // `pnpm check:size-budget` (tools/check-size-budget.ts, part of `pnpm check`
@@ -64,15 +64,37 @@ export const VERIFY_BUDGET: readonly Budget[] = [
   { name: VERIFY_PAGE_GZIP, limit: 61_440 },
 ];
 
-/** Both budgets: a release is held to every one of them. */
+/** Every file under `signer/`, uncompressed (specs/signing-page.md, SP-14). */
+export const SIGNER_OUTPUT = "signer output";
+/**
+ * `signer/index.html` and every `.js` and `.css` file under `signer/`, each
+ * gzipped at zlib's default level and summed.
+ */
+export const SIGNER_PAGE_GZIP = "signer page, gzip";
+
+/**
+ * The signing page's budget, in bytes (SP-14): set by the human from the first
+ * build's measurement on 2026-11-21 (62565 and 23469 bytes), about 25% over it,
+ * as for the verify page; approved by the human, 2026-11-21. A change is a
+ * reviewed change to this list and the spec's together.
+ */
+export const SIGNER_BUDGET: readonly Budget[] = [
+  { name: SIGNER_OUTPUT, limit: 78_848 },
+  { name: SIGNER_PAGE_GZIP, limit: 29_696 },
+];
+
+/** Every budget: a release is held to every one of them. */
 export const RELEASE_BUDGET: readonly Budget[] = [
   ...WRAPPER_BUDGET,
   ...VERIFY_BUDGET,
+  ...SIGNER_BUDGET,
 ];
 
 const PAGE = "index.html";
-const VERIFY_PREFIX = "verify/";
-const VERIFY_PAGE = "verify/index.html";
+const VERIFY_DIR = "verify";
+const SIGNER_DIR = "signer";
+/** The pages measured on their own, each under its own directory. */
+const OWN_BUDGET_DIRS: readonly string[] = [VERIFY_DIR, SIGNER_DIR];
 const LOADED_BY_THE_PAGE = /\.(?:js|css)$/iu;
 
 const gzipped = (bytes: Uint8Array): number => gzipSync(bytes).byteLength;
@@ -80,7 +102,7 @@ const gzipped = (bytes: Uint8Array): number => gzipSync(bytes).byteLength;
 /**
  * The measurements of the Wrapper's own release output: `files` is every file
  * of `apps/wrapper/dist/`, by path relative to it with `/` separators. The
- * files under `verify/` are not counted.
+ * files under `verify/` and `signer/` are not counted.
  */
 export const measureWrapperOutput = (
   files: ReadonlyMap<string, Uint8Array>,
@@ -88,7 +110,7 @@ export const measureWrapperOutput = (
   let output = 0;
   let page = 0;
   for (const [path, bytes] of files) {
-    if (path.startsWith(VERIFY_PREFIX)) continue;
+    if (OWN_BUDGET_DIRS.some(dir => path.startsWith(`${dir}/`))) continue;
     output += bytes.byteLength;
     if (path === PAGE || LOADED_BY_THE_PAGE.test(path)) page += gzipped(bytes);
   }
@@ -98,24 +120,41 @@ export const measureWrapperOutput = (
   ];
 };
 
-/** The measurements of the verify page: the files under `verify/` only. */
-export const measureVerifyOutput = (
+/**
+ * The measurements of the page under `dir`: its files only, uncompressed, and
+ * its `index.html` and every script and stylesheet under it gzipped.
+ */
+const measurePageDir = (
   files: ReadonlyMap<string, Uint8Array>,
+  dir: string,
+  names: readonly [output: string, pageGzip: string],
 ): Measurement[] => {
   let output = 0;
   let page = 0;
   for (const [path, bytes] of files) {
-    if (!path.startsWith(VERIFY_PREFIX)) continue;
+    if (!path.startsWith(`${dir}/`)) continue;
     output += bytes.byteLength;
-    if (path === VERIFY_PAGE || LOADED_BY_THE_PAGE.test(path)) {
+    if (path === `${dir}/${PAGE}` || LOADED_BY_THE_PAGE.test(path)) {
       page += gzipped(bytes);
     }
   }
   return [
-    { name: VERIFY_OUTPUT, bytes: output },
-    { name: VERIFY_PAGE_GZIP, bytes: page },
+    { name: names[0], bytes: output },
+    { name: names[1], bytes: page },
   ];
 };
+
+/** The measurements of the verify page: the files under `verify/` only. */
+export const measureVerifyOutput = (
+  files: ReadonlyMap<string, Uint8Array>,
+): Measurement[] =>
+  measurePageDir(files, VERIFY_DIR, [VERIFY_OUTPUT, VERIFY_PAGE_GZIP]);
+
+/** The measurements of the signing page: the files under `signer/` only. */
+export const measureSignerOutput = (
+  files: ReadonlyMap<string, Uint8Array>,
+): Measurement[] =>
+  measurePageDir(files, SIGNER_DIR, [SIGNER_OUTPUT, SIGNER_PAGE_GZIP]);
 
 const isByteCount = (value: number): boolean =>
   Number.isSafeInteger(value) && value >= 0;
@@ -213,8 +252,8 @@ export type ReleaseSizeReport = {
 /**
  * The release output `files` held to `RELEASE_BUDGET`: the problems, and each
  * budget with its measurement, as rows (for a report) and as a Markdown table
- * (for a summary). An output without `index.html` or without
- * `verify/index.html` is a problem. No `files` (no built `apps/wrapper/dist/`)
+ * (for a summary). An output without `index.html`, `verify/index.html`, or
+ * `signer/index.html` is a problem. No `files` (no built `apps/wrapper/dist/`)
  * measures nothing, which is a problem, never a pass.
  */
 export const releaseSizeReport = (
@@ -223,14 +262,18 @@ export const releaseSizeReport = (
   const sizes =
     files === undefined
       ? []
-      : [...measureWrapperOutput(files), ...measureVerifyOutput(files)];
+      : [
+          ...measureWrapperOutput(files),
+          ...measureVerifyOutput(files),
+          ...measureSignerOutput(files),
+        ];
   const rows = sizeBudgetRows(sizes, RELEASE_BUDGET);
   // An output without its pages (an empty dist/ included) is not a release
   // build, however small it is.
   const pages =
     files === undefined
       ? []
-      : [PAGE, VERIFY_PAGE]
+      : [PAGE, `${VERIFY_DIR}/${PAGE}`, `${SIGNER_DIR}/${PAGE}`]
           .filter(page => !files.has(page))
           .map(
             page =>

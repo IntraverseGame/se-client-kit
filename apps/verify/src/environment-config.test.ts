@@ -38,9 +38,17 @@ describe("a valid document", () => {
   });
 
   it("knows the Wrapper's fields and earlierPins, and only them", () => {
-    // `autoplay` (RFC-005) is validated by the Wrapper's rule, and not used.
+    // `autoplay` (RFC-005) and the wallet delegation's two fields (W-62,
+    // W-63) are validated by the Wrapper's rules, and not used.
     const fields = [...Object.keys(environmentDocument()), "earlierPins"];
-    expect(new Set(CONFIG_FIELDS)).toEqual(new Set([...fields, "autoplay"]));
+    expect(new Set(CONFIG_FIELDS)).toEqual(
+      new Set([
+        ...fields,
+        "autoplay",
+        "signingPageOrigin",
+        "acceptPendingNotices",
+      ]),
+    );
   });
 
   it("defaults minRpcQuorum to 2", () => {

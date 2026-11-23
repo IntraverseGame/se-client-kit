@@ -1,12 +1,15 @@
 // The Wrapper's one `message` listener (W-49b): it routes by `event.source`
 // before anything parses: `window.parent` to the operator channel, the game
-// frame's `contentWindow` to the controller bridge (W-38), anything else
-// dropped. Each channel then checks the origin and its own schema. The two
-// share no state and no schema: nothing from the operator reaches the game,
-// and nothing from the game reaches the operator. When the Wrapper is not
-// framed there is no operator route, so a message from its own window is
-// dropped. It is installed at boot, before the configuration is read, so an
-// early `hello` is recorded (W-49c).
+// frame's `contentWindow` to the controller bridge (W-38), and, while a
+// signing window is open, its handle to the shell's delegation use case
+// (W-67); anything else is dropped. Each channel then checks the origin and
+// its own schema. The channels share no state and no schema: nothing from the
+// operator reaches the game, and nothing from the game reaches the operator.
+// A message from the page's own window is dropped, framed or not (a wallet
+// extension's content script posts to the page's own document); when the
+// Wrapper is not framed there is no operator route at all. The game frame is
+// never the signing route. It is installed at boot, before the configuration
+// is read, so an early `hello` is recorded (W-49c).
 
 /** The parts of a `MessageEvent` a channel reads. */
 export type RoutedMessage = {
@@ -37,6 +40,12 @@ export type MessageDispatch = {
    * until the returned unsubscribe is called.
    */
   readonly onGame: (frame: unknown, handler: Handler) => () => void;
+  /**
+   * Routes the signing window's messages (`window.open`'s handle) to `handler`
+   * (the session's `receiveDelegation`) until the returned unsubscribe is
+   * called (W-67).
+   */
+  readonly onSigner: (handle: unknown, handler: Handler) => () => void;
   /** Removes the listener: nothing more is routed. */
   readonly close: () => void;
 };
@@ -51,6 +60,9 @@ export const createMessageDispatch = (
 ): MessageDispatch => {
   let operator: Handler | undefined;
   let game: { readonly frame: unknown; readonly handler: Handler } | undefined;
+  let signer:
+    | { readonly handle: unknown; readonly handler: Handler }
+    | undefined;
   const listener = (event: MessageEvent): void => {
     const { source } = event;
     if (source === null) return;
@@ -59,6 +71,8 @@ export const createMessageDispatch = (
       operator?.(message);
     } else if (game !== undefined && source === game.frame) {
       game.handler(message);
+    } else if (signer !== undefined && source === signer.handle) {
+      signer.handler(message);
     }
   };
   target.addEventListener("message", listener);
@@ -73,10 +87,18 @@ export const createMessageDispatch = (
         if (game === route) game = undefined;
       };
     },
+    onSigner: (handle: unknown, handler: Handler): (() => void) => {
+      const route = { handle, handler };
+      signer = route;
+      return (): void => {
+        if (signer === route) signer = undefined;
+      };
+    },
     close: (): void => {
       target.removeEventListener("message", listener);
       operator = undefined;
       game = undefined;
+      signer = undefined;
     },
   });
 };

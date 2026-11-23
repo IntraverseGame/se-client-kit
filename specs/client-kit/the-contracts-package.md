@@ -20,9 +20,13 @@ logic packages read it and never write to it.
   `kernel/public/v1/derive`, `kernel/public/v1/round-secret-hash`,
   `kernel/public/v1/coin-flip-payout`, `kernel/public/v1/weighted-draw`,
   `kernel/public/v1/book-draw`, and `kernel/public/v1/book-table-commitment`;
-  data for the verify page's tests, with no kernel logic here), the types
-  generated from the documents and the schema (`openapi-typescript` for the
-  OpenAPI documents, with `exportType` so every object is a `type` alias, and
+  data for the verify page's tests, with no kernel logic here), the
+  key-delegation contract `key-delegation/v1` (its notices,
+  `key-delegation/v1 notices`, which the shell, the signing page, and the verify
+  page read at run time, and its vectors, `key-delegation/v1 vectors`, which
+  `signing`, the shell, and the e2e suite replay in tests), the types generated
+  from the documents and the schema (`openapi-typescript` for the OpenAPI
+  documents, with `exportType` so every object is a `type` alias, and
   `emptyObjectsUnknown` so an object schema without properties is a record of
   `unknown` values; a leftover `export interface` fails the generation;
   `openapi-typescript` is pinned at 6.7.6, which has no TypeScript dependency,
@@ -48,9 +52,10 @@ logic packages read it and never write to it.
     may import it.
 - **Source layout (pinned).** Inside `packages/contracts/src/`, the **runtime
   sources** are `index.ts` (the runtime entry), `schemas/` (the vendored OpenAPI
-  documents, `schemas/play.v1.openapi.yaml` for `/play/v1`, and the Snapshot
-  schema), and `generated/` (the generated types). The **test-only sources** are
-  `testing.ts` (the test-only entry) and `vectors/`: every vendored vector
+  documents, `schemas/play.v1.openapi.yaml` for `/play/v1`, the Snapshot schema,
+  and the key-delegation notices, `schemas/key-delegation/v1/notices.json`), and
+  `generated/` (the generated types). The **test-only sources** are `testing.ts`
+  (the test-only entry) and `vectors/`: every vendored vector
   (`vectors/signing.json`, from the contracts repository's
   `test/vectors/signing.json`; `vectors/snapshot/valid/`,
   `vectors/snapshot/invalid/`, `vectors/snapshot/signature/`,
@@ -58,17 +63,22 @@ logic packages read it and never write to it.
   `vectors/kernel/v1/`, the fairness kernel's `seed.json`, `shuffle-draw.json`,
   `steps-derive.json`, `derive.json`, `round-secret-hash.json`,
   `coin-flip-payout.json`, `weighted-draw.json`, `book-draw.json`, and
-  `book-table-commitment.json`, recorded in the lock under their set ids), and
-  any module that only the test-only entry uses. Nothing else belongs in `src/`.
-  A module that both entries import is a runtime module by definition, so it
-  lives under `schemas/` or `generated/` and holds no vector data.
-  (`test/vectors/...` is the path in the backend's contracts repository, which
-  is already public by name; `contracts.lock.json` records each artifact's
-  public name and the path in this package, never a path inside a private
-  repository.) Today the runtime modules are `schemas/snapshot.ts` (the schema
-  as data of unknown shape), `generated/snapshot.ts` (its structural types), and
-  `generated/play.ts` and `generated/verify.ts` (the Play API and verify API
-  documents' types; the documents themselves, `schemas/play.v1.openapi.yaml` and
+  `book-table-commitment.json`, recorded in the lock under their set ids; and
+  `vectors/key-delegation/v1/vectors.json`, recorded as
+  `key-delegation/v1 vectors`), and any module that only the test-only entry
+  uses. Nothing else belongs in `src/`. A module that both entries import is a
+  runtime module by definition, so it lives under `schemas/` or `generated/` and
+  holds no vector data. (`test/vectors/...` is the path in the backend's
+  contracts repository, which is already public by name; `contracts.lock.json`
+  records each artifact's public name and the path in this package, never a path
+  inside a private repository.) Today the runtime modules are
+  `schemas/snapshot.ts` (the schema as data of unknown shape),
+  `schemas/key-delegation-notices.ts` (the notices document as data of unknown
+  shape, exported as `keyDelegationNotices`; its readers check it with
+  `signing`'s `readKeyDelegationNotices`, since `contracts` holds no logic),
+  `generated/snapshot.ts` (its structural types), and `generated/play.ts` and
+  `generated/verify.ts` (the Play API and verify API documents' types; the
+  documents themselves, `schemas/play.v1.openapi.yaml` and
   `schemas/verify.v1.openapi.yaml`, are not imported by any module, only read by
   the generator); the test-only module is `vectors/catalog.ts`, generated, which
   imports every vector and exports `signingVectors`, `snapshotVectors` (`valid`,
@@ -76,7 +86,8 @@ logic packages read it and never write to it.
   from `signed-action/`), and `kernelVectors` (`v1` from `kernel/v1/`, keyed by
   file name: `seed`, `shuffle-draw`, `steps-derive`, `derive`,
   `round-secret-hash`, `coin-flip-payout`, `weighted-draw`, `book-draw`, and
-  `book-table-commitment`).
+  `book-table-commitment`), and `keyDelegationVectors` (`v1`, the
+  `key-delegation/v1 vectors` file as data of unknown shape).
 
 - **Tarball.** What is published is the allow-list of check 3 below. The
   manifest still exports `./testing` for the kit's own tests; the published
@@ -90,28 +101,34 @@ logic packages read it and never write to it.
   structural copy of `Snapshot`, which the schema refers to from
   `PlayProblem.snapshot`; so is `Amount1`, its structural copy of `Amount` for
   `Snapshot.payout` (a `$ref` with a description of its own, which the generator
-  emits as a type of its own). The Play API document's types are its three
-  roots, renamed on export: `PlayApiPaths` (by path and method),
-  `PlayApiOperations` (by `operationId`), and `PlayApiComponents` (its schemas
-  and responses); its empty `webhooks`, `$defs`, and `external` are left out.
-  The generator appends one more type, `operationRoutes` (exported as
-  `PlayApiOperationRoutes`): each operation's literal path and method by
-  `operationId`, read from the generated `paths`, since two operations of one
-  shape (a move and a cash-out) are the same type structurally and `paths` alone
-  cannot tell them apart; a `paths` member it cannot read fails the generation.
-  The document embeds a copy of the Snapshot schema's definitions, so
-  `PlayApiComponents["schemas"]["Snapshot"]` duplicates `Snapshot`;
-  `play-client` never reads it (a Snapshot answer stays `unknown`). The verify
-  API document's types are named the same way: `VerifyApiPaths`,
-  `VerifyApiOperations`, `VerifyApiComponents`, and `VerifyApiOperationRoutes`
-  (one operation, `getRoundVerification`, `GET /verify/v1/rounds/{roundId}`).
-  The document is its own: it embeds no Snapshot, its `Amount` is an object
-  (`amount` as a base-10 string of base units, `currency`, `decimals`), its
-  `Kernel` carries the round's kernel `version`, and its errors are
-  `application/problem+json`. It was synced from se-backend `main` at `17d2099`;
-  the lock records `af3aab4`, the last commit that touched the file; the lock
-  records its public name, `verify/v1 OpenAPI document`. Later syncs are listed
-  in [How the kit gets its contracts](./how-the-kit-gets-its-contracts.md) (rule
+  emits as a type of its own). The Snapshot schema's key-delegation definitions
+  (slice S2) are exported as `SnapshotKeyDelegation` (renamed on export, so it
+  never meets `signing`'s own `KeyDelegation` type, the delegation as the wallet
+  signs it) and `KeyDelegationDomain`; the Play API document's
+  `KeyDelegationRequest` and the verify API document's `KeyDelegationEvidence`
+  stay inside `PlayApiComponents` and `VerifyApiComponents`, with no public type
+  name added. The Play API document's types are its three roots, renamed on
+  export: `PlayApiPaths` (by path and method), `PlayApiOperations` (by
+  `operationId`), and `PlayApiComponents` (its schemas and responses); its empty
+  `webhooks`, `$defs`, and `external` are left out. The generator appends one
+  more type, `operationRoutes` (exported as `PlayApiOperationRoutes`): each
+  operation's literal path and method by `operationId`, read from the generated
+  `paths`, since two operations of one shape (a move and a cash-out) are the
+  same type structurally and `paths` alone cannot tell them apart; a `paths`
+  member it cannot read fails the generation. The document embeds a copy of the
+  Snapshot schema's definitions, so `PlayApiComponents["schemas"]["Snapshot"]`
+  duplicates `Snapshot`; `play-client` never reads it (a Snapshot answer stays
+  `unknown`). The verify API document's types are named the same way:
+  `VerifyApiPaths`, `VerifyApiOperations`, `VerifyApiComponents`, and
+  `VerifyApiOperationRoutes` (one operation, `getRoundVerification`,
+  `GET /verify/v1/rounds/{roundId}`). The document is its own: it embeds no
+  Snapshot, its `Amount` is an object (`amount` as a base-10 string of base
+  units, `currency`, `decimals`), its `Kernel` carries the round's kernel
+  `version`, and its errors are `application/problem+json`. It was synced from
+  se-backend `main` at `17d2099`; the lock records `af3aab4`, the last commit
+  that touched the file; the lock records its public name,
+  `verify/v1 OpenAPI document`. Later syncs are listed in
+  [How the kit gets its contracts](./how-the-kit-gets-its-contracts.md) (rule
   4); since the 2026-11-17 sync its `BookVerification` carries the mode's rows
   as the optional `table` (`BookTableRow`: `id`, `weight`, `multiplierMilli`),
   in `VerifyApiComponents` with no public type name added.
@@ -281,14 +298,15 @@ logic packages read it and never write to it.
      and the output canary pass over every packed file; and the packed packages
      import in Node while `./testing` does not resolve.
 - **Dependencies.** `contracts` depends on no other kit package and has no
-  runtime dependency. `snapshot` and `play-client` depend on its runtime entry
-  (and, proposed in RFC-006, `shell` from slice S5 and the `signing-page` app,
-  for the key-delegation notices); the test-only entry has these consumers,
+  runtime dependency. `snapshot`, `play-client`, and `shell` (for the
+  key-delegation notices alone) depend on its runtime entry, and so do the
+  `verify` and `signing-page` apps; the test-only entry has these consumers,
   **all of them tests and all of them development dependencies**: the unit tests
   of `signing`, `snapshot`, and `shell`; the Wrapper's component tests; the
-  verify page's unit tests (the fairness kernel's vectors); and the e2e suite's
-  fake Play API. It never reaches a published tarball or a browser bundle (the
-  three checks above).
+  verify page's unit tests (the fairness kernel's and the key-delegation
+  vectors); the signing page's unit tests (the key-delegation vectors); and the
+  e2e suite (its fake Play API, and the replay wallet of T-50). It never reaches
+  a published tarball or a browser bundle (the three checks above).
 - **Replaceable by design.** The backend publishes the files the kit vendors at
   public locations with a manifest of their hashes, not as a package; that
   publication does not replace the copies (ADR-001 amendment note of 2026-11-17,

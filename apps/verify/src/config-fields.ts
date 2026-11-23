@@ -170,3 +170,19 @@ export const readOrigins = (
   const list = origins as string[];
   return new Set(list).size === list.length ? Object.freeze(list) : undefined;
 };
+
+/** The disjoint-origins rule: no origin is both an embedder and a game. */
+export const overlaps = (
+  ownOrigin: string,
+  gameOrigins: readonly string[] | undefined,
+  operatorOrigins: readonly string[] | undefined,
+): { readonly code: "overlapping-origins"; readonly field: string }[] => [
+  ...(operatorOrigins?.some(
+    origin => origin === ownOrigin || gameOrigins?.includes(origin) === true,
+  ) === true
+    ? [{ code: "overlapping-origins" as const, field: "operatorOrigins" }]
+    : []),
+  ...(gameOrigins?.includes(ownOrigin) === true
+    ? [{ code: "overlapping-origins" as const, field: "gameOrigins" }]
+    : []),
+];

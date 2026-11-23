@@ -68,6 +68,7 @@ describe("the verify page's budget", () => {
         ["index.html", html],
         ["verify/index.html", html],
         ["verify/assets/a.js", new Uint8Array(188_416)],
+        ["signer/index.html", html],
       ]),
     );
     expect(report.problems).toEqual([

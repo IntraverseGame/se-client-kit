@@ -71,31 +71,36 @@ forbidden contributor terms. Other cross-script lookalikes are left to review.
 | `@intraverse/se-client-signing`              | npm                                    | The hand-written, fixed-type EIP-712 encoder and secp256k1 signing and recovery: domain separator, type hashes, `hashStruct`, the `0x1901` digest, `PlayerAction`, `PlayerCashOut`, `PlayerCancel`, and the registry types the shell must recompute or verify (`NewRound`, `CreateRoundAuth`, `MarkReadyAuth`, `CloseRoundAuth`, `PayoutTerms`). Canonical 65-byte signatures, key generation, the transcript helper (the `previous` chain, one signature per sequence), the canonical `typedData` encoder (`ActionTypedData`), the action grammar, and a raw `keccak256` over bytes (for the verify page's StepsDerive) ([The cryptography](./the-cryptography.md) says which types are implemented today). It takes vectors from `contracts` in **tests only** (a development dependency on the test-only entry). | none at run time                                                                                                                                                                                                                                                  | `@noble/curves`, `@noble/hashes`    |
 | `@intraverse/se-client-snapshot`             | npm                                    | The hand-written validator over the Snapshot schema's keyword profile (the `Snapshot`, `PlayProblem`, and `AmountRequest` validators) and the render helpers (pure functions over a validated Snapshot). It takes the schema and the types from `contracts`, and its tests take the vectors from `contracts`' test entry.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `contracts`                                                                                                                                                                                                                                                       | none                                |
 | `@intraverse/se-client-play-client`          | npm                                    | A typed `fetch` client for the Play API (and the verify API read, `getRoundVerification`, which the verify page uses), generated from the OpenAPI documents. It takes its types from `contracts`, returns the Snapshot body as `unknown`, and never interprets it. It holds no credential: the shell keeps the play token and runs its refresh, using the client's request layer and schedule functions.                                                                                                                                                                                                                                                                                                                                                                                                            | `contracts`                                                                                                                                                                                                                                                       | none (it uses the platform `fetch`) |
-| `@intraverse/se-client-shell`                | npm                                    | The headless part of the Wrapper: session and token lifecycle, key custody, the transcript, Web Locks, `CreateRoundAuth` and tip checks, the controller boundary, the redacting types and logger. It has no DOM dependency beyond the platform APIs it is given.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `signing`, `snapshot`, `play-client` (and `contracts` through them)                                                                                                                                                                                               | none                                |
+| `@intraverse/se-client-shell`                | npm                                    | The headless part of the Wrapper: session and token lifecycle, key custody, the transcript, Web Locks, `CreateRoundAuth` and tip checks, the controller boundary, the wallet delegation's use case and its check (the Wrapper's side of `se.delegation/1`), the redacting types and logger. It has no DOM dependency beyond the platform APIs it is given.                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `signing`, `snapshot`, `play-client`, and `contracts`' runtime entry (the key-delegation notices alone)                                                                                                                                                           | none                                |
 | `@intraverse/se-client-wrapper` (app)        | no: a release bundle                   | The UI: rendering, accessibility, the iframe mount, the build. It uses the shell and renders only what the shell hands it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `shell` (and its types)                                                                                                                                                                                                                                           | none                                |
 | `@intraverse/se-client-reference-game` (app) | no                                     | A minimal game for the tests and as a sample for game developers.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | nothing but the type definitions of the controller protocol `se.controller/1`: `import type` from `shell`'s type-only subpath `@intraverse/se-client-shell/controller`, a development dependency (no runtime code; [The reference game](./the-reference-game.md)) | none                                |
 | `@intraverse/se-client-verify` (app)         | no: ships inside the Wrapper's release | The verify page ([Verify page](../verify-page.md)): a round recomputed in the browser from its public evidence. It holds the checks of V-12 (the fairness kernel's derivations, kernelVersion 1, for checks 5 and 7, keyed on the kernel version; checks 1 to 4 with `signing`; check 6's quorum read), the configuration read, and the page's states and view; its HTML, entry, and build. Its verify API request is `play-client`'s `getRoundVerification`; the body it returns as `unknown` is validated by the app's own module (`verify-body.ts`) against the vendored verify API document.                                                                                                                                                                                                                    | `signing` (its hashes, recovery, and raw `keccak256`) and `contracts` (runtime entry: the Snapshot schema's patterns); `play-client` (the verify API read); never `shell`                                                                                         | none (Web Crypto for SHA-256)       |
+| `@intraverse/se-client-signing-page` (app)   | no: ships inside the Wrapper's release | The wallet signing page ([Signing page](../signing-page.md)): opened by the Wrapper as a popup on its own origin, the only code that calls a wallet provider (through its wallet port), its side of `se.delegation/1`, its configuration read, its states and view; its HTML, entry, and build.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `signing` (the `KeyDelegation` typed data and the notices reader) and `contracts` (runtime entry: the key-delegation notices); never `shell`                                                                                                                      | none                                |
 
-Dependency direction, as enforced today (the edges RFC-006 proposes are listed
-apart, below). There are no cycles, and a package never imports an app:
+Dependency direction. There are no cycles, and a package never imports an app:
 
 ```text
 contracts ──▶ snapshot ────┐
     │                      ├──▶ shell ──▶ wrapper (app)
-    └─────▶ play-client ───┤
+    ├─────▶ play-client ───┤
+    └──(runtime: notices)──┤
 signing ───────────────────┘
 signing, contracts (runtime) ─▶ verify (app; never shell)
+signing, contracts (runtime) ─▶ signing-page (app; never shell)
 contracts (test-only entry) ──▶ the tests of signing, snapshot, shell, wrapper,
-                                verify, and the e2e fake Play API
+                                verify, signing-page, and the e2e suite
                                 (devDependencies)
 ```
 
 - `contracts` is the only leaf that holds data; `signing` has no kit dependency
   at run time. `snapshot` and `play-client` depend on `contracts`'s runtime
-  entry. `signing` takes vectors from `contracts`' test-only entry in its tests.
-  No other package imports `contracts` directly except in tests, and the
-  `verify` app, which takes the runtime entry (the Snapshot schema's patterns);
-  only tests import the test-only entry (the consumers are listed in
+  entry, and `shell` takes it for the key-delegation notices alone (slice S5 of
+  #220; it reads them through `signing`'s `readKeyDelegationNotices`). `signing`
+  takes vectors from `contracts`' test-only entry in its tests. No other package
+  imports `contracts` directly except in tests, and the `verify` and
+  `signing-page` apps, which take the runtime entry (the Snapshot schema's
+  patterns, and the key-delegation notices); only tests import the test-only
+  entry (the consumers are listed in
   [The `contracts` package](./the-contracts-package.md)). No package imports
   another sideways (`snapshot` and `play-client` never import each other), and a
   package never imports an app.
@@ -119,23 +124,22 @@ contracts (test-only entry) ──▶ the tests of signing, snapshot, shell, wra
   release artifact, so its release notes go in the Wrapper's changesets, and
   `.changeset/config.json` ignores it as it does the reference game (decided by
   the human, 2026-10-19).
-- **Proposed, not enforced
-  ([RFC-006](../../rfcs/active/RFC-006-wallet-delegated-action-key.md),
-  [ADR-012](../../decisions/ADR-012-the-signing-page-on-its-own-origin.md)).**
-  These edges are not rules yet and are not in the diagram or the table above:
-  no lint enforces them, and the direction above wins until ADR-012 is accepted
-  and the slice named lands with its lint change. From slice S2, `contracts`'
-  runtime entry holds the key-delegation notices. From S5, `shell` takes that
-  runtime entry for them (today's lint refuses the import). From S6b,
-  `signing-page` (the wallet signing page, an app on its own origin) takes
-  nothing but `signing` at run time, for the exact `KeyDelegation` typed data
-  the shell verifies, and `contracts`' runtime entry, for its copy of the
+- `signing-page` (the wallet signing page, an app on its own origin; slice S6b
+  of #220, [Signing page](../signing-page.md), SP-1) takes nothing but `signing`
+  at run time, for the exact `KeyDelegation` typed data the shell verifies and
+  the notices reader, and `contracts`' runtime entry, for its copy of the
   key-delegation notices; no third-party runtime dependency. It never takes
-  `shell`, and no package or app imports it (`AGENTS.md` names it). It ships
-  inside the Wrapper's release artifact, as `verify` does, and the Wrapper's
-  site never serves it. The pull request that lands each edge moves it into the
-  diagram and the table and updates the lint and its fixture cases and the
-  architecture memory, as V-15 did for `verify`.
+  `shell` (it holds no credential, and the code that holds the key stays out of
+  its bundle) nor the `contracts` test-only entry outside its tests, and no
+  package or app imports it. The lint and its fixture cases
+  (`tools/fixtures/signing-page-direction-cases.ts`, beside
+  `verify-direction-cases.ts`) hold it to that; `import-direction-cases.ts` now
+  lets `shell` take `contracts`' runtime entry, and still refuses its test-only
+  entry outside `shell`'s tests. Like `verify`, it ships inside the Wrapper's
+  release artifact, under `signer/`, and is never versioned or released on its
+  own: its release notes go in the Wrapper's changesets, and
+  `.changeset/config.json` ignores it. The Wrapper's site never serves it
+  (SP-15).
 - `play-client` returns the Snapshot as `unknown`, so only `snapshot`'s
   validator can turn it into a typed value: a Snapshot cannot reach the renderer
   unvalidated by construction.
@@ -147,10 +151,14 @@ contracts (test-only entry) ──▶ the tests of signing, snapshot, shell, wra
   `pnpm lint`. A fixture test (`tools/import-direction.test.ts`) runs the real
   configuration over scratch files and fails if a violating import is not
   reported (the cases are in `tools/fixtures/`: `import-direction-cases.ts`,
-  `verify-direction-cases.ts`, `lint-rule-cases.ts`, and `style-rule-cases.ts`).
-  The same entries reject another package's internals (`/src`, `/dist`, a
-  relative path into a sibling package) and the `contracts` test-only entry
-  outside tests.
+  `shell-contracts-cases.ts`, `verify-direction-cases.ts`,
+  `signing-page-direction-cases.ts`, `lint-rule-cases.ts`, and
+  `style-rule-cases.ts`). The same entries reject another package's internals
+  (`/src`, `/dist`, a relative path into a sibling package) and the `contracts`
+  test-only entry outside tests. The shell's entry also names the one binding it
+  may take from `contracts`' runtime entry, `keyDelegationNotices`
+  (`allowImportNames`), so any other name, a namespace import, or `export *`
+  fails (decided by the human, 2026-11-21); its tests are not held to it.
 - The same configuration enforces the other code rules that a linter can
   express: the `correctness`, `suspicious`, `pedantic`, and `perf` categories
   (all errors, and any warning fails the run); no `any`; no `@ts-ignore`,

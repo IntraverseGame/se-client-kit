@@ -10,7 +10,10 @@ import {
   typeHash,
 } from "./eip712.ts";
 import { codeOf } from "./fixtures/helpers.ts";
-import { provisionalKeyDelegation as vector } from "./fixtures/provisional-key-delegation.ts";
+import {
+  acceptedDelegation as vector,
+  keyDelegation,
+} from "./fixtures/key-delegation-vectors.ts";
 import { type Address, type Bytes32, decodeHex, encodeHex } from "./hex.ts";
 import {
   hashKeyDelegation,
@@ -105,8 +108,8 @@ describe("keyDelegationTypedData", () => {
       fields: typed.types.EIP712Domain,
     };
     const separator = hashStruct(domain, typed.domain);
-    expect(typeHash(struct)).toBe(vector.typeHash);
-    expect(separator).toBe(vector.domainSeparator);
+    expect(typeHash(struct)).toBe(keyDelegation.typeHash);
+    expect(separator).toBe(keyDelegation.domainSeparator);
     expect(typedDataDigest(separator, hashStruct(struct, typed.message))).toBe(
       keyDelegationDigest(ownDelegation),
     );
@@ -124,13 +127,13 @@ describe("keyDelegationTypedData", () => {
     expect(fromString).toBe(hashKeyDelegation(ownDelegation));
   });
 
-  it("gives the provisional struct hash and digest from its fields and the notice's hash", () => {
+  it("gives the accepted vector's struct hash and digest from its fields and the notice's hash", () => {
     const structHash = structHashOfNoticeHash(
       vector.noticeHash,
       keyDelegationTypedData(message),
     );
     expect(structHash).toBe(vector.structHash);
-    expect(typedDataDigest(vector.domainSeparator, structHash)).toBe(
+    expect(typedDataDigest(keyDelegation.domainSeparator, structHash)).toBe(
       vector.digest,
     );
   });

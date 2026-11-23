@@ -15,23 +15,31 @@ import type {
   ControllerMountRefusal,
 } from "./controller-bridge.ts";
 import type { RejectReason } from "./controller-protocol.ts";
+import type {
+  DelegationBegin,
+  DelegationEvent,
+  DelegationFailure,
+  DelegationOffer,
+  DelegationState,
+  DelegationWindow,
+} from "./delegation-types.ts";
 import type { ShellErrorCode } from "./errors.ts";
 import type { Bet } from "./round-start.ts";
-import type { VerificationFailure } from "./round-verification.ts";
+import type { TipFailure, VerificationFailure } from "./round-verification.ts";
 import type { SnapshotRead } from "./snapshot-read.ts";
-import type { TipCheckFailure } from "./tip-check.ts";
 
 /**
  * Which check refused a round (a machine code; the Wrapper gives each a player
  * label, W-48, RFC-005): one of W-26's five check reasons (`missing`,
  * `pinned-mismatch`, `cross-field`, `recover-mismatch`, `ready-mismatch`),
  * `reissued` (a re-issue, W-26), `tip-check` (W-26a, W-26b; `tipFailure` says
- * why), or `changed` (a book round whose record changed, W-52).
+ * why), `delegation` (W-72; `delegationFailure` says why), or `changed` (a book
+ * round whose record changed, W-52).
  */
 export type RoundFailure = VerificationFailure | "changed";
 
 /** Why the tip check failed (W-26a, W-26b), or `bind` for the bind rule alone. */
-export type RoundTipFailure = TipCheckFailure | "bind";
+export type RoundTipFailure = TipFailure;
 
 /** Why no session opened, or the session that did. */
 export type SessionOpening =
@@ -43,6 +51,11 @@ export type SessionOpening =
   | { readonly kind: "other-tab" }
   /** The browser has no usable Web Locks API: nothing is signed (W-14). */
   | { readonly kind: "unsupported" }
+  /**
+   * The action key, drawn at the open (W-9), could not be drawn: the lock is
+   * released, the token forgotten, and nothing is read or signed.
+   */
+  | { readonly kind: "key-generation" }
   | { readonly kind: "open"; readonly session: PlaySession };
 
 /** A use case's answer, as the UI renders it. */
@@ -92,6 +105,8 @@ export type RoundState = {
   readonly failure?: RoundFailure;
   /** When `failure` is `tip-check`: why the tip check failed (W-26b). */
   readonly tipFailure?: RoundTipFailure;
+  /** When `failure` is `delegation`: why the delegation check failed (W-72). */
+  readonly delegationFailure?: DelegationFailure;
   /** The round is out of sync (W-19, W-44). */
   readonly outOfSync: boolean;
   /** The cash-out control may be offered (W-24). */
@@ -173,7 +188,12 @@ export type PlaySession = {
    * and sends nothing).
    */
   readonly checkAgain: () => Promise<SessionRead>;
-  /** Starts a round with a bet copied from the Snapshot's `Amount` (W-22). */
+  /**
+   * Starts a round with a bet copied from the Snapshot's `Amount` (W-22),
+   * carrying the registered delegation, if any (W-70). Refused
+   * `delegation-refused`, with nothing sent, while the delegation's state is
+   * `refused` or a "Sign again" attempt begun from it is open (W-71).
+   */
   readonly start: (bet: Bet) => Promise<SessionRead>;
   /** Cashes out the current round, on the player's request only (W-24). */
   readonly cashOut: () => Promise<SessionRead>;
@@ -192,6 +212,33 @@ export type PlaySession = {
   readonly autoplayState: () => AutoplayState;
   /** Each change of the run's state. */
   readonly onAutoplay: (listener: (state: AutoplayState) => void) => () => void;
+  /** The wallet delegation's state (W-69), read-only. */
+  readonly delegation: () => DelegationState;
+  /**
+   * Whether the shell offers "Link a wallet" (W-64's first two conditions) and,
+   * when it does, the notice the wallet would sign (W-63, W-65).
+   */
+  readonly delegationOffer: () => DelegationOffer;
+  /**
+   * Takes the handle `window.open` returned under the confirm's click (or
+   * `null`, a blocked window) and begins the attempt (W-66): the 10 s wait for
+   * `ready`, the polling of `closed`, and the one `request`. A refused begin
+   * closes the handle it was given and posts nothing to it.
+   */
+  readonly beginDelegation: (
+    handle: DelegationWindow | null,
+  ) => DelegationBegin;
+  /** A `message` event the Wrapper routed from the signing window's handle. */
+  readonly receiveDelegation: (event: DelegationEvent) => void;
+  /**
+   * "Continue without" (W-71): forgets the delegation, registered or refused;
+   * the state is `offered` again.
+   */
+  readonly dropDelegation: () => void;
+  /** Each change of the delegation's state. */
+  readonly onDelegation: (
+    listener: (state: DelegationState) => void,
+  ) => () => void;
   readonly round: () => RoundState | undefined;
   /**
    * The game origin D of the launched game: the `sessions:redeem` answer's

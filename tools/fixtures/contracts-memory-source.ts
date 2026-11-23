@@ -115,7 +115,43 @@ export const SOURCES: Readonly<Record<string, GroupSource>> = {
     ref: "main",
     path: "k/book-table-commitment.json",
   },
+  "key-delegation-notices": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "d/notices.json",
+  },
+  "key-delegation-vectors": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "d/vectors.json",
+  },
 };
+
+/** One entry of a notices list. */
+export type NoticeEntry = {
+  readonly id: string;
+  readonly text: string;
+  readonly keccak256: string;
+  readonly status: string;
+};
+
+/** A notices list of the given entries, as the backend's file spells it. */
+export const noticesFile = (...notices: readonly NoticeEntry[]): string =>
+  `${JSON.stringify({ version: 1, notices }, null, 2)}\n`;
+
+/** A notices entry; its hash is made up, since the sync does not check it. */
+export const notice = (
+  id: string,
+  status = "pending",
+  text = `Notice ${id}.`,
+): NoticeEntry => ({
+  id,
+  text,
+  keccak256: `0x${id.padStart(64, "0")}`,
+  status,
+});
 
 export type MemorySource = {
   readonly files: Map<string, string>;
@@ -145,6 +181,8 @@ export const memorySource = (): MemorySource => {
     ["k/weighted-draw.json", '{"k":14}\n'],
     ["k/book-draw.json", '{"k":15}\n'],
     ["k/book-table-commitment.json", '{"k":16}\n'],
+    ["d/notices.json", noticesFile(notice("a"))],
+    ["d/vectors.json", '{"d":17}\n'],
   ]);
   const source: MemorySource = {
     files,

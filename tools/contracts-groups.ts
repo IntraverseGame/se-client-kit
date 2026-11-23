@@ -15,6 +15,11 @@ export type Group = {
   readonly sourceName: string;
   /** Vector files are append-only. */
   readonly vectors: boolean;
+  /**
+   * A key-delegation notices list: not a vector, but its entries are
+   * append-only by their own rule (`checkNoticesChange`), which no flag lifts.
+   */
+  readonly notices?: true;
 };
 
 export const GROUPS: readonly Group[] = [
@@ -144,6 +149,23 @@ export const GROUPS: readonly Group[] = [
     kind: "file",
     destination: "src/vectors/kernel/v1/book-table-commitment.json",
     sourceName: "kernel/public/v1/book-table-commitment",
+    vectors: true,
+  },
+  // The key-delegation contract `key-delegation/v1`: its notices (a runtime
+  // file, read through `contracts`' runtime entry) and their vectors.
+  {
+    id: "key-delegation-notices",
+    kind: "file",
+    destination: "src/schemas/key-delegation/v1/notices.json",
+    sourceName: "key-delegation/v1 notices",
+    vectors: false,
+    notices: true,
+  },
+  {
+    id: "key-delegation-vectors",
+    kind: "file",
+    destination: "src/vectors/key-delegation/v1/vectors.json",
+    sourceName: "key-delegation/v1 vectors",
     vectors: true,
   },
 ];

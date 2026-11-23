@@ -58,13 +58,18 @@ Q8).
      - the **menu**: a button whose popover holds "This session" (the time since
        the session opened, in whole minutes, and the rounds played, kept in
        memory only, never stored, logged, or sent; no amount, Q4), then the
-       lobby and the deposit, each exactly when W-49f offers it. In the
-       session-ended state the lobby is the only way out, so there it is a
-       visible control in the start control's place, not an item of the menu.
-       Links to the game's rules and to responsible gaming are not offered: they
-       need a source the Wrapper does not have (Q4). The menu shows in every
-       state with a session (not while loading, in the configuration-error
-       state, or in a browser without Web Locks);
+       lobby and the deposit, each exactly when W-49f offers it, then the wallet
+       delegation's item, "Link a wallet" (or "Signing window open", or the line
+       "Wallet linked for this session"), exactly when W-64 offers it
+       ([The wallet delegation](./the-wallet-delegation.md)); choosing "Link a
+       wallet" closes the menu and opens W-65's consent dialog, a modal dialog,
+       unlike the bar's popovers. In the session-ended state the lobby is the
+       only way out, so there it is a visible control in the start control's
+       place, not an item of the menu. Links to the game's rules and to
+       responsible gaming are not offered: they need a source the Wrapper does
+       not have (Q4). The menu shows in every state with a session (not while
+       loading, in the configuration-error state, or in a browser without Web
+       Locks);
      - the **balance**: the Snapshot's `bet.balance.formatted` under its label,
        while the bar shows the round; its slot keeps a minimum width, so a
        longer balance does not move the bet;
@@ -80,12 +85,16 @@ Q8).
        You won €1.94", the "Payout" label read, not shown), then the receipt,
        whose label is the shortened round id;
      - the **alert line**: the `role="alert"` region for an error that does not
-       stop the round (a typed error, the generic error, a connection problem),
-       except when a cover state owns the region ("One `role="alert"` region at
-       a time", below). **The alert overlays the status**: the alert line has no
-       slot of its own; it sits in the status line's slot, on the same row after
-       the status heading, in the place of the status detail. A state that shows
-       a status detail with an error (the waiting detail below, the slow notice,
+       stop the round, one at a time, the first of: a refused delegated start
+       (W-71), a typed error, the generic error, a failed wallet delegation
+       attempt (W-69), and a connection problem (as built, 2026-11-21; the
+       refused start's top rank decided by the human, 2026-11-21;
+       [The wallet delegation](./the-wallet-delegation.md), W-69), except when a
+       cover state owns the region ("One `role="alert"` region at a time",
+       below). **The alert overlays the status**: the alert line has no slot of
+       its own; it sits in the status line's slot, on the same row after the
+       status heading, in the place of the status detail. A state that shows a
+       status detail with an error (the waiting detail below, the slow notice,
        the state's own detail) keeps it, between the heading and the alert. The
        status line and the alert line together are the **status slot**; in the
        bar the status heading is set smaller than the cover's (1rem, monospace,
@@ -494,14 +503,14 @@ second action is signed at the sequence.
     round's kind (the session's presentation, W-53), not on the verdict alone: a
     book round's verdict is `ready` too and never reads as a config round's.
 
-  | Round, state                                                                                                                                                                                       | Chip                  | Popover                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-  | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-  | no round yet (`idle`), a round the shell does not hold, a config round that ended before its verdict                                                                                               | "How it's checked"    | what the shell checks for this game's kind of round, and that the key is made in this tab and never leaves it (a book game: that the randomness record is checked to stay the same, and that checking the draw is the verify page's job, not yet available)                                                                                                                                                                                                              |
-  | config round, verdict `checking`                                                                                                                                                                   | "Checking"            | checks 1 to 4 of W-26 in full (the round's authorization names this round, is bound to the player's key made in this tab, is for the bet and its currency, commits to the round's secret, takes its randomness from the pinned entropy chain, has the round's randomness target, and is signed by the pinned signer for the pinned domain), check 5 (the ready evidence), and the tip check (W-26b), each "being checked": the shell's verdict has no progress per check |
-  | config round whose verdict is `ready`, through `active` and `resolving`, and after it ends `won`, `lost`, or `canceled` (the player's own cancel, an expired round) with that last verdict `ready` | "Checked before play" | the same list, each "passed", and what it does not cover: the ready evidence is taken from the Snapshot as given until anchoring; the domain, the signer, and the authorization are not yet checked on-chain (W-26's TODO); the terms taken as signed (`playerRef`, `gameId`, `gameVersion`, `circuitVersion`, `payoutTermsHash`); the unchecked `expiry` and `prepareWindow`; and the outcome, which the shell never checks (the verify page's job)                     |
-  | as above, under W-26a's degraded chain check (development: `minRpcQuorum` 1)                                                                                                                       | "Checked (dev)"       | the list, with the tip check read "from one endpoint only (development)"; never "Checked before play"                                                                                                                                                                                                                                                                                                                                                                    |
-  | any round whose verdict is `failed` (a W-26 check, a re-issue after `ready`, the tip check, W-26a's "could not verify the chain"), or a changed book round (W-52)                                  | "Not verified"        | "This round failed verification" (or "Could not verify the chain"), and what refused it: a player label (W-48) for each machine code, the shell's `RoundState.failure` (`missing`, `pinned-mismatch`, `cross-field`, `recover-mismatch`, `ready-mismatch`, `reissued`, `tip-check`, `changed`) and, for the tip check, `tipFailure` (W-26b's seven causes and `bind`); the cover and status of the failed-verification state stay as they are                            |
-  | book round (W-50 to W-56), not changed                                                                                                                                                             | "Recorded"            | that the round's randomness record stayed the same from start to result (W-52), and that checking the draw is the verify page's job (not yet, #156)                                                                                                                                                                                                                                                                                                                      |
+  | Round, state                                                                                                                                                                                       | Chip                  | Popover                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+  | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | no round yet (`idle`), a round the shell does not hold, a config round that ended before its verdict                                                                                               | "How it's checked"    | what the shell checks for this game's kind of round, and that the key is made in this tab and never leaves it (a book game: that the randomness record is checked to stay the same, and that checking the draw is the verify page's job, not yet available)                                                                                                                                                                                                                                                                         |
+  | config round, verdict `checking`                                                                                                                                                                   | "Checking"            | checks 1 to 4 of W-26 in full (the round's authorization names this round, is bound to the player's key made in this tab, is for the bet and its currency, commits to the round's secret, takes its randomness from the pinned entropy chain, has the round's randomness target, and is signed by the pinned signer for the pinned domain), check 5 (the ready evidence), and the tip check (W-26b), each "being checked": the shell's verdict has no progress per check                                                            |
+  | config round whose verdict is `ready`, through `active` and `resolving`, and after it ends `won`, `lost`, or `canceled` (the player's own cancel, an expired round) with that last verdict `ready` | "Checked before play" | the same list, each "passed", and what it does not cover: the ready evidence is taken from the Snapshot as given until anchoring; the domain, the signer, and the authorization are not yet checked on-chain (W-26's TODO); the terms taken as signed (`playerRef`, `gameId`, `gameVersion`, `circuitVersion`, `payoutTermsHash`); the unchecked `expiry` and `prepareWindow`; and the outcome, which the shell never checks (the verify page's job)                                                                                |
+  | as above, under W-26a's degraded chain check (development: `minRpcQuorum` 1)                                                                                                                       | "Checked (dev)"       | the list, with the tip check read "from one endpoint only (development)"; never "Checked before play"                                                                                                                                                                                                                                                                                                                                                                                                                               |
+  | any round whose verdict is `failed` (a W-26 check, a re-issue after `ready`, the tip check, the delegation check (W-72), W-26a's "could not verify the chain"), or a changed book round (W-52)     | "Not verified"        | "This round failed verification" (or "Could not verify the chain"), and what refused it: a player label (W-48) for each machine code, the shell's `RoundState.failure` (`missing`, `pinned-mismatch`, `cross-field`, `recover-mismatch`, `ready-mismatch`, `reissued`, `tip-check`, `delegation`, `changed`) and, for the tip check, `tipFailure` (W-26b's seven causes and `bind`), and for the delegation check, `delegationFailure` (W-72's four causes); the cover and status of the failed-verification state stay as they are |
+  | book round (W-50 to W-56), not changed                                                                                                                                                             | "Recorded"            | that the round's randomness record stayed the same from start to result (W-52), and that checking the draw is the verify page's job (not yet, #156)                                                                                                                                                                                                                                                                                                                                                                                 |
   - **A failure wins and stays.** A round whose verdict failed, or a changed
     book round, reads "Not verified" from then on: after it ends too, through
     the required cancel and W-33's cancel states (`in-flight`, `settling`,
@@ -606,12 +615,12 @@ are in [Accessibility](../wrapper.md#accessibility).
 ## Tests
 
 Rows T-25 to T-28 and, for RFC-005's bar, T-29 to T-35 of the
-[test plan](../wrapper.md#test-plan), and the single-screen parts of T-6, T-9a,
-T-10 to T-12, T-14, T-14a, T-15, T-16, T-18, T-23, and T-24. The tests that
-assert the hidden frame today change with it: `e2e/tests/game-mount.spec.ts`,
-`e2e/tests/focus-from-frame.spec.ts`, `apps/wrapper/src/book-round.test.ts`, and
-the visibility checks of the round specs; the readiness signal of
-`e2e/tests/harness/round-play.ts` and
+[test plan](../wrapper.md#test-plan), the menu item and the dialog of T-46 and
+T-50, and the single-screen parts of T-6, T-9a, T-10 to T-12, T-14, T-14a, T-15,
+T-16, T-18, T-23, and T-24. The tests that assert the hidden frame today change
+with it: `e2e/tests/game-mount.spec.ts`, `e2e/tests/focus-from-frame.spec.ts`,
+`apps/wrapper/src/book-round.test.ts`, and the visibility checks of the round
+specs; the readiness signal of `e2e/tests/harness/round-play.ts` and
 `e2e/tests/preview-support/preview-rounds.ts` (a visible iframe) becomes the
 frame without `inert` and the status "Your round is in play". The preview run is
 the backend's job at a pinned commit, so its next pin bump takes the layout and

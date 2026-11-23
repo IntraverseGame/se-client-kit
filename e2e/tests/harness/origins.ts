@@ -35,6 +35,12 @@ export const OPERATOR_ORIGIN = "https://casino.e2e-operator.test";
 /** The same pages on an origin no configuration lists (T-9a). */
 export const UNLISTED_ORIGIN = "https://pages.e2e-unlisted.test";
 
+/**
+ * The wallet signing page's origin (T-50; ADR-012): a registrable domain of its
+ * own, where the release's `signer/` is served as the deploy lays it out.
+ */
+export const SIGNER_ORIGIN = "https://signer.e2e-signer.test";
+
 export const WRAPPER_DIST = fileURLToPath(
   new URL("../../../apps/wrapper/dist/", import.meta.url),
 );

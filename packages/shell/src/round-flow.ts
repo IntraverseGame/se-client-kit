@@ -34,8 +34,11 @@ import {
   type TrackingEvidence,
   type TrackingOptions,
 } from "./round-tracking.ts";
+import { isReissued } from "./round-verification.ts";
 import { isRoundOver, isStale } from "./snapshot-reading.ts";
-import type { FlowTestHooks } from "./typed-data.ts";
+
+/** The flow's test-only hooks (typed-data.ts), as the delivery takes them. */
+type FlowTestHooks = Parameters<typeof createRoundDelivery>[2];
 
 export type RoundFlowOptions = TrackingOptions &
   DeliveryOptions & {
@@ -142,10 +145,7 @@ export const createRoundFlow = (
     options,
     {
       roundId: round.roundId,
-      reissued: (): boolean => {
-        const verdict = tracking.verdict();
-        return verdict.state === "failed" && verdict.failure === "reissued";
-      },
+      reissued: (): boolean => isReissued(tracking.verdict()),
       latest: (): ValidSnapshot => tracking.latest(),
       // Past the cancel's gate (defined below; called only later).
       intoRound: (snapshot: ValidSnapshot): Promise<void> =>

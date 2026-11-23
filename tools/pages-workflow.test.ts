@@ -21,7 +21,9 @@ import {
 // Cloudflare Pages), read with the block-style reader of
 // tools/workflow-text.ts: its gates, permissions, environment, and pins, which
 // secrets reach which step, and that the deploy job runs no repository
-// script. The headers step's own script runs in tools/pages-headers.test.ts.
+// script. The headers step's own script runs in tools/pages-headers.test.ts;
+// the signing page's site, and the configuration job's inputs, are in
+// tools/pages-signer-site.test.ts.
 
 const pages: Line[] = readLines(
   readFileSync(
@@ -91,8 +93,15 @@ describe("the Pages workflow", () => {
     expect(keysIn(push, 4)).toEqual(["branches: [main]"]);
   });
 
-  it("runs every job only from main, with no other condition", () => {
-    expect(valuesOf(pages, "if")).toEqual([GATE, GATE, GATE]);
+  it("runs every job only from main; only the signing page's document is conditional", () => {
+    const signer = "signer-config-digest != ''";
+    expect(valuesOf(pages, "if")).toEqual([
+      GATE,
+      GATE,
+      `steps.config.outputs.${signer}`,
+      GATE,
+      `needs.config-stage.outputs.${signer}`,
+    ]);
   });
 
   it("never continues on an error and never cancels a deploy", () => {
@@ -124,11 +133,12 @@ describe("the Pages workflow", () => {
     );
   });
 
-  it("deploys to the three staging projects by their public names", () => {
+  it("deploys to the four staging projects by their public names", () => {
     expect(mappingAt(pages, jobKey("deploy-stage", "env"))).toEqual([
       "WRAPPER_PROJECT: se-wrapper-stage",
       "VERIFIER_PROJECT: se-verifier-stage",
       "GAME_PROJECT: se-games-stage",
+      "SIGNER_PROJECT: se-signer-stage",
     ]);
   });
 
@@ -183,26 +193,6 @@ describe("the Pages workflow", () => {
     ).toHaveLength(2);
     expect(pages.filter(line => line.text.includes("vars.CLOUDFLARE"))).toEqual(
       [],
-    );
-  });
-
-  it("gives the config job its configuration values and never the token", () => {
-    const [start, end] = jobRange(pages, "config-stage");
-    const job = pages.slice(start, end).map(line => line.text);
-    expect(job.filter(text => text.includes("CLOUDFLARE"))).toEqual([]);
-    expect(
-      stepEnv("config-stage", "Build and validate the configuration documents"),
-    ).toEqual([
-      "PAGES_WRAPPER_ORIGIN: ${{ secrets.PAGES_WRAPPER_ORIGIN }}",
-      "PAGES_VERIFIER_ORIGIN: ${{ secrets.PAGES_VERIFIER_ORIGIN }}",
-      "PAGES_CHAIN_PINS: ${{ secrets.PAGES_CHAIN_PINS }}",
-      "PAGES_RPC_ENDPOINTS: ${{ secrets.PAGES_RPC_ENDPOINTS }}",
-      "PAGES_RPC_ORIGINS: ${{ secrets.PAGES_RPC_ORIGINS }}",
-      "PAGES_GAME_ORIGINS: ${{ secrets.PAGES_GAME_ORIGINS }}",
-      "PAGES_OPERATOR_ORIGINS: ${{ secrets.PAGES_OPERATOR_ORIGINS }}",
-    ]);
-    expect(runWith("config-stage", "pages-config-cli.ts")).toContain(
-      "pnpm exec tsx apps/wrapper/pages-config-cli.ts",
     );
   });
 
@@ -283,7 +273,8 @@ describe("the Pages workflow", () => {
       'WRANGLER_SEND_METRICS: "false"',
     );
     const deploy = runWith("deploy-stage", "wrangler");
-    expect(deploy).toContain("for site in wrapper verifier game; do");
+    expect(deploy).toContain('sites="wrapper verifier game"');
+    expect(deploy).toContain("for site in $sites; do");
     expect(deploy).toContain('game) project="$GAME_PROJECT" ;;');
     expect(deploy).toContain('pages deploy "$site"');
     expect(deploy).toContain('--project-name "$project"');

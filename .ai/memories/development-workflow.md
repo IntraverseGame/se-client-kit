@@ -1,6 +1,6 @@
 ---
 description: Approvals, worktrees, scripts and the task cache, and where the development flow lives. Read before starting work or opening a PR.
-last-verified: 2026-11-20 (RFC-007 slice 7: the release runbook's "Solana entropy sources", the provider checklist, a browser key's rotation, staging's step 8 with its canary, production's first document as a gate of the publish path; RFC-007 slice 4: the verify page's size budget raised to 188416 and 61440 for the Solana read; slice 1: `entropyChainKind` in `PAGES_CHAIN_PINS`, staging `{ "anvil": "evm" }` by a one-step migration; earlier: 2026-11-18, no AI attribution in commits, pull requests, issues, review comments, code, or docs: the `commit-msg` hook in `.githooks/`, installed once per clone by `pnpm hooks`; the pr-shepherd's disclosure line withdrawn; ADR-003 amendment note; 2026-11-17, production's settings checked before publish: release.yml's `prod-check` calls pages-prod-check.yml, `publish` needs it; ADR-009 amendment note; a failed production deploy is recovered by a dispatch from `main`, never a re-run; immutable releases off; 2026-11-16, the `wireit@0.15.0` release-age waiver removed, once 0.15.0 was past the window; one exact-version exception left, `chokidar@4.0.3`; 2026-11-11, the generator's `undici` override raised from 6.29.0 to 6.29.1 for four advisories in 6.29.0, no supply-chain exception; the first-publish rehearsal moved from #154 to #208; 2026-11-04, #154's release settings checked: the `attest`, `pages-prod`, and `pages-prod-config` environments, the tag ruleset, and the Actions setting exist, the production environments hold no secret yet, and #133 sets those secrets as a precondition of `RELEASE_PUBLISH_ENABLED`; 2026-11-03, `earlierPins` in `PAGES_CHAIN_PINS`: the config tool writes it to the verifier's document only, each entry validated by the Wrapper's validator in the current pair's place; 2026-10-30, staging's `PAGES_OPERATOR_ORIGINS` holds the staging operators' origins, no longer a placeholder; 2026-10-28, #133: ADR-009 built, the changesets/action release flow and pages-prod.yml; staging's entropy chain moves to Somnia's public testnet, 50312, tipLagMargin 100, the switch procedure; #135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)
+last-verified: 2026-11-21 (RFC-007 slice 7: the release runbook's "Solana entropy sources", the provider checklist, a browser key's rotation, staging's step 8 with its canary, production's first document as a gate of the publish path; #220 S6b: the signing page's config check CLI, site layout, and deploy-check needing config-check; earlier: 2026-11-20 (#220: the signing page's Pages projects, `PAGES_SIGNER_ORIGIN` and `PAGES_ACCEPT_PENDING_NOTICES`, set before the merge; earlier the same day: 2026-11-20 (RFC-007 slice 4: the verify page's size budget raised to 188416 and 61440 for the Solana read; slice 1: `entropyChainKind` in `PAGES_CHAIN_PINS`, staging `{ "anvil": "evm" }` by a one-step migration; earlier: 2026-11-18, no AI attribution in commits, pull requests, issues, review comments, code, or docs: the `commit-msg` hook in `.githooks/`, installed once per clone by `pnpm hooks`; the pr-shepherd's disclosure line withdrawn; ADR-003 amendment note; 2026-11-17, production's settings checked before publish: release.yml's `prod-check` calls pages-prod-check.yml, `publish` needs it; ADR-009 amendment note; a failed production deploy is recovered by a dispatch from `main`, never a re-run; immutable releases off; 2026-11-16, the `wireit@0.15.0` release-age waiver removed, once 0.15.0 was past the window; one exact-version exception left, `chokidar@4.0.3`; 2026-11-11, the generator's `undici` override raised from 6.29.0 to 6.29.1 for four advisories in 6.29.0, no supply-chain exception; the first-publish rehearsal moved from #154 to #208; 2026-11-04, #154's release settings checked: the `attest`, `pages-prod`, and `pages-prod-config` environments, the tag ruleset, and the Actions setting exist, the production environments hold no secret yet, and #133 sets those secrets as a precondition of `RELEASE_PUBLISH_ENABLED`; 2026-11-03, `earlierPins` in `PAGES_CHAIN_PINS`: the config tool writes it to the verifier's document only, each entry validated by the Wrapper's validator in the current pair's place; 2026-10-30, staging's `PAGES_OPERATOR_ORIGINS` holds the staging operators' origins, no longer a placeholder; 2026-10-28, #133: ADR-009 built, the changesets/action release flow and pages-prod.yml; staging's entropy chain moves to Somnia's public testnet, 50312, tipLagMargin 100, the switch procedure; #135, #137: staging's lag margin and RPC stated, production's moved to #133; #143: wireit 0.15.0, the CI task cache stays off, two exact-version supply-chain exceptions; 2026-10-27, #3: CODEOWNERS active, the `main` ruleset as configured, npm trusted publishing; deploy policy: staging on every push to `main` with no gate, production on the merge of the version pull request, not built yet; #133: the Pages workflow and `wrangler`, ADR-008; 2026-10-19: wireit edges pull request: lint:ts depends on the package builds, e2e's test declares its env, the Vite builds declare NODE_ENV; #53: the guard for kit build output before typecheck, test, and the Wrapper and e2e runs; `WIREIT_LOGGER=simple` in CI; the Wrapper's size budget and the release workflow's `version` job, #12)))
 ---
 
 # Development workflow
@@ -77,15 +77,22 @@ Several agents and people work in one clone at once. Rules:
   amendment note 2026-11-17, accepted by the human) calls
   `.github/workflows/pages-prod-check.yml` (workflow_call only, no input), two
   jobs: `config-check` (`pages-prod-config`, `contents: read`, default checkout
-  = the run's commit, no output or upload) runs `config-prod`'s "Build the
+  = the run's commit, no upload; since #220's S6b one output, the signing
+  page document's digest, empty without one) runs `config-prod`'s "Build the
   shell" and "Build and validate the configuration documents" steps verbatim
-  (`pages-config-cli.ts --production`), builds the Wrapper, lays out the two
-  sites, and runs the deploy's "Write the Pages headers files" verbatim (so the
-  2000-character `_headers` line limit fails before publish);
+  (`pages-config-cli.ts --production`, then `config-check-cli.ts` on the
+  signing page's document when there is one), builds the Wrapper, lays out the
+  sites (the signing page's only when production names one), and runs the
+  deploy's "Write the Pages headers files" verbatim (so the 2000-character
+  `_headers` line limit and a COOP header fail before publish);
   `deploy-check` (`pages-prod`, `permissions: {}`, no checkout or repository
-  code, no network) runs `deploy-prod`'s "Require the Pages settings"
-  verbatim (four settings set, project names `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`
-  and different). Tests hold the copies equal. A reusable workflow so
+  code, no network; since S6b it needs `config-check`, for that digest) runs
+  `deploy-prod`'s "Require the Pages settings" verbatim (four settings set,
+  `PAGES_SIGNER_PROJECT` too when a signing page is named, project names
+  `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$` and all different); ADR-009's
+  amendment note of 2026-11-21 records the output and the `needs`. Tests hold
+  the copies equal. A
+  reusable workflow so
   release.yml itself still reads no `secrets.`; neither environment has a
   required reviewer (checked 2026-11-17). The token is not verified with
   Cloudflare (decided not to; ADR-009 note). The config tool's origin rule
@@ -167,7 +174,11 @@ Several agents and people work in one clone at once. Rules:
   configuration document's `playApiBaseUrl`, plus `operatorOrigins`, since
   `frame-ancestors` checks every ancestor; the Wrapper's `Permissions-Policy`;
   CSP cannot stop a listed operator framing the game directly, the game's
-  parent check and the bridge do). Every
+  parent check and the bridge do), and, with `PAGES_SIGNER_ORIGIN` set,
+  `se-signer-stage` (the wallet signing page, #220: the artifact's `signer/`
+  plus a root copy of its page, its own `environment-config.json`, no proxy,
+  no API, at its `pages.dev` origin with no custom domain; production's
+  project is the `pages-prod` secret `PAGES_SIGNER_PROJECT`). Every
   push to `main` deploys staging, always (the human, 2026-10-27): every job's
   only condition is `github.ref == 'refs/heads/main'`, and the workflow reads no
   `vars.` (the test asserts both, and the `push: branches: [main]` trigger).
@@ -209,10 +220,18 @@ Several agents and people work in one clone at once. Rules:
   origins since 2026-10-30, bare `https` only, never the Wrapper's, the
   verifier's, or a game origin, no repeats; appending one is a whole-value
   `gh secret set` and a redeploy: the runbook), and `PAGES_WRAPPER_ORIGIN`,
-  `PAGES_VERIFIER_ORIGIN`, `PAGES_CHAIN_PINS`, `PAGES_RPC_ENDPOINTS` (set).
+  `PAGES_VERIFIER_ORIGIN`, `PAGES_CHAIN_PINS`, `PAGES_RPC_ENDPOINTS` (set),
+  and the wallet delegation's optional `PAGES_SIGNER_ORIGIN` and
+  `PAGES_ACCEPT_PENDING_NOTICES` (`true` or unset; never in production), set
+  right before the merge of #220's pull request (the older workflow ignores
+  them) and only once the backend confirms staging accepts `keyDelegation`
+  (runbook, Turning on the wallet delegation). One input builds the
+  Wrapper's `signingPageOrigin` and `acceptPendingNotices` and the signing
+  page's whole document, so they cannot disagree; the Wrapper's and the
+  signing page's projects roll back together.
   Each Pages project: `SE_API_UPSTREAM_ORIGIN` (set), `SE_API_PATH_PREFIXES`
   (set), compatibility date 2024-11-11 or later (confirmed). Since 2026-10-28
-  the infrastructure owner manages the three projects' settings as code: ask
+  the infrastructure owner manages the projects' settings as code: ask
   them for a change (never the dashboard; their apply removes it), and redeploy
   when they ask. Staging's entropy chain is Somnia's public testnet (chain id
   50312, source key still `anvil`, kind `evm` in `entropyChainKind`, added by
@@ -303,7 +322,10 @@ Several agents and people work in one clone at once. Rules:
   (`WRAPPER_BUDGET`), plus two of the verify page's
   under `verify/` (`verify output`, `verify page, gzip`; `VERIFY_BUDGET`,
   limits 188416 and 61440, raised 2026-11-20 for the Solana read about 25% over 150909 and 48928, first set 2026-10-20 at 150000 and 49152; V-16, D-3), counted apart from the
-  Wrapper's. Enforced by
+  Wrapper's, and two of the signing page's under `signer/` (`signer output`,
+  `signer page, gzip`; `SIGNER_BUDGET`, SP-14: limits 78848 and 29696 set
+  from the first build's 62565 and 23469, approved by the human on
+  2026-11-21), counted apart from both. Enforced by
   `pnpm check:size-budget` (`tools/check-size-budget.ts`, in `pnpm check` and
   the `build` CI job), and directly by the release dry run (listed once; the
   dry run does not run the CLI) and `tools/release-publish.ts`. A test keeps

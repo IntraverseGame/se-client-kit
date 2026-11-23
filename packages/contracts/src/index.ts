@@ -8,7 +8,9 @@
 // `PlayApiOperations` (by `operationId`), and `PlayApiComponents` (its schemas
 // and responses), plus `PlayApiOperationRoutes`, each operation's literal path
 // and method, which the generator reads from `paths`. Its empty `webhooks`,
-// `$defs`, and `external` are left out.
+// `$defs`, and `external` are left out. The Snapshot schema's `KeyDelegation`
+// is exported as `SnapshotKeyDelegation`, so it never meets `signing`'s own
+// `KeyDelegation` (the delegation as the wallet signs it).
 export type {
   components as PlayApiComponents,
   operationRoutes as PlayApiOperationRoutes,
@@ -41,6 +43,8 @@ export type {
   GameConfig,
   Hash32,
   HttpsUrl,
+  KeyDelegation as SnapshotKeyDelegation,
+  KeyDelegationDomain,
   Multiplier,
   NewRound,
   OnChainRecord,
@@ -61,4 +65,5 @@ export type {
   Unit,
   ZKProofRef,
 } from "./generated/snapshot.ts";
+export { keyDelegationNotices } from "./schemas/key-delegation-notices.ts";
 export { snapshotSchema } from "./schemas/snapshot.ts";

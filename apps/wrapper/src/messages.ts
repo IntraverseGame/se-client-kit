@@ -4,9 +4,14 @@
 // actually shown. Texts never carry a value from the network except where the
 // UI places one beside them (an amount's `formatted`, a round id, a
 // `requestId`), always as text, never as markup. The bar's texts of RFC-005
-// are bar-messages.ts's, joined into the same catalogue.
+// are bar-messages.ts's, and the wallet delegation's delegation-messages.ts's,
+// joined into the same catalogue.
 
 import { type BarMessageKey, EN_BAR } from "./bar-messages.ts";
+import {
+  type DelegationMessageKey,
+  EN_DELEGATION,
+} from "./delegation-messages.ts";
 
 export type MessageKey =
   | "status.loading"
@@ -89,13 +94,18 @@ export type MessageKey =
   | "error.ENTROPY_UNAVAILABLE"
   | "error.PREPARATION_TIMEOUT"
   | "error.ROUND_VOIDED"
+  | "error.keyDelegationRefused"
+  | "error.KEY_DELEGATION_INVALID"
+  | "error.KEY_DELEGATION_EXPIRED"
+  | "error.KEY_DELEGATION_NOTICE_UNKNOWN"
   | "error.UNAVAILABLE"
   | "icon.win"
   | "icon.loss"
   | "icon.error"
   | "icon.info"
   | "icon.progress"
-  | BarMessageKey;
+  | BarMessageKey
+  | DelegationMessageKey;
 
 export type Messages = Readonly<Record<MessageKey, string>>;
 
@@ -191,6 +201,13 @@ const EN: Messages = {
   "error.ENTROPY_UNAVAILABLE": "The round could not be prepared.",
   "error.PREPARATION_TIMEOUT": "The round took too long to prepare.",
   "error.ROUND_VOIDED": "The round was voided. Your bet was not taken.",
+  // A delegated start refused before any round existed (W-71; staging drafts).
+  "error.keyDelegationRefused":
+    "Your wallet link was refused, and the round did not start.",
+  "error.KEY_DELEGATION_INVALID": "The wallet's signature was not accepted.",
+  "error.KEY_DELEGATION_EXPIRED": "The wallet link has expired.",
+  "error.KEY_DELEGATION_NOTICE_UNKNOWN":
+    "The signed text is not accepted here.",
   "error.UNAVAILABLE": "The game is unavailable right now.",
   "icon.win": "Win",
   "icon.loss": "Loss",
@@ -198,6 +215,7 @@ const EN: Messages = {
   "icon.info": "Information",
   "icon.progress": "In progress",
   ...EN_BAR,
+  ...EN_DELEGATION,
 };
 
 /** The language shown when the session's has no catalogue. */

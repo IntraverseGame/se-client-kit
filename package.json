@@ -51,6 +51,7 @@
         "./packages/shell:build",
         "./apps/wrapper:build",
         "./apps/verify:build",
+        "./apps/signing-page:build",
         "./apps/reference-game:build",
         "./apps/pages-proxy:build"
       ]
@@ -91,6 +92,7 @@
         "./apps/wrapper:typecheck",
         "./apps/reference-game:typecheck",
         "./apps/verify:typecheck",
+        "./apps/signing-page:typecheck",
         "./apps/pages-proxy:typecheck",
         "./e2e:typecheck",
         "typecheck:tools"
@@ -123,6 +125,7 @@
         "./apps/wrapper:test",
         "./apps/reference-game:test",
         "./apps/verify:test",
+        "./apps/signing-page:test",
         "./apps/pages-proxy:test",
         "./packages/snapshot:test",
         "./packages/play-client:test",
@@ -236,6 +239,7 @@
       "files": [
         "**/*.{ts,mts,cts,tsx,js,mjs,cjs,jsx,cjsx,mjsx,ctsx,mtsx}",
         "**/*.json",
+        "!**/node_modules/**",
         "!**/dist/**",
         "!**/coverage/**",
         "!**/playwright-report/**",

@@ -21,6 +21,7 @@
     "@intraverse/se-client-e2e",
     "@intraverse/se-client-pages-proxy",
     "@intraverse/se-client-reference-game",
+    "@intraverse/se-client-signing-page",
     "@intraverse/se-client-verify"
   ]
 }

@@ -14,7 +14,9 @@ import type { RoundSigner } from "./round-signer.ts";
 import {
   type AuthEvidence,
   createRoundVerification,
+  isReissued,
   type RoundVerdict,
+  type RoundVerification,
 } from "./round-verification.ts";
 import type { SigningSession } from "./signing-session.ts";
 import type { TipCheckRecord } from "./tip-check.ts";
@@ -43,6 +45,8 @@ export type TrackedRound = {
 export type TrackingEvidence = {
   readonly auth: AuthEvidence;
   readonly tip: TipCheckRecord | undefined;
+  /** Each distinct `proofs.keyDelegation` read for the round (W-72). */
+  readonly delegation: ReturnType<RoundVerification["delegationEvidence"]>;
 };
 
 export type RoundTracking = {
@@ -92,10 +96,11 @@ export const createRoundTracking = (
   };
 
   // Opens the transcript state with the settled `T_0` once the round may sign
-  // (`ready`, or a required cancel), and stops it on a re-issue.
+  // (`ready`, or a required cancel), and stops it on a re-issue or a changed
+  // delegation (W-72), which is handled as one.
   const apply = (): RoundVerdict => {
     const verdict = verification.verdict();
-    if (verdict.state === "failed" && verdict.failure === "reissued") {
+    if (isReissued(verdict)) {
       signer?.reissue();
       return verdict;
     }
@@ -148,7 +153,11 @@ export const createRoundTracking = (
     signer: (): RoundSigner | undefined => signer,
     latest: (): ValidSnapshot => latest,
     evidence: (): TrackingEvidence =>
-      Object.freeze({ auth: verification.evidence(), tip }),
+      Object.freeze({
+        auth: verification.evidence(),
+        tip,
+        delegation: verification.delegationEvidence(),
+      }),
     tipError: (): Error | undefined => tipError,
   });
 };

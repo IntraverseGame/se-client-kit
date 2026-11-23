@@ -1,10 +1,16 @@
 // The fake Play API keeps to the vendored document where the operations'
-// tests rely on it: the token's form, strict request bodies, and unknown
-// paths.
+// tests rely on it: the token's form, strict request bodies (the start's
+// `keyDelegation` included, T-43), and unknown paths.
 
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { actionBody, startBody } from "./fixtures/play-bodies.ts";
+import {
+  actionBody,
+  delegatedStartBody,
+  keyDelegation,
+  startBody,
+  startingSnapshot,
+} from "./fixtures/play-bodies.ts";
 import {
   createServerHarness,
   type ServerHarness,
@@ -72,6 +78,43 @@ describe("the fake Play API", () => {
         ...PLAY_ROUTES.refreshPlayToken,
         authorization: bearer,
         body: {},
+        retry: "never",
+      }),
+    ).toBe("INVALID_ARGUMENT");
+  });
+
+  it.each([
+    ["a delegation", delegatedStartBody],
+    [
+      "a null delegation, as the document allows",
+      { ...startBody, keyDelegation: null },
+    ],
+  ])("accepts a start with %s", async (_name, body) => {
+    h.server.answer("startRound", { kind: "success", body: startingSnapshot });
+    const { error } = await h.settle(
+      h.transport.send({
+        ...PLAY_ROUTES.startRound,
+        authorization: bearer,
+        body,
+        retry: "never",
+      }),
+    );
+    expect(error).toBeUndefined();
+  });
+
+  const { signature: _signature, ...unsigned } = keyDelegation;
+
+  it.each([
+    ["a field it does not list", { ...keyDelegation, extra: 1 }],
+    ["no signature", unsigned],
+    ["not an object", "0x00"],
+    ["an array", [keyDelegation]],
+  ])("refuses a start whose keyDelegation has %s", async (_name, value) => {
+    expect(
+      await codeOf({
+        ...PLAY_ROUTES.startRound,
+        authorization: bearer,
+        body: { ...startBody, keyDelegation: value },
         retry: "never",
       }),
     ).toBe("INVALID_ARGUMENT");

@@ -5,7 +5,8 @@
 // does not use is still validated, so a document one refuses the other refuses
 // too. The one exception is `earlierPins` (V-3b), which only the verifier site's
 // document carries: the page reads it and the Wrapper refuses it as an unknown
-// field. An issue names a field, never a value.
+// field. The wallet delegation's two fields are delegation-config.ts's: read,
+// never used. An issue names a field, never a value.
 
 import { readAutoplayConfig } from "./autoplay-config.ts";
 import type { RpcEndpoint } from "./chain-read.ts";
@@ -14,6 +15,7 @@ import {
   isCount,
   isRecord,
   NAME,
+  overlaps,
   own,
   readAddress,
   readApiBase,
@@ -23,6 +25,10 @@ import {
   readUrl,
   shareProvider,
 } from "./config-fields.ts";
+import {
+  type DelegationConfigIssueCode,
+  readDelegationConfig,
+} from "./delegation-config.ts";
 import { type PinPair, readDomain, readEarlierPins } from "./pin-pairs.ts";
 import { readSources, type SourceConfig } from "./source-config.ts";
 
@@ -67,7 +73,8 @@ export type ConfigIssueCode =
   | "invalid-game-origins"
   | "invalid-operator-origins"
   | "overlapping-origins"
-  | "invalid-autoplay";
+  | "invalid-autoplay"
+  | DelegationConfigIssueCode;
 
 export type ConfigIssue = {
   readonly code: ConfigIssueCode;
@@ -96,6 +103,8 @@ export const CONFIG_FIELDS: readonly string[] = Object.freeze([
   "gameOrigins",
   "operatorOrigins",
   "autoplay",
+  "signingPageOrigin",
+  "acceptPendingNotices",
 ]);
 
 const ENVIRONMENTS: ReadonlySet<string> = new Set([
@@ -149,22 +158,6 @@ const readQuorum = (
   }
   return quorum;
 };
-
-/** The disjoint-origins rule: no origin is both an embedder and a game. */
-const overlaps = (
-  ownOrigin: string,
-  gameOrigins: readonly string[] | undefined,
-  operatorOrigins: readonly string[] | undefined,
-): ConfigIssue[] => [
-  ...(operatorOrigins?.some(
-    origin => origin === ownOrigin || gameOrigins?.includes(origin) === true,
-  ) === true
-    ? [{ code: "overlapping-origins" as const, field: "operatorOrigins" }]
-    : []),
-  ...(gameOrigins?.includes(ownOrigin) === true
-    ? [{ code: "overlapping-origins" as const, field: "gameOrigins" }]
-    : []),
-];
 
 const unknownFields = (fields: Fields): ConfigIssue[] =>
   Object.keys(fields)
@@ -253,6 +246,15 @@ export const validateEnvironmentConfig = (
   ) {
     issues.push({ code: "invalid-autoplay", field: "autoplay" });
   }
+  issues.push(
+    ...readDelegationConfig(fields, {
+      ownOrigin,
+      environment,
+      verifyBaseUrl,
+      gameOrigins,
+      operatorOrigins,
+    }).issues,
+  );
   if (
     issues.length > 0 ||
     runtimeSigner === undefined ||

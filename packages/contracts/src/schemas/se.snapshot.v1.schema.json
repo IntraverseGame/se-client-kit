@@ -140,6 +140,11 @@
       "then": { "properties": { "proofs": { "not": { "required": ["fairnessProof"] } } } }
     },
     {
+      "$comment": "A key delegation is a config round's only: a book start with one is refused.",
+      "if": { "properties": { "model": { "const": "book" } } },
+      "then": { "properties": { "proofs": { "properties": { "keyDelegation": { "not": {} } } } } }
+    },
+    {
       "$comment": "Round creation authorization: a config round's authorization is signed when the round is bound, with its randomness proof, so a config round's proofs always carry it (from the bind on: starting once bound, then every later status). A book round never carries it.",
       "if": { "properties": { "model": { "const": "config" } } },
       "then": { "properties": { "proofs": { "required": ["createRoundAuth"] } } },
@@ -326,7 +331,12 @@
         "balance": { "$ref": "#/$defs/Amount" },
         "minBet": { "$ref": "#/$defs/Amount" },
         "maxBet": { "$ref": "#/$defs/Amount" },
-        "suggestedBets": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/Amount" } },
+        "suggestedBets": {
+          "description": "The bets the player is offered, in ascending order of value: the minimum bet's multiples 1, 2, 5, 10, 20, 50 and 100 that are at most maxBet. Empty when maxBet is below minBet (no bet of the game fits). Each carries the server's formatted text; a client offers these and never builds an amount of its own.",
+          "type": "array",
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/Amount" }
+        },
         "defaultBet": { "$ref": "#/$defs/Amount" }
       }
     },
@@ -410,7 +420,8 @@
         "fairnessProof": { "$ref": "#/$defs/FairnessProof" },
         "randomnessProof": { "$ref": "#/$defs/RandomnessProof" },
         "createRoundAuth": { "$ref": "#/$defs/CreateRoundAuth" },
-        "record": { "$ref": "#/$defs/OnChainRecord" }
+        "record": { "$ref": "#/$defs/OnChainRecord" },
+        "keyDelegation": { "$ref": "#/$defs/KeyDelegation" }
       }
     },
     "FairnessProof": {
@@ -431,8 +442,8 @@
       "required": ["source", "blockNumber", "roundSecretHash"],
       "properties": {
         "source": { "description": "Entropy source identifier.", "type": "string", "pattern": "^[a-z0-9][a-z0-9:_-]{0,63}$" },
-        "blockNumber": { "type": "integer", "minimum": 0 },
-        "blockValue": { "$ref": "#/$defs/Hash32" },
+        "blockNumber": { "description": "The entropy height N the round is bound to: the block number on an EVM chain; the slot on Solana (source solana), not the block height.", "type": "integer", "minimum": 0 },
+        "blockValue": { "description": "The value of blockNumber the seed uses. On Solana: the slot's blockhash, base58-decoded; a skipped slot takes the blockhash of the first finalized block at a later slot.", "$ref": "#/$defs/Hash32" },
         "blockExplorerUrl": { "$ref": "#/$defs/HttpsUrl" },
         "roundSecretHash": { "$ref": "#/$defs/Hash32" },
         "roundSecret": { "description": "Revealed only after the round ends.", "$ref": "#/$defs/Hash32" },
@@ -450,6 +461,34 @@
         "explorerUrl": { "$ref": "#/$defs/HttpsUrl" }
       }
     },
+    "KeyDelegation": {
+      "description": "Config rounds started with a key delegation only: the player's wallet's EIP-712 KeyDelegation(string notice,address actionKey,bytes32 sessionId,uint64 expiry) for the round's action key, under the domain {name: SuperEngine KeyDelegation, version: 1}, which names no chain. Absent on a round without one: never null and never empty. Recover the signer from notice, actionKey, sessionId and expiry and compare it with wallet; actionKey is the one createRoundAuth.newRound names.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wallet", "actionKey", "sessionId", "expiry", "noticeId", "noticeHash", "notice", "signature", "domain", "acceptedAt"],
+      "properties": {
+        "wallet": { "description": "The address that signed the delegation.", "$ref": "#/$defs/Address" },
+        "actionKey": { "description": "The round's action key.", "$ref": "#/$defs/Address" },
+        "sessionId": { "description": "The session's bytes32 form: its 16 UUIDv7 bytes left-aligned, zero-padded.", "$ref": "#/$defs/Hash32" },
+        "expiry": { "description": "The signed expiry, Unix seconds.", "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "noticeId": { "description": "The id of the signed notice in the published notice list.", "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+        "noticeHash": { "description": "keccak256 of the notice's text: what the struct hashes for notice.", "$ref": "#/$defs/Hash32" },
+        "notice": { "description": "The signed consent text, from the published notice list.", "type": "string", "minLength": 1, "maxLength": 512 },
+        "signature": { "$ref": "#/$defs/Signature65" },
+        "domain": { "$ref": "#/$defs/KeyDelegationDomain" },
+        "acceptedAt": { "description": "When the engine accepted the delegation with the start, Unix seconds; expiry is after it. The engine's statement.", "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
+      }
+    },
+    "KeyDelegationDomain": {
+      "description": "The key delegation's EIP-712 domain, EIP712Domain(string name,string version): no chainId and no verifyingContract.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "SuperEngine KeyDelegation" },
+        "version": { "const": "1" }
+      }
+    },
     "CreateRoundAuth": {
       "description": "Config rounds only, required from the bind on: the round creation authorization, an EIP-712 signature by the registry admin key over CreateRoundAuth(bytes32 created,uint40 prepareWindow,uint256 expiry), where created = keccak256(abi.encode(newRound)). The same object on every read of the round. domain and signer are the round's own values; a client trusts them only when they equal the values pinned in its own configuration.",
       "type": "object",
@@ -458,7 +497,7 @@
       "properties": {
         "newRound": { "$ref": "#/$defs/NewRound" },
         "entropyChainId": {
-          "description": "Chain of the entropy source. Not signed itself: with randomnessProof.source and blockNumber it recomputes newRound.randomnessTarget.",
+          "description": "Chain of the entropy source: the EVM chain id, or on Solana the cluster number (101 mainnet-beta, 102 testnet, 103 devnet). Not signed itself: with randomnessProof.source and blockNumber it recomputes newRound.randomnessTarget.",
           "type": "integer",
           "minimum": 1,
           "maximum": 9007199254740991
@@ -566,6 +605,9 @@
         "ROUND_ACTIVE",
         "SESSION_EXPIRED",
         "SESSION_REVOKED",
+        "KEY_DELEGATION_INVALID",
+        "KEY_DELEGATION_EXPIRED",
+        "KEY_DELEGATION_NOTICE_UNKNOWN",
         "STALE_ACTION",
         "INVALID_ARGUMENT",
         "NOT_FOUND",

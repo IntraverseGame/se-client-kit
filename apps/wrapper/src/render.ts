@@ -78,6 +78,8 @@ export const createView = (
   const intoGame = createIntoGame();
   // Whether a run of autoplay went at the last update (W-46, W-61).
   let running = false;
+  // The wallet delegation's registrations announced so far (W-69).
+  let linkedSeen = 0;
 
   const update = (state: WrapperState, cause: ChangeCause): void => {
     const options = currentOptions();
@@ -127,6 +129,12 @@ export const createView = (
       announce(shown.statusHeading.textContent);
     } else if (cover !== undefined && !cover.alert) {
       announce(cover.heading);
+    }
+    // A new registration of the wallet delegation, politely (W-69).
+    const linked = options.delegation?.linked ?? linkedSeen;
+    if (linked > linkedSeen) {
+      linkedSeen = linked;
+      announce(m["delegation.linked"]);
     }
 
     const active = doc.activeElement;

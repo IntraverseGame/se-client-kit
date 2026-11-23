@@ -1,6 +1,6 @@
-// W-9 to W-14: the key is generated in the shell on first need, from the
-// injected random source; it is used only while this page holds the lock; the
-// session's end destroys it.
+// W-9 to W-14: the key is generated in the shell at the open, once the page
+// holds the lock (since #220's slice S5), from the injected random source; it
+// is used only while this page holds the lock; the session's end destroys it.
 
 import { recoverAddress } from "@intraverse/se-client-signing";
 import { describe, expect, it } from "vitest";
@@ -35,12 +35,12 @@ const pick = {
 };
 
 describe("the action key (W-9, W-10)", () => {
-  it("is generated on the first need, not before", async () => {
+  it("is generated at the open, once the lock is held, and only once", async () => {
     const random = recordingRandom(7);
     const session = await openTestSession({ random });
-    expect(random.draws()).toHaveLength(0);
-    const address = session.address();
+    // Drawn before any address is asked for: a delegation names it (W-9).
     expect(random.draws()).toHaveLength(1);
+    const address = session.address();
     expect(session.address()).toBe(address);
     expect(random.draws()).toHaveLength(1);
   });
@@ -52,11 +52,19 @@ describe("the action key (W-9, W-10)", () => {
     expect(random.draws().map(draw => draw.length)).toEqual([32, 32, 32]);
   });
 
-  it("refuses a random source that never yields a valid key", async () => {
-    const session = await openTestSession({
-      random: (length: number): Uint8Array => new Uint8Array(length),
-    });
-    expect(shellCodeOf(() => session.address())).toBe("key-generation");
+  it("refuses a random source that never yields a valid key, at the open", async () => {
+    const locks = createFakeLockManager();
+    let draws = 0;
+    const zeros = (length: number): Uint8Array => {
+      draws += 1;
+      return new Uint8Array(length);
+    };
+    const opening = openTestSession({ locks, random: zeros });
+    await expect(opening).rejects.toMatchObject({ code: "key-generation" });
+    expect(draws).toBe(16);
+    // The lock is released: the next page takes it.
+    const next = await openTestSession({ locks });
+    expect(next.state()).toBe("signing");
   });
 
   it("signs with the key whose address it reports", async () => {

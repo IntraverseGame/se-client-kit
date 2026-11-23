@@ -1,6 +1,6 @@
 ---
 description: Package boundaries, key custody, how contracts and vectors flow, and decisions an agent must not "fix". Read before changing structure or adding packages.
-last-verified: 2026-11-20 (RFC-007 slice 4: the verify page's Solana check 6 and its base58 decoder in `apps/verify`; slices 2 and 3: the Solana tip check, `tip-check-evm.ts` and `tip-check-solana.ts`, `RpcCall` with the Solana calls, the record a union on `kind`; RFC-007 slice 1: `entropyChainKind` per source in both validators and the Pages tool, `SourceConfig` a union on `kind`, the genesis tables in `packages/shell/src/solana-clusters.ts` and `apps/verify/src/solana-clusters.ts`, `production-cluster` in both validators, a `solana` source failing closed as `unsupported-chain-kind` until slices 2 and 4; earlier: 2026-11-18, RFC-007 drafted, #235: both chain reads are EVM-only today, and Solana entropy is proposed with an explicit `entropyChainKind`, genesis hashes pinned in code, and a base58 decoder in `apps/verify`; earlier: 2026-11-17, RFC-006 slice S3: `signing`'s `KeyDelegation` typed data, digest from `noticeHash`, `sessionIdBytes32`, the wallet signature's normalization in `recoverKeyDelegation` only, `sameHex`; earlier the same day: RFC-006 and ADR-012, proposed and not built: the wallet-delegated action key, the `signing-page` app on another registrable domain, `shell` taking `contracts`' runtime entry from S5, the delegation check beside the tip check under W-26's `T_0` rule, and the dependency direction updated to match `AGENTS.md`; earlier: contracts synced from se-backend `main`: the verify API's `book.table` (`BookTableRow`), validated by `verify-book.ts` and not kept; the kernel set `book-table-commitment` vendored, test-only and replayed by no test; check 8's reason no longer says the API lacks the table; earlier: 2026-11-13, RFC-005 built on its recommendations, pending the human: the shell's `inset` capability and `layout` message (`controller-layout.ts`, `controller-mount.ts`), autoplay's run in the shell (`autoplay-run.ts`, `autoplay-bet.ts`, `autoplay-types.ts`, `session-mount.ts`), `RoundState.failure`; the Wrapper's bar version 2 (`bar-chrome.ts`, `bar-menu.ts`, `bar-slots.ts`, `bar-state.ts`, `bet-stepper.ts`, `start-control.ts`, `round-controls.ts`, `fairness.ts`, `fairness-view.ts`, `popover.ts`, `stage-layout.ts`, `app-extras.ts`, `autoplay-config.ts`); earlier: 2026-11-10, ADR-011: a framed Wrapper whose `location.ancestorOrigins` proves a single listed parent opens with no `hello`, still required where the list is missing; earlier: 2026-11-09, the Snapshot schema's `cashOutValue` and its vectors synced from se-backend `c4a4801`, the Wrapper's rendering of it now live; earlier: 2026-11-03, `earlierPins`, V-3b: the verifier's document may list earlier registry and signer pairs, only check 3 reads them, the Wrapper refuses the field; earlier: verify API document at se-backend 98af0475: `game.terms` is absent exactly when the body has `book`; V-18 refuses both and neither; earlier: 2026-10-30, cashOutValue on active steps rounds, typed and shown on the bar's cash-out control before its schema is vendored; RFC-004 built: the single screen W-57/W-58 in the Wrapper, `stage-plan.ts`, `stage-view.ts`, `bar-view.ts`, `focus-rules.ts`, `resize` as `H_min`; earlier: RFC-004's shell part, W-38's hold, the session's `givenToGame` at `show` and `mountGame`, and `RoundState.pending`, the flow's `pending()`; earlier: RFC-004 folded into the specs; earlier: 2026-10-29, kernel sets of se-backend bc4f4adf, #156: check 5 replays `round-secret-hash`; earlier: #156 verify book rounds: a body with `book` is a book round, `verify-book.ts`, `book-checks.ts`, `book-fairness.ts`, `round-report.ts`, the `not-applicable` check status and V-8's `book-draw` reason; #146 book contract re-vendor: the Snapshot schema and vectors at se-backend `dee6000`, the book status rule now the validator's, the shell's interim `book-status.ts` removed; #146 book playback pull request: the session's `SessionRound` (a `RoundFlow` or a `BookRound`), the W-53 guard and `session-changed`, the bridge's `playback` copy and `onCopy`; #136: the verify API is read same-origin only, verify-page.md D-10; 2026-10-27, #3: CODEOWNERS active, the npm org claimed; open-marker deferrals: production hosting is #133; #133: `apps/pages-proxy`, the Pages API proxy, outside the dependency graph; 2026-10-20: verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify page states pull request: `apps/verify`'s states, view, checks 1 to 4 and 6, configuration read, and the verify API read; operator launch contract pull request, #42: the shell's operator channel and `serialized-origin.ts`, the Wrapper's operator gate, dispatch, and links; verify kernel pull request: `apps/verify` with the kernel derivations of checks 5 and 7, `signing`'s raw `keccak256`; start resend pull request: `startMayBeStored`, W-22's one resend of a start whose round may exist; Play API document: a start, move, or cash-out may be stored after a lost response, `UNAVAILABLE`, or `INTERNAL`; Play API document: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)
+last-verified: 2026-11-21 (#220 S6b: the signing-page import-direction lint enforced, apps/signing-page built; the shell's one binding from `contracts`' runtime entry, `keyDelegationNotices`, enforced by name; the production signer project named only by its secret; earlier: 2026-11-20 (#220: RFC-006 accepted and archived, ADR-012 accepted; the wallet delegation specified for S2 and S4 to S7: `signing-page` app, `shell` on `contracts`' runtime entry for the notices; earlier the same day: 2026-11-20 (RFC-007 slice 4: the verify page's Solana check 6 and its base58 decoder in `apps/verify`; slices 2 and 3: the Solana tip check, `tip-check-evm.ts` and `tip-check-solana.ts`, `RpcCall` with the Solana calls, the record a union on `kind`; RFC-007 slice 1: `entropyChainKind` per source in both validators and the Pages tool, `SourceConfig` a union on `kind`, the genesis tables in `packages/shell/src/solana-clusters.ts` and `apps/verify/src/solana-clusters.ts`, `production-cluster` in both validators, a `solana` source failing closed as `unsupported-chain-kind` until slices 2 and 4; earlier: 2026-11-18, RFC-007 drafted, #235: both chain reads are EVM-only today, and Solana entropy is proposed with an explicit `entropyChainKind`, genesis hashes pinned in code, and a base58 decoder in `apps/verify`; earlier: 2026-11-17, RFC-006 slice S3: `signing`'s `KeyDelegation` typed data, digest from `noticeHash`, `sessionIdBytes32`, the wallet signature's normalization in `recoverKeyDelegation` only, `sameHex`; earlier the same day: RFC-006 and ADR-012, proposed and not built: the wallet-delegated action key, the `signing-page` app on another registrable domain, `shell` taking `contracts`' runtime entry from S5, the delegation check beside the tip check under W-26's `T_0` rule, and the dependency direction updated to match `AGENTS.md`; earlier: contracts synced from se-backend `main`: the verify API's `book.table` (`BookTableRow`), validated by `verify-book.ts` and not kept; the kernel set `book-table-commitment` vendored, test-only and replayed by no test; check 8's reason no longer says the API lacks the table; earlier: 2026-11-13, RFC-005 built on its recommendations, pending the human: the shell's `inset` capability and `layout` message (`controller-layout.ts`, `controller-mount.ts`), autoplay's run in the shell (`autoplay-run.ts`, `autoplay-bet.ts`, `autoplay-types.ts`, `session-mount.ts`), `RoundState.failure`; the Wrapper's bar version 2 (`bar-chrome.ts`, `bar-menu.ts`, `bar-slots.ts`, `bar-state.ts`, `bet-stepper.ts`, `start-control.ts`, `round-controls.ts`, `fairness.ts`, `fairness-view.ts`, `popover.ts`, `stage-layout.ts`, `app-extras.ts`, `autoplay-config.ts`); earlier: 2026-11-10, ADR-011: a framed Wrapper whose `location.ancestorOrigins` proves a single listed parent opens with no `hello`, still required where the list is missing; earlier: 2026-11-09, the Snapshot schema's `cashOutValue` and its vectors synced from se-backend `c4a4801`, the Wrapper's rendering of it now live; earlier: 2026-11-03, `earlierPins`, V-3b: the verifier's document may list earlier registry and signer pairs, only check 3 reads them, the Wrapper refuses the field; earlier: verify API document at se-backend 98af0475: `game.terms` is absent exactly when the body has `book`; V-18 refuses both and neither; earlier: 2026-10-30, cashOutValue on active steps rounds, typed and shown on the bar's cash-out control before its schema is vendored; RFC-004 built: the single screen W-57/W-58 in the Wrapper, `stage-plan.ts`, `stage-view.ts`, `bar-view.ts`, `focus-rules.ts`, `resize` as `H_min`; earlier: RFC-004's shell part, W-38's hold, the session's `givenToGame` at `show` and `mountGame`, and `RoundState.pending`, the flow's `pending()`; earlier: RFC-004 folded into the specs; earlier: 2026-10-29, kernel sets of se-backend bc4f4adf, #156: check 5 replays `round-secret-hash`; earlier: #156 verify book rounds: a body with `book` is a book round, `verify-book.ts`, `book-checks.ts`, `book-fairness.ts`, `round-report.ts`, the `not-applicable` check status and V-8's `book-draw` reason; #146 book contract re-vendor: the Snapshot schema and vectors at se-backend `dee6000`, the book status rule now the validator's, the shell's interim `book-status.ts` removed; #146 book playback pull request: the session's `SessionRound` (a `RoundFlow` or a `BookRound`), the W-53 guard and `session-changed`, the bridge's `playback` copy and `onCopy`; #136: the verify API is read same-origin only, verify-page.md D-10; 2026-10-27, #3: CODEOWNERS active, the npm org claimed; open-marker deferrals: production hosting is #133; #133: `apps/pages-proxy`, the Pages API proxy, outside the dependency graph; 2026-10-20: verify API document pull request: the verify API document vendored into `contracts`, `apps/verify` reads its `RoundVerification`; verify page states pull request: `apps/verify`'s states, view, checks 1 to 4 and 6, configuration read, and the verify API read; operator launch contract pull request, #42: the shell's operator channel and `serialized-origin.ts`, the Wrapper's operator gate, dispatch, and links; verify kernel pull request: `apps/verify` with the kernel derivations of checks 5 and 7, `signing`'s raw `keccak256`; start resend pull request: `startMayBeStored`, W-22's one resend of a start whose round may exist; Play API document: a start, move, or cash-out may be stored after a lost response, `UNAVAILABLE`, or `INTERNAL`; Play API document: a cancel that loses to the round's closure, `bet.balance` read apart from the round; re-read after a drop pull request: `snapshot-reread.ts`, W-35's re-read schedule; Snapshot last-round read pull request: the next bet beside an ended round, no new-round step, `ended` a defensive fallback, the interim `version` limit; fairness kernel vectors pull request: `kernelVectors.v1` in `contracts`, three file groups recorded under their set ids; Snapshot payout contract sync: `payout`, `Amount1` not exported; backend docs: the verify edge rules, the capability carrier; RFC-001 decisions: the operator-embedding spec, ADR-006, ADR-007; shell cancel fold-in pull request: the session read side (`session-reads.ts`), `RoundState.cancel`, `checkAgain`, the Wrapper's cancel-aware polling and views; Wrapper session pull request: `takeLaunchCode`, `openPlaySession` and its use cases, the token keeper, `isRoundOver`, the game frame's mount; reference game pull request: the type-only `controller` subpath of `shell`, its lint and build-output checks, the Coin Flip game; shell round flows pull request: start, move, cash-out, the required cancel, W-19 resync, the re-issue state, the Snapshot reader; Wrapper configuration and rendering pull request: the Wrapper's modules; shell controller bridge pull request: the `se.controller/1` bridge, its allow-list; play-client cancel pull request: `cancelRound`, never repeated; shell entropy chain id pull request: a pinned chain per entropy source; play-client operations pull request: the operations, the token seal)))
 ---
 
 # Architecture (agent context)
@@ -38,19 +38,23 @@ structure below.
   (`import type` from `@intraverse/se-client-shell/controller`, a `types`-only
   `exports` entry; a Vite guard fails its build on a runtime import of any package, kit or
   third-party, and the lint bans bare specifiers in its non-test sources);
-  proposed, not built (RFC-006, ADR-012): `shell` takes `contracts`' runtime
-  entry for the key-delegation notices from slice S5 (today's lint still
-  refuses it), and `signing` and `contracts`' runtime entry ← `signing-page`
-  (app; never `shell`, nothing imports it);
+  `contracts`' runtime entry ← `shell` for the key-delegation notices alone
+  (read through `signing`'s `readKeyDelegationNotices`); `signing` and
+  `contracts`' runtime entry ← `signing-page` (app, the wallet signing page;
+  never `shell`, nothing imports it; RFC-006 and ADR-012, accepted
+  2026-11-20);
   `pages-proxy` (app, ADR-008) imports nothing at all: one self-contained
   module, the Pages sites' same-origin API proxy, deployed as each site's
   `_worker.js` and on the path of every signed action (it forwards bodies
   byte for byte, never parses them). No
   cycles; a package never imports an app; `snapshot` and `play-client` never
   import each other. Enforced by `no-restricted-imports` overrides in
-  `.oxlintrc.json` (per package, with a separate entry for its test files) and
-  proven by `tools/import-direction.test.ts` (cases in `tools/fixtures/`), which runs the real config over
-  scratch files; a new package updates both. `pnpm check:contracts` is a second,
+  `.oxlintrc.json` (per package, with a separate entry for its test files;
+  the shell's names `keyDelegationNotices` as its one binding from
+  `contracts`' runtime entry, `allowImportNames`, decided by the human,
+  2026-11-21) and proven by `tools/import-direction.test.ts` (cases in
+  `tools/fixtures/`), which runs the real config over scratch files; a new
+  package updates both. `pnpm check:contracts` is a second,
   independent check that only tests import the test-only entry.
 - **`contracts` is data only.** No validator, client, encoder, or helper in it.
   Two entry points: runtime (schemas, generated types) and test-only (vectors).
@@ -334,7 +338,7 @@ structure below.
   (#41) and by the signing vectors of contracts release 1.0.0 (`types` and the
   `player-cancel` round of `closes`); the shell uses it directly (no injected cancel encoding). Draw-registry types are
   encoded internally for the vector
-  replay only. `KeyDelegation` (RFC-006, proposed, slice S3): its struct types
+  replay only. `KeyDelegation` (RFC-006, slices S3 and S2): its struct types
   sit in `types.ts` beside the registry's, its functions in
   `key-delegation.ts`, under its own chainless domain. `recoverKeyDelegation`
   is the one place a wallet's signature is normalized before the strict
@@ -591,39 +595,36 @@ structure below.
   and an ended `won`/`lost` one is V-8's
   `book-draw` reason, never V-6. The verdict's types and the parts both kinds
   of round share live in `round-report.ts`.
-- **The wallet-delegated action key** (#220; RFC-006 `draft` and ADR-012
-  `proposed`, kept so by the code owner on 2026-11-17, so every spec and
-  `AGENTS.md` line that relies on them says "proposed"): not built beyond
-  `signing`'s part (S3, the bullet on signing above). A player
-  may sign, once per session, a `KeyDelegation` naming the shell's own action
-  key; every start carries it. All wallet code goes in a new private app,
-  `apps/signing-page`, on its own origin and on another registrable domain than
-  the Wrapper's (W-37's comparison, for site isolation): nothing but `signing`
-  and `contracts`' runtime entry at run time, never `shell`; `connect-src
-  'self'` for its own configuration document and no API on its site; shipped
-  inside the Wrapper's release artifact, never served on the Wrapper's site;
-  opened as the Wrapper's popup and talking `se.delegation/1`. The shell takes
-  `contracts`' runtime entry for the notices from S5 (today's lint and
-  `tools/fixtures/import-direction-cases.ts` still refuse it until S5). At the
-  W-26 point the shell runs a delegation check beside the tip check: a round
-  whose `proofs.keyDelegation` is missing (judged once `active`) or differs from
-  what it sent (signature included; hex compared as bytes, `expiry` as an
-  integer), or that carries one though none was sent, fails it. It follows
-  W-26's `T_0` rule: `PlayerCancel` only once checks 1 to 5 have passed (a
-  failure seen before check 5 waits for it), nothing signed when one of checks
-  1 to 5 failed, and a later different `proofs.keyDelegation` is a re-issue:
-  nothing more signed. The signing page revokes first (at most about 3 s), then
-  answers, then drops its opener; the Wrapper closes it. The Wrapper's origin never
-  connects a wallet; its one listener drops same-window messages (wallet
-  extensions post there). The specs say so already, marked proposed: W-9
-  generates the key at session open or when the player chooses to delegate
-  (the code still does it on the first need until S5); W-11 and W-12 keep the
-  delegation in memory only; operator pages must not send COOP `same-origin`
-  (W-49g). `key-delegation/v1` is on every list of contracts the kit may copy.
-  Kit first, per environment and release: the verify page will accept exactly
-  `RoundVerification.keyDelegation` and the `key_delegation` check name (S7);
-  today's reader is broader than V-10 (it ignores every unknown field and any
-  check name). Built in slices S2 to S7; S3 is done. Do not add a wallet call, a
-  `window.ethereum` read, or wallet storage to the Wrapper or the shell.
+- **The wallet-delegated action key** (#220; RFC-006 archived and ADR-012
+  accepted on 2026-11-20; S3 merged, S2 and S4 to S7 built by #220's pull
+  request). Specs: `specs/wrapper/the-wallet-delegation.md` (W-62 to W-73),
+  `specs/signing-page.md` (SP-1 to SP-15), V-22 (the verify page's check 9).
+  A player may sign, once per session, a `KeyDelegation` naming the shell's
+  own action key (now drawn at the session's open, W-9); every start carries
+  it, W-22's resend too. All wallet code is in `apps/signing-page`, on its own
+  origin on another registrable domain (Pages `se-signer-stage` and the
+  production project, the `pages-prod` secret `PAGES_SIGNER_PROJECT`;
+  `pages.dev` origins, no custom domain; the origins are secrets), shipped under `signer/` in the Wrapper's artifact, never served on
+  the Wrapper's site; `connect-src 'self'` for its configuration document, no
+  API, no COOP. The Wrapper opens it under the click, talks `se.delegation/1`
+  (a third route of the one listener; same-window messages dropped), and the
+  shell checks the signature itself. At the W-26 point a delegation check sits
+  beside the tip check (by bytes and integer; `missing` judged past
+  `starting`; a later different object is `changed`, handled as a re-issue).
+  Production offers nothing until a release vendors an `approved` notice: the
+  only notice is `en-draft-1`, `pending`, and `acceptPendingNotices` is
+  refused in production. The configuration job builds `signingPageOrigin`,
+  both pending flags, and the signing page's document from
+  `PAGES_SIGNER_ORIGIN` and `PAGES_ACCEPT_PENDING_NOTICES`. The verify page's
+  body reading is closed to the vendored document since S7. In the Wrapper
+  (S6), `delegation-wiring.ts` follows the shell's state, owns the consent
+  dialog (`consent-dialog.ts`, a `<dialog>` on the body opened with
+  `showModal()`), and calls `openSigningWindow` in the confirm's click; the
+  menu's entry is `bar-menu.ts`'s, the alert line's `delegation-alert.ts`'s
+  (it follows the `refused` state, never the problem's code), and the two
+  configuration fields `delegation-config.ts`'s, spelled again in
+  `apps/verify` and held alike by `tools/config-parity.test.ts`. Do not add a
+  wallet call, a `window.ethereum` read, or wallet storage to the Wrapper or
+  the shell; the UI's look waits for #256.
 
 <!-- TODO: production hosting of the Wrapper (staging is ADR-008's push to Cloudflare Pages; production is to come, #133; credentials and hostnames stay outside this repository). -->

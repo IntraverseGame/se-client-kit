@@ -210,7 +210,10 @@ const snapshotCall = async (
  * `retryable`: the document says to retry it with a new key, which is the
  * player's choice. After a lost response, `UNAVAILABLE`, or `INTERNAL` the
  * round may already have been started, and the same key and body answer it (the
- * caller decides whether to send them again). Answers the round's Snapshot as
+ * caller decides whether to send them again). A body's `keyDelegation` (W-70)
+ * is sent as the caller built it, never read, checked, or normalized, and a
+ * repeat sends it in the same bytes; its refusals (`422` `KEY_DELEGATION_*`,
+ * `409` `CONFLICT`) are answered once. Answers the round's Snapshot as
  * `unknown`.
  */
 export const startRound = (

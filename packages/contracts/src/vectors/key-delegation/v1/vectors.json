@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "domain": {
+    "name": "SuperEngine KeyDelegation",
+    "version": "1",
+    "encodeType": "EIP712Domain(string name,string version)",
+    "typeHash": "0xb03948446334eb9b2196d5eb166f69b9d49403eb4a12f36de8d3f9f3cb8e15c3",
+    "separator": "0xdf1a3469adcdcfcc9f3bbd698fd36df7cee6c4dddad538d44b80ab537d6fdabf"
+  },
+  "type": {
+    "encodeType": "KeyDelegation(string notice,address actionKey,bytes32 sessionId,uint64 expiry)",
+    "typeHash": "0x3f61f038833be2c4a751a98b54b11d874f7683ea8d0c052705a241abd33c0daf"
+  },
+  "devKey": {
+    "address": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+  },
+  "accepted": [
+    {
+      "name": "en-draft-1",
+      "noticeId": "en-draft-1",
+      "typedData": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            }
+          ],
+          "KeyDelegation": [
+            {
+              "name": "notice",
+              "type": "string"
+            },
+            {
+              "name": "actionKey",
+              "type": "address"
+            },
+            {
+              "name": "sessionId",
+              "type": "bytes32"
+            },
+            {
+              "name": "expiry",
+              "type": "uint64"
+            }
+          ]
+        },
+        "primaryType": "KeyDelegation",
+        "domain": {
+          "name": "SuperEngine KeyDelegation",
+          "version": "1"
+        },
+        "message": {
+          "notice": "DRAFT, pending legal review. By signing, you confirm that the moves signed by this game session's key are yours. This signature gives no access to your funds and sends no transaction. It publicly links this wallet address to your player reference at this operator: the link is published with the evidence of every round you play in this session. Using the same wallet at another operator links your player references there too.",
+          "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+          "sessionId": "0x0192f0c4a1b27c3d8e9f00112233aabb00000000000000000000000000000000",
+          "expiry": 1795000000
+        }
+      },
+      "structHash": "0xf9137991171a6063f5d74cf89b44c02a12d62deedf89ccf499d6090d3e979d87",
+      "digest": "0x1e8f00b98749a4104f405d810a91fe9705e8c1f545754a08a6cd8881abec7b17",
+      "start": {
+        "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+        "sessionId": "ses_0192f0c4a1b27c3d8e9f00112233aabb",
+        "sessionIdBytes32": "0x0192f0c4a1b27c3d8e9f00112233aabb00000000000000000000000000000000",
+        "acceptedAt": 1794990000
+      },
+      "keyDelegation": {
+        "wallet": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+        "expiry": 1795000000,
+        "noticeHash": "0x71508a4d7d3e376ef39a9d928b6ce49120f86f99de1987add45b405f8b5ba777",
+        "signature": "0x9ad187814121626d2b32fea77688284c45d7ce9b9403a4fa929c78a6042b1f8b460ddb0b51ab48d910c58c84a22c216610fed39ccf2dab52c1cbc608e15c85a81b"
+      }
+    }
+  ],
+  "refused": [
+    {
+      "name": "high-s twin",
+      "start": {
+        "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+        "sessionId": "ses_0192f0c4a1b27c3d8e9f00112233aabb",
+        "sessionIdBytes32": "0x0192f0c4a1b27c3d8e9f00112233aabb00000000000000000000000000000000",
+        "acceptedAt": 1794990000
+      },
+      "keyDelegation": {
+        "wallet": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+        "expiry": 1795000000,
+        "noticeHash": "0x71508a4d7d3e376ef39a9d928b6ce49120f86f99de1987add45b405f8b5ba777",
+        "signature": "0x9ad187814121626d2b32fea77688284c45d7ce9b9403a4fa929c78a6042b1f8bb9f224f4ae54b726ef3a737b5dd3de98a9b00949e01af4e8fe069883eed9bb991c"
+      },
+      "code": "KEY_DELEGATION_INVALID"
+    },
+    {
+      "name": "v as 0",
+      "start": {
+        "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+        "sessionId": "ses_0192f0c4a1b27c3d8e9f00112233aabb",
+        "sessionIdBytes32": "0x0192f0c4a1b27c3d8e9f00112233aabb00000000000000000000000000000000",
+        "acceptedAt": 1794990000
+      },
+      "keyDelegation": {
+        "wallet": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+        "expiry": 1795000000,
+        "noticeHash": "0x71508a4d7d3e376ef39a9d928b6ce49120f86f99de1987add45b405f8b5ba777",
+        "signature": "0x9ad187814121626d2b32fea77688284c45d7ce9b9403a4fa929c78a6042b1f8b460ddb0b51ab48d910c58c84a22c216610fed39ccf2dab52c1cbc608e15c85a800"
+      },
+      "code": "KEY_DELEGATION_INVALID"
+    },
+    {
+      "name": "v as 1",
+      "start": {
+        "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+        "sessionId": "ses_0192f0c4a1b27c3d8e9f00112233aabb",
+        "sessionIdBytes32": "0x0192f0c4a1b27c3d8e9f00112233aabb00000000000000000000000000000000",
+        "acceptedAt": 1794990000
+      },
+      "keyDelegation": {
+        "wallet": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+        "expiry": 1795000000,
+        "noticeHash": "0x71508a4d7d3e376ef39a9d928b6ce49120f86f99de1987add45b405f8b5ba777",
+        "signature": "0x9ad187814121626d2b32fea77688284c45d7ce9b9403a4fa929c78a6042b1f8b460ddb0b51ab48d910c58c84a22c216610fed39ccf2dab52c1cbc608e15c85a801"
+      },
+      "code": "KEY_DELEGATION_INVALID"
+    },
+    {
+      "name": "another session",
+      "start": {
+        "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+        "sessionId": "ses_0192f0c4a1b27c3d8e9f00112233aacc",
+        "sessionIdBytes32": "0x0192f0c4a1b27c3d8e9f00112233aacc00000000000000000000000000000000",
+        "acceptedAt": 1794990000
+      },
+      "keyDelegation": {
+        "wallet": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+        "expiry": 1795000000,
+        "noticeHash": "0x71508a4d7d3e376ef39a9d928b6ce49120f86f99de1987add45b405f8b5ba777",
+        "signature": "0x9ad187814121626d2b32fea77688284c45d7ce9b9403a4fa929c78a6042b1f8b460ddb0b51ab48d910c58c84a22c216610fed39ccf2dab52c1cbc608e15c85a81b"
+      },
+      "code": "KEY_DELEGATION_INVALID"
+    },
+    {
+      "name": "another action key",
+      "start": {
+        "actionKey": "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
+        "sessionId": "ses_0192f0c4a1b27c3d8e9f00112233aabb",
+        "sessionIdBytes32": "0x0192f0c4a1b27c3d8e9f00112233aabb00000000000000000000000000000000",
+        "acceptedAt": 1794990000
+      },
+      "keyDelegation": {
+        "wallet": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+        "expiry": 1795000000,
+        "noticeHash": "0x71508a4d7d3e376ef39a9d928b6ce49120f86f99de1987add45b405f8b5ba777",
+        "signature": "0x9ad187814121626d2b32fea77688284c45d7ce9b9403a4fa929c78a6042b1f8b460ddb0b51ab48d910c58c84a22c216610fed39ccf2dab52c1cbc608e15c85a81b"
+      },
+      "code": "KEY_DELEGATION_INVALID"
+    },
+    {
+      "name": "zero wallet",
+      "start": {
+        "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+        "sessionId": "ses_0192f0c4a1b27c3d8e9f00112233aabb",
+        "sessionIdBytes32": "0x0192f0c4a1b27c3d8e9f00112233aabb00000000000000000000000000000000",
+        "acceptedAt": 1794990000
+      },
+      "keyDelegation": {
+        "wallet": "0x0000000000000000000000000000000000000000",
+        "expiry": 1795000000,
+        "noticeHash": "0x71508a4d7d3e376ef39a9d928b6ce49120f86f99de1987add45b405f8b5ba777",
+        "signature": "0x9ad187814121626d2b32fea77688284c45d7ce9b9403a4fa929c78a6042b1f8b460ddb0b51ab48d910c58c84a22c216610fed39ccf2dab52c1cbc608e15c85a81b"
+      },
+      "code": "KEY_DELEGATION_INVALID"
+    },
+    {
+      "name": "expiry not after acceptedAt",
+      "start": {
+        "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+        "sessionId": "ses_0192f0c4a1b27c3d8e9f00112233aabb",
+        "sessionIdBytes32": "0x0192f0c4a1b27c3d8e9f00112233aabb00000000000000000000000000000000",
+        "acceptedAt": 1795000000
+      },
+      "keyDelegation": {
+        "wallet": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+        "expiry": 1795000000,
+        "noticeHash": "0x71508a4d7d3e376ef39a9d928b6ce49120f86f99de1987add45b405f8b5ba777",
+        "signature": "0x9ad187814121626d2b32fea77688284c45d7ce9b9403a4fa929c78a6042b1f8b460ddb0b51ab48d910c58c84a22c216610fed39ccf2dab52c1cbc608e15c85a81b"
+      },
+      "code": "KEY_DELEGATION_EXPIRED"
+    },
+    {
+      "name": "a notice not in the list",
+      "start": {
+        "actionKey": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+        "sessionId": "ses_0192f0c4a1b27c3d8e9f00112233aabb",
+        "sessionIdBytes32": "0x0192f0c4a1b27c3d8e9f00112233aabb00000000000000000000000000000000",
+        "acceptedAt": 1794990000
+      },
+      "keyDelegation": {
+        "wallet": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+        "expiry": 1795000000,
+        "noticeHash": "0x9f48979840cb7a5f8942663409976b9ba4eac4aeb06f32b75e777e23f9d8ed7d",
+        "signature": "0x033620bb419a702a96fdb7c4d19b622eb3e39e39aeed2f4a95fc1a4b40b1e97c18ed0290e398b1a3c734b685994ba9b01d108ec7387363e5ae3615a2855ec1031c"
+      },
+      "code": "KEY_DELEGATION_NOTICE_UNKNOWN"
+    }
+  ]
+}

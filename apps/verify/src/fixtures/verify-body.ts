@@ -154,6 +154,9 @@ export const verifyBody = (snapshot: Json): Json => {
           },
         }),
     actions: [],
+    ...(proofs["keyDelegation"] === undefined
+      ? {}
+      : { keyDelegation: proofs["keyDelegation"] }),
     ...(ENDED.has(status)
       ? {
           recomputed: {
@@ -181,6 +184,24 @@ export const wonBody = (): Json =>
     }),
   );
 
+/**
+ * The vendored `valid/coinflip-active-key-delegation` vector's
+ * `proofs.keyDelegation` (V-22): the same round as the won body's, its
+ * `newRound` naming the delegated action key.
+ */
+export const vectorDelegation = (): Json =>
+  asRecord(
+    asRecord(inputOf("coinflip-active-key-delegation")["proofs"])[
+      "keyDelegation"
+    ],
+  );
+
+/** The won body, started with the vector's key delegation (V-22). */
+export const delegatedBody = (): Json => ({
+  ...wonBody(),
+  keyDelegation: vectorDelegation(),
+});
+
 /** The object at the parent of `path` (dotted) in `copy`, and the last key. */
 const parentOf = (copy: Json, path: string): [Json, string] => {
   const keys = path.split(".");
@@ -189,9 +210,13 @@ const parentOf = (copy: Json, path: string): [Json, string] => {
   return [target, keys.at(-1) ?? ""];
 };
 
-/** A copy of the won body with `path` (dotted) set to `value`. */
-export const withField = (path: string, value: unknown): Json => {
-  const copy = wonBody();
+/** A copy of the won body (or `base`) with `path` (dotted) set to `value`. */
+export const withField = (
+  path: string,
+  value: unknown,
+  base: () => Json = wonBody,
+): Json => {
+  const copy = base();
   const [target, last] = parentOf(copy, path);
   target[last] = value;
   return copy;

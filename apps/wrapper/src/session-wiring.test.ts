@@ -33,12 +33,14 @@ import { showOpening } from "./session-wiring.ts";
 
 const m = messagesFor("en").messages;
 
-describe("opening the session (W-1a, W-2, W-14)", () => {
+describe("opening the session (W-1a, W-2, W-9, W-14)", () => {
   it.each<[SessionOpening["kind"], string]>([
     ["no-launch-code", m["state.sessionEnded"]],
     ["redeem-failed", m["state.sessionEnded"]],
     ["other-tab", m["state.otherTab"]],
     ["unsupported", m["state.unsupported"]],
+    // The key drawn at the open could not be drawn (W-9).
+    ["key-generation", m["state.sessionEnded"]],
   ])("%s shows its state and opens nothing", (kind, heading) => {
     const ui = mount();
     const opening = { kind } as SessionOpening;

@@ -5,9 +5,10 @@ import type { RoundState } from "@intraverse/se-client-shell";
 
 import {
   createMessageDispatch,
+  type MessageDispatch,
   type MessageTarget,
 } from "../message-dispatch.ts";
-import { wireSession } from "../session-wiring.ts";
+import { type SessionWiringOptions, wireSession } from "../session-wiring.ts";
 import type { StageLayout } from "../stage-layout.ts";
 import { mount, type Mounted } from "./app.ts";
 import {
@@ -44,6 +45,10 @@ export const wired = async (
     readonly document?: Readonly<Record<string, unknown>>;
     /** Where the bar sits and the band it covers (RFC-005). */
     readonly layout?: StageLayout;
+    /** The wallet delegation's platform parts and signing page (W-62). */
+    readonly delegation?: SessionWiringOptions["delegation"];
+    /** The page's message router; a fresh one on a fake window by default. */
+    readonly messages?: MessageDispatch;
   } = {},
 ): Promise<Wired> => {
   const ui = options.document === undefined ? mount() : mount(options.document);
@@ -54,8 +59,11 @@ export const wired = async (
       app: ui.app,
       doc: globalThis.document,
       ownOrigin: SE_ORIGIN,
-      messages: createMessageDispatch(fakeWindow()),
+      messages: options.messages ?? createMessageDispatch(fakeWindow()),
       ...(options.layout === undefined ? {} : { layout: options.layout }),
+      ...(options.delegation === undefined
+        ? {}
+        : { delegation: options.delegation }),
     },
     fake.session,
   );

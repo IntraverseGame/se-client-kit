@@ -14,19 +14,19 @@ import {
   type Read,
 } from "./verify-readers.ts";
 
+/** `Amount`'s fields, each with its reader (held to the document). */
+export const AMOUNT_FIELDS = {
+  amount: (v: unknown) =>
+    typeof v === "string" &&
+    v.length <= AMOUNT_MAX_LENGTH &&
+    PATTERN.amount.test(v)
+      ? BigInt(v)
+      : Bad,
+  currency: (v: unknown) => (typeof v === "string" && v !== "" ? v : Bad),
+  decimals: (v: unknown) => int(v, 0, MAX_DECIMALS),
+};
 /** An `Amount` of the document: a base-10 string of base units, and decimals. */
-export const amount = nested(s =>
-  shape(s, {
-    amount: v =>
-      typeof v === "string" &&
-      v.length <= AMOUNT_MAX_LENGTH &&
-      PATTERN.amount.test(v)
-        ? BigInt(v)
-        : Bad,
-    currency: v => (typeof v === "string" && v !== "" ? v : Bad),
-    decimals: v => int(v, 0, MAX_DECIMALS),
-  }),
-);
+export const amount = nested(s => shape(s, AMOUNT_FIELDS));
 
 /**
  * `1.94 EUR` from base units, decimals, and a currency: exact, by `bigint`

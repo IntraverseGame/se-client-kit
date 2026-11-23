@@ -15,30 +15,32 @@ import {
   text,
 } from "./verify-readers.ts";
 
-const termsNode = nested(s =>
-  shape(s, {
-    options: v => int(v, 1, 25),
-    losers: v => int(v, 0, 24),
-    next: list(v => int(v, 0)),
-  }),
-);
+/** `TermsNode`'s fields, each with its reader (held to the document). */
+export const TERMS_NODE_FIELDS = {
+  options: (v: unknown) => int(v, 1, 25),
+  losers: (v: unknown) => int(v, 0, 24),
+  next: list(v => int(v, 0)),
+};
+const termsNode = nested(s => shape(s, TERMS_NODE_FIELDS));
 
-const terms = nested(t =>
-  shape(t, {
-    nodes: list(termsNode),
-    houseEdgeWad: v => text(v, PATTERN.amount),
-    maxMultiplierMilli: v => int(v, 1),
-  }),
-);
+/** `PayoutTerms`'s fields, each with its reader (held to the document). */
+export const PAYOUT_TERMS_FIELDS = {
+  nodes: list(termsNode),
+  houseEdgeWad: (v: unknown) => text(v, PATTERN.amount),
+  maxMultiplierMilli: (v: unknown) => int(v, 1),
+};
+const terms = nested(t => shape(t, PAYOUT_TERMS_FIELDS));
 
+/** `Game`'s fields, each with its reader (held to the document). */
+export const GAME_FIELDS = {
+  gameCode: (v: unknown) => text(v),
+  gameId: (v: unknown) => int(v, 0),
+  gameVersion: (v: unknown) => int(v, 0),
+  packageHash: (v: unknown) => text(v, PATTERN.hex32),
+  terms: (v: unknown) => optional(v, terms),
+};
 export const game = nested(s => {
-  const read = shape(s, {
-    gameCode: v => text(v),
-    gameId: v => int(v, 0),
-    gameVersion: v => int(v, 0),
-    packageHash: v => text(v, PATTERN.hex32),
-    terms: v => optional(v, terms),
-  });
+  const read = shape(s, GAME_FIELDS);
   if (read === Bad) return Bad;
   const { packageHash } = read;
   // A book round has no terms: no nodes, so A-3's shape test never holds for it.

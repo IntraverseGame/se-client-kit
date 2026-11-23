@@ -20,6 +20,11 @@ import type {
   ValidSnapshot,
 } from "@intraverse/se-client-shell";
 
+import {
+  createFakeDelegation,
+  type FakeDelegation,
+} from "./fake-delegation.ts";
+
 /** A valid Snapshot vector as the shell hands it over, validated by T-5. */
 export const validSnapshot = (name: string): ValidSnapshot => {
   const file = snapshotVectors.valid[name] as { readonly input: unknown };
@@ -64,6 +69,10 @@ export type FakeSession = {
   readonly stops: string[];
   /** Reports the shell's run state to the Wrapper. */
   readonly runState: (state: AutoplayState) => void;
+  /** The scripted delegation use case (W-62 to W-71). */
+  readonly delegation: FakeDelegation;
+  /** Runs with each start's answer, before the start resolves. */
+  readonly onStart: (hook: (answer: SessionRead) => void) => void;
 };
 
 /** The next answer of a queue (the last one repeats). */
@@ -83,6 +92,8 @@ const refuseMount = (_options: GameMountOptions): GameMount => ({
 });
 
 export const createFakeSession = (): FakeSession => {
+  const delegation = createFakeDelegation();
+  let startHook: ((answer: SessionRead) => void) | undefined;
   const reads: SessionRead[] = [];
   const starts: Bet[] = [];
   const mounts: GameMountOptions[] = [];
@@ -119,13 +130,18 @@ export const createFakeSession = (): FakeSession => {
     },
     start: bet => {
       starts.push(bet);
-      return Promise.resolve(next(startAnswers));
+      const answer = next(startAnswers);
+      // What the shell decides with the answer, before it returns (W-71).
+      startHook?.(answer);
+      return Promise.resolve(answer);
     },
     cashOut: () => {
       cashOuts += 1;
       return Promise.resolve(next(cashOutAnswers));
     },
     round: () => round,
+    // Nothing offered unless a test offers it (W-62 to W-71).
+    ...delegation.members,
     gameOrigin: () => FAKE_GAME_ORIGIN,
     mountGame: options => {
       mounts.push(options);
@@ -184,6 +200,10 @@ export const createFakeSession = (): FakeSession => {
     runState: state => {
       run = state;
       for (const listener of runListeners) listener(state);
+    },
+    delegation,
+    onStart: hook => {
+      startHook = hook;
     },
   };
 };

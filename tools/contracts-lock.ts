@@ -17,6 +17,11 @@ import {
 import { dirname, join } from "node:path";
 
 import { type Group, GROUPS } from "./contracts-groups.ts";
+import {
+  checkLockedNotices,
+  checkNoticesList,
+  type LockedFiles,
+} from "./contracts-notices.ts";
 import { findFiles } from "./workspace.ts";
 
 export const LOCK_FILE = "contracts.lock.json";
@@ -214,6 +219,7 @@ export const planSync = (
   previous: readonly LockEntry[],
   reader: SourceReader,
   options: SyncOptions,
+  locked: LockedFiles,
 ): SyncPlan => {
   const before = new Map(previous.map(entry => [entry.path, entry]));
   const entries: LockEntry[] = [];
@@ -255,6 +261,13 @@ export const planSync = (
         throw new Error(
           `${path}: vector files are append-only; refusing to change one`,
         );
+      if (group.notices === true) {
+        // Always: a first sync, or a lock that lost the entry, checks the list
+        // too, so the rule never fails open.
+        checkNoticesList(bytes);
+        if (old !== undefined)
+          checkLockedNotices(old.path, old.sha256, bytes, locked);
+      }
       entries.push(entry);
       files.set(path, bytes);
     }

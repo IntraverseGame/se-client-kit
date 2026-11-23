@@ -2,25 +2,32 @@
   "lockVersion": 1,
   "entries": [
     {
+      "path": "src/schemas/key-delegation/v1/notices.json",
+      "source": "se-backend",
+      "sourceName": "key-delegation/v1 notices",
+      "sourceCommit": "15c9014d3abc6bc165f4c9978baefad02c58cb55",
+      "sha256": "fa313b214f7c32236d74dce7e6e0f6fa8478f6e8f8d2715d7eedc8c07c385a41"
+    },
+    {
       "path": "src/schemas/play.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "play/v1 OpenAPI document",
-      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
-      "sha256": "3b78949a40d5e34bf8b8c3ef76696e9b8e565d81b92dc931a4d9ff50bed67988"
+      "sourceCommit": "21c392f8c0a7591d9a240db4c7f2dac60837813b",
+      "sha256": "0bbba06527cc1b644a24060cf15a279794fd683719b0a6af44e82e0548a3f588"
     },
     {
       "path": "src/schemas/se.snapshot.v1.schema.json",
       "source": "se-backend",
       "sourceName": "se.snapshot/1 schema",
-      "sourceCommit": "c4a4801959b60429e9b56f07ee13bf3bb5a0dc68",
-      "sha256": "8683aebb1c387c6a6a50d068d1ce7e9d047fd7e219c9b19717ec5fd7758f58af"
+      "sourceCommit": "21c392f8c0a7591d9a240db4c7f2dac60837813b",
+      "sha256": "5363b9dcd14d2e7c251efa1b3a188e818c1774c86c298e793ec29e587435b17e"
     },
     {
       "path": "src/schemas/verify.v1.openapi.yaml",
       "source": "se-backend",
       "sourceName": "verify/v1 OpenAPI document",
-      "sourceCommit": "bfe7dcde80386a7635816c9160bca9de214f948c",
-      "sha256": "48ef8e8dead8891ef43b20e5302660f2a599e56a5d17ccfa76f26f0fbd5f3f09"
+      "sourceCommit": "87551a725fcb7df0e6eae89e0b3e80cd244826da",
+      "sha256": "9603b8d11177f89951f06416c00dc1c61677b4f6a67e2696365c1b959d89c118"
     },
     {
       "path": "src/vectors/kernel/v1/book-draw.json",
@@ -84,6 +91,13 @@
       "sourceName": "kernel/public/v1/weighted-draw",
       "sourceCommit": "bc4f4adf356a7e5b5146e5f80bfb4f62c1e87556",
       "sha256": "e431098fdf576f0fd624ffd437c636975dfb50dade682ab000f911f8bf5f1250"
+    },
+    {
+      "path": "src/vectors/key-delegation/v1/vectors.json",
+      "source": "se-backend",
+      "sourceName": "key-delegation/v1 vectors",
+      "sourceCommit": "15c9014d3abc6bc165f4c9978baefad02c58cb55",
+      "sha256": "16cc1818f9714c4cd4fd8b97dbedb39e59f900fa786ac0d73caf54cfd98a6e32"
     },
     {
       "path": "src/vectors/signing.json",
@@ -511,6 +525,55 @@
       "sourceName": "se.snapshot/1 vectors/invalid/idle-with-round-fields.json",
       "sourceCommit": "80947db790ba5753fd185333e20d5dcd5ccbd42f",
       "sha256": "d01fc780d800d0464e259d0b6f714faf6c39e668dcc054f95a5aed35e60597cf"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/key-delegation-domain-with-chain.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/key-delegation-domain-with-chain.json",
+      "sourceCommit": "15c9014d3abc6bc165f4c9978baefad02c58cb55",
+      "sha256": "ccfb6c57c176a8a2a8609e92d4872c4cc7b78bfde83e4e2ead6790e634919507"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/key-delegation-empty.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/key-delegation-empty.json",
+      "sourceCommit": "15c9014d3abc6bc165f4c9978baefad02c58cb55",
+      "sha256": "c418c0fd61693393877e66dcfb66e2d0ce20bcea46fa7e60259d1ad6c520bc99"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/key-delegation-missing-notice.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/key-delegation-missing-notice.json",
+      "sourceCommit": "15c9014d3abc6bc165f4c9978baefad02c58cb55",
+      "sha256": "60cd42e9119b2192643e0fbe732ca402d777a99a32117b1450b6061793c2b9ee"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/key-delegation-null.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/key-delegation-null.json",
+      "sourceCommit": "15c9014d3abc6bc165f4c9978baefad02c58cb55",
+      "sha256": "df2caa347af9dc29f000f330ef8914d2591bc005dce9f8b732a74f20e0353450"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/key-delegation-on-book.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/key-delegation-on-book.json",
+      "sourceCommit": "15c9014d3abc6bc165f4c9978baefad02c58cb55",
+      "sha256": "348996ad9434dd08fad599f6a8bd3c7ddcd3519782e04d45cb3e576d80e83ce2"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/key-delegation-signature-uppercase.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/key-delegation-signature-uppercase.json",
+      "sourceCommit": "15c9014d3abc6bc165f4c9978baefad02c58cb55",
+      "sha256": "c2b1a899db6015ff48e542ab8df0766f017ac0e61166f55ad5e58e454c9ab5cb"
+    },
+    {
+      "path": "src/vectors/snapshot/invalid/key-delegation-unknown-field.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/invalid/key-delegation-unknown-field.json",
+      "sourceCommit": "15c9014d3abc6bc165f4c9978baefad02c58cb55",
+      "sha256": "747480f4f8d819f98095825bf3fc82bd6f0cbd3f68ad5902f6ce0c8016ef439c"
     },
     {
       "path": "src/vectors/snapshot/invalid/multiplier-negative.json",
@@ -1043,6 +1106,13 @@
       "sourceName": "se.snapshot/1 vectors/valid/coinflip-active-create-round-auth.json",
       "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
       "sha256": "df4871c3c62d3e357c7778e0dfa1d4a3975ae88039a880297d0620943d1778cf"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-active-key-delegation.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-active-key-delegation.json",
+      "sourceCommit": "15c9014d3abc6bc165f4c9978baefad02c58cb55",
+      "sha256": "d28c8ea5052172e9dd2c8400ce595afe12833622b876ab6ed64047516e5f3eeb"
     },
     {
       "path": "src/vectors/snapshot/valid/coinflip-active-ready-hash.json",

@@ -19,9 +19,8 @@
 
 import type { BrowserContext, PlaywrightWorkerOptions } from "@playwright/test";
 
-import { playApiPrefix } from "./fake-play-api.ts";
 import type { FakePlayApi } from "./fake-play-types.ts";
-import { decodeBody, routeOf } from "./fake-play-wire.ts";
+import { decodeBody, playApiPrefix, routeOf } from "./fake-play-wire.ts";
 import type { PlayOperationId } from "./play-api-document.ts";
 
 export type NetworkControl = {

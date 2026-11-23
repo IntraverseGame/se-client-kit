@@ -7,6 +7,11 @@
 
 import { checkLaterView } from "./cancel-views.ts";
 import {
+  type DelegationAction,
+  delegationActions,
+  delegationAlert,
+} from "./delegation-alert.ts";
+import {
   ALERT_HEADING_ID,
   type BarParts,
   button,
@@ -19,7 +24,7 @@ import {
 } from "./dom.ts";
 import { type MessageKey, type Messages, problemMessage } from "./messages.ts";
 import { roundIdAndVerify } from "./round-id-view.ts";
-import type { ViewOptions } from "./view-options.ts";
+import type { DelegationView, ViewOptions } from "./view-options.ts";
 import { isFinal, type WrapperState } from "./wrapper-state.ts";
 
 /**
@@ -87,6 +92,8 @@ export type AlertContent = {
   readonly retry: boolean;
   /** The control's text when it is not "Try again" (a voided start, W-42). */
   readonly retryLabel?: MessageKey;
+  /** The wallet delegation's controls (W-71). */
+  readonly actions?: readonly DelegationAction[];
 };
 
 /**
@@ -102,29 +109,39 @@ const VOIDED_START_CODES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * The error the bar's alert line shows, if any (W-41 to W-43): a typed error,
- * the generic error, or the connection problem, by priority. None in a final
- * state, where nothing more is shown but the cover (W-44).
+ * The error the bar's alert line shows, if any (W-41 to W-43, W-69, W-71): a
+ * refused delegated start, a typed error (with "Continue without a wallet" when
+ * it refused a delegated start), the generic error, a failed delegation
+ * attempt, or the connection problem, by priority. None in a final state, where
+ * nothing more is shown but the cover (W-44).
  */
 export const alertContent = (
   m: Messages,
   state: WrapperState,
+  delegation?: DelegationView,
 ): AlertContent | undefined => {
   if (isFinal(state)) return undefined;
   const { problem } = state;
+  const ofDelegation = delegationAlert(m, delegation, problem);
+  if (delegation?.alert?.kind === "refused" && ofDelegation !== undefined) {
+    return ofDelegation;
+  }
   if (problem !== undefined) {
+    const other = delegation?.otherRefusal === problem;
     // `INSUFFICIENT_FUNDS` at `idle` keeps the deposit control (W-49f).
     return {
-      key: `problem:${problem.code}:${problem.requestId ?? ""}`,
+      key: `problem:${problem.code}:${problem.requestId ?? ""}:${String(other)}`,
       heading: m["error.heading"],
       lines: [problemMessage(m, problem.code)],
       ...(problem.requestId === undefined
         ? {}
         : { requestId: problem.requestId }),
-      retry: problem.retryable,
+      // No `KEY_DELEGATION_*` code is retried as it is (W-71).
+      retry: problem.retryable && !problem.code.startsWith("KEY_DELEGATION_"),
       ...(VOIDED_START_CODES.has(problem.code)
         ? { retryLabel: "action.backToStart" as const }
         : {}),
+      ...(other ? { actions: ["continueWithoutWallet"] as const } : {}),
     };
   }
   if (state.refused === true) {
@@ -135,6 +152,7 @@ export const alertContent = (
       retry: false,
     };
   }
+  if (ofDelegation !== undefined) return ofDelegation;
   if (state.connectionProblem) {
     return {
       key: `connection:${String(state.offline)}`,
@@ -179,6 +197,7 @@ export const alertView = (
     error.retry &&
       retry !== undefined &&
       button(el, m[error.retryLabel ?? "action.retry"], "retry", retry),
+    ...delegationActions(el, m, error.actions, options.delegation),
   ];
 };
 

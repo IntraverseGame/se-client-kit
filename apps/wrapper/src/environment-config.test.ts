@@ -62,9 +62,15 @@ describe("validateEnvironmentConfig", () => {
   });
 
   it("lists every field of the Configuration table", () => {
-    // `autoplay` is optional (RFC-005): the fixture's document has none.
+    // `autoplay` (RFC-005) and the wallet delegation's two fields (W-62,
+    // W-63) are optional: the fixture's document has none of them.
     expect(new Set(ENVIRONMENT_CONFIG_FIELDS)).toEqual(
-      new Set([...Object.keys(environmentDocument()), "autoplay"]),
+      new Set([
+        ...Object.keys(environmentDocument()),
+        "autoplay",
+        "signingPageOrigin",
+        "acceptPendingNotices",
+      ]),
     );
   });
 

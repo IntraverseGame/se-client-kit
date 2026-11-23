@@ -200,6 +200,7 @@ describe("no secret leaves the shell", () => {
       "round-stopped",
       "snapshot-rejected",
       "use-case-failed",
+      "delegation-refused",
     ] as const;
     const messages = codes.map(code => new ShellError(code).message);
     expect(new Set(messages).size).toBe(codes.length);

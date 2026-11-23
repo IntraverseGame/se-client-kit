@@ -220,6 +220,20 @@ describe("check 3: the backend's signature (the signature/ vectors)", () => {
     expect(result.note).toMatch(/refused/u);
   });
 
+  it("refuses a signature whose v is not 27, 28, 0, or 1, as a mismatch", async () => {
+    const vector = signatureVector(ACCEPT);
+    const auth = at(vector.input, "proofs.createRoundAuth");
+    auth["signature"] = `${String(auth["signature"]).slice(0, 130)}1d`;
+    const result = checkSignature(
+      await evidenceOf(vector.input),
+      configFor(vector.pinned),
+    ).result;
+    expect(failing(result)).toEqual([
+      "signature recovers to the configured signer",
+    ]);
+    expect(result.note).toMatch(/refused/u);
+  });
+
   it("fails, with no created, when the round carries no createRoundAuth", async () => {
     const vector = signatureVector(ACCEPT);
     delete at(vector.input, "proofs")["createRoundAuth"];

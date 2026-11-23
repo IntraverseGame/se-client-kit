@@ -30,7 +30,10 @@ description: Use when adding or changing behavior, signing code, contracts, or t
 3. Assert on typed errors (their `code` or class), never on message text.
 4. Money: assert on strings or `bigint`, never on `number`.
 5. Secrets: a test never prints or snapshots a key or token. The only keys in
-   the repository are the public test keys of the vectors. Add a test that the
+   the repository are the public test keys of the vectors; the e2e suite and
+   the `shell` package's unit tests may give their seeded random stub the
+   signed-action vector's test key, read from `contracts`' test-only entry at
+   run time, never copied into a file. Add a test that the
    thing you touched does not leak a credential into logs, errors, or storage
    when it handles one.
 6. e2e: unique ids per run; no dependence on test order; no real wallet or

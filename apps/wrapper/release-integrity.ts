@@ -14,6 +14,7 @@ import {
   META_CONTENT_SECURITY_POLICY,
 } from "./release-headers.ts";
 import { readTree, verifyOutput } from "./release-output-check.ts";
+import { signerOutputFiles } from "./release-signer.ts";
 import { withIntegrity } from "./release-sri.ts";
 import { verifyOutputFiles } from "./release-verify.ts";
 
@@ -43,7 +44,12 @@ import { verifyOutputFiles } from "./release-verify.ts";
 //     own build and put into the output under `verify/` with the same rules:
 //     its own `<meta>` policy, SRI, its files in the manifest, and
 //     `verify/index.html` as the second allowed HTML file. `headers.json`
-//     holds its policy under `/verify/*` (release-verify.ts).
+//     holds its policy under `/verify/*` (release-verify.ts);
+//   - the signing page (apps/signing-page, specs/signing-page.md SP-14) is
+//     put under `signer/` the same way, with `signer/index.html` as the third
+//     allowed HTML file and its headers under `/signer/*` (release-signer.ts);
+//     no rule of `headers.json` holds a `Cross-Origin-Opener-Policy` header
+//     (release-headers.ts refuses one).
 
 type OutputBundle = Rolldown.OutputBundle;
 
@@ -101,6 +107,12 @@ export type ReleaseIntegrityOptions = {
    * component tests of this step) there is no verify page.
    */
   readonly verifyDist?: string;
+  /**
+   * The signing page app's build output, put into the release under `signer/`
+   * (release-signer.ts). A release build always sets it; without it (the
+   * component tests of this step) there is no signing page.
+   */
+  readonly signerDist?: string;
 };
 
 export const releaseIntegrity = (
@@ -145,14 +157,17 @@ export const releaseIntegrity = (
             bundle[file] === undefined ? undefined : bytesOf(bundle, file),
         );
         const extra = new Map<string, Uint8Array>();
-        if (options.verifyDist !== undefined) {
-          for (const [file, source] of await verifyOutputFiles(
-            options.verifyDist,
-            base,
-          )) {
-            extra.set(file, source);
-            this.emitFile({ type: "asset", fileName: file, source });
-          }
+        const carried = [
+          ...(options.verifyDist === undefined
+            ? []
+            : await verifyOutputFiles(options.verifyDist, base)),
+          ...(options.signerDist === undefined
+            ? []
+            : await signerOutputFiles(options.signerDist, base)),
+        ];
+        for (const [file, source] of carried) {
+          extra.set(file, source);
+          this.emitFile({ type: "asset", fileName: file, source });
         }
         const headers = `${JSON.stringify(headersFile(), undefined, 2)}\n`;
         extra.set(HEADERS_FILE, encoder.encode(headers));
@@ -176,6 +191,7 @@ export const releaseIntegrity = (
       handler: async () => {
         await verifyOutput(await readTree(outDir), base, {
           requireVerify: options.verifyDist !== undefined,
+          requireSigner: options.signerDist !== undefined,
         });
       },
     },

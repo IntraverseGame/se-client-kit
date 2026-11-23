@@ -120,6 +120,26 @@ describe("the bar's contrast (W-47, RFC-005)", () => {
     ).toBeGreaterThanOrEqual(4.5);
   });
 
+  it("keeps the consent dialog's text at 4.5:1 (W-65): the pending mark, the confirm, the hover", () => {
+    // The dialog is a popover surface; its notice sits on the page colour
+    // (checked above), the pending mark in the problem colour.
+    expect(
+      contrast(token("--se-problem"), token("--se-popover")),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(token("--se-on-accent"), token("--se-accent-press")),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(token("--se-strong"), token("--se-popover")),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(stylesheet).toMatch(
+      /\.se-dialog \{[^}]*background: var\(--se-popover\);[^}]*color: var\(--se-fg\);/u,
+    );
+    expect(stylesheet).toMatch(
+      /\.se-dialog__notice \{[^}]*background: var\(--se-page\);[^}]*white-space: pre-wrap;/u,
+    );
+  });
+
   it("keeps the accent and the problem colour at 3:1 on the bar (1.4.11)", () => {
     for (const colour of ["--se-accent", "--se-problem"]) {
       expect(contrast(token(colour), token("--se-bar"))).toBeGreaterThanOrEqual(

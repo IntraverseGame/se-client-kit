@@ -16,10 +16,10 @@ Part of the [Client kit spec](../client-kit.md), section
   (`(string action,uint8[] path,uint32 sequence,bytes32 round,bytes32 previous)`,
   where `round` is the round id), `CreateRoundAuth`, `MarkReadyAuth`, and
   `CloseRoundAuth`, each with its type hash, `hashStruct`, and the `0x1901`
-  digest; and `KeyDelegation` under its own chainless domain (proposed, its
-  bullet below). The field types are `string` (Keccak-256 of its UTF-8 bytes; a
-  lone surrogate is refused), `uint8[]` (Keccak-256 of the concatenated 32-byte
-  words), `bytes32`, `bool`, `address`, and `uintN` (big-endian 32-byte words,
+  digest; and `KeyDelegation` under its own chainless domain (its bullet below).
+  The field types are `string` (Keccak-256 of its UTF-8 bytes; a lone surrogate
+  is refused), `uint8[]` (Keccak-256 of the concatenated 32-byte words),
+  `bytes32`, `bool`, `address`, and `uintN` (big-endian 32-byte words,
   range-checked). A value outside its type is refused, never truncated. A field
   wider than 40 bits (`uint64`, `uint128`, or `uint256`: an amount, the chain
   id, an expiry) takes a `bigint` or a canonical decimal string only; a `number`
@@ -69,12 +69,15 @@ Part of the [Client kit spec](../client-kit.md), section
   check 7), so that app adds no hash dependency; the shell does not use it. Its
   tests check known answers and the seeds that the fairness kernel's public
   vectors name as `keccak256` of a text.
-- **`KeyDelegation`** (proposed,
-  [RFC-006](../../rfcs/active/RFC-006-wallet-delegated-action-key.md), its slice
-  S3). What a player's browser wallet signs, once per session, for the shell's
-  action key; the values are the backend's published `key-delegation/v1`.
-  `signing` builds the typed data and the digest and recovers the wallet's
-  signature; the shell (S5) and the signing page (S6b) use them.
+- **`KeyDelegation`**
+  ([RFC-006](../../rfcs/archived/RFC-006-wallet-delegated-action-key.md),
+  accepted 2026-11-20; its slices S3 and S2). What a player's browser wallet
+  signs, once per session, for the shell's action key; the values are the
+  backend's published `key-delegation/v1`. `signing` builds the typed data and
+  the digest, recovers the wallet's signature, and reads the notices list; the
+  shell ([The wallet delegation](../wrapper/the-wallet-delegation.md)), the
+  signing page ([Signing page](../signing-page.md)), and the verify page
+  ([Verify page](../verify-page.md), V-22) use them.
   - **Type and domain.**
     `KeyDelegation(string notice,address actionKey,bytes32 sessionId,uint64 expiry)`,
     type hash
@@ -98,10 +101,13 @@ Part of the [Client kit spec](../client-kit.md), section
     Anything else, uppercase hex and the Snapshot's wider `context.sessionId`
     form included, is `invalid-input`.
   - **The expiry** is a `number`, a safe integer from 1 to 2^53 − 1 (unix
-    seconds, `floor(sessionExpiresAt)`, the backend's accepted range); anything
-    else is `invalid-input`. A `number`, not a `bigint`: it is a time, never an
-    amount; every value the backend accepts is a safe integer, so it is held
-    exactly; the shell derives it from the redeem's date-time; and
+    seconds: the redeem's `sessionExpiresAt`, an RFC 3339 date-time, read with
+    `play-client`'s `parseDeadline` as milliseconds since the epoch, divided by
+    1000 and floored, so fractional seconds, which the Play API document's
+    `date-time` does not exclude, are dropped; the backend's accepted range);
+    anything else is `invalid-input`. A `number`, not a `bigint`: it is a time,
+    never an amount; every value the backend accepts is a safe integer, so it is
+    held exactly; the shell derives it from the redeem's date-time; and
     `se.delegation/1` carries it as a JSON number, which a `bigint` cannot be.
     The encoder writes the `uint64` word from a `bigint`, so its rule that a
     `number` is accepted only for fields of 40 bits or fewer still holds.
@@ -138,27 +144,47 @@ Part of the [Client kit spec](../client-kit.md), section
     `signature`, and the session's `bytes32` by value (RFC-006 section 7), and
     the verify page, which cannot take the shell. It is not constant-time: it is
     for public values only (an address, a hash, a signature), never a secret.
+  - **The notices list** (slice S2). `readKeyDelegationNotices(value)` reads the
+    `key-delegation/v1` notices document, which its callers take from
+    `contracts`' runtime entry (`keyDelegationNotices`, of unknown shape, since
+    `contracts` holds no logic), and returns a frozen array of
+    `KeyDelegationNotice` (`id`, `text`, `noticeHash`, `status`), in the list's
+    order. It checks what the backend's contract states and refuses anything
+    else with `invalid-input`, naming no value: a plain object of exactly
+    `version` (1) and `notices` (an array); each entry exactly `id`
+    (`^[a-z0-9-]{1,64}$`), `text` (1 to 512 bytes of UTF-8, with no control or
+    format character, Unicode Cc and Cf, which include the bidi controls, the
+    zero-width marks, and the byte-order mark, and no line or paragraph
+    separator, U+2028 and U+2029, so a wallet shows the bytes that are hashed; a
+    lone surrogate refused), `keccak256` (`0x` and 64 lowercase hex digits,
+    equal to `noticeHash(text)`), and `status` (`pending`, `approved`, or
+    `retired`); no `id` and no hash repeated. Choosing a notice by status, or
+    looking one up by hash, is the caller's (the shell and the signing page by
+    W-63 and SP-7, the verify page by hash over the whole list, V-22).
   - **Public API.** `keyDelegationTypedData`, `noticeHash`,
-    `recoverKeyDelegation`, `sessionIdBytes32`, and `sameHex`, with the types
-    `KeyDelegation` (the notice as `noticeHash`), `KeyDelegationMessage` (the
-    notice as text), `KeyDelegationTypedData`, and `RecoveredKeyDelegation`. The
-    struct hash, the domain separator, and the digest are internal and tested.
-  - **Vectors.** Until the backend's `key-delegation/v1 vectors` are vendored
-    (S2), the tests pin its published values, held as provisional test constants
-    (`src/fixtures/provisional-key-delegation.ts`). They are copied from the
-    backend's key-delegation contract vectors, its published
-    `key-delegation/v1 vectors` (the accepted case), and independently
-    re-derived here. Only tests import that file. S2 (#220's vendoring task)
-    deletes it and moves these tests to the lock-pinned vendored vectors on
-    `contracts`' test-only entry. They are the type string and type hash, the
-    domain string and separator, the `en-draft-1` notice's hash, the struct hash
-    and digest for one action key, session, and expiry, and a wallet signature
-    that recovers to a well-known development account. No key is held for it,
-    and the notice's text is not copied (S2 vendors it). The typed data and
-    `noticeHash` are tested with a text of their own, and a round trip signs
-    with the `player` test key; the normalization cases are derived from the
-    vector's signature; the zero-address case replaces Keccak-256 in one test
-    file, as for `recoverAddress`. Rows T-37 and T-38 of the
+    `recoverKeyDelegation`, `sessionIdBytes32`, `sameHex`, and
+    `readKeyDelegationNotices`, with the types `KeyDelegation` (the notice as
+    `noticeHash`), `KeyDelegationMessage` (the notice as text),
+    `KeyDelegationTypedData`, `RecoveredKeyDelegation`, `KeyDelegationNotice`,
+    and `NoticeStatus`. The struct hash, the domain separator, and the digest
+    are internal and tested.
+  - **Vectors.** The tests replay the backend's `key-delegation/v1 vectors`,
+    vendored in `contracts` (slice S2) and read through its test-only entry: the
+    domain's and the type's `encodeType` and hashes and the separator; the
+    accepted vector's `typedData` (rebuilt by `keyDelegationTypedData`), struct
+    hash, digest, and signature, which recovers to its `wallet` (the public
+    development account the backend signs its vectors with; no key is held for
+    it, and the vectors file holds only its address); the refused vectors'
+    high-`s` twin and `v` 0 normalized to the accepted signature's canonical
+    bytes, `v` 1 read as 28 (which recovers to another wallet), and their other
+    cases. S3 landed before the vendoring on provisional constants
+    (`src/fixtures/provisional-key-delegation.ts`), copied from the backend's
+    published vectors and re-derived; S2 deleted that file and moved its tests
+    to the vendored file. `noticeHash` and the typed data are also tested with a
+    text of their own, a round trip signs with the `player` test key, and the
+    zero-address case replaces Keccak-256 in one test file, as for
+    `recoverAddress`. `readKeyDelegationNotices` is tested on the vendored
+    notices and on refused variants of them. Rows T-37, T-38, and T-51 of the
     [Wrapper test plan](../wrapper.md#test-plan).
   - **What it emits.** Nothing; an error carries its code's fixed message, never
     a signature, an address, or a session.

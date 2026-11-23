@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "notices": [
+    {
+      "id": "en-draft-1",
+      "text": "DRAFT, pending legal review. By signing, you confirm that the moves signed by this game session's key are yours. This signature gives no access to your funds and sends no transaction. It publicly links this wallet address to your player reference at this operator: the link is published with the evidence of every round you play in this session. Using the same wallet at another operator links your player references there too.",
+      "keccak256": "0x71508a4d7d3e376ef39a9d928b6ce49120f86f99de1987add45b405f8b5ba777",
+      "status": "pending"
+    }
+  ]
+}

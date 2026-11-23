@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { provisionalKeyDelegation as vector } from "./fixtures/provisional-key-delegation.ts";
+import { acceptedDelegation as vector } from "./fixtures/key-delegation-vectors.ts";
 import { sameHex } from "./hex.ts";
 
 describe("sameHex", () => {
