@@ -114,3 +114,47 @@ export const roundEnvironmentConfig = (
   entropyChainId: { [pins.source]: pins.entropyChainId },
   tipLagMargin: { [pins.source]: 2 },
 });
+
+export const SOLANA_SOURCE = "solana";
+
+export const SOLANA_CLUSTER = 101;
+
+export const SOLANA_LAG_MARGIN = 64;
+
+export const SOLANA_RPC_ENDPOINTS: readonly {
+  readonly provider: string;
+  readonly url: string;
+}[] = [
+  { provider: "s1", url: "https://sol1.e2e.test/rpc" },
+  { provider: "s2", url: "https://sol2.e2e.test/rpc" },
+];
+
+export const solanaEnvironmentConfig = (
+  playApiBaseUrl: string,
+  pins: Omit<RoundPins, "source" | "entropyChainId">,
+): Readonly<Record<string, unknown>> => ({
+  ...environmentConfig(playApiBaseUrl),
+  runtimeSigner: pins.signer,
+  registryDomain: pins.domain,
+  rpcEndpoints: { [SOLANA_SOURCE]: SOLANA_RPC_ENDPOINTS },
+  entropyChainKind: { [SOLANA_SOURCE]: "solana" },
+  entropyChainId: { [SOLANA_SOURCE]: SOLANA_CLUSTER },
+  tipLagMargin: { [SOLANA_SOURCE]: SOLANA_LAG_MARGIN },
+});
+
+export const evmSolanaEnvironmentConfig = (
+  playApiBaseUrl: string,
+  pins: RoundPins,
+): Readonly<Record<string, unknown>> => ({
+  ...roundEnvironmentConfig(playApiBaseUrl, pins),
+  rpcEndpoints: {
+    [pins.source]: ROUND_RPC_ENDPOINTS,
+    [SOLANA_SOURCE]: SOLANA_RPC_ENDPOINTS,
+  },
+  entropyChainKind: { [pins.source]: "evm", [SOLANA_SOURCE]: "solana" },
+  entropyChainId: {
+    [pins.source]: pins.entropyChainId,
+    [SOLANA_SOURCE]: SOLANA_CLUSTER,
+  },
+  tipLagMargin: { [pins.source]: 2, [SOLANA_SOURCE]: SOLANA_LAG_MARGIN },
+});

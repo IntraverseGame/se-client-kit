@@ -111,13 +111,22 @@ const TABLE = {
   ],
 } as const;
 
+/** The entropy a book round names when it is not the vector's own. */
+export type BookEntropy = {
+  readonly source: string;
+  readonly chainId: number;
+  readonly block: number;
+};
+
 /**
  * The vendored book round, ended as `ending`, as the verify API's body, over
- * block N's hash `blockValue` (the vector's by default).
+ * block N's hash `blockValue` (the vector's by default), on the vector's own
+ * entropy chain or on `chain`.
  */
 export const bookRound = (
   ending: BookEnding,
   blockValue: string = BOOK_BLOCK_VALUE,
+  chain?: BookEntropy,
 ): Json => {
   const round = copy(ending);
   const randomness = randomnessOf(round, ending);
@@ -144,9 +153,9 @@ export const bookRound = (
     payout: read.payout,
     commitment: { roundSecretHash: sha256(roundSecret) },
     entropy: {
-      source: randomness["source"],
-      chainId: VERIFY_PINS.entropyChainId,
-      block: randomness["blockNumber"],
+      source: chain?.source ?? randomness["source"],
+      chainId: chain?.chainId ?? VERIFY_PINS.entropyChainId,
+      block: chain?.block ?? randomness["blockNumber"],
       value: blockValue,
     },
     reveal: { roundSecret, seed: sha256(blockValue, roundSecret) },

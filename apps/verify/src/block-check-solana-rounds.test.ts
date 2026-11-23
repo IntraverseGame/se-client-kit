@@ -2,8 +2,7 @@
 // source in one document, a round of each reads only its own source's
 // endpoints with its own kind's calls; and a Solana book round's value carried
 // through check 7's seed. The book round is synthetic, its seed computed from
-// the fake chain's value, until `entropy/solana/v1`'s seed vectors and the
-// Solana round vectors are vendored (RFC-007 slice 6) and replace it.
+// the fake chain's value: no vendored vector carries a Solana seed.
 
 import { describe, expect, it } from "vitest";
 

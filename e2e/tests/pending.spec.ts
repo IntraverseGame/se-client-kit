@@ -10,13 +10,19 @@
 // Crash rounds (t12-cash-out.spec.ts): the cash-out, and the last surviving
 // move, after which the round is `won` and nothing is signed. T-12's preview
 // row (preview/t12-cash-out.spec.ts) plays the cash-out only.
-// No row is pending now. When a row cannot run yet, it is declared here with
-// its reason; when it becomes runnable, it moves to its own spec file with a
+// Pending: the part of T-42 that replays a Solana signature vector (the
+// backend has published none yet, se-backend#613). When a row cannot run yet,
+// it is declared here with its reason; when it becomes runnable, it moves to its own spec file with a
 // real body on the harness (fixtures.ts) and leaves this list.
 
 import { test } from "./harness/fixtures.ts";
 
-const PENDING: readonly (readonly [string, string])[] = [];
+const PENDING: readonly (readonly [string, string])[] = [
+  [
+    "T-42",
+    "a Solana round's cancel and picks compared byte for byte with a vendored Solana signed-action vector; waits for the backend's Solana signature vectors (se-backend#613)",
+  ],
+];
 
 test.describe("pending: the Wrapper's browser test plan", () => {
   for (const [id, what] of PENDING) {

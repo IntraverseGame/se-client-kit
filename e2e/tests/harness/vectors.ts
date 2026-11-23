@@ -1,4 +1,5 @@
-// The Snapshot vectors the fake Play API answers with. This module is the e2e
+// The Snapshot vectors the fake Play API answers with, and the Solana entropy
+// reads the fake Solana RPC replays (`entropyVector`). This module is the e2e
 // suite's only importer of the test-only entry of the `contracts` package: the
 // suite is development-only, and nothing here reaches a bundle.
 //
@@ -16,7 +17,10 @@
 // that vector's (round-play.ts). The key is read here at run time only and is
 // never copied into a file (AGENTS.md).
 
-import { snapshotVectors } from "@intraverse/se-client-contracts/testing";
+import {
+  entropyVectors,
+  snapshotVectors,
+} from "@intraverse/se-client-contracts/testing";
 
 /** The definition a vector is an instance of, in the Play API document. */
 export type VectorDefinition = "PlayProblem" | "Snapshot";
@@ -122,6 +126,15 @@ const textOf = (
   const value = record[key];
   if (typeof value !== "string") throw new Error(`${where}: no ${key}`);
   return value;
+};
+
+/** The `entropy/v1/solana` read `name`: one read of a slot, as vendored. */
+export const entropyVector = (
+  name: string,
+): Readonly<Record<string, unknown>> => {
+  const file: unknown = entropyVectors.solana[name];
+  if (!isRecord(file)) throw new Error(`no entropy/v1/solana read "${name}"`);
+  return file;
 };
 
 /** The base64 `typedData` of the `typed-data/` vector `name`. */

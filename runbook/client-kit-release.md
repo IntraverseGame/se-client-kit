@@ -184,31 +184,38 @@ A sync touches **one package**, `contracts` (`packages/contracts/`).
    `kernel-vectors-derive`, `kernel-vectors-round-secret-hash`,
    `kernel-vectors-coin-flip-payout`, `kernel-vectors-weighted-draw`,
    `kernel-vectors-book-draw`, `kernel-vectors-book-table-commitment`,
-   `key-delegation-notices`, `key-delegation-vectors`
-   (`tools/contracts-groups.ts` is the list). Each has `name` (the repository,
-   recorded in the lock), `repo` (your local checkout), `ref` (for example the
-   default branch on `origin`) and `path` (the file or directory in that
-   repository). The lock records only public names, so the paths are not in this
-   repository: the source's own documentation names them, or ask its owners.
-   Keep your sources file for the next sync. Copy only the Play and verify
-   OpenAPI documents, the Snapshot schema and vectors, the signing vectors, the
-   fairness kernel's public sets (`kernel/public/v1/*`), and
-   `key-delegation/v1`'s notices and vectors; never another surface's document.
-   The notices keep every entry too, matched by id: the script refuses a notices
-   file that removes or renames an entry, changes an entry's text or hash, moves
-   a status back, holds an unknown status, or repeats an `id` or a hash, and no
-   flag lifts that; a new entry may appear anywhere, and the order does not
-   matter. **A notice that turns `approved`** (after the backend's legal review)
-   reaches players only with a kit release that syncs it: production offers the
-   wallet delegation from that release's deploy on, where `PAGES_SIGNER_ORIGIN`
-   is set
+   `entropy-vectors-solana-produced-slot`,
+   `entropy-vectors-solana-skipped-slot`,
+   `entropy-vectors-solana-skipped-slots-long-term-storage`,
+   `entropy-vectors-solana-skipped-slot-ledger-gap`, `key-delegation-notices`,
+   `key-delegation-vectors` (`tools/contracts-groups.ts` is the list). Each has
+   `name` (the repository, recorded in the lock), `repo` (your local checkout),
+   `ref` (for example the default branch on `origin`) and `path` (the file or
+   directory in that repository). The lock records only public names, so the
+   paths are not in this repository: the source's own documentation names them,
+   or ask its owners. Keep your sources file for the next sync. Copy only the
+   Play and verify OpenAPI documents, the Snapshot schema and vectors, the
+   signing vectors, the fairness kernel's public sets (`kernel/public/v1/*`),
+   the Solana entropy reads (`entropy/v1/solana/*`), and `key-delegation/v1`'s
+   notices and vectors; never another surface's document. The notices keep every
+   entry too, matched by id: the script refuses a notices file that removes or
+   renames an entry, changes an entry's text or hash, moves a status back, holds
+   an unknown status, or repeats an `id` or a hash, and no flag lifts that; a
+   new entry may appear anywhere, and the order does not matter. **A notice that
+   turns `approved`** (after the backend's legal review) reaches players only
+   with a kit release that syncs it: production offers the wallet delegation
+   from that release's deploy on, where `PAGES_SIGNER_ORIGIN` is set
    ([Turning on the wallet delegation](#turning-on-the-wallet-delegation)).
 3. Run `pnpm exec tsx tools/sync-contracts.ts --sources <file>`. It copies the
    files and rewrites `packages/contracts/contracts.lock.json` together. It
    refuses to change or remove a vector that is already locked; pass
    `--allow-vector-change` only before the first release, and say so in the pull
    request. A group you do not mean to move (the signing vectors, for example)
-   keeps the ref it was last synced at: name that commit as its `ref`.
+   keeps the ref it was last synced at: name that commit as its `ref`. A file
+   the backend only moved to another path reports the move's commit as its last
+   commit though its content (SHA-256) is the same: the entry keeps the commit
+   it had, so a sync that adds a file moves no other entry (the Solana entropy
+   sync did so for the kernel sets).
 4. Run `pnpm exec tsx tools/generate-contracts.ts --write` to regenerate the
    types and the vector catalog, then `pnpm check`. Vectors stay on the
    test-only entry; the lint rule, `check:contracts`, and `check:build-output`

@@ -209,6 +209,7 @@ const withVectors = (run: (packageDir: string) => void): void => {
       ["snapshot/signed-action", "f-g.json"],
       ["kernel/v1", "h-i.json"],
       ["kernel/v1", "j.json"],
+      ["entropy/v1/solana", "k.json"],
     ] as const) {
       mkdirSync(join(vectors, folder), { recursive: true });
       writeFileSync(join(vectors, folder, file), "{}\n");

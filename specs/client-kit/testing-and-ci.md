@@ -590,7 +590,29 @@ development-only, so it may import the test-only entry of `contracts`.
   a file, so the round's vendored `CreateRoundAuth` is the session's; a round
   configuration pins its signer, domain, and entropy source; fake RPC endpoints
   answer the tip check (`harness/fake-rpc.ts`, which can fail it on purpose);
-  and the fake Play API checks the start's `actionKey` and the move's,
+  for a Solana source, the fake Solana RPC does the same
+  (`harness/fake-solana-rpc.ts`, T-42,
+  [RFC-007](../../rfcs/active/RFC-007-solana-entropy-in-the-browser.md) section
+  8): a route per configured endpoint answering `getGenesisHash`, `getSlot`,
+  `getBlock`, and `getBlocksWithLimit` from a scripted ledger that is one of the
+  vendored `entropy/v1/solana` reads (`harness/solana-ledger.ts`: it answers
+  only a request whose method and parameters are a recorded request's, so the
+  options the kit sends are checked), with the CORS headers and the preflight
+  answered, HTTP 200 for every JSON-RPC error, and the behaviors `agree`,
+  `other-cluster`, `error`, `lagging`, `skip` (a produced block moved one slot
+  on, so N is -32007), `gap` (moved two, its `parentSlot` not below N), and
+  `pruned` (-32001); a call it does not know is recorded as unexpected and fails
+  the test. Three configuration documents exist: the EVM one, a `solana`-only
+  one (the source `solana`, kind `solana`, cluster 101, a lag margin of 64
+  slots, two endpoints `s1` and `s2`), and one with an `evm` and a `solana`
+  source (`harness/environment-config.ts`). A Solana round is the vendored
+  `coinflip-won-solana` Snapshot's `createRoundAuth`, round id, and slot laid
+  over the Coin Flip round's `active` and `resolving` Snapshots
+  (`harness/solana-round.ts`, answered as `snapshot-document`): the signature is
+  the backend's, and the one value the harness holds is the round's `T_0`
+  (`readyHash`, `keccak256(abi.encode(created, seedHash))`, which the shell
+  recomputes: a wrong value fails W-26's check 5, so the round never reaches
+  `ready`); and the fake Play API checks the start's `actionKey` and the move's,
   cash-out's, and cancel's bytes against the vectors (an answer's `expect`; the
   cash-out's and the cancel's signatures byte for byte against their
   `signed-action/` vectors), and can answer a code no vector holds
@@ -600,22 +622,24 @@ development-only, so it may import the test-only entry of `contracts`.
   the answer is queued, so the body stays one the schema accepts; a `version`
   definition with any keyword but `description`, `type`, and `minimum` allows no
   override, fail closed), and, for W-28 only, an `invalid/` Snapshot. The
-  harness's own checks have their tests (`round-harness.spec.ts`). No row is
-  pending now: `e2e/tests/pending.spec.ts` is where a row that cannot run yet is
-  declared with `test.fixme`, reported as skipped, never as passed, and it lists
-  none. Every spec file runs in all three projects except the proofs of the
-  blocks (above): `hermetic-workers.spec.ts` in Chromium only, and
-  `hermetic-proxy.spec.ts` and `hermetic-webrtc.spec.ts` in Firefox and WebKit
-  only, each skipped elsewhere with its reason. One browser behavior is pinned
-  per project, since the Wrapper works around it: a parent's `focus()` while its
-  frame has the focus (W-46's move from the game frame to the result or error
-  heading) moves the focus in Chromium, WebKit, and, from Playwright 1.65 (its
-  Firefox 159.0 build), Playwright's Firefox; Playwright 1.64's Firefox build
-  (157.0) left it in the frame. Both Firefox builds run frames in their parent's
-  process (`fission.webContentIsolationStrategy` 0). A release Firefox (159)
-  moves it without the blur, checked by hand. The Wrapper keeps blurring the
-  frame element first so the move does not depend on the browser; with the blur
-  it moves in every project (`focus-from-frame.spec.ts`, `FOCUS_FROM_FRAME` in
+  harness's own checks have their tests (`round-harness.spec.ts`). One part of
+  one row is pending: `e2e/tests/pending.spec.ts` is where a row that cannot run
+  yet is declared with `test.fixme`, reported as skipped, never as passed, and
+  it lists the part of T-42 that replays a Solana signature vector (the backend
+  has published none, se-backend#613). Every spec file runs in all three
+  projects except the proofs of the blocks (above): `hermetic-workers.spec.ts`
+  in Chromium only, and `hermetic-proxy.spec.ts` and `hermetic-webrtc.spec.ts`
+  in Firefox and WebKit only, each skipped elsewhere with its reason. One
+  browser behavior is pinned per project, since the Wrapper works around it: a
+  parent's `focus()` while its frame has the focus (W-46's move from the game
+  frame to the result or error heading) moves the focus in Chromium, WebKit,
+  and, from Playwright 1.65 (its Firefox 159.0 build), Playwright's Firefox;
+  Playwright 1.64's Firefox build (157.0) left it in the frame. Both Firefox
+  builds run frames in their parent's process
+  (`fission.webContentIsolationStrategy` 0). A release Firefox (159) moves it
+  without the blur, checked by hand. The Wrapper keeps blurring the frame
+  element first so the move does not depend on the browser; with the blur it
+  moves in every project (`focus-from-frame.spec.ts`, `FOCUS_FROM_FRAME` in
   `harness/frame-focus.ts`, one stdout line). T-14 asserts the full W-46 rule in
   every project: the result heading focused, the game's heading not focused, and
   the game's document without focus. T-9a's e2e cases

@@ -1,0 +1,115 @@
+{
+  "vector": "entropy/v1/solana/skipped-slots-long-term-storage",
+  "description": "Solana mainnet-beta (chain id 101), three skipped slots in a row, read from long-term storage: getBlock answers error -32009, and the first of them takes the value, the hash and the time of the first finalized block after all three, three slots later. Synthetic test values, not mainnet blocks.",
+  "source": "solana",
+  "chainId": 101,
+  "slot": 381000300,
+  "finalizedSlot": 381000340,
+  "rpc": [
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getSlot",
+        "params": [
+          {
+            "commitment": "finalized"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": 381000340,
+        "id": 1
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "getBlock",
+        "params": [
+          381000300,
+          {
+            "commitment": "finalized",
+            "encoding": "json",
+            "maxSupportedTransactionVersion": 0,
+            "rewards": false,
+            "transactionDetails": "none"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32009,
+          "message": "Slot 381000300 was skipped, or missing in long-term storage"
+        },
+        "id": 2
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "getBlocksWithLimit",
+        "params": [
+          381000300,
+          1,
+          {
+            "commitment": "finalized"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": [
+          381000303
+        ],
+        "id": 3
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "getBlock",
+        "params": [
+          381000303,
+          {
+            "commitment": "finalized",
+            "encoding": "json",
+            "maxSupportedTransactionVersion": 0,
+            "rewards": false,
+            "transactionDetails": "none"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "blockHeight": 361000300,
+          "blockTime": 1800000121,
+          "blockhash": "Dw1ajqbbzwqvdhNTC9VrursniWrKWHqsX4vdSDgCDWAr",
+          "parentSlot": 381000299,
+          "previousBlockhash": "5vBEEdd5X9ZX9upyo2LuDzSgDfxDuHd46dmhyaJ4hvfT"
+        },
+        "id": 4
+      }
+    }
+  ],
+  "block": {
+    "blockNumber": 381000300,
+    "blockValue": "0xc02243b8a5e7a2c0fd4a930404d4f6c72d70d796fae738e14680492db4ad67bf",
+    "blockHash": "0xc02243b8a5e7a2c0fd4a930404d4f6c72d70d796fae738e14680492db4ad67bf",
+    "blockTime": 1800000121
+  },
+  "valueSlot": 381000303,
+  "randomnessTarget": "0xd386b2c82d53ce764437f2af5d122672c880844df87fd565706c46e51a1b5bcb",
+  "verifyEntropy": {
+    "source": "solana",
+    "chainId": 101,
+    "block": 381000300,
+    "value": "0xc02243b8a5e7a2c0fd4a930404d4f6c72d70d796fae738e14680492db4ad67bf"
+  }
+}

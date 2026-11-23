@@ -51,6 +51,9 @@ The kit is a repository of packages and apps. These are its ownership lines.
   - the Play API contract (an OpenAPI document per surface) and its versioning;
   - the Snapshot schema `se.snapshot/1` and its golden vectors;
   - the signed-action spec and its vectors;
+  - the Solana entropy reads `entropy/v1/solana`
+    ([RFC-007](../rfcs/active/RFC-007-solana-entropy-in-the-browser.md);
+    vendored since its slice 6);
   - the key-delegation contract `key-delegation/v1`: its notices and their
     vectors ([RFC-006](../rfcs/archived/RFC-006-wallet-delegated-action-key.md),
     accepted; vendored since slice S2 of #220);
@@ -720,12 +723,13 @@ request, workflow log, agent output, or release note:
 - unpublished backend internals: only the player-facing contracts (the Play API
   document, the Snapshot schema bundle, the signed-action specification, the
   signing vectors, the public vector bundle of the SuperEngine fairness kernel,
-  kernelVersion 1 (its sets `kernel/public/v1/*`), and the key-delegation
-  contract `key-delegation/v1`, its notices and their vectors) are shared, and
-  only as copies; no operator, wallet, or admin API document, no internal module
-  names or designs. That "wallet" names a backend API document;
-  `key-delegation/v1` is not one: it is the player-facing contract a player's
-  own browser wallet signs (RFC-006), and it may be copied;
+  kernelVersion 1 (its sets `kernel/public/v1/*`), the Solana entropy reads
+  `entropy/v1/solana`, and the key-delegation contract `key-delegation/v1`, its
+  notices and their vectors) are shared, and only as copies; no operator,
+  wallet, or admin API document, no internal module names or designs. That
+  "wallet" names a backend API document; `key-delegation/v1` is not one: it is
+  the player-facing contract a player's own browser wallet signs (RFC-006), and
+  it may be copied;
 - anything about an operator's credentials or contracts, or a player's data;
 - unreleased security findings (they go through `SECURITY.md`).
 
@@ -818,8 +822,8 @@ workflow's logs are public and hold no secret.
   [runbook/client-kit-release.md](../runbook/client-kit-release.md).
 - Backend-owned contracts, by name and version: the Play API `/play/v1`; the
   Snapshot schema `se.snapshot/1` and its bundle; the signed-action spec; the
-  signing vectors; the key-delegation contract `key-delegation/v1`, its notices
-  and their vectors.
+  signing vectors; the Solana entropy reads `entropy/v1/solana`; the
+  key-delegation contract `key-delegation/v1`, its notices and their vectors.
 - [signing-page.md](./signing-page.md) (the wallet signing page),
   [RFC-006](../rfcs/archived/RFC-006-wallet-delegated-action-key.md),
   [ADR-012](../decisions/ADR-012-the-signing-page-on-its-own-origin.md).

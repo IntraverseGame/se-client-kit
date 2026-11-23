@@ -75,6 +75,18 @@ type AnswerKind<Id extends PlayOperationId> =
   | (Id extends SnapshotOperationId
       ? {
           /**
+           * 200 with a Snapshot the harness built from vendored vectors only
+           * (solana-round.ts): the Solana round's own `createRoundAuth` and
+           * slot laid over an EVM round's `active` or `resolving` vector. The
+           * Wrapper validates it (W-28) as it does every body.
+           */
+          readonly kind: "snapshot-document";
+          readonly document: Readonly<Record<string, unknown>>;
+        }
+      : never)
+  | (Id extends SnapshotOperationId
+      ? {
+          /**
            * 200 with the `valid/` Snapshot vector of this name, its `version`
            * replaced by `version` and nothing else changed: a later read that
            * carries a lower `version` than the one last shown (W-29). The value

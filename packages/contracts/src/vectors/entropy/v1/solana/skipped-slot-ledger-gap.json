@@ -1,0 +1,103 @@
+{
+  "vector": "entropy/v1/solana/skipped-slot-ledger-gap",
+  "description": "Solana mainnet-beta (chain id 101), a skipped slot on a provider with a gap in its ledger: getBlocksWithLimit lists a block two slots later whose parentSlot is not below the skipped slot, so a block between them is missing. The read is refused and no value is served. Synthetic test values, not mainnet blocks.",
+  "source": "solana",
+  "chainId": 101,
+  "slot": 381000400,
+  "finalizedSlot": 381000440,
+  "rpc": [
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getSlot",
+        "params": [
+          {
+            "commitment": "finalized"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": 381000440,
+        "id": 1
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "getBlock",
+        "params": [
+          381000400,
+          {
+            "commitment": "finalized",
+            "encoding": "json",
+            "maxSupportedTransactionVersion": 0,
+            "rewards": false,
+            "transactionDetails": "none"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32007,
+          "message": "Slot 381000400 was skipped, or missing due to ledger jump to recent snapshot"
+        },
+        "id": 2
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "getBlocksWithLimit",
+        "params": [
+          381000400,
+          1,
+          {
+            "commitment": "finalized"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": [
+          381000402
+        ],
+        "id": 3
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "getBlock",
+        "params": [
+          381000402,
+          {
+            "commitment": "finalized",
+            "encoding": "json",
+            "maxSupportedTransactionVersion": 0,
+            "rewards": false,
+            "transactionDetails": "none"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "blockHeight": 361000401,
+          "blockTime": 1800000160,
+          "blockhash": "BRSYD8dt2NJRWSx7E7FqxKKaWgJcSSEj2NGv7VMeWTMY",
+          "parentSlot": 381000401,
+          "previousBlockhash": "68Lob2rnF9QXKEvscXuZr3Yb4dqHTN6DfBcENfqzfhmM"
+        },
+        "id": 4
+      }
+    }
+  ],
+  "refusal": "ledger-gap",
+  "randomnessTarget": "0x590010622a34ca099c922466246f6f3faf3fe26d38fa4a2751bc03c0356f2f87"
+}

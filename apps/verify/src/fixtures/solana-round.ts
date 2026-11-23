@@ -1,9 +1,9 @@
 // Test-only: Solana rounds for check 6 as the page runs it (VT-14). A document
 // that lists the vectors' EVM source (`ethereum:block`) beside a `solana` one,
 // as staging does during its switch; the vectors' rounds moved to slot N of
-// `solana`; and one fetch that serves both kinds. The rounds are synthetic: no
-// vendored vector has a Solana round until RFC-007's slice 6, whose Solana
-// Snapshot and `entropy/solana/v1` seed vectors replace them.
+// `solana`; and one fetch that serves both kinds. The rounds are synthetic: the
+// vendored Solana Snapshot vectors are won rounds with no verify API body, and
+// no vendored vector carries a Solana seed.
 
 import type { ChainReadDeps } from "../chain-read.ts";
 import type { RoundEvidence } from "../round-evidence.ts";

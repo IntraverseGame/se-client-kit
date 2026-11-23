@@ -389,6 +389,13 @@ structure below.
   `shownPayout`, and `cashOutButton` in `round-view.ts`; the multiplier alone
   without it), and the game's copy drops it (W-38). Never
   derive it from `currentMultiplier`.
+- The Solana entropy reads `entropy/v1/solana` (`produced-slot`, `skipped-slot`,
+  `skipped-slots-long-term-storage`, `skipped-slot-ledger-gap`; one group each
+  in `tools/contracts-groups.ts`, locked under `entropy/v1/solana/<case>`) are
+  vendored as data under `vectors/entropy/v1/solana/`, on the test-only entry as
+  `entropyVectors.solana`; their consumers are the verify page's unit tests
+  (`chain-read-solana-vectors.test.ts`) and the e2e fake Solana RPC. The two
+  Solana Snapshot vectors are `valid/coinflip-won-solana*`.
 - The fairness kernel's public vector sets (the SuperEngine fairness kernel,
   kernelVersion 1: `kernel/public/v1/seed`, `shuffle-draw`, `steps-derive`,
   `derive`, `round-secret-hash`, `coin-flip-payout`, `weighted-draw`,

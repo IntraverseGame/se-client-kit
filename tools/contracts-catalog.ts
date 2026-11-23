@@ -53,6 +53,8 @@ export const catalogSource = (packageDir: string): string => {
   );
   // Each kernel version's folder under src/vectors/kernel/.
   const kernelGroups = [folderGroup("kernel/v1", "v1")];
+  // Each entropy chain's folder under src/vectors/entropy/v1/.
+  const entropyGroups = [folderGroup("entropy/v1/solana", "solana")];
   lines.push(
     'import signing from "./signing.json" with { type: "json" };',
     'import keyDelegationV1 from "./key-delegation/v1/vectors.json" with { type: "json" };',
@@ -79,6 +81,11 @@ export const catalogSource = (packageDir: string): string => {
     "  readonly v1: VectorSet;",
     "};",
     "",
+    "export type EntropyVectors = {",
+    "  /** The Solana entropy reads `entropy/v1/solana`, by file name. */",
+    "  readonly solana: VectorSet;",
+    "};",
+    "",
     "export type KeyDelegationVectors = {",
     "  /** The key-delegation contract `key-delegation/v1`: its vectors file. */",
     "  readonly v1: unknown;",
@@ -89,6 +96,8 @@ export const catalogSource = (packageDir: string): string => {
     `export const snapshotVectors: SnapshotVectors = {\n${snapshotGroups.join("\n")}\n};`,
     "",
     `export const kernelVectors: KernelVectors = {\n${kernelGroups.join("\n")}\n};`,
+    "",
+    `export const entropyVectors: EntropyVectors = {\n${entropyGroups.join("\n")}\n};`,
     "",
     "export const keyDelegationVectors: KeyDelegationVectors = { v1: keyDelegationV1 };",
     "",

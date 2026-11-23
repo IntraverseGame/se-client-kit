@@ -64,18 +64,18 @@ const traceMode = (testInfo: TestInfo): string => {
 };
 
 type RoundFixtures = {
-  /** The tip check's fake RPC endpoints (fake-rpc.ts). */
-  readonly fakeRpc: FakeRpc;
   /** The page's clock, installed before it loads (the Wrapper's timers). */
   readonly pageClock: Clock;
 };
 
 /**
- * The suite's `test` with the round: the random source scripts the Wrapper's
- * key draw, the configuration pins the round, and the RPC endpoints are fake.
- * Overrides `randomDraws` here, so the shared fixtures stay as they are.
+ * The suite's `test` with the round's session: the random source scripts the
+ * Wrapper's key draw and the page's clock is installed. The tip check's chain
+ * is left to the test that extends it (`test` below for EVM,
+ * solana-round-play.ts for Solana). Overrides `randomDraws` here, so the shared
+ * fixtures stay as they are.
  */
-export const test = base.extend<RoundFixtures>({
+export const roundSession = base.extend<RoundFixtures>({
   // An override keeps the shared fixture's registration (automatic).
   randomDraws: async ({ context, hermetic, seed }, use, testInfo) => {
     // The key's bytes are the init script's argument: a trace would write them
@@ -93,6 +93,26 @@ export const test = base.extend<RoundFixtures>({
     await use(draws);
   },
 
+  // Installed, not paused (see the header): real time still moves the timers.
+  pageClock: [
+    async ({ page }, use) => {
+      await page.clock.install();
+      await use(page.clock);
+    },
+    { auto: true },
+  ],
+});
+
+type EvmFixtures = {
+  /** The tip check's fake RPC endpoints (fake-rpc.ts). */
+  readonly fakeRpc: FakeRpc;
+};
+
+/**
+ * The suite's `test` with the round: the session above, the configuration pins
+ * the round, and the RPC endpoints are fake.
+ */
+export const test = roundSession.extend<EvmFixtures>({
   // After `hermetic`, so these routes take their requests before its
   // catch-all, and after the shared origins, so this configuration is served.
   fakeRpc: [
@@ -110,15 +130,6 @@ export const test = base.extend<RoundFixtures>({
       await rpc.install(context);
       await use(rpc);
       expect(rpc.unexpected(), "calls the fake RPC did not know").toEqual([]);
-    },
-    { auto: true },
-  ],
-
-  // Installed, not paused (see the header): real time still moves the timers.
-  pageClock: [
-    async ({ page }, use) => {
-      await page.clock.install();
-      await use(page.clock);
     },
     { auto: true },
   ],
@@ -154,6 +165,15 @@ export type SnapshotAnswer = {
   readonly vector: string;
   readonly expect?: BodyCheck;
 };
+
+/** A Snapshot answer of a document the harness built from vendored vectors. */
+export const documentAnswer = (
+  document: Readonly<Record<string, unknown>>,
+  check?: BodyCheck,
+): Answer<"getSnapshot"> =>
+  check === undefined
+    ? { kind: "snapshot-document", document }
+    : { kind: "snapshot-document", document, expect: check };
 
 /** A Snapshot answer of the `valid/` vector `vector`. */
 export const snapshotAnswer = (
