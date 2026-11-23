@@ -76,10 +76,11 @@ MIT, see [`LICENSE`](./LICENSE).
 ## AI tool adapters and symlinks
 
 `AGENTS.md` is the single instruction source. Tool adapters are pointers only:
-`CLAUDE.md` imports `@AGENTS.md`; `.opencode/skills`, `.claude/skills`, and
-`.agents/skills` are symlinks to `.ai/skills`; `.claude/agents` and
-`.opencode/agents` are symlinks to `.ai/agents` (the implementer, reviewer,
-documenter, and pr-shepherd role agents).
+`CLAUDE.md` imports `@AGENTS.md`; `.opencode/skills`, `.claude/skills`,
+`.omp/skills`, and `.agents/skills` are symlinks to `.ai/skills`;
+`.claude/agents`, `.opencode/agents`, and `.omp/agents` are symlinks to
+`.ai/agents` (the implementer, reviewer, documenter, and pr-shepherd role
+agents).
 
 On Windows, clone with symlink support
 (`git config --global core.symlinks true`, Developer Mode enabled). Without it

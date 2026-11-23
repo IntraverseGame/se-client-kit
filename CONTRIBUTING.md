@@ -210,10 +210,11 @@ each tool through pointer-only adapters (ADR-003):
 | -------------- | --------------------------------- | ------------------------------------------------------------------ |
 | Claude Code    | `.claude/agents` → `.ai/agents`   | Ask for it by name ("use the reviewer agent") or `@agent-reviewer` |
 | OpenCode       | `.opencode/agents` → `.ai/agents` | `@reviewer` (or switch to the agent)                               |
+| OMP            | `.omp/agents` → `.ai/agents`      | Ask for it by name ("use the reviewer agent")                      |
 | Codex / others | — (no agent folder)               | "Act as the reviewer defined in `.ai/agents/reviewer.md`"          |
 
-Skills are found through `.claude/skills`, `.opencode/skills`, and
-`.agents/skills`, all pointing to `.ai/skills`.
+Skills are found through `.claude/skills`, `.opencode/skills`, `.omp/skills`,
+and `.agents/skills`, all pointing to `.ai/skills`.
 
 A typical change:
 
