@@ -165,7 +165,8 @@ the configuration, never a constant of the kit.
   raised to 2 (Q16), leaving `solana` alone, as in production. Staging's
   `solana` margin is the provisional 64 slots (Q1), and its `solana` endpoints
   are staging keys on two independent providers that staging's own engine does
-  not read, Origin-locked to staging's origins (P-3, P-6). The rule is per
+  not read, Origin-locked to staging's origins (or, for one of them, a public
+  keyless endpoint under P-3's staging exception) (P-3, P-6). The rule is per
   environment: an environment's browser endpoints never include the provider its
   own engine reads, so staging's pair may differ from production's.
 
@@ -591,6 +592,9 @@ an endpoint enters a configuration document; the runbook gets the checklist
     endpoint.
   - A key never appears in the repository, an issue, a pull request, a log, or
     the recorded evidence; the CSP and `PAGES_RPC_ORIGINS` hold origins only.
+  - **Staging exception** (decided 2026-11-24, [Decisions](#decisions)): one of
+    staging's two endpoints may be a public, keyless mainnet-beta endpoint with
+    no Origin allowlist and no cap. Production has none.
 - **P-4. Methods.** `getGenesisHash`; `getSlot` at `finalized`; `getBlock` (with
   section 4's options) and `getBlocksWithLimit`, both at `finalized`; with the
   JSON-RPC error codes of the Solana validator's RPC (-32001, -32004, -32007,
@@ -612,6 +616,9 @@ an endpoint enters a configuration document; the runbook gets the checklist
   bind check: independent RPCs exclude the engine's own; decided by the code
   owner on 2026-11-18). The kit cannot see the engine's provider, so this one is
   the infrastructure owner's to keep, and the runbook's checklist names it.
+  Before an environment's engine is switched to another provider by hand, that
+  provider's browser endpoint in that environment is replaced first, or in the
+  same change (decided 2026-11-24, [Decisions](#decisions)).
 - **P-7. The policies.** Each endpoint's origin is in `PAGES_RPC_ORIGINS`
   (exactly the origins of `PAGES_RPC_ENDPOINTS`' URLs), passes the headers
   step's `origin` pattern, and so reaches both sites' `connect-src`; nothing
@@ -1115,6 +1122,22 @@ comes back as a pull request through the same workflow):
     hostname; #235 links its result.
   - **Endpoint changes during the canary**: a browser key's rotation on the same
     provider does not restart the count; a change of provider does.
+- **2026-11-24, the human, on P-3 for staging**: one of **staging's** two
+  browser endpoints may be a public, keyless Solana mainnet-beta endpoint with
+  no Origin allowlist and no rate or spend cap, as a recorded exception to P-3.
+  `Origin` is a quota control, not integrity (P-3): the tip check and check 6
+  rest on the quorum; staging's volume is low, and a failed call costs only a
+  staging round. The risks are accepted: such an endpoint may answer HTTP 429
+  when it rate-limits, which fails P-2, so at the source's quorum one refused
+  call fails the tip check and the round is canceled, or check 6 cannot be
+  verified; and its operator may block or change it without notice. P-1, P-2
+  otherwise, P-4, P-6, and P-7 still apply; P-3's key-in-the-path rule is moot.
+  **Production is unchanged**: every production browser endpoint passes P-1 to
+  P-7 as written, so a public endpoint without an allowlist is never one of
+  them. Section 6 (P-3) points here. With it, P-6 per environment: before an
+  environment's engine is switched to another provider by hand, that provider's
+  browser endpoint in that environment is replaced first, or in the same change
+  (section 6, P-6).
 
 ## Unresolved questions
 
