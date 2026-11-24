@@ -4,7 +4,8 @@
   its open points, RFC-006 Q1, Q2, Q4, Q5, and Q-e, answered by the code owner
   the same day; accepted by the human on 2026-11-20 with RFC-006, with decision
   3's hosting set to two Pages projects at their `pages.dev` origins and no
-  custom domain)
+  custom domain; amended 2026-11-24, #248: the Wrapper and the verify page send
+  a `Cross-Origin-Opener-Policy`, the signing page still none)
 - Date: 2026-11-20 (proposed 2026-11-17)
 - Relates to: [RFC-006](../rfcs/archived/RFC-006-wallet-delegated-action-key.md)
   (the wallet-delegated action key),
@@ -90,6 +91,17 @@
    and the verify page (V-17). The site routes no API: it gets no `_worker.js`,
    `_routes.json`, or `_redirects`, and the deploy refuses an artifact that
    holds one, as it does for the game's site.
+
+   Amendment note (2026-11-24, #248): **the Wrapper and the verify page send an
+   opener policy; the signing page still sends none.** The Wrapper's `/*` rule
+   sends `Cross-Origin-Opener-Policy: same-origin-allow-popups`, which isolates
+   it when it is the top page (a standalone launch; a framed Wrapper's is
+   ignored) and keeps the handle of the signing window it opens, where
+   `same-origin` would cut it (W-49g). The verify page's `/verify/*` rule sends
+   `same-origin`: it opens no window. The release build and the deploy's headers
+   step refuse any other value on those two rules and any opener policy on
+   `/signer/*`, so this decision's "no COOP" for the signing page holds.
+
 8. **It keeps nothing.** No storage, cookie, or service worker; it logs nothing
    and emits no telemetry.
 

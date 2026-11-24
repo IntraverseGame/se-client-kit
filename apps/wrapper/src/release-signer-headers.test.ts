@@ -2,7 +2,9 @@
 // The signing page's headers in the release (specs/signing-page.md, SP-13;
 // T-49): its own policy with `frame-ancestors 'none'` and no `img-src`, no
 // referrer, no sniffing, the Wrapper's `Permissions-Policy`, and no
-// `Cross-Origin-Opener-Policy` in any rule: the build refuses one.
+// `Cross-Origin-Opener-Policy`: the build refuses one in its rule, and any
+// but `same-origin-allow-popups` on the Wrapper's and `same-origin` on the
+// verify page's.
 
 import { describe, expect, it } from "vitest";
 
@@ -45,27 +47,30 @@ describe("the signing page's headers (SP-13)", () => {
     expect(signerHeaders()).toEqual(headersFile()[SIGNER_HEADERS_PATH]);
   });
 
-  it("holds no Cross-Origin-Opener-Policy in any rule", () => {
-    for (const rule of Object.values(headersFile())) {
-      expect(Object.keys(rule).map(name => name.toLowerCase())).not.toContain(
-        "cross-origin-opener-policy",
-      );
-    }
+  it("holds no Cross-Origin-Opener-Policy in its rule, and only the Wrapper's and the verify page's own elsewhere", () => {
+    const policies = Object.entries(headersFile()).flatMap(([path, rule]) =>
+      Object.entries(rule)
+        .filter(([name]) => name.toLowerCase() === "cross-origin-opener-policy")
+        .map(([, value]) => [path, value]),
+    );
+    expect(policies).toEqual([
+      [WRAPPER_HEADERS_PATH, "same-origin-allow-popups"],
+      [VERIFY_HEADERS_PATH, "same-origin"],
+    ]);
   });
 });
 
-/** The release's headers file with a COOP header added to one rule. */
-const withCoop = (path: string, name: string) => ({
+/** The release's headers file with an opener policy set on one rule. */
+const withCoop = (path: string, name: string, value = "same-origin") => ({
   ...headersFile(),
-  [path]: { ...headersFile()[path], [name]: "same-origin" },
+  [path]: { ...headersFile()[path], [name]: value },
 });
 
 describe("the refusal of an opener policy (T-49)", () => {
   it.each([
     [SIGNER_HEADERS_PATH, "Cross-Origin-Opener-Policy"],
-    [WRAPPER_HEADERS_PATH, "Cross-Origin-Opener-Policy"],
     [SIGNER_HEADERS_PATH, "cross-origin-opener-policy"],
-    [VERIFY_HEADERS_PATH, "CROSS-ORIGIN-OPENER-POLICY"],
+    ["/other/*", "CROSS-ORIGIN-OPENER-POLICY"],
   ])("refuses a %s rule with %s", (path, name) => {
     expect(() => {
       refuseOpenerPolicy(withCoop(path, name));
@@ -74,25 +79,49 @@ describe("the refusal of an opener policy (T-49)", () => {
     );
   });
 
-  it("accepts the release's own headers file", () => {
+  it.each([
+    [WRAPPER_HEADERS_PATH, "Cross-Origin-Opener-Policy", "same-origin"],
+    [WRAPPER_HEADERS_PATH, "cross-origin-opener-policy", "unsafe-none"],
+    [
+      VERIFY_HEADERS_PATH,
+      "CROSS-ORIGIN-OPENER-POLICY",
+      "same-origin-allow-popups",
+    ],
+  ])("refuses a %s rule with %s: %s", (path, name, value) => {
+    expect(() => {
+      refuseOpenerPolicy(withCoop(path, name, value));
+    }).toThrow(
+      `The release headers' ${path} rule has Cross-Origin-Opener-Policy "${value}", not`,
+    );
+  });
+
+  it("accepts the release's own headers file, and one with no opener policy", () => {
     expect(() => {
       refuseOpenerPolicy(headersFile());
     }).not.toThrow();
+    expect(() => {
+      refuseOpenerPolicy({ [SIGNER_HEADERS_PATH]: signerHeaders() });
+    }).not.toThrow();
   });
 
-  it.each([SIGNER_HEADERS_PATH, WRAPPER_HEADERS_PATH])(
-    "fails the build when the written headers file's %s rule has one",
-    async path => {
+  it.each([
+    [SIGNER_HEADERS_PATH, "same-origin-allow-popups"],
+    [WRAPPER_HEADERS_PATH, "same-origin"],
+  ])(
+    "fails the build when the written headers file's %s rule has %s",
+    async (path, value) => {
       await expect(
         verified(files => {
           files.set(
             HEADERS_FILE,
             encoder.encode(
-              JSON.stringify(withCoop(path, "Cross-Origin-Opener-Policy")),
+              JSON.stringify(
+                withCoop(path, "Cross-Origin-Opener-Policy", value),
+              ),
             ),
           );
         }, bundleOf()),
-      ).rejects.toThrow(/Cross-Origin-Opener-Policy header.*refused/u);
+      ).rejects.toThrow(/Cross-Origin-Opener-Policy.*refused/u);
     },
   );
 });

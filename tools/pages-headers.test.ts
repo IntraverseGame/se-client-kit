@@ -76,6 +76,14 @@ describe("the Pages headers step", () => {
       ].join("\n"),
     );
     expect(result.wrapper).toContain("frame-ancestors 'none'");
+    // The verify page's own opener policy replaces the Wrapper's under it.
+    const [wrapperRule, verifyRule] = String(result.wrapper).split("/verify/*");
+    expect(wrapperRule).toContain(
+      "  Cross-Origin-Opener-Policy: same-origin-allow-popups\n",
+    );
+    expect(verifyRule).toContain("  ! Cross-Origin-Opener-Policy\n");
+    expect(verifyRule).toContain("  Cross-Origin-Opener-Policy: same-origin\n");
+    expect(verifyRule).not.toContain("same-origin-allow-popups");
   });
 
   it("accepts one https origin in every list", () => {
@@ -105,6 +113,9 @@ describe("the Pages headers step", () => {
     const result = run(REAL, { rpc: RPC_INPUT });
     expect(result.status).toBe(0);
     expect(result.verifier).toBe(["/*", ...verifyLines(), ""].join("\n"));
+    expect(result.verifier).toContain(
+      "  Cross-Origin-Opener-Policy: same-origin\n",
+    );
     expect(result.verifier).toContain("frame-ancestors 'none'");
     expect(result.verifier).not.toContain("{{");
   });

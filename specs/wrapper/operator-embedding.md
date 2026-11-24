@@ -382,8 +382,10 @@ and deposit anchors (`operator-links.ts`). ADR-006 is accepted.
   talks to (the verify and deposit links open with no opener). A `sandbox`
   attribute on the Wrapper's iframe without `allow-popups` blocks the window
   too; the operator guidance already asks for no `sandbox`. The Wrapper's own
-  site sends no `Cross-Origin-Opener-Policy` either: on a standalone launch it
-  is the top page, and its release build refuses the header
+  site sends `Cross-Origin-Opener-Policy: same-origin-allow-popups`: on a
+  standalone launch it is the top page, so the policy isolates it and still
+  keeps the signing window; embedded, the browser ignores it. Its release build
+  refuses `same-origin` there
   ([client-kit.md](../client-kit.md#how-the-wrapper-reaches-the-superengine-origin)).
 
 ## What is logged

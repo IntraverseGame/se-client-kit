@@ -635,12 +635,13 @@ Three jobs:
   then leaves the Wrapper's site), writes the Wrapper's and the verifier's
   `_routes.json` and every site's `_headers` (the CSP lists and the Wrapper's
   origin read from the configuration documents; the signing page's from the
-  `/signer/*` rule of `headers.json`; a `Cross-Origin-Opener-Policy` in any rule
-  is refused), refuses, right before the upload, a Wrapper or verifier site that
-  holds `signer/` and a signing page site with a `_worker.js`, `_routes.json`,
-  or `_redirects`, and runs `wrangler pages deploy --no-bundle --branch main`
-  (pinned by the lockfile) once per project, the signing page's first. It runs
-  no repository script.
+  `/signer/*` rule of `headers.json`; a `Cross-Origin-Opener-Policy` other than
+  `same-origin-allow-popups` on `/*` and `same-origin` on `/verify/*`, so any on
+  `/signer/*`, is refused), refuses, right before the upload, a Wrapper or
+  verifier site that holds `signer/` and a signing page site with a
+  `_worker.js`, `_routes.json`, or `_redirects`, and runs
+  `wrangler pages deploy --no-bundle --branch main` (pinned by the lockfile)
+  once per project, the signing page's first. It runs no repository script.
 
 **Every push to `main` deploys staging.** There is no switch: no repository
 variable gates a job (the human, 2026-10-27), and every job runs only from
@@ -1085,7 +1086,9 @@ own checks, step 5 of
    and `/verify/rounds/<a round id>` on the verifier's: each has exactly one
    `Content-Security-Policy` (the Wrapper's on `/`, the verify page's on
    `/verify/` and everywhere on the verifier's site), plus `Referrer-Policy`,
-   `Permissions-Policy`, and `Strict-Transport-Security: max-age=31536000`. Two
+   `Permissions-Policy`, `Strict-Transport-Security: max-age=31536000`, and one
+   `Cross-Origin-Opener-Policy` (`same-origin-allow-popups` on the Wrapper's
+   `/`, `same-origin` on `/verify/` and everywhere on the verifier's site). Two
    policies mean Pages merged the rules: stop deploying
    (`gh workflow disable pages.yml`) and fix the headers step.
 5. On the game's site, `/` answers the game page with one

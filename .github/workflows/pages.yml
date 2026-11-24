@@ -500,9 +500,11 @@ jobs:
       # headers on `/*`.
       # Refuses a `headers.json` that is not path patterns of one-line strings
       # or has no `/verify/*` rule (or no `/signer/*` rule for a signing page
-      # site), a Cross-Origin-Opener-Policy header in any rule, a placeholder it
-      # does not know, a document with no Wrapper origin, a `headers.json` with
-      # no `Permissions-Policy` in its `/*` rule, a line over the Pages limit,
+      # site), a Cross-Origin-Opener-Policy header other than
+      # `same-origin-allow-popups` on `/*` and `same-origin` on `/verify/*` (so
+      # none on `/signer/*`), a placeholder it does not know, a document with
+      # no Wrapper origin, a `headers.json` with no `Permissions-Policy` in its
+      # `/*` rule, a line over the Pages limit,
       # or an existing `_headers`. tools/pages-headers.test.ts runs this script.
       - name: Write the Pages headers files
         env:
@@ -531,12 +533,17 @@ jobs:
             echo "::error::headers.json is not path patterns of one-line string headers with a /verify/* rule."
             exit 1
           fi
-          # No rule may set an opener policy: the Wrapper's would cut the
-          # signing window's opener, and the signing page's its own (W-49g,
-          # SP-13); the release build refuses one too.
-          if jq --exit-status '[.[] | keys[] | ascii_downcase]
-            | index("cross-origin-opener-policy") != null' "$headers_json" > /dev/null; then
-            echo "::error::headers.json sets a Cross-Origin-Opener-Policy header."
+          # An opener policy only as the release sets it: the Wrapper's
+          # `same-origin-allow-popups` keeps the signing window it opens
+          # (`same-origin` would cut it, W-49g), and the verify page's
+          # `same-origin`; no other rule, the signing page's above all, sets one
+          # (its own would cut its opener, SP-13). The release build refuses
+          # the same.
+          if jq --exit-status '[to_entries[] | .key as $path | .value | to_entries[]
+            | select(.key | ascii_downcase == "cross-origin-opener-policy")
+            | select(.value != ({"/*": "same-origin-allow-popups", "/verify/*": "same-origin"} | .[$path]))]
+            | length > 0' "$headers_json" > /dev/null; then
+            echo "::error::headers.json sets a Cross-Origin-Opener-Policy header other than same-origin-allow-popups on /* and same-origin on /verify/*."
             exit 1
           fi
           origin='^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:[0-9]{1,5})?$'

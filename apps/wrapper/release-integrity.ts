@@ -48,8 +48,9 @@ import { verifyOutputFiles } from "./release-verify.ts";
 //   - the signing page (apps/signing-page, specs/signing-page.md SP-14) is
 //     put under `signer/` the same way, with `signer/index.html` as the third
 //     allowed HTML file and its headers under `/signer/*` (release-signer.ts);
-//     no rule of `headers.json` holds a `Cross-Origin-Opener-Policy` header
-//     (release-headers.ts refuses one).
+//     a `Cross-Origin-Opener-Policy` header is allowed only as
+//     `same-origin-allow-popups` on `/*` and `same-origin` on `/verify/*`,
+//     never on `/signer/*` (release-headers.ts refuses any other).
 
 type OutputBundle = Rolldown.OutputBundle;
 

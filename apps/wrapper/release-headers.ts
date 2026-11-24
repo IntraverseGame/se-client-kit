@@ -3,9 +3,11 @@
 // strict `Content-Security-Policy` (no `unsafe-inline`, no `unsafe-eval`,
 // `connect-src` limited to the SE origin and the configured RPCs, `frame-src`
 // the game origins), `Referrer-Policy: no-referrer`, a `Permissions-Policy`,
-// and `Strict-Transport-Security`. The signing page's rule (`/signer/*`) is
-// its own (specs/signing-page.md, SP-13), and no rule holds a
-// `Cross-Origin-Opener-Policy` header: the build refuses one.
+// and `Strict-Transport-Security`. The Wrapper's rule (`/*`) sends
+// `Cross-Origin-Opener-Policy: same-origin-allow-popups` (it keeps the signing
+// window it opens) and the verify page's (`/verify/*`) `same-origin`; the
+// signing page's rule (`/signer/*`) is its own (specs/signing-page.md, SP-13)
+// and holds none: the build refuses any other opener policy.
 //
 // The build is the same for every environment, so the origins that differ per
 // environment are placeholders in the headers file; `contentSecurityPolicyFor`
@@ -89,6 +91,16 @@ export const PERMISSIONS_POLICY: string = [
  */
 export const STRICT_TRANSPORT_SECURITY = "max-age=31536000";
 
+/**
+ * The Wrapper's opener policy: it isolates the Wrapper's browsing context group
+ * when it is top-level, yet keeps the handle of the signing window it opens
+ * (W-66); `same-origin` would cut it (W-49g).
+ */
+export const WRAPPER_OPENER_POLICY = "same-origin-allow-popups";
+
+/** The verify page's opener policy: it opens no window it talks to. */
+export const VERIFY_OPENER_POLICY = "same-origin";
+
 /** The Wrapper's response headers, with the per-environment placeholders. */
 export const wrapperHeaders = (): Readonly<Record<string, string>> =>
   Object.freeze({
@@ -96,6 +108,7 @@ export const wrapperHeaders = (): Readonly<Record<string, string>> =>
     "Referrer-Policy": "no-referrer",
     "Permissions-Policy": PERMISSIONS_POLICY,
     "Strict-Transport-Security": STRICT_TRANSPORT_SECURITY,
+    "Cross-Origin-Opener-Policy": WRAPPER_OPENER_POLICY,
   });
 
 /** The one placeholder of the verify page's policy (specs/verify-page.md). */
@@ -133,11 +146,15 @@ export const VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE: string = [
   "frame-ancestors 'none'",
 ].join("; ");
 
-/** The verify page's response headers: its own policy, the Wrapper's rest. */
+/**
+ * The verify page's response headers: its own policy and opener policy, the
+ * Wrapper's rest.
+ */
 export const verifyHeaders = (): Readonly<Record<string, string>> =>
   Object.freeze({
     ...wrapperHeaders(),
     "Content-Security-Policy": VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE,
+    "Cross-Origin-Opener-Policy": VERIFY_OPENER_POLICY,
   });
 
 /**
@@ -198,20 +215,34 @@ export type HeadersFile = Readonly<
 
 const OPENER_POLICY = "cross-origin-opener-policy";
 
+/** The one opener policy each rule may hold; any other rule holds none. */
+const OPENER_POLICIES: ReadonlyMap<string, string> = new Map([
+  [WRAPPER_HEADERS_PATH, WRAPPER_OPENER_POLICY],
+  [VERIFY_HEADERS_PATH, VERIFY_OPENER_POLICY],
+]);
+
 /**
- * Refuses a headers file any of whose rules holds a
- * `Cross-Origin-Opener-Policy` header, by any spelling of its name: the
- * Wrapper's own would cut the signing window's opener (W-49g), and the signing
- * page's would cut its own (SP-13).
+ * Refuses a headers file with a `Cross-Origin-Opener-Policy` header, by any
+ * spelling of its name, other than `same-origin-allow-popups` on the Wrapper's
+ * rule and `same-origin` on the verify page's: the Wrapper's `same-origin`
+ * would cut the signing window's opener (W-49g), and the signing page's own
+ * would cut its opener (SP-13).
  */
 export const refuseOpenerPolicy = (file: HeadersFile): void => {
   for (const [path, headers] of Object.entries(file)) {
-    if (
-      Object.keys(headers).some(name => name.toLowerCase() === OPENER_POLICY)
-    ) {
-      throw new Error(
-        `The release headers' ${path} rule has a Cross-Origin-Opener-Policy header, which would cut the signing window's opener; the build is refused.`,
-      );
+    const allowed = OPENER_POLICIES.get(path);
+    for (const [name, value] of Object.entries(headers)) {
+      if (name.toLowerCase() !== OPENER_POLICY) continue;
+      if (allowed === undefined) {
+        throw new Error(
+          `The release headers' ${path} rule has a Cross-Origin-Opener-Policy header, which no rule but the Wrapper's and the verify page's may hold; the build is refused.`,
+        );
+      }
+      if (value !== allowed) {
+        throw new Error(
+          `The release headers' ${path} rule has Cross-Origin-Opener-Policy ${JSON.stringify(value)}, not ${JSON.stringify(allowed)}; the build is refused.`,
+        );
+      }
     }
   }
 };
@@ -219,8 +250,9 @@ export const refuseOpenerPolicy = (file: HeadersFile): void => {
 /**
  * The headers file of the release bundle (`headers.json`): the headers by path
  * pattern. The more specific patterns, `/verify/*` and `/signer/*`, replace the
- * Wrapper's headers for those pages, they do not add to them. No rule holds a
- * `Cross-Origin-Opener-Policy` header (`refuseOpenerPolicy`).
+ * Wrapper's headers for those pages, they do not add to them. Only the
+ * Wrapper's and the verify page's rules hold a `Cross-Origin-Opener-Policy`
+ * header, each its own (`refuseOpenerPolicy`).
  */
 export const headersFile = (): HeadersFile => {
   const file: HeadersFile = Object.freeze({
