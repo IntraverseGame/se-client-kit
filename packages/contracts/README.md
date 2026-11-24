@@ -36,9 +36,10 @@ or calling the Play API (use `@intraverse/se-client-play-client`).
   kit's own tests: the signing vectors and the Snapshot vectors (valid, invalid,
   signature, the canonical `typedData` bytes of signed actions, and signed
   actions made by an independent signer), the public vectors of the SuperEngine
-  fairness kernel, kernelVersion 1, and the key-delegation vectors
-  (`key-delegation/v1`). It is not part of the public API, and the published
-  package will not contain it: vectors never ship in a bundle or a tarball.
+  fairness kernel, kernelVersion 1, the Solana entropy reads
+  (`entropy/v1/solana`), and the key-delegation vectors (`key-delegation/v1`).
+  It is not part of the public API, and the published package will not contain
+  it: vectors never ship in a bundle or a tarball.
 
 ## Guarantees and constraints
 

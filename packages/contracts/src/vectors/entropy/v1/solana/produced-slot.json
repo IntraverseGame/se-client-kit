@@ -1,0 +1,70 @@
+{
+  "vector": "entropy/v1/solana/produced-slot",
+  "description": "Solana mainnet-beta (chain id 101), a slot with a block: the value and the hash are the slot's blockhash, base58 decoded to 32 bytes, and the time is the block's blockTime. Synthetic test values, not mainnet blocks.",
+  "source": "solana",
+  "chainId": 101,
+  "slot": 381000100,
+  "finalizedSlot": 381000140,
+  "rpc": [
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getSlot",
+        "params": [
+          {
+            "commitment": "finalized"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": 381000140,
+        "id": 1
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "getBlock",
+        "params": [
+          381000100,
+          {
+            "commitment": "finalized",
+            "encoding": "json",
+            "maxSupportedTransactionVersion": 0,
+            "rewards": false,
+            "transactionDetails": "none"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "blockHeight": 361000100,
+          "blockTime": 1800000040,
+          "blockhash": "BEDNFQ6dD7SFjGjFHj98RAEXzFvQfAqdqKFfdiB98T8d",
+          "parentSlot": 381000099,
+          "previousBlockhash": "7THNYwf9ZujjZM4EG5hC7UmBxXu3GrqAJDqyj2o2R2wi"
+        },
+        "id": 2
+      }
+    }
+  ],
+  "block": {
+    "blockNumber": 381000100,
+    "blockValue": "0x97f767076b4026477f4269eeb5914440a20939fdebbdc7001c945e478313e37a",
+    "blockHash": "0x97f767076b4026477f4269eeb5914440a20939fdebbdc7001c945e478313e37a",
+    "blockTime": 1800000040
+  },
+  "valueSlot": 381000100,
+  "randomnessTarget": "0x65a833d69c70d81d1cf2a9377061f5b8ebea92e1e8c76ac5dec646eadc18beb1",
+  "verifyEntropy": {
+    "source": "solana",
+    "chainId": 101,
+    "block": 381000100,
+    "value": "0x97f767076b4026477f4269eeb5914440a20939fdebbdc7001c945e478313e37a"
+  },
+  "snapshot": "snapshot/valid/coinflip-won-solana"
+}

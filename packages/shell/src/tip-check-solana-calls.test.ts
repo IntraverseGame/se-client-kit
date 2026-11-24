@@ -1,7 +1,6 @@
 // T-40 (RFC-007 section 3): the tip check of a `solana` source against a
 // scripted Solana transport and a manual clock: its calls, its reading of
-// untrusted answers, and W-26b's rule in slots. The answers are synthetic until
-// the backend's `entropy/solana/v1` vectors are vendored (RFC-007 slice 6).
+// untrusted answers, and W-26b's rule in slots. The answers are synthetic.
 
 import { describe, expect, it } from "vitest";
 

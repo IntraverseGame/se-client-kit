@@ -30,6 +30,34 @@
       "sha256": "9603b8d11177f89951f06416c00dc1c61677b4f6a67e2696365c1b959d89c118"
     },
     {
+      "path": "src/vectors/entropy/v1/solana/produced-slot.json",
+      "source": "se-backend",
+      "sourceName": "entropy/v1/solana/produced-slot",
+      "sourceCommit": "17438b694736e4c0da7dd41ec3874e5e8cb75bb8",
+      "sha256": "7887b2d520263a0be79a47f64b8d78fba9c0d6ba1979fcf93e507d00587c26ee"
+    },
+    {
+      "path": "src/vectors/entropy/v1/solana/skipped-slot-ledger-gap.json",
+      "source": "se-backend",
+      "sourceName": "entropy/v1/solana/skipped-slot-ledger-gap",
+      "sourceCommit": "17438b694736e4c0da7dd41ec3874e5e8cb75bb8",
+      "sha256": "3b09275c84309beebb848fc0ed29c45a1efdce2064e708e94651a15873b9bec1"
+    },
+    {
+      "path": "src/vectors/entropy/v1/solana/skipped-slot.json",
+      "source": "se-backend",
+      "sourceName": "entropy/v1/solana/skipped-slot",
+      "sourceCommit": "17438b694736e4c0da7dd41ec3874e5e8cb75bb8",
+      "sha256": "5a1bc3d87a494a3afd8229d56e2cedc2842548928f30cd379ca8111ca3ea36b5"
+    },
+    {
+      "path": "src/vectors/entropy/v1/solana/skipped-slots-long-term-storage.json",
+      "source": "se-backend",
+      "sourceName": "entropy/v1/solana/skipped-slots-long-term-storage",
+      "sourceCommit": "17438b694736e4c0da7dd41ec3874e5e8cb75bb8",
+      "sha256": "c6bcd6736d51f3e9dd70a13dcf0f1cc47b03e9c47f2806fbb90456f9350dfd3b"
+    },
+    {
       "path": "src/vectors/kernel/v1/book-draw.json",
       "source": "se-backend",
       "sourceName": "kernel/public/v1/book-draw",
@@ -1239,6 +1267,20 @@
       "sourceName": "se.snapshot/1 vectors/valid/coinflip-won-proofs-verified.json",
       "sourceCommit": "2f7614e3149d6cf105a1f72bbd9a74ad20e57146",
       "sha256": "cb58ba83b288dc61a154888d5ecaef67455f61aebd9fd4f0c04c336719e4c6e4"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-won-solana-skipped-slot.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-won-solana-skipped-slot.json",
+      "sourceCommit": "17438b694736e4c0da7dd41ec3874e5e8cb75bb8",
+      "sha256": "cd6ca2ba71d5c5f02aebc76af88e829a1ca881c430af9273df11cca2bba066a5"
+    },
+    {
+      "path": "src/vectors/snapshot/valid/coinflip-won-solana.json",
+      "source": "se-backend",
+      "sourceName": "se.snapshot/1 vectors/valid/coinflip-won-solana.json",
+      "sourceCommit": "17438b694736e4c0da7dd41ec3874e5e8cb75bb8",
+      "sha256": "4865c862841bfa5dac937f1b6388fe612e408b2e2ed3dfc63e8434c92309622d"
     },
     {
       "path": "src/vectors/snapshot/valid/coinflip-won.json",

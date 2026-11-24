@@ -24,7 +24,8 @@ release.
 In scope: the lock entries whose source is the backend, which publishes them:
 the Play and verify OpenAPI documents, the Snapshot schema `se.snapshot/1` and
 its vectors (`valid/`, `invalid/`, `signature/`, `typed-data/`,
-`signed-action/`), and the fairness kernel's public sets (`kernel/public/v1/*`).
+`signed-action/`), the fairness kernel's public sets (`kernel/public/v1/*`), and
+the Solana entropy reads (`entropy/v1/solana/*`).
 
 Out of scope:
 
@@ -57,6 +58,7 @@ one SHA-256 in every environment.
 | The `/verify/v1` OpenAPI document                    | <!-- TODO(contracts, #138): the path. -->                                                                                                | `verify/v1 OpenAPI document`                   |
 | The `se.snapshot/1` schema                           | <!-- TODO(contracts, #138): the path. -->                                                                                                | `se.snapshot/1 schema`                         |
 | An `se.snapshot/1` vector                            | <!-- TODO(contracts, #138): the path pattern (by class and file). -->                                                                    | `se.snapshot/1 vectors/<class>/<file>`         |
+| A Solana entropy read                                | `entropy/v1/solana/<case>.json` under the backend's published contracts location <!-- TODO(contracts, #138): the location's prefix. -->  | `entropy/v1/solana/<case>`                     |
 | A public set of the fairness kernel, kernelVersion 1 | <!-- TODO(contracts, #138): the path pattern (by set). -->                                                                               | `kernel/public/v1/<set>`                       |
 | The `key-delegation/v1` notices                      | `key-delegation/v1/notices.json` under the backend's published contracts location <!-- TODO(contracts, #138): the location's prefix. --> | `key-delegation/v1 notices`                    |
 | The `key-delegation/v1` vectors                      | `key-delegation/v1/vectors.json` under the same location                                                                                 | `key-delegation/v1 vectors`                    |
@@ -65,11 +67,11 @@ The job reads the manifest only: a file's location matters to a person who reads
 it, not to the comparison, which goes by name.
 
 **Versions.** Every published file belongs to one version of its contract, which
-its name states: `play/v1`, `verify/v1`, `se.snapshot/1`, `kernel/public/v1`, or
-`key-delegation/v1`. Within a version a file changes only additively (rule 4):
-it keeps its name and location, and its SHA-256 changes. A breaking change is a
-new version under a new name and location, and the old version's location keeps
-serving through its deprecation window
+its name states: `play/v1`, `verify/v1`, `se.snapshot/1`, `kernel/public/v1`,
+`entropy/v1`, or `key-delegation/v1`. Within a version a file changes only
+additively (rule 4): it keeps its name and location, and its SHA-256 changes. A
+breaking change is a new version under a new name and location, and the old
+version's location keeps serving through its deprecation window
 ([Errors and edge cases](../client-kit.md#errors-and-edge-cases)).
 
 ## The manifest
@@ -114,14 +116,14 @@ with the manifest entry of the same name (`sourceName` equals `name`) and
 compares their SHA-256. It does not download the files, and it does not compare
 the lock's `sourceCommit`: the manifest names no commit.
 
-| Finding          | When                                                                                                         | Severity |
-| ---------------- | ------------------------------------------------------------------------------------------------------------ | -------- |
-| in sync          | a pinned name is served with the same SHA-256                                                                | none     |
-| changed document | a pinned OpenAPI document, the Snapshot schema, or the key-delegation notices is served with another SHA-256 | warning  |
-| changed vector   | a pinned vector file, kernel set, or the key-delegation vectors is served with another SHA-256               | failure  |
-| not served       | a pinned name is not in the manifest                                                                         | warning  |
-| not vendored     | a name in the manifest is not pinned                                                                         | warning  |
-| not covered      | a lock entry whose source is not the backend (the signing vectors)                                           | notice   |
+| Finding          | When                                                                                                                | Severity |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------- | -------- |
+| in sync          | a pinned name is served with the same SHA-256                                                                       | none     |
+| changed document | a pinned OpenAPI document, the Snapshot schema, or the key-delegation notices is served with another SHA-256        | warning  |
+| changed vector   | a pinned vector file, kernel set, Solana entropy read, or the key-delegation vectors is served with another SHA-256 | failure  |
+| not served       | a pinned name is not in the manifest                                                                                | warning  |
+| not vendored     | a name in the manifest is not pinned                                                                                | warning  |
+| not covered      | a lock entry whose source is not the backend (the signing vectors)                                                  | notice   |
 
 - **A changed document** is a change within its version, additive by rule 4: the
   kit syncs it. It is also what the job sees when the kit synced first and the

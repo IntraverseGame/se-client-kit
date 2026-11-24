@@ -139,9 +139,9 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
   test-only entry (vectors): only tests may import the test-only entry (the
   consumers are the tests of `signing`, `snapshot`, and `shell`, the Wrapper's
   component tests, the verify page's and the signing page's unit tests, and the
-  e2e suite: its fake Play API and its replay wallet; all development
-  dependencies), and no vector may reach a bundle or a published tarball. A new
-  package must pass the checks in
+  e2e suite: its fake Play API, its fake Solana RPC, and its replay wallet; all
+  development dependencies), and no vector may reach a bundle or a published
+  tarball. A new package must pass the checks in
   [`add-a-package`](./.ai/skills/add-a-package/SKILL.md).
 - **The signing page is the only code that talks to a wallet**, on its own
   origin, through its wallet port's allow-list; the Wrapper has no wallet code
@@ -204,10 +204,11 @@ Enforced by lint import-direction rules (`.oxlintrc.json`, proven by
 - **Contracts are documents, never code.** The Play API document, the Snapshot
   schema and vectors, the signing vectors, the public vector bundle of the
   SuperEngine fairness kernel, kernelVersion 1 (its sets `kernel/public/v1/*`),
-  and the key-delegation contract `key-delegation/v1` (its notices and their
-  vectors) are copied into the `contracts` package, not imported from another
-  repository. Each copy is pinned in a lock file with its source commit and a
-  content hash. No git submodules.
+  the Solana entropy reads `entropy/v1/solana` (its files
+  `entropy/v1/solana/*`), and the key-delegation contract `key-delegation/v1`
+  (its notices and their vectors) are copied into the `contracts` package, not
+  imported from another repository. Each copy is pinned in a lock file with its
+  source commit and a content hash. No git submodules.
 - **Vectors are append-only.** A released version's vector files are never
   edited; a vendored vector file records the source commit it came from.
 - Never write to `localStorage`, cookies, or any persistent storage from the
@@ -255,6 +256,7 @@ add, in any file, commit, issue, pull request, log, or agent output:
   document at `/play/v1`, the Snapshot schema bundle, the signed-action
   specification, the signing vectors, the public vector bundle of the
   SuperEngine fairness kernel, kernelVersion 1, its sets `kernel/public/v1/*`,
+  the Solana entropy reads `entropy/v1/solana`, its files `entropy/v1/solana/*`,
   and the key-delegation contract `key-delegation/v1`, its notices and their
   vectors) are shared, and only as copies;
 - personal data, or the names, emails, or handles of people unless they are

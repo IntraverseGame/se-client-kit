@@ -5,8 +5,7 @@
 // scripted for is recorded as unexpected. No real network, no real clock.
 //
 // The answers are synthetic: the block values are RFC-007 section 5's base58
-// vectors, used as `blockhash` texts. Slice 6 replaces them with the backend's
-// `entropy/solana/v1` recorded mainnet answers once they are vendored.
+// vectors, used as `blockhash` texts.
 
 import type { ChainReadClock, ChainReadDeps } from "../chain-read.ts";
 

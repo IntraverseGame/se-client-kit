@@ -1,0 +1,116 @@
+{
+  "vector": "entropy/v1/solana/skipped-slot",
+  "description": "Solana mainnet-beta (chain id 101), a skipped slot: getBlock answers error -32007, so the value, the hash and the time are those of the first finalized block after the slot, and blockNumber stays the skipped slot. Synthetic test values, not mainnet blocks.",
+  "source": "solana",
+  "chainId": 101,
+  "slot": 381000200,
+  "finalizedSlot": 381000240,
+  "rpc": [
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getSlot",
+        "params": [
+          {
+            "commitment": "finalized"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": 381000240,
+        "id": 1
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "getBlock",
+        "params": [
+          381000200,
+          {
+            "commitment": "finalized",
+            "encoding": "json",
+            "maxSupportedTransactionVersion": 0,
+            "rewards": false,
+            "transactionDetails": "none"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32007,
+          "message": "Slot 381000200 was skipped, or missing due to ledger jump to recent snapshot"
+        },
+        "id": 2
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "getBlocksWithLimit",
+        "params": [
+          381000200,
+          1,
+          {
+            "commitment": "finalized"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": [
+          381000201
+        ],
+        "id": 3
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "getBlock",
+        "params": [
+          381000201,
+          {
+            "commitment": "finalized",
+            "encoding": "json",
+            "maxSupportedTransactionVersion": 0,
+            "rewards": false,
+            "transactionDetails": "none"
+          }
+        ]
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "blockHeight": 361000200,
+          "blockTime": 1800000080,
+          "blockhash": "BxsPfJRKzQqfMKP1ouztuYQFkVhrk82jWbQE5hgaMTKv",
+          "parentSlot": 381000199,
+          "previousBlockhash": "CZHhYR4bnLwNofmKh6DaM2yZxwtpRFXpfrqqnvgY7Xu3"
+        },
+        "id": 4
+      }
+    }
+  ],
+  "block": {
+    "blockNumber": 381000200,
+    "blockValue": "0xa2e4ca6b9288e1dd5ab0c613603d419628ea9cc77bd886f11638aebb1afbf681",
+    "blockHash": "0xa2e4ca6b9288e1dd5ab0c613603d419628ea9cc77bd886f11638aebb1afbf681",
+    "blockTime": 1800000080
+  },
+  "valueSlot": 381000201,
+  "randomnessTarget": "0x867b6c82dece2176345a1dca97ad758f1c3ba4bb31d28b15138729322bab318f",
+  "verifyEntropy": {
+    "source": "solana",
+    "chainId": 101,
+    "block": 381000200,
+    "value": "0xa2e4ca6b9288e1dd5ab0c613603d419628ea9cc77bd886f11638aebb1afbf681"
+  },
+  "snapshot": "snapshot/valid/coinflip-won-solana-skipped-slot"
+}

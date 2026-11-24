@@ -1,8 +1,7 @@
 // T-40 (RFC-007 section 3): the Solana tip check reads every answer as
 // untrusted data. A malformed genesis hash or slot, a JSON-RPC error, and a
 // failed request are no answer; a well-formed genesis hash that differs from
-// the pinned one is another cluster. Synthetic answers until the backend's
-// `entropy/solana/v1` vectors are vendored (RFC-007 slice 6).
+// the pinned one is another cluster. Synthetic answers.
 
 import { describe, expect, it } from "vitest";
 

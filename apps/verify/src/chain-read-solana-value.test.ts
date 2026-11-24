@@ -1,9 +1,7 @@
 // VT-14, an endpoint's value for slot N in the Solana chain read (RFC-007
 // section 4): a block at N, a skipped N with `getBlocksWithLimit` and
 // `getBlock(M)`, the ledger gaps, the readers' refusals, and the not-found
-// codes. Synthetic answers until `entropy/solana/v1` is vendored (RFC-007
-// slice 6): its blockhash, skipped-slot, ledger-gap, non-32-byte, and -32004
-// cases replace the ones marked below.
+// codes. Synthetic answers.
 
 import { describe, expect, it } from "vitest";
 
@@ -39,7 +37,6 @@ const listing = (listed: Scripted): SolanaScript => ({
 });
 
 describe("readSolanaValueByQuorum: an endpoint's value", () => {
-  // Replaced by entropy/solana/v1's blockhash case once vendored (slice 6).
   it("is a block at N's blockhash, as 0x and lowercase hex", async () => {
     const { result, answer } = await answerOf(agreeing());
     expect(result).toMatchObject({ ok: true, blockHash: VALUE_A.hex });
@@ -52,7 +49,6 @@ describe("readSolanaValueByQuorum: an endpoint's value", () => {
     });
   });
 
-  // Replaced by entropy/solana/v1's skipped-slot case once vendored (slice 6).
   it.each([-32_007, -32_009])(
     "is the next block's when N was skipped (%i), noting the slot",
     async code => {
@@ -69,7 +65,6 @@ describe("readSolanaValueByQuorum: an endpoint's value", () => {
     expect(answer).toMatchObject({ blockHash: VALUE_A.hex, fromSlot: NEXT });
   });
 
-  // Replaced by entropy/solana/v1's ledger-gap case once vendored (slice 6).
   it.each<[string, SolanaScript]>([
     [
       "M's parent at N",
@@ -134,7 +129,6 @@ describe("readSolanaValueByQuorum: an endpoint's value", () => {
     });
   });
 
-  // -32004 is replaced by entropy/solana/v1's not-found case once vendored.
   it.each([-32_001, -32_004, -32_014, -32_019])(
     "is not available on %i from getBlock at N",
     async code => {
@@ -157,8 +151,6 @@ describe("readSolanaValueByQuorum: an endpoint's value", () => {
     },
   );
 
-  // A blockhash of 31 or 33 bytes is replaced by entropy/solana/v1's
-  // non-32-byte case once vendored (slice 6).
   it.each<[string, Readonly<Record<string, unknown>>]>([
     ["a blockhash of 31 bytes", { blockhash: BYTES_31 }],
     ["a blockhash of 33 bytes", { blockhash: BYTES_33 }],

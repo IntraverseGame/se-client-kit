@@ -20,20 +20,28 @@ logic packages read it and never write to it.
   `kernel/public/v1/derive`, `kernel/public/v1/round-secret-hash`,
   `kernel/public/v1/coin-flip-payout`, `kernel/public/v1/weighted-draw`,
   `kernel/public/v1/book-draw`, and `kernel/public/v1/book-table-commitment`;
-  data for the verify page's tests, with no kernel logic here), the
-  key-delegation contract `key-delegation/v1` (its notices,
-  `key-delegation/v1 notices`, which the shell, the signing page, and the verify
-  page read at run time, and its vectors, `key-delegation/v1 vectors`, which
-  `signing`, the shell, and the e2e suite replay in tests), the types generated
-  from the documents and the schema (`openapi-typescript` for the OpenAPI
-  documents, with `exportType` so every object is a `type` alias, and
-  `emptyObjectsUnknown` so an object schema without properties is a record of
-  `unknown` values; a leftover `export interface` fails the generation;
-  `openapi-typescript` is pinned at 6.7.6, which has no TypeScript dependency,
-  reads the document from a `file:` URL, and is given a `fetch` that refuses, so
-  a reference outside the document fails the generation; every `$ref` in the
-  vendored documents is local, which a test checks
-  ([ADR-004](../../decisions/ADR-004-openapi-typescript-6.md));
+  data for the verify page's tests, with no kernel logic here), the Solana
+  entropy reads `entropy/v1/solana` (`entropy/v1/solana/produced-slot`,
+  `entropy/v1/solana/skipped-slot`,
+  `entropy/v1/solana/skipped-slots-long-term-storage`, and
+  `entropy/v1/solana/skipped-slot-ledger-gap`: each the raw JSON-RPC exchanges
+  of one read of a slot and what the read gives, synthetic values and not
+  mainnet blocks, which the verify page's unit tests and the e2e fake Solana RPC
+  replay; the two Solana Snapshot vectors that go with them,
+  `valid/coinflip-won-solana` and `valid/coinflip-won-solana-skipped-slot`, are
+  `valid/` vectors), the key-delegation contract `key-delegation/v1` (its
+  notices, `key-delegation/v1 notices`, which the shell, the signing page, and
+  the verify page read at run time, and its vectors,
+  `key-delegation/v1 vectors`, which `signing`, the shell, and the e2e suite
+  replay in tests), the types generated from the documents and the schema
+  (`openapi-typescript` for the OpenAPI documents, with `exportType` so every
+  object is a `type` alias, and `emptyObjectsUnknown` so an object schema
+  without properties is a record of `unknown` values; a leftover
+  `export interface` fails the generation; `openapi-typescript` is pinned at
+  6.7.6, which has no TypeScript dependency, reads the document from a `file:`
+  URL, and is given a `fetch` that refuses, so a reference outside the document
+  fails the generation; every `$ref` in the vendored documents is local, which a
+  test checks ([ADR-004](../../decisions/ADR-004-openapi-typescript-6.md));
   `json-schema-to-typescript` for the Snapshot schema, which gives the
   structural types only: the conditional blindness rules stay with the validator
   in `snapshot`; its `export interface` declarations are rewritten as
@@ -63,16 +71,20 @@ logic packages read it and never write to it.
   `vectors/kernel/v1/`, the fairness kernel's `seed.json`, `shuffle-draw.json`,
   `steps-derive.json`, `derive.json`, `round-secret-hash.json`,
   `coin-flip-payout.json`, `weighted-draw.json`, `book-draw.json`, and
-  `book-table-commitment.json`, recorded in the lock under their set ids; and
-  `vectors/key-delegation/v1/vectors.json`, recorded as
-  `key-delegation/v1 vectors`), and any module that only the test-only entry
-  uses. Nothing else belongs in `src/`. A module that both entries import is a
-  runtime module by definition, so it lives under `schemas/` or `generated/` and
-  holds no vector data. (`test/vectors/...` is the path in the backend's
-  contracts repository, which is already public by name; `contracts.lock.json`
-  records each artifact's public name and the path in this package, never a path
-  inside a private repository.) Today the runtime modules are
-  `schemas/snapshot.ts` (the schema as data of unknown shape),
+  `book-table-commitment.json`, recorded in the lock under their set ids;
+  `vectors/entropy/v1/solana/`, the four reads' files `produced-slot.json`,
+  `skipped-slot.json`, `skipped-slots-long-term-storage.json`, and
+  `skipped-slot-ledger-gap.json`, recorded in the lock under their manifest
+  names (`entropy/v1/solana/produced-slot`, and so on, one group each in
+  `tools/contracts-groups.ts`); and `vectors/key-delegation/v1/vectors.json`,
+  recorded as `key-delegation/v1 vectors`), and any module that only the
+  test-only entry uses. Nothing else belongs in `src/`. A module that both
+  entries import is a runtime module by definition, so it lives under `schemas/`
+  or `generated/` and holds no vector data. (`test/vectors/...` is the path in
+  the backend's contracts repository, which is already public by name;
+  `contracts.lock.json` records each artifact's public name and the path in this
+  package, never a path inside a private repository.) Today the runtime modules
+  are `schemas/snapshot.ts` (the schema as data of unknown shape),
   `schemas/key-delegation-notices.ts` (the notices document as data of unknown
   shape, exported as `keyDelegationNotices`; its readers check it with
   `signing`'s `readKeyDelegationNotices`, since `contracts` holds no logic),
@@ -86,8 +98,11 @@ logic packages read it and never write to it.
   from `signed-action/`), and `kernelVectors` (`v1` from `kernel/v1/`, keyed by
   file name: `seed`, `shuffle-draw`, `steps-derive`, `derive`,
   `round-secret-hash`, `coin-flip-payout`, `weighted-draw`, `book-draw`, and
-  `book-table-commitment`), and `keyDelegationVectors` (`v1`, the
-  `key-delegation/v1 vectors` file as data of unknown shape).
+  `book-table-commitment`), `entropyVectors` (`solana` from
+  `entropy/v1/solana/`, keyed by file name: `produced-slot`, `skipped-slot`,
+  `skipped-slots-long-term-storage`, and `skipped-slot-ledger-gap`), and
+  `keyDelegationVectors` (`v1`, the `key-delegation/v1 vectors` file as data of
+  unknown shape).
 
 - **Tarball.** What is published is the allow-list of check 3 below. The
   manifest still exports `./testing` for the kit's own tests; the published
@@ -303,10 +318,11 @@ logic packages read it and never write to it.
   `verify` and `signing-page` apps; the test-only entry has these consumers,
   **all of them tests and all of them development dependencies**: the unit tests
   of `signing`, `snapshot`, and `shell`; the Wrapper's component tests; the
-  verify page's unit tests (the fairness kernel's and the key-delegation
-  vectors); the signing page's unit tests (the key-delegation vectors); and the
-  e2e suite (its fake Play API, and the replay wallet of T-50). It never reaches
-  a published tarball or a browser bundle (the three checks above).
+  verify page's unit tests (the fairness kernel's, the Solana entropy reads',
+  and the key-delegation vectors); the signing page's unit tests (the
+  key-delegation vectors); and the e2e suite (its fake Play API, its fake Solana
+  RPC, and the replay wallet of T-50). It never reaches a published tarball or a
+  browser bundle (the three checks above).
 - **Replaceable by design.** The backend publishes the files the kit vendors at
   public locations with a manifest of their hashes, not as a package; that
   publication does not replace the copies (ADR-001 amendment note of 2026-11-17,

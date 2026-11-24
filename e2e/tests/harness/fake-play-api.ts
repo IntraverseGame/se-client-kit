@@ -7,8 +7,9 @@
 //   (play-api-document.ts, held to the generated types);
 // - every Snapshot and every scripted problem is a `valid/` vector (vectors.ts)
 //   of the definition the answer needs (`snapshot-version` replaces only its
-//   `version`, checked against the schema); a problem keeps its own `status`,
-//   which the operation must list;
+//   `version`, checked against the schema; `snapshot-document` is a Snapshot
+//   the harness lays out from vendored vectors, solana-round.ts); a problem
+//   keeps its own `status`, which the operation must list;
 // - the bodies the fake writes itself (redeem and refresh responses, problems
 //   of a missing token or a malformed body, an `own-problem` for a code no
 //   vector holds, with a listed status) are typed by the document's types;
@@ -109,6 +110,10 @@ export const createFakePlayApi = (options: FakePlayApiOptions): FakePlayApi => {
       case "snapshot":
       case "snapshot-version": {
         await json(route, 200, snapshotBody(answer));
+        return;
+      }
+      case "snapshot-document": {
+        await json(route, 200, answer.document);
         return;
       }
       case "problem": {

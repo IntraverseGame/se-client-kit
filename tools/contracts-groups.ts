@@ -151,6 +151,37 @@ export const GROUPS: readonly Group[] = [
     sourceName: "kernel/public/v1/book-table-commitment",
     vectors: true,
   },
+  // The Solana entropy reads `entropy/v1/solana`: one file per case, each
+  // recorded under its manifest name.
+  {
+    id: "entropy-vectors-solana-produced-slot",
+    kind: "file",
+    destination: "src/vectors/entropy/v1/solana/produced-slot.json",
+    sourceName: "entropy/v1/solana/produced-slot",
+    vectors: true,
+  },
+  {
+    id: "entropy-vectors-solana-skipped-slot",
+    kind: "file",
+    destination: "src/vectors/entropy/v1/solana/skipped-slot.json",
+    sourceName: "entropy/v1/solana/skipped-slot",
+    vectors: true,
+  },
+  {
+    id: "entropy-vectors-solana-skipped-slots-long-term-storage",
+    kind: "file",
+    destination:
+      "src/vectors/entropy/v1/solana/skipped-slots-long-term-storage.json",
+    sourceName: "entropy/v1/solana/skipped-slots-long-term-storage",
+    vectors: true,
+  },
+  {
+    id: "entropy-vectors-solana-skipped-slot-ledger-gap",
+    kind: "file",
+    destination: "src/vectors/entropy/v1/solana/skipped-slot-ledger-gap.json",
+    sourceName: "entropy/v1/solana/skipped-slot-ledger-gap",
+    vectors: true,
+  },
   // The key-delegation contract `key-delegation/v1`: its notices (a runtime
   // file, read through `contracts`' runtime entry) and their vectors.
   {

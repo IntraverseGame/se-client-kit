@@ -109,22 +109,21 @@ export const startCheck: BodyCheck = body => {
 
 const SIGNATURE = /^0x[0-9a-f]{130}$/iu;
 
-/**
- * A signed action of the round `roundId` with `typedData` of the `typed-data/`
- * vector.
- */
-const actionCheck =
+export const isSignature = (value: string): boolean => SIGNATURE.test(value);
+
+/** A signed action of the round `roundId` with the base64 `typedData`. */
+export const actionCheck =
   (
     what: string,
     roundId: string,
-    typedDataVector: string,
+    typedData: string,
     signature: (value: string) => boolean,
   ): BodyCheck =>
   body => {
     const fields = bodyOf(body);
     if (fields["roundId"] !== roundId) return `${what}: another round`;
-    if (fields["typedData"] !== typedDataBase64(typedDataVector)) {
-      return `${what}: typedData is not ${typedDataVector}'s`;
+    if (fields["typedData"] !== typedData) {
+      return `${what}: typedData is not the expected one`;
     }
     const value = fields["signature"];
     if (typeof value !== "string" || !signature(value)) {
@@ -143,8 +142,8 @@ const actionCheck =
 export const pickCheck: BodyCheck = actionCheck(
   "the move",
   ROUND.roundId,
-  "coinflip-pick",
-  value => SIGNATURE.test(value),
+  typedDataBase64("coinflip-pick"),
+  isSignature,
 );
 
 /**
@@ -155,7 +154,7 @@ export const pickCheck: BodyCheck = actionCheck(
 export const cancelCheck: BodyCheck = actionCheck(
   "the cancel",
   ROUND.roundId,
-  "coinflip-cancel",
+  typedDataBase64("coinflip-cancel"),
   value =>
     value.toLowerCase() === signedActionSignature(KEY_VECTOR).toLowerCase(),
 );
@@ -258,8 +257,8 @@ for (const [name, input] of [
 export const cashOrCrashPickCheck: BodyCheck = actionCheck(
   "the pick",
   CASH_OR_CRASH_ROUND_ID,
-  "cashorcrash-pick",
-  value => SIGNATURE.test(value),
+  typedDataBase64("cashorcrash-pick"),
+  isSignature,
 );
 
 /**
@@ -271,7 +270,7 @@ export const cashOrCrashPickCheck: BodyCheck = actionCheck(
 export const cashOutCheck: BodyCheck = actionCheck(
   "the cash-out",
   CASH_OR_CRASH_ROUND_ID,
-  "cashorcrash-cash-out",
+  typedDataBase64("cashorcrash-cash-out"),
   value =>
     value.toLowerCase() ===
     signedActionSignature(CASH_OR_CRASH.cashOut).toLowerCase(),
@@ -288,6 +287,6 @@ export const lastRowPickCheck = (row: 0 | 1 | 2): BodyCheck =>
   actionCheck(
     `the pick on row ${String(row)}`,
     LAST_ROW_ROUND_ID,
-    `cashorcrash-last-row-pick-row${String(row)}`,
-    value => SIGNATURE.test(value),
+    typedDataBase64(`cashorcrash-last-row-pick-row${String(row)}`),
+    isSignature,
   );

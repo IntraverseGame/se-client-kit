@@ -115,6 +115,30 @@ export const SOURCES: Readonly<Record<string, GroupSource>> = {
     ref: "main",
     path: "k/book-table-commitment.json",
   },
+  "entropy-vectors-solana-produced-slot": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "e/produced-slot.json",
+  },
+  "entropy-vectors-solana-skipped-slot": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "e/skipped-slot.json",
+  },
+  "entropy-vectors-solana-skipped-slots-long-term-storage": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "e/skipped-slots-long-term-storage.json",
+  },
+  "entropy-vectors-solana-skipped-slot-ledger-gap": {
+    name: "backend",
+    repo: "r",
+    ref: "main",
+    path: "e/skipped-slot-ledger-gap.json",
+  },
   "key-delegation-notices": {
     name: "backend",
     repo: "r",
@@ -181,6 +205,10 @@ export const memorySource = (): MemorySource => {
     ["k/weighted-draw.json", '{"k":14}\n'],
     ["k/book-draw.json", '{"k":15}\n'],
     ["k/book-table-commitment.json", '{"k":16}\n'],
+    ["e/produced-slot.json", '{"e":18}\n'],
+    ["e/skipped-slot.json", '{"e":19}\n'],
+    ["e/skipped-slots-long-term-storage.json", '{"e":20}\n'],
+    ["e/skipped-slot-ledger-gap.json", '{"e":21}\n'],
     ["d/notices.json", noticesFile(notice("a"))],
     ["d/vectors.json", '{"d":17}\n'],
   ]);

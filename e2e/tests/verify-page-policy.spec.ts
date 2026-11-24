@@ -18,8 +18,7 @@
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
-import type { Page } from "@playwright/test";
-
+import { recordViolations, sourcesOf } from "./harness/csp-violations.ts";
 import { ROUND_RPC_ENDPOINTS } from "./harness/environment-config.ts";
 import { WRAPPER_DIST, WRAPPER_ORIGIN } from "./harness/origins.ts";
 import {
@@ -33,51 +32,11 @@ import { matchingRound, VERIFY_ROUND_ID } from "./harness/verify-rounds.ts";
 
 const MATCHES = "This round matches its evidence";
 
-/** A policy violation the browser reported. */
-type Violation = {
-  readonly directive: string;
-  readonly blocked: string;
-};
-
-/** Records every `securitypolicyviolation` event of the page from its start. */
-const recordViolations = async (page: Page): Promise<void> => {
-  await page.addInitScript(() => {
-    const seen: Violation[] = [];
-    (globalThis as unknown as { cspViolations: Violation[] }).cspViolations =
-      seen;
-    document.addEventListener("securitypolicyviolation", event => {
-      seen.push({
-        directive: event.effectiveDirective,
-        blocked: event.blockedURI,
-      });
-    });
-  });
-};
-
-const violations = (page: Page): Promise<readonly Violation[]> =>
-  page.evaluate(
-    () =>
-      (globalThis as unknown as { cspViolations: Violation[] }).cspViolations,
-  );
-
 /** The origins the page may reach: its own and the configured RPC endpoints. */
 const ALLOWED_ORIGINS: readonly string[] = [
   WRAPPER_ORIGIN,
   ...ROUND_RPC_ENDPOINTS.map(endpoint => new URL(endpoint.url).origin),
 ];
-
-/** The sorted source list of `directive` in `policy`, empty if it has none. */
-const sourcesOf = (
-  policy: string | undefined,
-  directive: string,
-): readonly string[] =>
-  (
-    (policy ?? "")
-      .split(";")
-      .map(part => part.trim().split(/\s+/u))
-      .find(([name]) => name === directive)
-      ?.slice(1) ?? []
-  ).toSorted();
 
 test.beforeAll(() => {
   if (!verifyPageBuilt()) throw new Error(VERIFY_PAGE_NOT_BUILT);
@@ -98,7 +57,7 @@ test.describe("the verify page under its headers.json policy (VT-8)", () => {
     verifyPage,
     verifyRpc,
   }) => {
-    await recordViolations(page);
+    const violations = await recordViolations(page);
     const documentResponse = page.waitForResponse(verifyUrl(VERIFY_ROUND_ID));
     await verifyPage.open(page, VERIFY_ROUND_ID);
     await expect(
@@ -118,14 +77,14 @@ test.describe("the verify page under its headers.json policy (VT-8)", () => {
     );
     // Check 6 read the chain across origins, which `connect-src` allowed.
     expect(verifyRpc.calls().length).toBeGreaterThan(0);
-    expect(await violations(page)).toEqual([]);
+    expect(await violations.read()).toEqual([]);
   });
 
   test("enforces the policy: a request to another origin is refused", async ({
     page,
     verifyPage,
   }) => {
-    await recordViolations(page);
+    const violations = await recordViolations(page);
     await verifyPage.open(page, VERIFY_ROUND_ID);
     await expect(
       page.getByRole("heading", { level: 1, name: MATCHES }),
@@ -139,8 +98,8 @@ test.describe("the verify page under its headers.json policy (VT-8)", () => {
       }
     });
     expect(outcome).toBe("refused");
-    await expect.poll(() => violations(page)).toHaveLength(1);
-    expect((await violations(page))[0]?.directive).toBe("connect-src");
+    await expect.poll(async () => (await violations.read()).length).toBe(1);
+    expect((await violations.read())[0]?.directive).toBe("connect-src");
   });
 
   test("every script and stylesheet carries integrity, with no inline script or style", async ({

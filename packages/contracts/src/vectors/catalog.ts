@@ -51,139 +51,145 @@ import vector44 from "./snapshot/valid/coinflip-starting-created.json" with { ty
 import vector45 from "./snapshot/valid/coinflip-starting.json" with { type: "json" };
 import vector46 from "./snapshot/valid/coinflip-won-payout.json" with { type: "json" };
 import vector47 from "./snapshot/valid/coinflip-won-proofs-verified.json" with { type: "json" };
-import vector48 from "./snapshot/valid/coinflip-won.json" with { type: "json" };
-import vector49 from "./snapshot/valid/problem-default-code-invalid-argument.json" with { type: "json" };
-import vector50 from "./snapshot/valid/problem-default-code-unavailable-not-retryable.json" with { type: "json" };
-import vector51 from "./snapshot/valid/problem-default-code-unavailable.json" with { type: "json" };
-import vector52 from "./snapshot/valid/problem-default-code-unknown.json" with { type: "json" };
-import vector53 from "./snapshot/valid/problem-entropy-unavailable.json" with { type: "json" };
-import vector54 from "./snapshot/valid/problem-insufficient-funds.json" with { type: "json" };
-import vector55 from "./snapshot/valid/problem-redeem-unavailable.json" with { type: "json" };
-import vector56 from "./snapshot/valid/problem-round-active.json" with { type: "json" };
-import vector57 from "./snapshot/valid/steps-lost-expired-payout.json" with { type: "json" };
-import vector58 from "./snapshot/invalid/allowlist-fairness-proof-on-book.json" with { type: "json" };
-import vector59 from "./snapshot/invalid/allowlist-operator-token-in-view.json" with { type: "json" };
-import vector60 from "./snapshot/invalid/allowlist-player-id-in-context.json" with { type: "json" };
-import vector61 from "./snapshot/invalid/allowlist-player-id-in-view.json" with { type: "json" };
-import vector62 from "./snapshot/invalid/allowlist-settlement-not-in-v1.json" with { type: "json" };
-import vector63 from "./snapshot/invalid/allowlist-unknown-step-field.json" with { type: "json" };
-import vector64 from "./snapshot/invalid/allowlist-unknown-top-level-field.json" with { type: "json" };
-import vector65 from "./snapshot/invalid/amount-request-decimals-out-of-range.json" with { type: "json" };
-import vector66 from "./snapshot/invalid/amount-request-formatted.json" with { type: "json" };
-import vector67 from "./snapshot/invalid/amount-request-normalized.json" with { type: "json" };
-import vector68 from "./snapshot/invalid/amount-request-unit-missing.json" with { type: "json" };
-import vector69 from "./snapshot/invalid/amount-request-value-missing.json" with { type: "json" };
-import vector70 from "./snapshot/invalid/amount-request-value-number.json" with { type: "json" };
-import vector71 from "./snapshot/invalid/amount-unit-lowercase.json" with { type: "json" };
-import vector72 from "./snapshot/invalid/amount-unit-not-registry-code.json" with { type: "json" };
-import vector73 from "./snapshot/invalid/amount-value-decimal.json" with { type: "json" };
-import vector74 from "./snapshot/invalid/amount-value-leading-zero.json" with { type: "json" };
-import vector75 from "./snapshot/invalid/amount-value-negative.json" with { type: "json" };
-import vector76 from "./snapshot/invalid/amount-value-number.json" with { type: "json" };
-import vector77 from "./snapshot/invalid/amount-value-over-uint256.json" with { type: "json" };
-import vector78 from "./snapshot/invalid/amount-value-too-long.json" with { type: "json" };
-import vector79 from "./snapshot/invalid/blindness-draw-before-resolution-starting.json" with { type: "json" };
-import vector80 from "./snapshot/invalid/blindness-loser-of-unplayed-step.json" with { type: "json" };
-import vector81 from "./snapshot/invalid/blindness-loser-while-starting.json" with { type: "json" };
-import vector82 from "./snapshot/invalid/blindness-round-secret-before-end.json" with { type: "json" };
-import vector83 from "./snapshot/invalid/blindness-seed-before-end.json" with { type: "json" };
-import vector84 from "./snapshot/invalid/book-rtp-decimal-above-one.json" with { type: "json" };
-import vector85 from "./snapshot/invalid/book-rtp-decimal-missing.json" with { type: "json" };
-import vector86 from "./snapshot/invalid/book-rtp-decimal-number.json" with { type: "json" };
-import vector87 from "./snapshot/invalid/book-rtp-decimal-two-places.json" with { type: "json" };
-import vector88 from "./snapshot/invalid/book-rtp-fraction-decimal.json" with { type: "json" };
-import vector89 from "./snapshot/invalid/book-status-active.json" with { type: "json" };
-import vector90 from "./snapshot/invalid/book-status-canceled.json" with { type: "json" };
-import vector91 from "./snapshot/invalid/book-status-resolving.json" with { type: "json" };
-import vector92 from "./snapshot/invalid/cash-out-value-on-canceled.json" with { type: "json" };
-import vector93 from "./snapshot/invalid/cash-out-value-on-idle.json" with { type: "json" };
-import vector94 from "./snapshot/invalid/cash-out-value-on-lost.json" with { type: "json" };
-import vector95 from "./snapshot/invalid/cash-out-value-on-playback.json" with { type: "json" };
-import vector96 from "./snapshot/invalid/cash-out-value-on-resolving.json" with { type: "json" };
-import vector97 from "./snapshot/invalid/cash-out-value-on-starting.json" with { type: "json" };
-import vector98 from "./snapshot/invalid/cash-out-value-on-step-0.json" with { type: "json" };
-import vector99 from "./snapshot/invalid/cash-out-value-on-won.json" with { type: "json" };
-import vector100 from "./snapshot/invalid/cash-out-value-value-number.json" with { type: "json" };
-import vector101 from "./snapshot/invalid/close-reason-on-active.json" with { type: "json" };
-import vector102 from "./snapshot/invalid/close-reason-unknown.json" with { type: "json" };
-import vector103 from "./snapshot/invalid/create-round-auth-address-uppercase.json" with { type: "json" };
-import vector104 from "./snapshot/invalid/create-round-auth-bet-above-uint128.json" with { type: "json" };
-import vector105 from "./snapshot/invalid/create-round-auth-domain-name.json" with { type: "json" };
-import vector106 from "./snapshot/invalid/create-round-auth-missing-active.json" with { type: "json" };
-import vector107 from "./snapshot/invalid/create-round-auth-missing.json" with { type: "json" };
-import vector108 from "./snapshot/invalid/create-round-auth-new-round-unknown-property.json" with { type: "json" };
-import vector109 from "./snapshot/invalid/create-round-auth-on-book-starting.json" with { type: "json" };
-import vector110 from "./snapshot/invalid/create-round-auth-on-idle.json" with { type: "json" };
-import vector111 from "./snapshot/invalid/create-round-auth-prepare-window-above-uint40.json" with { type: "json" };
-import vector112 from "./snapshot/invalid/create-round-auth-signature-length.json" with { type: "json" };
-import vector113 from "./snapshot/invalid/create-round-auth-signature-v.json" with { type: "json" };
-import vector114 from "./snapshot/invalid/create-round-auth-unknown-property.json" with { type: "json" };
-import vector115 from "./snapshot/invalid/hash-short.json" with { type: "json" };
-import vector116 from "./snapshot/invalid/hash-uppercase.json" with { type: "json" };
-import vector117 from "./snapshot/invalid/idle-with-round-fields.json" with { type: "json" };
-import vector118 from "./snapshot/invalid/key-delegation-domain-with-chain.json" with { type: "json" };
-import vector119 from "./snapshot/invalid/key-delegation-empty.json" with { type: "json" };
-import vector120 from "./snapshot/invalid/key-delegation-missing-notice.json" with { type: "json" };
-import vector121 from "./snapshot/invalid/key-delegation-null.json" with { type: "json" };
-import vector122 from "./snapshot/invalid/key-delegation-on-book.json" with { type: "json" };
-import vector123 from "./snapshot/invalid/key-delegation-signature-uppercase.json" with { type: "json" };
-import vector124 from "./snapshot/invalid/key-delegation-unknown-field.json" with { type: "json" };
-import vector125 from "./snapshot/invalid/multiplier-negative.json" with { type: "json" };
-import vector126 from "./snapshot/invalid/pattern-trailing-newline.json" with { type: "json" };
-import vector127 from "./snapshot/invalid/payout-on-active.json" with { type: "json" };
-import vector128 from "./snapshot/invalid/payout-on-canceled.json" with { type: "json" };
-import vector129 from "./snapshot/invalid/payout-on-idle.json" with { type: "json" };
-import vector130 from "./snapshot/invalid/payout-on-resolving.json" with { type: "json" };
-import vector131 from "./snapshot/invalid/payout-on-starting.json" with { type: "json" };
-import vector132 from "./snapshot/invalid/payout-value-number.json" with { type: "json" };
-import vector133 from "./snapshot/invalid/presentation-config-mismatch.json" with { type: "json" };
-import vector134 from "./snapshot/invalid/presentation-playback-with-config-model-starting.json" with { type: "json" };
-import vector135 from "./snapshot/invalid/problem-default-code-internal-retryable.json" with { type: "json" };
-import vector136 from "./snapshot/invalid/problem-hidden-state-in-snapshot.json" with { type: "json" };
-import vector137 from "./snapshot/invalid/problem-retryable-mismatch.json" with { type: "json" };
-import vector138 from "./snapshot/invalid/problem-round-active-without-snapshot.json" with { type: "json" };
-import vector139 from "./snapshot/invalid/problem-snapshot-on-other-code.json" with { type: "json" };
-import vector140 from "./snapshot/invalid/problem-unknown-code.json" with { type: "json" };
-import vector141 from "./snapshot/invalid/record-roundid-not-padded.json" with { type: "json" };
-import vector142 from "./snapshot/invalid/required-context-missing.json" with { type: "json" };
-import vector143 from "./snapshot/invalid/required-fairness-proof-missing.json" with { type: "json" };
-import vector144 from "./snapshot/invalid/required-multiplier-missing.json" with { type: "json" };
-import vector145 from "./snapshot/invalid/required-proofs-missing.json" with { type: "json" };
-import vector146 from "./snapshot/invalid/required-roundid-missing.json" with { type: "json" };
-import vector147 from "./snapshot/invalid/required-step-missing.json" with { type: "json" };
-import vector148 from "./snapshot/invalid/reveal-round-secret-missing-on-won.json" with { type: "json" };
-import vector149 from "./snapshot/invalid/reveal-seed-missing-on-lost.json" with { type: "json" };
-import vector150 from "./snapshot/invalid/roundid-not-uuidv7.json" with { type: "json" };
-import vector151 from "./snapshot/invalid/schema-wrong-version.json" with { type: "json" };
-import vector152 from "./snapshot/invalid/starting-fairness-proof-without-randomness-proof.json" with { type: "json" };
-import vector153 from "./snapshot/invalid/status-unknown.json" with { type: "json" };
-import vector154 from "./snapshot/invalid/zkproof-tx-while-pending.json" with { type: "json" };
-import vector155 from "./snapshot/invalid/zkproof-verified-without-proof-ref.json" with { type: "json" };
-import vector156 from "./snapshot/signature/create-round-auth-accept.json" with { type: "json" };
-import vector157 from "./snapshot/signature/create-round-auth-action-key.json" with { type: "json" };
-import vector158 from "./snapshot/signature/create-round-auth-secret-hash.json" with { type: "json" };
-import vector159 from "./snapshot/signature/create-round-auth-tampered.json" with { type: "json" };
-import vector160 from "./snapshot/signature/create-round-auth-unpinned-signer.json" with { type: "json" };
-import vector161 from "./snapshot/typed-data/cash-out.json" with { type: "json" };
-import vector162 from "./snapshot/typed-data/cashorcrash-cash-out.json" with { type: "json" };
-import vector163 from "./snapshot/typed-data/cashorcrash-last-row-pick-row0.json" with { type: "json" };
-import vector164 from "./snapshot/typed-data/cashorcrash-last-row-pick-row1.json" with { type: "json" };
-import vector165 from "./snapshot/typed-data/cashorcrash-last-row-pick-row2.json" with { type: "json" };
-import vector166 from "./snapshot/typed-data/cashorcrash-pick.json" with { type: "json" };
-import vector167 from "./snapshot/typed-data/coinflip-cancel.json" with { type: "json" };
-import vector168 from "./snapshot/typed-data/coinflip-pick.json" with { type: "json" };
-import vector169 from "./snapshot/typed-data/pick-multi-path.json" with { type: "json" };
-import vector170 from "./snapshot/signed-action/cashorcrash-cash-out.json" with { type: "json" };
-import vector171 from "./snapshot/signed-action/coinflip-cancel.json" with { type: "json" };
-import vector172 from "./kernel/v1/book-draw.json" with { type: "json" };
-import vector173 from "./kernel/v1/book-table-commitment.json" with { type: "json" };
-import vector174 from "./kernel/v1/coin-flip-payout.json" with { type: "json" };
-import vector175 from "./kernel/v1/derive.json" with { type: "json" };
-import vector176 from "./kernel/v1/round-secret-hash.json" with { type: "json" };
-import vector177 from "./kernel/v1/seed.json" with { type: "json" };
-import vector178 from "./kernel/v1/shuffle-draw.json" with { type: "json" };
-import vector179 from "./kernel/v1/steps-derive.json" with { type: "json" };
-import vector180 from "./kernel/v1/weighted-draw.json" with { type: "json" };
+import vector48 from "./snapshot/valid/coinflip-won-solana-skipped-slot.json" with { type: "json" };
+import vector49 from "./snapshot/valid/coinflip-won-solana.json" with { type: "json" };
+import vector50 from "./snapshot/valid/coinflip-won.json" with { type: "json" };
+import vector51 from "./snapshot/valid/problem-default-code-invalid-argument.json" with { type: "json" };
+import vector52 from "./snapshot/valid/problem-default-code-unavailable-not-retryable.json" with { type: "json" };
+import vector53 from "./snapshot/valid/problem-default-code-unavailable.json" with { type: "json" };
+import vector54 from "./snapshot/valid/problem-default-code-unknown.json" with { type: "json" };
+import vector55 from "./snapshot/valid/problem-entropy-unavailable.json" with { type: "json" };
+import vector56 from "./snapshot/valid/problem-insufficient-funds.json" with { type: "json" };
+import vector57 from "./snapshot/valid/problem-redeem-unavailable.json" with { type: "json" };
+import vector58 from "./snapshot/valid/problem-round-active.json" with { type: "json" };
+import vector59 from "./snapshot/valid/steps-lost-expired-payout.json" with { type: "json" };
+import vector60 from "./snapshot/invalid/allowlist-fairness-proof-on-book.json" with { type: "json" };
+import vector61 from "./snapshot/invalid/allowlist-operator-token-in-view.json" with { type: "json" };
+import vector62 from "./snapshot/invalid/allowlist-player-id-in-context.json" with { type: "json" };
+import vector63 from "./snapshot/invalid/allowlist-player-id-in-view.json" with { type: "json" };
+import vector64 from "./snapshot/invalid/allowlist-settlement-not-in-v1.json" with { type: "json" };
+import vector65 from "./snapshot/invalid/allowlist-unknown-step-field.json" with { type: "json" };
+import vector66 from "./snapshot/invalid/allowlist-unknown-top-level-field.json" with { type: "json" };
+import vector67 from "./snapshot/invalid/amount-request-decimals-out-of-range.json" with { type: "json" };
+import vector68 from "./snapshot/invalid/amount-request-formatted.json" with { type: "json" };
+import vector69 from "./snapshot/invalid/amount-request-normalized.json" with { type: "json" };
+import vector70 from "./snapshot/invalid/amount-request-unit-missing.json" with { type: "json" };
+import vector71 from "./snapshot/invalid/amount-request-value-missing.json" with { type: "json" };
+import vector72 from "./snapshot/invalid/amount-request-value-number.json" with { type: "json" };
+import vector73 from "./snapshot/invalid/amount-unit-lowercase.json" with { type: "json" };
+import vector74 from "./snapshot/invalid/amount-unit-not-registry-code.json" with { type: "json" };
+import vector75 from "./snapshot/invalid/amount-value-decimal.json" with { type: "json" };
+import vector76 from "./snapshot/invalid/amount-value-leading-zero.json" with { type: "json" };
+import vector77 from "./snapshot/invalid/amount-value-negative.json" with { type: "json" };
+import vector78 from "./snapshot/invalid/amount-value-number.json" with { type: "json" };
+import vector79 from "./snapshot/invalid/amount-value-over-uint256.json" with { type: "json" };
+import vector80 from "./snapshot/invalid/amount-value-too-long.json" with { type: "json" };
+import vector81 from "./snapshot/invalid/blindness-draw-before-resolution-starting.json" with { type: "json" };
+import vector82 from "./snapshot/invalid/blindness-loser-of-unplayed-step.json" with { type: "json" };
+import vector83 from "./snapshot/invalid/blindness-loser-while-starting.json" with { type: "json" };
+import vector84 from "./snapshot/invalid/blindness-round-secret-before-end.json" with { type: "json" };
+import vector85 from "./snapshot/invalid/blindness-seed-before-end.json" with { type: "json" };
+import vector86 from "./snapshot/invalid/book-rtp-decimal-above-one.json" with { type: "json" };
+import vector87 from "./snapshot/invalid/book-rtp-decimal-missing.json" with { type: "json" };
+import vector88 from "./snapshot/invalid/book-rtp-decimal-number.json" with { type: "json" };
+import vector89 from "./snapshot/invalid/book-rtp-decimal-two-places.json" with { type: "json" };
+import vector90 from "./snapshot/invalid/book-rtp-fraction-decimal.json" with { type: "json" };
+import vector91 from "./snapshot/invalid/book-status-active.json" with { type: "json" };
+import vector92 from "./snapshot/invalid/book-status-canceled.json" with { type: "json" };
+import vector93 from "./snapshot/invalid/book-status-resolving.json" with { type: "json" };
+import vector94 from "./snapshot/invalid/cash-out-value-on-canceled.json" with { type: "json" };
+import vector95 from "./snapshot/invalid/cash-out-value-on-idle.json" with { type: "json" };
+import vector96 from "./snapshot/invalid/cash-out-value-on-lost.json" with { type: "json" };
+import vector97 from "./snapshot/invalid/cash-out-value-on-playback.json" with { type: "json" };
+import vector98 from "./snapshot/invalid/cash-out-value-on-resolving.json" with { type: "json" };
+import vector99 from "./snapshot/invalid/cash-out-value-on-starting.json" with { type: "json" };
+import vector100 from "./snapshot/invalid/cash-out-value-on-step-0.json" with { type: "json" };
+import vector101 from "./snapshot/invalid/cash-out-value-on-won.json" with { type: "json" };
+import vector102 from "./snapshot/invalid/cash-out-value-value-number.json" with { type: "json" };
+import vector103 from "./snapshot/invalid/close-reason-on-active.json" with { type: "json" };
+import vector104 from "./snapshot/invalid/close-reason-unknown.json" with { type: "json" };
+import vector105 from "./snapshot/invalid/create-round-auth-address-uppercase.json" with { type: "json" };
+import vector106 from "./snapshot/invalid/create-round-auth-bet-above-uint128.json" with { type: "json" };
+import vector107 from "./snapshot/invalid/create-round-auth-domain-name.json" with { type: "json" };
+import vector108 from "./snapshot/invalid/create-round-auth-missing-active.json" with { type: "json" };
+import vector109 from "./snapshot/invalid/create-round-auth-missing.json" with { type: "json" };
+import vector110 from "./snapshot/invalid/create-round-auth-new-round-unknown-property.json" with { type: "json" };
+import vector111 from "./snapshot/invalid/create-round-auth-on-book-starting.json" with { type: "json" };
+import vector112 from "./snapshot/invalid/create-round-auth-on-idle.json" with { type: "json" };
+import vector113 from "./snapshot/invalid/create-round-auth-prepare-window-above-uint40.json" with { type: "json" };
+import vector114 from "./snapshot/invalid/create-round-auth-signature-length.json" with { type: "json" };
+import vector115 from "./snapshot/invalid/create-round-auth-signature-v.json" with { type: "json" };
+import vector116 from "./snapshot/invalid/create-round-auth-unknown-property.json" with { type: "json" };
+import vector117 from "./snapshot/invalid/hash-short.json" with { type: "json" };
+import vector118 from "./snapshot/invalid/hash-uppercase.json" with { type: "json" };
+import vector119 from "./snapshot/invalid/idle-with-round-fields.json" with { type: "json" };
+import vector120 from "./snapshot/invalid/key-delegation-domain-with-chain.json" with { type: "json" };
+import vector121 from "./snapshot/invalid/key-delegation-empty.json" with { type: "json" };
+import vector122 from "./snapshot/invalid/key-delegation-missing-notice.json" with { type: "json" };
+import vector123 from "./snapshot/invalid/key-delegation-null.json" with { type: "json" };
+import vector124 from "./snapshot/invalid/key-delegation-on-book.json" with { type: "json" };
+import vector125 from "./snapshot/invalid/key-delegation-signature-uppercase.json" with { type: "json" };
+import vector126 from "./snapshot/invalid/key-delegation-unknown-field.json" with { type: "json" };
+import vector127 from "./snapshot/invalid/multiplier-negative.json" with { type: "json" };
+import vector128 from "./snapshot/invalid/pattern-trailing-newline.json" with { type: "json" };
+import vector129 from "./snapshot/invalid/payout-on-active.json" with { type: "json" };
+import vector130 from "./snapshot/invalid/payout-on-canceled.json" with { type: "json" };
+import vector131 from "./snapshot/invalid/payout-on-idle.json" with { type: "json" };
+import vector132 from "./snapshot/invalid/payout-on-resolving.json" with { type: "json" };
+import vector133 from "./snapshot/invalid/payout-on-starting.json" with { type: "json" };
+import vector134 from "./snapshot/invalid/payout-value-number.json" with { type: "json" };
+import vector135 from "./snapshot/invalid/presentation-config-mismatch.json" with { type: "json" };
+import vector136 from "./snapshot/invalid/presentation-playback-with-config-model-starting.json" with { type: "json" };
+import vector137 from "./snapshot/invalid/problem-default-code-internal-retryable.json" with { type: "json" };
+import vector138 from "./snapshot/invalid/problem-hidden-state-in-snapshot.json" with { type: "json" };
+import vector139 from "./snapshot/invalid/problem-retryable-mismatch.json" with { type: "json" };
+import vector140 from "./snapshot/invalid/problem-round-active-without-snapshot.json" with { type: "json" };
+import vector141 from "./snapshot/invalid/problem-snapshot-on-other-code.json" with { type: "json" };
+import vector142 from "./snapshot/invalid/problem-unknown-code.json" with { type: "json" };
+import vector143 from "./snapshot/invalid/record-roundid-not-padded.json" with { type: "json" };
+import vector144 from "./snapshot/invalid/required-context-missing.json" with { type: "json" };
+import vector145 from "./snapshot/invalid/required-fairness-proof-missing.json" with { type: "json" };
+import vector146 from "./snapshot/invalid/required-multiplier-missing.json" with { type: "json" };
+import vector147 from "./snapshot/invalid/required-proofs-missing.json" with { type: "json" };
+import vector148 from "./snapshot/invalid/required-roundid-missing.json" with { type: "json" };
+import vector149 from "./snapshot/invalid/required-step-missing.json" with { type: "json" };
+import vector150 from "./snapshot/invalid/reveal-round-secret-missing-on-won.json" with { type: "json" };
+import vector151 from "./snapshot/invalid/reveal-seed-missing-on-lost.json" with { type: "json" };
+import vector152 from "./snapshot/invalid/roundid-not-uuidv7.json" with { type: "json" };
+import vector153 from "./snapshot/invalid/schema-wrong-version.json" with { type: "json" };
+import vector154 from "./snapshot/invalid/starting-fairness-proof-without-randomness-proof.json" with { type: "json" };
+import vector155 from "./snapshot/invalid/status-unknown.json" with { type: "json" };
+import vector156 from "./snapshot/invalid/zkproof-tx-while-pending.json" with { type: "json" };
+import vector157 from "./snapshot/invalid/zkproof-verified-without-proof-ref.json" with { type: "json" };
+import vector158 from "./snapshot/signature/create-round-auth-accept.json" with { type: "json" };
+import vector159 from "./snapshot/signature/create-round-auth-action-key.json" with { type: "json" };
+import vector160 from "./snapshot/signature/create-round-auth-secret-hash.json" with { type: "json" };
+import vector161 from "./snapshot/signature/create-round-auth-tampered.json" with { type: "json" };
+import vector162 from "./snapshot/signature/create-round-auth-unpinned-signer.json" with { type: "json" };
+import vector163 from "./snapshot/typed-data/cash-out.json" with { type: "json" };
+import vector164 from "./snapshot/typed-data/cashorcrash-cash-out.json" with { type: "json" };
+import vector165 from "./snapshot/typed-data/cashorcrash-last-row-pick-row0.json" with { type: "json" };
+import vector166 from "./snapshot/typed-data/cashorcrash-last-row-pick-row1.json" with { type: "json" };
+import vector167 from "./snapshot/typed-data/cashorcrash-last-row-pick-row2.json" with { type: "json" };
+import vector168 from "./snapshot/typed-data/cashorcrash-pick.json" with { type: "json" };
+import vector169 from "./snapshot/typed-data/coinflip-cancel.json" with { type: "json" };
+import vector170 from "./snapshot/typed-data/coinflip-pick.json" with { type: "json" };
+import vector171 from "./snapshot/typed-data/pick-multi-path.json" with { type: "json" };
+import vector172 from "./snapshot/signed-action/cashorcrash-cash-out.json" with { type: "json" };
+import vector173 from "./snapshot/signed-action/coinflip-cancel.json" with { type: "json" };
+import vector174 from "./kernel/v1/book-draw.json" with { type: "json" };
+import vector175 from "./kernel/v1/book-table-commitment.json" with { type: "json" };
+import vector176 from "./kernel/v1/coin-flip-payout.json" with { type: "json" };
+import vector177 from "./kernel/v1/derive.json" with { type: "json" };
+import vector178 from "./kernel/v1/round-secret-hash.json" with { type: "json" };
+import vector179 from "./kernel/v1/seed.json" with { type: "json" };
+import vector180 from "./kernel/v1/shuffle-draw.json" with { type: "json" };
+import vector181 from "./kernel/v1/steps-derive.json" with { type: "json" };
+import vector182 from "./kernel/v1/weighted-draw.json" with { type: "json" };
+import vector183 from "./entropy/v1/solana/produced-slot.json" with { type: "json" };
+import vector184 from "./entropy/v1/solana/skipped-slot-ledger-gap.json" with { type: "json" };
+import vector185 from "./entropy/v1/solana/skipped-slot.json" with { type: "json" };
+import vector186 from "./entropy/v1/solana/skipped-slots-long-term-storage.json" with { type: "json" };
 import signing from "./signing.json" with { type: "json" };
 import keyDelegationV1 from "./key-delegation/v1/vectors.json" with { type: "json" };
 
@@ -207,6 +213,11 @@ export type SnapshotVectors = {
 export type KernelVectors = {
   /** The SuperEngine fairness kernel, kernelVersion 1: its public sets, by file name. */
   readonly v1: VectorSet;
+};
+
+export type EntropyVectors = {
+  /** The Solana entropy reads `entropy/v1/solana`, by file name. */
+  readonly solana: VectorSet;
 };
 
 export type KeyDelegationVectors = {
@@ -266,152 +277,163 @@ export const snapshotVectors: SnapshotVectors = {
     "coinflip-starting": vector45,
     "coinflip-won-payout": vector46,
     "coinflip-won-proofs-verified": vector47,
-    "coinflip-won": vector48,
-    "problem-default-code-invalid-argument": vector49,
-    "problem-default-code-unavailable-not-retryable": vector50,
-    "problem-default-code-unavailable": vector51,
-    "problem-default-code-unknown": vector52,
-    "problem-entropy-unavailable": vector53,
-    "problem-insufficient-funds": vector54,
-    "problem-redeem-unavailable": vector55,
-    "problem-round-active": vector56,
-    "steps-lost-expired-payout": vector57,
+    "coinflip-won-solana-skipped-slot": vector48,
+    "coinflip-won-solana": vector49,
+    "coinflip-won": vector50,
+    "problem-default-code-invalid-argument": vector51,
+    "problem-default-code-unavailable-not-retryable": vector52,
+    "problem-default-code-unavailable": vector53,
+    "problem-default-code-unknown": vector54,
+    "problem-entropy-unavailable": vector55,
+    "problem-insufficient-funds": vector56,
+    "problem-redeem-unavailable": vector57,
+    "problem-round-active": vector58,
+    "steps-lost-expired-payout": vector59,
   },
   invalid: {
-    "allowlist-fairness-proof-on-book": vector58,
-    "allowlist-operator-token-in-view": vector59,
-    "allowlist-player-id-in-context": vector60,
-    "allowlist-player-id-in-view": vector61,
-    "allowlist-settlement-not-in-v1": vector62,
-    "allowlist-unknown-step-field": vector63,
-    "allowlist-unknown-top-level-field": vector64,
-    "amount-request-decimals-out-of-range": vector65,
-    "amount-request-formatted": vector66,
-    "amount-request-normalized": vector67,
-    "amount-request-unit-missing": vector68,
-    "amount-request-value-missing": vector69,
-    "amount-request-value-number": vector70,
-    "amount-unit-lowercase": vector71,
-    "amount-unit-not-registry-code": vector72,
-    "amount-value-decimal": vector73,
-    "amount-value-leading-zero": vector74,
-    "amount-value-negative": vector75,
-    "amount-value-number": vector76,
-    "amount-value-over-uint256": vector77,
-    "amount-value-too-long": vector78,
-    "blindness-draw-before-resolution-starting": vector79,
-    "blindness-loser-of-unplayed-step": vector80,
-    "blindness-loser-while-starting": vector81,
-    "blindness-round-secret-before-end": vector82,
-    "blindness-seed-before-end": vector83,
-    "book-rtp-decimal-above-one": vector84,
-    "book-rtp-decimal-missing": vector85,
-    "book-rtp-decimal-number": vector86,
-    "book-rtp-decimal-two-places": vector87,
-    "book-rtp-fraction-decimal": vector88,
-    "book-status-active": vector89,
-    "book-status-canceled": vector90,
-    "book-status-resolving": vector91,
-    "cash-out-value-on-canceled": vector92,
-    "cash-out-value-on-idle": vector93,
-    "cash-out-value-on-lost": vector94,
-    "cash-out-value-on-playback": vector95,
-    "cash-out-value-on-resolving": vector96,
-    "cash-out-value-on-starting": vector97,
-    "cash-out-value-on-step-0": vector98,
-    "cash-out-value-on-won": vector99,
-    "cash-out-value-value-number": vector100,
-    "close-reason-on-active": vector101,
-    "close-reason-unknown": vector102,
-    "create-round-auth-address-uppercase": vector103,
-    "create-round-auth-bet-above-uint128": vector104,
-    "create-round-auth-domain-name": vector105,
-    "create-round-auth-missing-active": vector106,
-    "create-round-auth-missing": vector107,
-    "create-round-auth-new-round-unknown-property": vector108,
-    "create-round-auth-on-book-starting": vector109,
-    "create-round-auth-on-idle": vector110,
-    "create-round-auth-prepare-window-above-uint40": vector111,
-    "create-round-auth-signature-length": vector112,
-    "create-round-auth-signature-v": vector113,
-    "create-round-auth-unknown-property": vector114,
-    "hash-short": vector115,
-    "hash-uppercase": vector116,
-    "idle-with-round-fields": vector117,
-    "key-delegation-domain-with-chain": vector118,
-    "key-delegation-empty": vector119,
-    "key-delegation-missing-notice": vector120,
-    "key-delegation-null": vector121,
-    "key-delegation-on-book": vector122,
-    "key-delegation-signature-uppercase": vector123,
-    "key-delegation-unknown-field": vector124,
-    "multiplier-negative": vector125,
-    "pattern-trailing-newline": vector126,
-    "payout-on-active": vector127,
-    "payout-on-canceled": vector128,
-    "payout-on-idle": vector129,
-    "payout-on-resolving": vector130,
-    "payout-on-starting": vector131,
-    "payout-value-number": vector132,
-    "presentation-config-mismatch": vector133,
-    "presentation-playback-with-config-model-starting": vector134,
-    "problem-default-code-internal-retryable": vector135,
-    "problem-hidden-state-in-snapshot": vector136,
-    "problem-retryable-mismatch": vector137,
-    "problem-round-active-without-snapshot": vector138,
-    "problem-snapshot-on-other-code": vector139,
-    "problem-unknown-code": vector140,
-    "record-roundid-not-padded": vector141,
-    "required-context-missing": vector142,
-    "required-fairness-proof-missing": vector143,
-    "required-multiplier-missing": vector144,
-    "required-proofs-missing": vector145,
-    "required-roundid-missing": vector146,
-    "required-step-missing": vector147,
-    "reveal-round-secret-missing-on-won": vector148,
-    "reveal-seed-missing-on-lost": vector149,
-    "roundid-not-uuidv7": vector150,
-    "schema-wrong-version": vector151,
-    "starting-fairness-proof-without-randomness-proof": vector152,
-    "status-unknown": vector153,
-    "zkproof-tx-while-pending": vector154,
-    "zkproof-verified-without-proof-ref": vector155,
+    "allowlist-fairness-proof-on-book": vector60,
+    "allowlist-operator-token-in-view": vector61,
+    "allowlist-player-id-in-context": vector62,
+    "allowlist-player-id-in-view": vector63,
+    "allowlist-settlement-not-in-v1": vector64,
+    "allowlist-unknown-step-field": vector65,
+    "allowlist-unknown-top-level-field": vector66,
+    "amount-request-decimals-out-of-range": vector67,
+    "amount-request-formatted": vector68,
+    "amount-request-normalized": vector69,
+    "amount-request-unit-missing": vector70,
+    "amount-request-value-missing": vector71,
+    "amount-request-value-number": vector72,
+    "amount-unit-lowercase": vector73,
+    "amount-unit-not-registry-code": vector74,
+    "amount-value-decimal": vector75,
+    "amount-value-leading-zero": vector76,
+    "amount-value-negative": vector77,
+    "amount-value-number": vector78,
+    "amount-value-over-uint256": vector79,
+    "amount-value-too-long": vector80,
+    "blindness-draw-before-resolution-starting": vector81,
+    "blindness-loser-of-unplayed-step": vector82,
+    "blindness-loser-while-starting": vector83,
+    "blindness-round-secret-before-end": vector84,
+    "blindness-seed-before-end": vector85,
+    "book-rtp-decimal-above-one": vector86,
+    "book-rtp-decimal-missing": vector87,
+    "book-rtp-decimal-number": vector88,
+    "book-rtp-decimal-two-places": vector89,
+    "book-rtp-fraction-decimal": vector90,
+    "book-status-active": vector91,
+    "book-status-canceled": vector92,
+    "book-status-resolving": vector93,
+    "cash-out-value-on-canceled": vector94,
+    "cash-out-value-on-idle": vector95,
+    "cash-out-value-on-lost": vector96,
+    "cash-out-value-on-playback": vector97,
+    "cash-out-value-on-resolving": vector98,
+    "cash-out-value-on-starting": vector99,
+    "cash-out-value-on-step-0": vector100,
+    "cash-out-value-on-won": vector101,
+    "cash-out-value-value-number": vector102,
+    "close-reason-on-active": vector103,
+    "close-reason-unknown": vector104,
+    "create-round-auth-address-uppercase": vector105,
+    "create-round-auth-bet-above-uint128": vector106,
+    "create-round-auth-domain-name": vector107,
+    "create-round-auth-missing-active": vector108,
+    "create-round-auth-missing": vector109,
+    "create-round-auth-new-round-unknown-property": vector110,
+    "create-round-auth-on-book-starting": vector111,
+    "create-round-auth-on-idle": vector112,
+    "create-round-auth-prepare-window-above-uint40": vector113,
+    "create-round-auth-signature-length": vector114,
+    "create-round-auth-signature-v": vector115,
+    "create-round-auth-unknown-property": vector116,
+    "hash-short": vector117,
+    "hash-uppercase": vector118,
+    "idle-with-round-fields": vector119,
+    "key-delegation-domain-with-chain": vector120,
+    "key-delegation-empty": vector121,
+    "key-delegation-missing-notice": vector122,
+    "key-delegation-null": vector123,
+    "key-delegation-on-book": vector124,
+    "key-delegation-signature-uppercase": vector125,
+    "key-delegation-unknown-field": vector126,
+    "multiplier-negative": vector127,
+    "pattern-trailing-newline": vector128,
+    "payout-on-active": vector129,
+    "payout-on-canceled": vector130,
+    "payout-on-idle": vector131,
+    "payout-on-resolving": vector132,
+    "payout-on-starting": vector133,
+    "payout-value-number": vector134,
+    "presentation-config-mismatch": vector135,
+    "presentation-playback-with-config-model-starting": vector136,
+    "problem-default-code-internal-retryable": vector137,
+    "problem-hidden-state-in-snapshot": vector138,
+    "problem-retryable-mismatch": vector139,
+    "problem-round-active-without-snapshot": vector140,
+    "problem-snapshot-on-other-code": vector141,
+    "problem-unknown-code": vector142,
+    "record-roundid-not-padded": vector143,
+    "required-context-missing": vector144,
+    "required-fairness-proof-missing": vector145,
+    "required-multiplier-missing": vector146,
+    "required-proofs-missing": vector147,
+    "required-roundid-missing": vector148,
+    "required-step-missing": vector149,
+    "reveal-round-secret-missing-on-won": vector150,
+    "reveal-seed-missing-on-lost": vector151,
+    "roundid-not-uuidv7": vector152,
+    "schema-wrong-version": vector153,
+    "starting-fairness-proof-without-randomness-proof": vector154,
+    "status-unknown": vector155,
+    "zkproof-tx-while-pending": vector156,
+    "zkproof-verified-without-proof-ref": vector157,
   },
   signature: {
-    "create-round-auth-accept": vector156,
-    "create-round-auth-action-key": vector157,
-    "create-round-auth-secret-hash": vector158,
-    "create-round-auth-tampered": vector159,
-    "create-round-auth-unpinned-signer": vector160,
+    "create-round-auth-accept": vector158,
+    "create-round-auth-action-key": vector159,
+    "create-round-auth-secret-hash": vector160,
+    "create-round-auth-tampered": vector161,
+    "create-round-auth-unpinned-signer": vector162,
   },
   typedData: {
-    "cash-out": vector161,
-    "cashorcrash-cash-out": vector162,
-    "cashorcrash-last-row-pick-row0": vector163,
-    "cashorcrash-last-row-pick-row1": vector164,
-    "cashorcrash-last-row-pick-row2": vector165,
-    "cashorcrash-pick": vector166,
-    "coinflip-cancel": vector167,
-    "coinflip-pick": vector168,
-    "pick-multi-path": vector169,
+    "cash-out": vector163,
+    "cashorcrash-cash-out": vector164,
+    "cashorcrash-last-row-pick-row0": vector165,
+    "cashorcrash-last-row-pick-row1": vector166,
+    "cashorcrash-last-row-pick-row2": vector167,
+    "cashorcrash-pick": vector168,
+    "coinflip-cancel": vector169,
+    "coinflip-pick": vector170,
+    "pick-multi-path": vector171,
   },
   signedAction: {
-    "cashorcrash-cash-out": vector170,
-    "coinflip-cancel": vector171,
+    "cashorcrash-cash-out": vector172,
+    "coinflip-cancel": vector173,
   },
 };
 
 export const kernelVectors: KernelVectors = {
   v1: {
-    "book-draw": vector172,
-    "book-table-commitment": vector173,
-    "coin-flip-payout": vector174,
-    "derive": vector175,
-    "round-secret-hash": vector176,
-    "seed": vector177,
-    "shuffle-draw": vector178,
-    "steps-derive": vector179,
-    "weighted-draw": vector180,
+    "book-draw": vector174,
+    "book-table-commitment": vector175,
+    "coin-flip-payout": vector176,
+    "derive": vector177,
+    "round-secret-hash": vector178,
+    "seed": vector179,
+    "shuffle-draw": vector180,
+    "steps-derive": vector181,
+    "weighted-draw": vector182,
+  },
+};
+
+export const entropyVectors: EntropyVectors = {
+  solana: {
+    "produced-slot": vector183,
+    "skipped-slot-ledger-gap": vector184,
+    "skipped-slot": vector185,
+    "skipped-slots-long-term-storage": vector186,
   },
 };
 

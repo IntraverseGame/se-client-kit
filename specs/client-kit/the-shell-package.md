@@ -1179,54 +1179,57 @@ the Wrapper's side of `se.delegation/1`, and the delegation check; slice S5 of
   with no URL; the bind in slots; the decision, and the required cancel for a
   round signed for source `solana` on cluster 101 (W-26's checks 1 to 5 passed);
   and, with an `evm` and a `solana` source configured, each round making only
-  its own kind's calls at its own endpoints. Its answers are synthetic until the
-  backend's `entropy/solana/v1` vectors are vendored (RFC-007, slice 6), which
-  then replace them.
-  <!-- TODO(RFC-007 slice 6): replay `entropy/solana/v1`'s recorded mainnet answers in the Solana tip check's tests once vendored. -->
-  The `signature/` Snapshot vectors are read and validated and replay through
-  checks 1 to 4 with their verdicts and reasons, each under a configuration that
-  pins its `pinned` values and its own entropy source and chain id; the vendored
-  `valid/coinflip-active-ready-hash` round passes checks 1 to 5 and settles
-  `T_0` as its `readyHash`. Since the vectors do not pin the entropy chain id,
-  the wrong-chain cases have their own tests: a configuration that pins another
-  chain, a round signed on another chain, an `entropyChainId` changed after
-  signing, and a source the configuration does not list. The other T-8 cases
-  issue a round with a registry key drawn at run time from a seeded source (so
-  no key is written down) and change a field before or after signing: each check
-  fails with its reason and in order (`missing`, `pinned-mismatch`,
-  `cross-field` for a wrong round, key, bet, currency, secret hash, chain, or
-  `randomnessTarget`, `recover-mismatch` for a tampered `playerRef`, `gameId`,
-  `gameVersion`, `circuitVersion`, `payoutTermsHash`, `prepareWindow`, or
-  `expiry`, another signer, a high-`s` signature, or another domain,
-  `ready-mismatch`, and `missing` for `readyHash` still absent at `active`); a
-  past `expiry` passes; the verdict never sets `cancel` when `T_0` is not
-  settled, sets it for a tip-check failure only once `T_0` is settled and the
-  round is `active`, and withdraws it on a re-issue, which is recorded once with
-  the first object kept. The game bridge (T-9) runs against a fake frame and
-  listener: a wrong `source` or origin, a bad schema, an unknown `type`, a
-  string, an accessor, and an extra field are ignored; each mount refusal;
-  nothing before `hello`, the first valid one only, and an incompatible one ends
-  the boundary; every post goes to D; each reject reason and `busy` for a
-  repeated id in flight; a seeded property test over recorded sessions of every
-  golden and `signature/` Snapshot, with legal, illegal, malformed, and forged
-  messages, checks that every message the game receives holds only allow-listed
-  fields and no proof, signature, session id, link, or amount; and a session
-  that signs a move through the pick use case shows that the key's bytes, the
-  token, the key's address, the signature, and the digest reach no message and
-  that no messaging, storage, or network global is touched. The round flows
-  (T-4, T-4b, and the T-8 cases that need a flow) run against a scripted Play
-  API transport, a round issued for the session's own key (with three steps
-  where a cash-out is needed), a stand-in tip decision, and the canonical
-  encoder wrapped to record what it got: the start sends the key and the bet and
-  signs nothing; a start with no response, a 503 `UNAVAILABLE` (either
-  `retryable`), a bare 503, or a 500 `INTERNAL` is sent once more with the same
-  body and key and its answer is the round (an ended one held as a first answer
-  is), a failed resend is thrown with no third send, a page that lost the lock
-  before the resend sends nothing more, and any other failure (a 500 of another
-  code, a 400, a 409, a 422, a voided start's 503) is thrown with one send
-  (`round-start-resend.test.ts`); through the session, a `ROUND_ACTIVE` to the
-  resend shows that round, and a session that ended before the resend sends
-  nothing more (`play-session-play.test.ts`); a move is signed at the next
+  its own kind's calls at its own endpoints. Its answers are synthetic: the
+  vendored `entropy/v1/solana` reads hold no genesis hash and no shell call
+  (RFC-007, slice 6). The two vendored Solana rounds,
+  `valid/coinflip-won-solana` and `valid/coinflip-won-solana-skipped-slot`,
+  replay through W-26's checks 1 to 4 under a `solana` source on cluster 101
+  (`create-round-auth-solana-vectors.test.ts`), are refused under another
+  signer, and settle `T_0` as the `readyHash` the e2e harness lays over its
+  `active` round (check 5). The `signature/` Snapshot vectors are read and
+  validated and replay through checks 1 to 4 with their verdicts and reasons,
+  each under a configuration that pins its `pinned` values and its own entropy
+  source and chain id; the vendored `valid/coinflip-active-ready-hash` round
+  passes checks 1 to 5 and settles `T_0` as its `readyHash`. Since the vectors
+  do not pin the entropy chain id, the wrong-chain cases have their own tests: a
+  configuration that pins another chain, a round signed on another chain, an
+  `entropyChainId` changed after signing, and a source the configuration does
+  not list. The other T-8 cases issue a round with a registry key drawn at run
+  time from a seeded source (so no key is written down) and change a field
+  before or after signing: each check fails with its reason and in order
+  (`missing`, `pinned-mismatch`, `cross-field` for a wrong round, key, bet,
+  currency, secret hash, chain, or `randomnessTarget`, `recover-mismatch` for a
+  tampered `playerRef`, `gameId`, `gameVersion`, `circuitVersion`,
+  `payoutTermsHash`, `prepareWindow`, or `expiry`, another signer, a high-`s`
+  signature, or another domain, `ready-mismatch`, and `missing` for `readyHash`
+  still absent at `active`); a past `expiry` passes; the verdict never sets
+  `cancel` when `T_0` is not settled, sets it for a tip-check failure only once
+  `T_0` is settled and the round is `active`, and withdraws it on a re-issue,
+  which is recorded once with the first object kept. The game bridge (T-9) runs
+  against a fake frame and listener: a wrong `source` or origin, a bad schema,
+  an unknown `type`, a string, an accessor, and an extra field are ignored; each
+  mount refusal; nothing before `hello`, the first valid one only, and an
+  incompatible one ends the boundary; every post goes to D; each reject reason
+  and `busy` for a repeated id in flight; a seeded property test over recorded
+  sessions of every golden and `signature/` Snapshot, with legal, illegal,
+  malformed, and forged messages, checks that every message the game receives
+  holds only allow-listed fields and no proof, signature, session id, link, or
+  amount; and a session that signs a move through the pick use case shows that
+  the key's bytes, the token, the key's address, the signature, and the digest
+  reach no message and that no messaging, storage, or network global is touched.
+  The round flows (T-4, T-4b, and the T-8 cases that need a flow) run against a
+  scripted Play API transport, a round issued for the session's own key (with
+  three steps where a cash-out is needed), a stand-in tip decision, and the
+  canonical encoder wrapped to record what it got: the start sends the key and
+  the bet and signs nothing; a start with no response, a 503 `UNAVAILABLE`
+  (either `retryable`), a bare 503, or a 500 `INTERNAL` is sent once more with
+  the same body and key and its answer is the round (an ended one held as a
+  first answer is), a failed resend is thrown with no third send, a page that
+  lost the lock before the resend sends nothing more, and any other failure (a
+  500 of another code, a 400, a 409, a 422, a voided start's 503) is thrown with
+  one send (`round-start-resend.test.ts`); through the session, a `ROUND_ACTIVE`
+  to the resend shows that round, and a session that ended before the resend
+  sends nothing more (`play-session-play.test.ts`); a move is signed at the next
   sequence with the canonical text and path, and its body carries the encoder's
   bytes; a second pick for a step already signed (pending, in flight, or shown
   again by an older Snapshot) is refused; a W-16 resend sends the same body; a

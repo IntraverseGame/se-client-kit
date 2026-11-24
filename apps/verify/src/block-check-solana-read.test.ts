@@ -1,7 +1,6 @@
 // VT-14, check 6 of a Solana round as the page runs it (RFC-007 section 4):
 // the reader picked by the source's kind, the display, `entropy.value`, and a
-// round not ended. Synthetic answers and rounds until `entropy/solana/v1` and
-// the Solana round vectors are vendored (RFC-007 slice 6).
+// round not ended. Synthetic answers and rounds.
 
 import { describe, expect, it } from "vitest";
 

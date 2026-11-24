@@ -1,8 +1,7 @@
 // T-40 (RFC-007 section 3): what a Solana tip check records (W-27), its bind in
 // slots, its decision with W-26b's reasons, the degraded mode, and a
 // configuration with an `evm` and a `solana` source, each round read by its own
-// source's kind at its own endpoints. Synthetic answers until the backend's
-// `entropy/solana/v1` vectors are vendored (RFC-007 slice 6).
+// source's kind at its own endpoints. Synthetic answers.
 
 import { describe, expect, it } from "vitest";
 

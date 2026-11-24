@@ -53,8 +53,10 @@ The player-facing contracts are defined by a separate, private backend
 repository and are **copied** here as documents: the Play API document, the
 Snapshot schema and vectors, the signing vectors, the public vector bundle of
 the SuperEngine fairness kernel, kernelVersion 1 (its sets
-`kernel/public/v1/*`), and the key-delegation contract `key-delegation/v1` (its
-notices and their vectors; RFC-006, accepted 2026-11-20, vendored in slice S2).
+`kernel/public/v1/*`), the Solana entropy reads `entropy/v1/solana` (its files
+`entropy/v1/solana/*`; RFC-007, vendored in slice 6), and the key-delegation
+contract `key-delegation/v1` (its notices and their vectors; RFC-006, accepted
+2026-11-20, vendored in slice S2).
 The signed-action specification is not copied: the kit refers to it by name and
 implements it, and its vectors are copied (the signing vectors and the
 `signed-action/` Snapshot vector). Neither side imports the other's code. Refer

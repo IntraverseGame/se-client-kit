@@ -863,9 +863,9 @@ comes back as a pull request through the same workflow):
   provider would add a margin and is not required.
 - The verify page reaches back only as far as the shallower provider's history
   (P-5).
-- Until `entropy/solana/v1` and the Solana round vectors are vendored (slice 6),
-  the Wrapper's Solana path is proven by unit tests and by staging's canary on
-  mainnet-beta (Q11), not by a browser test in CI.
+- Before slices 5 and 6, the Wrapper's Solana path was proven by unit tests and
+  by staging's canary on mainnet-beta (Q11) only; since them T-42 and VT-15 run
+  it in a browser against the e2e fake Solana RPC.
 - Staging stays degraded (`minRpcQuorum` 1), as today, until step 4 of its
   switch, on both of its sources from step 2; the canary runs at quorum 2, like
   production (Q16).
@@ -1131,7 +1131,14 @@ RFC waits on, not questions):
 - **`entropy/solana/v1` and the Solana Snapshot and signature vectors** (Q3):
   published by the backend's slice through its contracts manifest; the kit
   vendors and lock-pins them in slice 6, and the lists of what it may copy gain
-  the set there.
+  the set there. As built (2026-11-23): the backend published the reads as
+  **`entropy/v1/solana`** (four files, from se-backend `17438b69`) and two
+  Snapshot vectors, `valid/coinflip-won-solana` and
+  `valid/coinflip-won-solana-skipped-slot`, whose `createRoundAuth` carries the
+  public test signer's signature over the Solana target; the kit vendored them
+  in slice 6. Still pending from the backend: a Solana `signature/` or
+  `signed-action/` vector, so T-42 does not compare a Solana cancel or pick with
+  a vendored signature.
 - **Staging's switch to mainnet-beta** (Q11, Q16; section 9, step 8): the
   staging keys on two providers staging's own engine does not read,
   Origin-locked to staging's origins, and staging's secrets (the infrastructure

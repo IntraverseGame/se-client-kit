@@ -13,6 +13,7 @@ import {
   verifyLock,
 } from "./contracts-lock.ts";
 import { lockedFilesIn } from "./contracts-notices.ts";
+import { ENTROPY_PATHS } from "./fixtures/contracts-entropy.ts";
 import {
   COMMIT_A,
   COMMIT_B,
@@ -88,6 +89,7 @@ describe("sync", () => {
       "src/schemas/play.v1.openapi.yaml",
       "src/schemas/se.snapshot.v1.schema.json",
       "src/schemas/verify.v1.openapi.yaml",
+      ...ENTROPY_PATHS,
       ...KERNEL_SETS.map(set => kernelPath(set)),
       "src/vectors/key-delegation/v1/vectors.json",
       "src/vectors/signing.json",

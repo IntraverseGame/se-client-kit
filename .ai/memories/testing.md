@@ -78,8 +78,12 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   (VT-13, VT-14) runs on `fixtures/solana-rpc.ts`, a scripted fake endpoint set
   on a manual clock (`advance` fires due timers in order, so a test can place an
   answer just before a 15 s deadline), with synthetic answers (RFC-007's base58
-  vectors as `blockhash` texts, a synthetic Solana book round for check 7) that
-  `entropy/solana/v1` replaces once vendored (slice 6); `earlierPins` (V-3b) is the one field
+  vectors as `blockhash` texts, a synthetic Solana book round for check 7); the
+  vendored `entropy/v1/solana` reads (`entropyVectors.solana`) replay in
+  `chain-read-solana-vectors.test.ts` through `fixtures/entropy-vectors.ts`
+  (the calls the vector records, in order, and its value or `ledger-gap`); the
+  shell's `create-round-auth-solana-vectors.test.ts` replays the two vendored
+  Solana Snapshot rounds through W-26's checks 1 to 4; `earlierPins` (V-3b) is the one field
   apart, with its own cases there that also run the Pages tool; `test:tools` builds `contracts`, `signing`, and `shell` first
   for it. Only tests may import that entry, and no
   vector may reach a bundle (a lint rule and a build check). Prefer adding a
@@ -510,6 +514,26 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   hangs at `browser.newContext`, or a launch that times out before any test, is
   this; `test.slow()` or a longer timeout cannot fix it. Stand-ins for these
   tests: `harness/stand-in-starts.ts`.
+- **The Solana e2e** (RFC-007, T-42, VT-15): `harness/fake-solana-rpc.ts` is a
+  Playwright route per Solana endpoint (`environment-config.ts`'s
+  `SOLANA_RPC_ENDPOINTS`, `s1` and `s2`), answering from `harness/solana-ledger.ts`,
+  one vendored `entropy/v1/solana` read as a list of recorded exchanges: only a
+  request with a recorded method and parameters is answered, anything else is
+  `unexpected` and fails the test; `behave(provider, ...)` sets `agree`,
+  `other-cluster`, `error`, `lagging`, `skip`, `gap`, or `pruned`. The Wrapper's
+  round tests for it use `harness/solana-round-play.ts`'s `test` (the
+  `roundSession` of `round-play.ts`: the scripted key and the page clock, no
+  chain) with `solanaDocument` (`solana-only` or `evm-and-solana`) and
+  `solanaCase` options; the round is `harness/solana-round.ts`'s `solanaRound`,
+  the vendored Solana Snapshot's `createRoundAuth`, round id, and slot laid over
+  the Coin Flip `active` or `resolving` Snapshot and answered as
+  `snapshot-document`; its `readyHash` is the one constant the harness holds,
+  and a wrong value fails check 5 so the round never reaches `ready`. The verify
+  page's rows use `harness/verify-solana-page.ts`'s `test` (`solanaCase`,
+  `solanaDocument`, `solanaRpc`, `solanaVerifyPage`) and `solanaBookRound`. No
+  Solana signature vector exists yet, so a Solana cancel is
+  checked for its round, its `typedData`, and a 65-byte signature, and the
+  byte-for-byte row is pending in `pending.spec.ts`.
 - **The verify page's e2e** uses `harness/verify-page.ts`'s `test` (the shared
   fixtures plus `fakeVerifyApi`, `verifyRpc`, `verifyPage`): script a round id
   with `fakeVerifyApi.answerEvery` / `answer` (queued, used once) from
@@ -739,7 +763,8 @@ tests: [write-tests skill](../skills/write-tests/SKILL.md).
   hash and final slot, with the same behaviors, a deferred answer keyed by
   provider and method) and the same clock; `runScripted` returns only an EVM
   (or unlisted) record and `runSolanaScripted` only a Solana one. Its answers
-  are synthetic until RFC-007's slice 6 vendors `entropy/solana/v1`.
+  are synthetic: the vendored `entropy/v1/solana` reads hold no genesis hash and
+  no shell call.
   The `signature/` vectors replay their verdicts through the W-26 checks
   (`create-round-auth-vectors.test.ts`). They do not pin the entropy chain
   id, so the wrong-chain cases are unit tests. A case that needs a signed

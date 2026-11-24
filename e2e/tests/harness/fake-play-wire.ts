@@ -74,6 +74,13 @@ type AnswerKind<Id extends PlayOperationId> =
       : never)
   | (Id extends SnapshotOperationId
       ? {
+          /** 200 with a Snapshot the harness built from vendored vectors. */
+          readonly kind: "snapshot-document";
+          readonly document: Readonly<Record<string, unknown>>;
+        }
+      : never)
+  | (Id extends SnapshotOperationId
+      ? {
           /**
            * 200 with the `valid/` Snapshot vector of this name, its `version`
            * replaced by `version` and nothing else changed: a later read that
