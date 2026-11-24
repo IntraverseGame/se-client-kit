@@ -96,6 +96,12 @@ describe("the recommended headers", () => {
     expect(PERMISSIONS_POLICY).toContain("camera=()");
     expect(PERMISSIONS_POLICY).not.toContain("clipboard-write");
   });
+
+  it("sends HSTS on the Wrapper and the verify page, without includeSubDomains or preload", () => {
+    for (const headers of [wrapperHeaders(), verifyHeaders()]) {
+      expect(headers["Strict-Transport-Security"]).toBe("max-age=31536000");
+    }
+  });
 });
 
 describe("contentSecurityPolicyFor", () => {

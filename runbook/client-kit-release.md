@@ -1084,9 +1084,10 @@ own checks, step 5 of
 4. The response headers of `/` and `/verify/` on the Wrapper's site, and of `/`
    and `/verify/rounds/<a round id>` on the verifier's: each has exactly one
    `Content-Security-Policy` (the Wrapper's on `/`, the verify page's on
-   `/verify/` and everywhere on the verifier's site), plus `Referrer-Policy` and
-   `Permissions-Policy`. Two policies mean Pages merged the rules: stop
-   deploying (`gh workflow disable pages.yml`) and fix the headers step.
+   `/verify/` and everywhere on the verifier's site), plus `Referrer-Policy`,
+   `Permissions-Policy`, and `Strict-Transport-Security: max-age=31536000`. Two
+   policies mean Pages merged the rules: stop deploying
+   (`gh workflow disable pages.yml`) and fix the headers step.
 5. On the game's site, `/` answers the game page with one
    `Content-Security-Policy` whose `frame-ancestors` is the Wrapper's origin
    followed by the operator origins (the Wrapper's alone when there are none),
@@ -1556,7 +1557,8 @@ the push that merges #220 deploys the signing page at once.
    `wrapperOrigins` the Wrapper's origin alone, and `acceptPendingNotices`
    `true`; `<signer origin>/` answers the signing page with SP-13's headers (its
    Content Security Policy with `connect-src 'self'` and
-   `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`, and no
+   `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`,
+   `Strict-Transport-Security: max-age=31536000`, and no
    `Cross-Origin-Opener-Policy`); and `<Wrapper origin>/signer/` does **not**
    answer the signing page (the Wrapper's site never serves it). Then, on a
    desktop browser with a test wallet, open a fresh launch, choose "Link a

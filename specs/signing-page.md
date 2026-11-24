@@ -304,9 +304,10 @@ follow-up change); languages other than English.
   - **No `Cross-Origin-Opener-Policy` header**, on purpose: its own would cut
     its opener, as the operator's does (W-49g). The release build refuses a COOP
     header in the page's rule (T-49).
-  - `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, and the
+  - `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, the
     Wrapper's own `Permissions-Policy` (read from its `headers.json` `/*` rule,
-    so the two cannot drift).
+    so the two cannot drift), and the Wrapper's
+    `Strict-Transport-Security: max-age=31536000`.
   - **No API on its site** (ADR-012): the site gets no `_worker.js`,
     `_routes.json`, or `_redirects`, and the deploy refuses an artifact that
     holds one, as it does for the game's site. So `'self'` reaches nothing but
