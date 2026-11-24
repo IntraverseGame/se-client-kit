@@ -392,9 +392,12 @@ path of every signed action.
   are dropped: `Host` (the upstream URL's), the incoming `CF-Connecting-IP`
   (Cloudflare sets its own on the forwarded request), the hop-by-hop headers
   (`Connection` and every header it names, `Keep-Alive`, `TE`, `Trailer`,
-  `Transfer-Encoding`, `Upgrade`, and every `Proxy-*` header), and `Forwarded`,
-  `X-Real-IP`, `True-Client-IP`, `X-Forwarded-Host`, `X-Forwarded-Proto`,
-  `X-Original-URL`, `X-Rewrite-URL`, and `X-HTTP-Method-Override`.
+  `Transfer-Encoding`, `Upgrade`, and every `Proxy-*` header), `Forwarded`,
+  `X-Real-IP`, `True-Client-IP`, `X-Client-IP`, `Client-IP`,
+  `X-Cluster-Client-IP`, `CF-Connecting-IPv6`, `X-Forwarded-Host`,
+  `X-Forwarded-Proto`, `X-Forwarded-Port`, `X-Original-URL`, `X-Rewrite-URL`,
+  `X-HTTP-Method-Override`, and `Cookie` (the parent domain's cookies would
+  otherwise reach the API; the pages never send or need one).
 - **The client IP.** The proxy forwards the client IP in `X-Forwarded-For`: it
   replaces any incoming `X-Forwarded-For` (which the client could have written)
   with the incoming `CF-Connecting-IP`, and drops it when there is none. The
@@ -402,8 +405,9 @@ path of every signed action.
   that, any client can send its own.
 - **The answer.** The upstream's status, headers, and body are returned, with
   `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; sandbox`
-  and `X-Content-Type-Options: nosniff` set, replacing the upstream's own.
-  Nothing is cached, and no caching header is added or changed.
+  and `X-Content-Type-Options: nosniff` set, replacing the upstream's own, and
+  every `Set-Cookie` removed. Nothing is cached, and no caching header is added
+  or changed.
 - **The upstream.** The origin is the Pages project's production variable
   `SE_API_UPSTREAM_ORIGIN`, exactly an `https` origin (no path, query,
   credentials, or trailing slash), set by the infrastructure owner in each

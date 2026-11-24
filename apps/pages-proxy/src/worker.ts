@@ -6,14 +6,15 @@
 // It forwards a request under one of the site's API prefixes (the project's
 // `SE_API_PATH_PREFIXES`, each one of `/play/v1/` and `/verify/v1/`) to the
 // origin in the project's `SE_API_UPSTREAM_ORIGIN`, and returns the upstream's
-// answer with two security headers set. The method, the path, the query, and
-// the body pass through unchanged: the body is the incoming stream, never
-// read, parsed, or re-encoded, so a signed action arrives byte for byte. The
-// request headers pass through except `Host`, the incoming
-// `CF-Connecting-IP`, the hop-by-hop headers, and the headers a backend could
-// read as the client's address, host, scheme, path, or method; the client IP
-// goes in `X-Forwarded-For`. A path with an encoded slash, backslash, or dot,
-// or an empty segment, is refused (400) and never forwarded. Nothing is cached.
+// answer with two security headers set and its `Set-Cookie` removed. The
+// method, the path, the query, and the body pass through unchanged: the body
+// is the incoming stream, never read, parsed, or re-encoded, so a signed
+// action arrives byte for byte. The request headers pass through except
+// `Host`, the incoming `CF-Connecting-IP`, `Cookie`, the hop-by-hop headers,
+// and the headers a backend could read as the client's address, host, scheme,
+// port, path, or method; the client IP goes in `X-Forwarded-For`. A path with
+// an encoded slash, backslash, or dot, or an empty segment, is refused (400)
+// and never forwarded. Nothing is cached.
 // A missing or malformed setting, an upstream that cannot be reached, or an
 // asset read that fails is a 502 with no body. Every answer the proxy makes or
 // forwards carries `PROXY_RESPONSE_HEADERS`. It never throws.
@@ -55,8 +56,9 @@ const PROXY_RESPONSE_HEADERS: Readonly<Record<string, string>> = Object.freeze({
 
 /**
  * Request headers never forwarded: the hop-by-hop headers (and every name
- * `Connection` lists, removed separately), and the headers a backend could read
- * as the client's address, host, scheme, path, or method.
+ * `Connection` lists, removed separately), the headers a backend could read as
+ * the client's address, host, scheme, port, path, or method, and `Cookie` (the
+ * parent domain's cookies would otherwise reach the API; the pages send none).
  */
 const DROPPED_REQUEST_HEADERS: readonly string[] = Object.freeze([
   "host",
@@ -70,11 +72,17 @@ const DROPPED_REQUEST_HEADERS: readonly string[] = Object.freeze([
   "forwarded",
   "x-real-ip",
   "true-client-ip",
+  "x-client-ip",
+  "client-ip",
+  "x-cluster-client-ip",
+  "cf-connecting-ipv6",
   "x-forwarded-host",
   "x-forwarded-proto",
+  "x-forwarded-port",
   "x-original-url",
   "x-rewrite-url",
   "x-http-method-override",
+  "cookie",
 ]);
 
 /** An HTTP header name (RFC 9110 `token`). */
@@ -152,12 +160,17 @@ export const forwardedHeaders = (incoming: Headers): Headers => {
   return headers;
 };
 
-/** `response` with the proxy's security headers set over its own. */
+/**
+ * `response` with the proxy's security headers set over its own, and no
+ * `Set-Cookie`.
+ */
 export const withProxyHeaders = (response: Response): Response => {
   const headers = new Headers(response.headers);
   for (const [name, value] of Object.entries(PROXY_RESPONSE_HEADERS)) {
     headers.set(name, value);
   }
+  // Removes every `Set-Cookie`: the API sets no cookie on the pages' origin.
+  headers.delete("Set-Cookie");
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

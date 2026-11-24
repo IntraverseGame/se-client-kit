@@ -283,11 +283,12 @@ Several agents and people work in one clone at once. Rules:
   every named export as an entry point, so it exports only functions and types
   (an exported constant made `wrangler pages dev` refuse it). Rules: the site's
   prefixes from `SE_API_PATH_PREFIXES` (narrowing `/play/v1/`, `/verify/v1/`);
-  400 for `%2f`/`%5c`/`%2e` or an empty segment; hop-by-hop and
-  address/host/scheme/path/method-override request headers dropped;
-  `X-Forwarded-For` replaced by `CF-Connecting-IP`; `cache: "no-store"`; every
-  answer (and its own 400/502) gets `Content-Security-Policy: default-src
-  'none'; frame-ancestors 'none'; sandbox` and `nosniff`; a failed asset read
+  400 for `%2f`/`%5c`/`%2e` or an empty segment; hop-by-hop,
+  address/host/scheme/port/path/method-override, and `Cookie` request headers
+  dropped; `X-Forwarded-For` replaced by `CF-Connecting-IP`; `cache:
+  "no-store"`; every answer (and its own 400/502) gets
+  `Content-Security-Policy: default-src 'none'; frame-ancestors 'none';
+  sandbox` and `nosniff`, and loses every `Set-Cookie`; a failed asset read
   is a 502. Local smoke: `wrangler pages dev <site> --binding
   SE_API_UPSTREAM_ORIGIN=... --binding SE_API_PATH_PREFIXES=...` (the worker
   accepts only `https`, so a local echo upstream needs an edited copy; workerd

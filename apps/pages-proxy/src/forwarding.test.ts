@@ -13,7 +13,8 @@ import { proxyRequest } from "./worker.ts";
 
 // The Pages API proxy's forwarding (specs/client-kit.md, The Pages API proxy):
 // the request passes through, and the answer comes back with the proxy's two
-// security headers. An injected `fetch`: no network, no clock.
+// security headers and no `Set-Cookie`. An injected `fetch`: no network, no
+// clock.
 
 describe("forwarding", () => {
   it("passes the method, path, and query through to the upstream origin", async () => {
@@ -141,6 +142,23 @@ describe("the answer", () => {
     );
     expect(hasProxyHeaders(response)).toBe(true);
     expect(response.headers.get("Cache-Control")).toBe("max-age=60");
+  });
+
+  it("removes every Set-Cookie of the upstream's answer, keeping the other headers", async () => {
+    const headers = new Headers({ "Content-Type": "application/json" });
+    headers.append("Set-Cookie", "a=1; Path=/");
+    headers.append("Set-Cookie", "b=2; Domain=example.test");
+    const upstream = new Response("{}", { headers });
+    const { send } = recorder(() => upstream);
+    const response = await proxyRequest(
+      new Request(`${SITE}/verify/v1/rounds/r`),
+      environment(),
+      send,
+    );
+    expect(response.headers.get("Set-Cookie")).toBeNull();
+    expect(response.headers.getSetCookie()).toEqual([]);
+    expect(response.headers.get("Content-Type")).toBe("application/json");
+    expect(hasProxyHeaders(response)).toBe(true);
   });
 
   it("returns a redirect as it is, not followed", async () => {
