@@ -241,15 +241,17 @@ another origin.
    headers file with the recommended `Content-Security-Policy` (no
    `unsafe-inline`, no `unsafe-eval`, `connect-src` limited to the SE origin and
    the configured RPCs, `frame-src` the game origins),
-   `Referrer-Policy: no-referrer`, and a `Permissions-Policy`, and no
-   `Cross-Origin-Opener-Policy` (the build refuses one: it would cut the signing
-   window's opener, W-49g). The bundle carries the verify page under `verify/`
-   and the signing page under `signer/` ([Signing page](./signing-page.md),
-   SP-14). The bundle is one file, `se-client-wrapper-<version>.tar` (a
-   deterministic tar of the build output), identified by its **digest**,
-   `sha256:` and the SHA-256 of that file; the release dry run requires two
-   builds of the same commit to give the same digest
-   ([Supply chain](./client-kit/supply-chain.md), Reproducible build). A
+   `Referrer-Policy: no-referrer`, a `Permissions-Policy`,
+   `Strict-Transport-Security: max-age=31536000` (no `includeSubDomains` and no
+   preload: the zone is shared with the operator team, so each SuperEngine
+   origin sends its own), and no `Cross-Origin-Opener-Policy` (the build refuses
+   one: it would cut the signing window's opener, W-49g). The bundle carries the
+   verify page under `verify/` and the signing page under `signer/`
+   ([Signing page](./signing-page.md), SP-14). The bundle is one file,
+   `se-client-wrapper-<version>.tar` (a deterministic tar of the build output),
+   identified by its **digest**, `sha256:` and the SHA-256 of that file; the
+   release dry run requires two builds of the same commit to give the same
+   digest ([Supply chain](./client-kit/supply-chain.md), Reproducible build). A
    published release attaches the tar and its `.sha256` to a GitHub release (tag
    `@intraverse/se-client-wrapper@<version>`), the released Wrapper's durable
    home; its build-provenance attestation, of the tar's digest, is stored on the
@@ -700,7 +702,8 @@ registrable domain than the Wrapper's (SP-2, ADR-012).
   `_headers` with the `/signer/*` rule's headers of `headers.json` on `/*`
   (SP-13: its Content Security Policy with `connect-src 'self'` and
   `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`,
-  `X-Content-Type-Options: nosniff`, the Wrapper's `Permissions-Policy`, and no
+  `X-Content-Type-Options: nosniff`, the Wrapper's `Permissions-Policy`,
+  `Strict-Transport-Security: max-age=31536000`, and no
   `Cross-Origin-Opener-Policy`). No proxy and no API: the deploy refuses a
   `_worker.js`, `_routes.json`, or `_redirects` on this site, as on the game's.
   The Wrapper opens its root (W-66).

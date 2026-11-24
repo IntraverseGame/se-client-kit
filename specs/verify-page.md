@@ -1311,9 +1311,10 @@ The page around them is built too:
   images, and fonts, `connect-src 'self' {{verifyConnectOrigins}}` (the origins
   of `verifyApiBaseUrl` and of the configured RPC endpoints),
   `frame-src 'none'`, and `frame-ancestors 'none'` (the page is not embedded),
-  with the Wrapper's `Referrer-Policy: no-referrer` and `Permissions-Policy`.
-  The form is handled by script, so `form-action 'none'` holds. No inline script
-  or style; SRI on every script and stylesheet (V-16).
+  with the Wrapper's `Referrer-Policy: no-referrer`, `Permissions-Policy`, and
+  `Strict-Transport-Security`. The form is handled by script, so
+  `form-action 'none'` holds. No inline script or style; SRI on every script and
+  stylesheet (V-16).
 - **No third-party call, no persistence, no telemetry.** The page calls only the
   configuration document, the verify API, and the configured RPC endpoints. It
   writes nothing to `localStorage`, `sessionStorage`, IndexedDB, or cookies; the

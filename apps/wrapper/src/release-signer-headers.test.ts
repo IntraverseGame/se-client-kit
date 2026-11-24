@@ -34,12 +34,13 @@ describe("the signing page's headers (SP-13)", () => {
     );
   });
 
-  it("is the /signer/* rule: the policy, no referrer, nosniff, the Wrapper's Permissions-Policy", () => {
+  it("is the /signer/* rule: the policy, no referrer, nosniff, the Wrapper's Permissions-Policy, HSTS", () => {
     expect(headersFile()[SIGNER_HEADERS_PATH]).toEqual({
       "Content-Security-Policy": SIGNER_CONTENT_SECURITY_POLICY,
       "Referrer-Policy": "no-referrer",
       "X-Content-Type-Options": "nosniff",
       "Permissions-Policy": wrapperHeaders()["Permissions-Policy"],
+      "Strict-Transport-Security": "max-age=31536000",
     });
     expect(signerHeaders()).toEqual(headersFile()[SIGNER_HEADERS_PATH]);
   });

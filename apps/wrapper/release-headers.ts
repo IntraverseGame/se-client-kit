@@ -2,9 +2,9 @@
 // (specs/client-kit.md, How the Wrapper reaches the SuperEngine origin): a
 // strict `Content-Security-Policy` (no `unsafe-inline`, no `unsafe-eval`,
 // `connect-src` limited to the SE origin and the configured RPCs, `frame-src`
-// the game origins), `Referrer-Policy: no-referrer`, and a
-// `Permissions-Policy`. The signing page's rule (`/signer/*`) is its own
-// (specs/signing-page.md, SP-13), and no rule holds a
+// the game origins), `Referrer-Policy: no-referrer`, a `Permissions-Policy`,
+// and `Strict-Transport-Security`. The signing page's rule (`/signer/*`) is
+// its own (specs/signing-page.md, SP-13), and no rule holds a
 // `Cross-Origin-Opener-Policy` header: the build refuses one.
 //
 // The build is the same for every environment, so the origins that differ per
@@ -83,12 +83,19 @@ export const PERMISSIONS_POLICY: string = [
   "clipboard-read=()",
 ].join(", ");
 
+/**
+ * HSTS for each SuperEngine origin: no `includeSubDomains` and no preload,
+ * because the zone is shared with the operator team.
+ */
+export const STRICT_TRANSPORT_SECURITY = "max-age=31536000";
+
 /** The Wrapper's response headers, with the per-environment placeholders. */
 export const wrapperHeaders = (): Readonly<Record<string, string>> =>
   Object.freeze({
     "Content-Security-Policy": CONTENT_SECURITY_POLICY_TEMPLATE,
     "Referrer-Policy": "no-referrer",
     "Permissions-Policy": PERMISSIONS_POLICY,
+    "Strict-Transport-Security": STRICT_TRANSPORT_SECURITY,
   });
 
 /** The one placeholder of the verify page's policy (specs/verify-page.md). */
@@ -166,7 +173,7 @@ export const SIGNER_META_CONTENT_SECURITY_POLICY: string =
 
 /**
  * The signing page's response headers (SP-13): its own policy, no referrer, no
- * sniffing, and the Wrapper's `Permissions-Policy`. No
+ * sniffing, the Wrapper's `Permissions-Policy`, and HSTS. No
  * `Cross-Origin-Opener-Policy`, on purpose: it would cut the page's opener.
  */
 export const signerHeaders = (): Readonly<Record<string, string>> =>
@@ -176,6 +183,7 @@ export const signerHeaders = (): Readonly<Record<string, string>> =>
     "X-Content-Type-Options": "nosniff",
     // The `/*` rule's own value, so the two cannot drift.
     "Permissions-Policy": PERMISSIONS_POLICY,
+    "Strict-Transport-Security": STRICT_TRANSPORT_SECURITY,
   });
 
 /** The path patterns of the Wrapper's headers and of its two other pages. */
