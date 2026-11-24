@@ -12,7 +12,8 @@ import { prodCheck, stepRun } from "./release-workflow-lines.ts";
 // page's site): the headers step (its own script, from pages.yml,
 // tools/pages-headers-step.ts) writes the `/signer/*` rule's headers on `/*`
 // of the signing page's site, where there is one; the Wrapper's site takes
-// every rule but that one; no rule may set a Cross-Origin-Opener-Policy; and
+// every rule but that one; no rule may set a Cross-Origin-Opener-Policy but
+// `same-origin-allow-popups` on `/*` and `same-origin` on `/verify/*`; and
 // the release's production check lays the signing page's site out, so its
 // headers are checked before publish. The headers file here is SP-13's, not
 // the build's, so the step's own behavior is what is tested.
@@ -88,28 +89,62 @@ describe("the signing page's _headers", () => {
   });
 
   it.each([
-    ["the signing page's rule", "/signer/*", "Cross-Origin-Opener-Policy"],
-    ["the Wrapper's rule", "/*", "cross-origin-opener-policy"],
+    [
+      "the signing page's rule",
+      "/signer/*",
+      "Cross-Origin-Opener-Policy",
+      "same-origin",
+    ],
+    [
+      "the signing page's rule",
+      "/signer/*",
+      "cross-origin-opener-policy",
+      "same-origin-allow-popups",
+    ],
+    ["the Wrapper's rule", "/*", "cross-origin-opener-policy", "same-origin"],
+    [
+      "the verify page's rule",
+      "/verify/*",
+      "Cross-Origin-Opener-Policy",
+      "unsafe-none",
+    ],
   ])(
-    "refuses an opener policy in %s, with or without a signing page site",
-    (_what, pattern, header) => {
+    "refuses an opener policy in %s (%s: %s), with or without a signing page site",
+    (_what, pattern, header, value) => {
       const rules: Record<string, Record<string, string>> = {
         ...HEADERS,
         [pattern]: {
           ...HEADERS[pattern as keyof typeof HEADERS],
-          [header]: "same-origin",
+          [header]: value,
         },
       };
       for (const signer of [true, false]) {
         const result = step.run(rules, ORIGINS, { signer });
         expect(result.status).toBe(1);
         expect(result.output).toContain(
-          "::error::headers.json sets a Cross-Origin-Opener-Policy header.",
+          "::error::headers.json sets a Cross-Origin-Opener-Policy header other than same-origin-allow-popups on /* and same-origin on /verify/*.",
         );
         expect(result.wrapper).toBeNull();
       }
     },
   );
+
+  it("accepts the Wrapper's and the verify page's own opener policies", () => {
+    const rules = {
+      ...HEADERS,
+      "/*": {
+        ...HEADERS["/*"],
+        "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+      },
+      "/verify/*": {
+        ...HEADERS["/verify/*"],
+        "cross-origin-opener-policy": "same-origin",
+      },
+    };
+    const result = step.run(rules, ORIGINS, { signer: true });
+    expect(result.status).toBe(0);
+    expect(result.signer).not.toMatch(/cross-origin-opener-policy/iu);
+  });
 });
 
 describe("the production check's layout of the signing page's site", () => {

@@ -102,6 +102,13 @@ describe("the recommended headers", () => {
       expect(headers["Strict-Transport-Security"]).toBe("max-age=31536000");
     }
   });
+
+  it("keeps the signing window on the Wrapper and isolates the verify page (COOP)", () => {
+    expect(wrapperHeaders()["Cross-Origin-Opener-Policy"]).toBe(
+      "same-origin-allow-popups",
+    );
+    expect(verifyHeaders()["Cross-Origin-Opener-Policy"]).toBe("same-origin");
+  });
 });
 
 describe("contentSecurityPolicyFor", () => {
@@ -233,10 +240,11 @@ describe("the verify page's recommended headers", () => {
     }
   });
 
-  it("keeps the Wrapper's referrer and permissions policy", () => {
+  it("keeps the Wrapper's referrer and permissions policy, with its own opener policy", () => {
     expect(verifyHeaders()).toEqual({
       ...wrapperHeaders(),
       "Content-Security-Policy": VERIFY_CONTENT_SECURITY_POLICY_TEMPLATE,
+      "Cross-Origin-Opener-Policy": "same-origin",
     });
   });
 

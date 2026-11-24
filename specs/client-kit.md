@@ -244,9 +244,12 @@ another origin.
    `Referrer-Policy: no-referrer`, a `Permissions-Policy`,
    `Strict-Transport-Security: max-age=31536000` (no `includeSubDomains` and no
    preload: the zone is shared with the operator team, so each SuperEngine
-   origin sends its own), and no `Cross-Origin-Opener-Policy` (the build refuses
-   one: it would cut the signing window's opener, W-49g). The bundle carries the
-   verify page under `verify/` and the signing page under `signer/`
+   origin sends its own), and
+   `Cross-Origin-Opener-Policy: same-origin-allow-popups` (it isolates the
+   Wrapper when it is the top page, on a standalone launch, and keeps the
+   signing window it opens; `same-origin` would cut that window's opener, W-49g;
+   a framed Wrapper's is ignored). The bundle carries the verify page under
+   `verify/` and the signing page under `signer/`
    ([Signing page](./signing-page.md), SP-14). The bundle is one file,
    `se-client-wrapper-<version>.tar` (a deterministic tar of the build output),
    identified by its **digest**, `sha256:` and the SHA-256 of that file; the
@@ -541,32 +544,33 @@ would need a looser policy:
   Wrapper's, `/verify/*` for the verify page's ([verify page](./verify-page.md),
   V-16 and Security), and `/signer/*` for the signing page's
   ([signing page](./signing-page.md), SP-13), which replace the Wrapper's for
-  that path rather than add to them. No rule holds a
-  `Cross-Origin-Opener-Policy` header, and the build refuses one
-  (`release-headers.ts`, and `release-output-check.ts` again on the written
-  `headers.json`; the deploy's headers step refuses one too): the Wrapper is the
-  top page on a standalone launch and its opener policy would cut the signing
-  window's opener, and the signing page's own would cut its opener too (W-49g,
-  SP-13). That holds only if the host applies the most specific rule; a host
-  that merges every matching rule (some do) would send both policies, and the
-  browser would enforce both: the Wrapper's `connect-src` does not list the
-  verify API's origin, so the page could not reach a verify API on another
-  origin. The hosting step therefore excludes `/verify/*` from `/*`, or serves
-  the Wrapper's rule only with headers safe on every path, and checks the real
-  response headers of a preview deploy. Pages merges every matching rule, so the
-  Pages deploy writes each more specific rule as a detach (`! Name`) of every
-  header of the broader rules, then its own headers: `/verify/*` then carries
-  only the verify page's. The verifier's site gets the `/verify/*` rule's
-  headers on `/*`. The Wrapper's policy is `default-src 'none'`, `'self'` for
-  scripts, styles, images, and fonts, `base-uri`, `form-action`, and
-  `object-src` `'none'`, Trusted Types required, and three placeholders the
-  deploy side fills from the environment's document (the Pages deploy fills them
-  from each site's configuration document: the RPC endpoints' origins, the game
-  origins, and the operator origins, each sorted and unique; an empty RPC list
-  leaves `connect-src 'self'`, an empty game or operator list is `'none'`; the
-  Play and verify APIs are same-origin there, through the proxy):
-  `connect-src 'self' {{connectOrigins}}` (the Play API's and the RPC endpoints'
-  origins), `frame-src {{gameOrigins}}`, and
+  that path rather than add to them. A `Cross-Origin-Opener-Policy` header is
+  allowed only as `same-origin-allow-popups` on `/*` and `same-origin` on
+  `/verify/*` (the verify page opens no window it talks to), and never on
+  `/signer/*`; the build refuses any other (`release-headers.ts`, and
+  `release-output-check.ts` again on the written `headers.json`; the deploy's
+  headers step refuses the same): the Wrapper is the top page on a standalone
+  launch, and `same-origin` there would cut the signing window's opener, and the
+  signing page's own would cut its opener too (W-49g, SP-13). That holds only if
+  the host applies the most specific rule; a host that merges every matching
+  rule (some do) would send both policies, and the browser would enforce both:
+  the Wrapper's `connect-src` does not list the verify API's origin, so the page
+  could not reach a verify API on another origin. The hosting step therefore
+  excludes `/verify/*` from `/*`, or serves the Wrapper's rule only with headers
+  safe on every path, and checks the real response headers of a preview deploy.
+  Pages merges every matching rule, so the Pages deploy writes each more
+  specific rule as a detach (`! Name`) of every header of the broader rules,
+  then its own headers: `/verify/*` then carries only the verify page's. The
+  verifier's site gets the `/verify/*` rule's headers on `/*`. The Wrapper's
+  policy is `default-src 'none'`, `'self'` for scripts, styles, images, and
+  fonts, `base-uri`, `form-action`, and `object-src` `'none'`, Trusted Types
+  required, and three placeholders the deploy side fills from the environment's
+  document (the Pages deploy fills them from each site's configuration document:
+  the RPC endpoints' origins, the game origins, and the operator origins, each
+  sorted and unique; an empty RPC list leaves `connect-src 'self'`, an empty
+  game or operator list is `'none'`; the Play and verify APIs are same-origin
+  there, through the proxy): `connect-src 'self' {{connectOrigins}}` (the Play
+  API's and the RPC endpoints' origins), `frame-src {{gameOrigins}}`, and
   `frame-ancestors {{operatorOrigins}}` (`'none'` when the list is empty).
   `contentSecurityPolicyFor` computes the filled policy for a validated
   document; `verifyContentSecurityPolicyFor` does the same for the verify page's

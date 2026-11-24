@@ -84,7 +84,8 @@ Several agents and people work in one clone at once. Rules:
   signing page's document when there is one), builds the Wrapper, lays out the
   sites (the signing page's only when production names one), and runs the
   deploy's "Write the Pages headers files" verbatim (so the 2000-character
-  `_headers` line limit and a COOP header fail before publish);
+  `_headers` line limit and a COOP header other than `same-origin-allow-popups`
+  on `/*` and `same-origin` on `/verify/*` fail before publish);
   `deploy-check` (`pages-prod`, `permissions: {}`, no checkout or repository
   code, no network; since S6b it needs `config-check`, for that digest) runs
   `deploy-prod`'s "Require the Pages settings" verbatim (four settings set,

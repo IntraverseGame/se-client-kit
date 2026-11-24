@@ -9,20 +9,64 @@
 // configuration names the signing page and accepts the vendored `pending`
 // notice; the signing page is served from the release's `signer/` at its own
 // origin (signing-page.ts), and the replay wallet is announced there
-// (replay-wallet.ts).
+// (replay-wallet.ts). The Wrapper's page is served with the release's `/*`
+// `Cross-Origin-Opener-Policy` (`same-origin-allow-popups`), as the deploy
+// serves it on a top-level launch, so the signing window is opened and kept
+// under it.
 
-import type { Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import type { BrowserContext, Page } from "@playwright/test";
 
 import {
   roundEnvironmentConfig,
   serveEnvironmentConfig,
 } from "./environment-config.ts";
-import { FAKE_NOW, SIGNER_ORIGIN } from "./origins.ts";
+import {
+  FAKE_NOW,
+  SIGNER_ORIGIN,
+  WRAPPER_DIST,
+  WRAPPER_ORIGIN,
+} from "./origins.ts";
 import { delegationVector, replayWallet } from "./replay-wallet.ts";
 import { advanceUntil, expect, test as roundTest } from "./round-play.ts";
 import { ROUND_PINS } from "./round-vector.ts";
 import { serveSigningPage } from "./signing-page.ts";
 import { TEXT } from "./wrapper-page.ts";
+
+/**
+ * Serves the Wrapper's page with the `/*` rule's opener policy of the release's
+ * `headers.json`, as built; returns how often it was served.
+ */
+const serveWrapperWithOpenerPolicy = async (
+  context: BrowserContext,
+): Promise<() => number> => {
+  const file = JSON.parse(
+    readFileSync(join(WRAPPER_DIST, "headers.json"), "utf8"),
+  ) as Record<string, Readonly<Record<string, string>> | undefined>;
+  const policy = file["/*"]?.["Cross-Origin-Opener-Policy"];
+  if (policy === undefined) {
+    throw new Error("headers.json /* has no Cross-Origin-Opener-Policy");
+  }
+  const body = readFileSync(join(WRAPPER_DIST, "index.html"));
+  let served = 0;
+  await context.route(
+    url => url.origin === WRAPPER_ORIGIN && url.pathname === "/",
+    async route => {
+      served += 1;
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cross-origin-opener-policy": policy,
+        },
+        body,
+      });
+    },
+  );
+  return () => served;
+};
 
 export const DELEGATION_TEXT = {
   link: "Link a wallet",
@@ -60,7 +104,10 @@ export const test = roundTest.extend<DelegationFixtures>({
       });
       await serveSigningPage(context);
       await replayWallet(context);
+      const served = await serveWrapperWithOpenerPolicy(context);
       await use(null);
+      // Every T-50 signed case launches the Wrapper, so each ran under it.
+      expect(served()).toBeGreaterThan(0);
     },
     { auto: true },
   ],
