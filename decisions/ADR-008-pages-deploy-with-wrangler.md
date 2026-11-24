@@ -11,7 +11,9 @@
   updated again 2026-10-28: staging's entropy chain moves to Somnia's public
   testnet, read through its public RPC, with a lag margin of 100 blocks; amended
   2026-11-03: the optional `earlierPins`, in the verifier's document only;
-  amended 2026-11-06: a `book-slot-v1` launch plays book rounds since #146)
+  amended 2026-11-06: a `book-slot-v1` launch plays book rounds since #146;
+  amended 2026-11-24, #245: the proxy also drops `Cookie` and the other
+  client-IP and port headers, and removes `Set-Cookie` from its answers)
 - Deciders: the TPO (Pages hosting, the push model, the kit-owned proxy, the
   verify page on its own site), the human maintainer (the deploy tool, the
   secrets, the proxy hardening, acceptance), the infrastructure owner (the
@@ -238,16 +240,18 @@ functions and types. Its behavior, specified in
   followed. The upstream fetch asks for no caching (`cache: "no-store"`).
 - **Request headers dropped**: `Host`, the incoming `CF-Connecting-IP`, the
   hop-by-hop headers (`Connection` and every name it lists, `Keep-Alive`, `TE`,
-  `Trailer`, `Transfer-Encoding`, `Upgrade`, `Proxy-*`), and `Forwarded`,
-  `X-Real-IP`, `True-Client-IP`, `X-Forwarded-Host`, `X-Forwarded-Proto`,
-  `X-Original-URL`, `X-Rewrite-URL`, `X-HTTP-Method-Override`. `X-Forwarded-For`
-  is replaced with the incoming `CF-Connecting-IP` (dropped when there is none).
-  It is trustworthy only if the upstream authenticates the proxy.
+  `Trailer`, `Transfer-Encoding`, `Upgrade`, `Proxy-*`), `Forwarded`,
+  `X-Real-IP`, `True-Client-IP`, `X-Client-IP`, `Client-IP`,
+  `X-Cluster-Client-IP`, `CF-Connecting-IPv6`, `X-Forwarded-Host`,
+  `X-Forwarded-Proto`, `X-Forwarded-Port`, `X-Original-URL`, `X-Rewrite-URL`,
+  `X-HTTP-Method-Override`, and `Cookie`. `X-Forwarded-For` is replaced with the
+  incoming `CF-Connecting-IP` (dropped when there is none). It is trustworthy
+  only if the upstream authenticates the proxy.
 - **Answers.** The upstream's status, headers, and body come back, with
   `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; sandbox`
-  and `X-Content-Type-Options: nosniff` set over the upstream's. The proxy's own
-  answers (400, 502) carry the same two headers and no body. Nothing is cached
-  and no caching header is added.
+  and `X-Content-Type-Options: nosniff` set over the upstream's, and every
+  `Set-Cookie` removed. The proxy's own answers (400, 502) carry the same two
+  headers and no body. Nothing is cached and no caching header is added.
 - **The upstream** is the project's production variable
   `SE_API_UPSTREAM_ORIGIN`, exactly an `https` origin, never in this repository
   or CI. Missing or malformed, an unreachable upstream, or a failed asset read

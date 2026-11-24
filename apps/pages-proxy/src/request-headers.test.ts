@@ -59,11 +59,17 @@ describe("headers never forwarded", () => {
     "Forwarded",
     "X-Real-IP",
     "True-Client-IP",
+    "X-Client-IP",
+    "Client-IP",
+    "X-Cluster-Client-IP",
+    "CF-Connecting-IPv6",
     "X-Forwarded-Host",
     "X-Forwarded-Proto",
+    "X-Forwarded-Port",
     "X-Original-URL",
     "X-Rewrite-URL",
     "X-HTTP-Method-Override",
+    "Cookie",
   ])("drops %s", name => {
     const headers = forwardedHeaders(new Headers({ [name]: "x", Accept: "a" }));
     expect(headers.get(name)).toBeNull();

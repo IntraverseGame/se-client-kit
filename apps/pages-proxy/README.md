@@ -19,12 +19,14 @@ published. CI deploys it with each site.
 - The request headers pass through unchanged, except `Host` (the upstream's),
   `CF-Connecting-IP` (Cloudflare sets its own), and `X-Forwarded-For`, which
   carries the client IP. The hop-by-hop headers (with every name `Connection`
-  lists), the `proxy-*` headers, and the forwarding headers a backend could read
-  as the client's address, host, scheme, path, or method are dropped.
+  lists), the `proxy-*` headers, `Cookie`, and the forwarding headers a backend
+  could read as the client's address, host, scheme, port, path, or method are
+  dropped.
 - The upstream's status and body come back as they are, and its headers too,
   except that `Content-Security-Policy` and `X-Content-Type-Options` are set
-  over its own, on every answer the proxy forwards or makes. Nothing is cached,
-  and no caching header is added or changed.
+  over its own, on every answer the proxy forwards or makes, and every
+  `Set-Cookie` is removed. Nothing is cached, and no caching header is added or
+  changed.
 - A path with an encoded slash, backslash, or dot, an empty segment (`//`), or,
   under an API prefix, a trailing `/` is refused with a 400 and no body, and
   never forwarded.
