@@ -1,6 +1,6 @@
 {
   "name": "@intraverse/se-client-play-client",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A typed fetch client for the SuperEngine Play API (/play/v1).",
   "keywords": [
     "superengine",

@@ -1,6 +1,6 @@
 {
   "name": "@intraverse/se-client-wrapper",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "The Wrapper UI, built by Vite into a release bundle.",
   "type": "module",
