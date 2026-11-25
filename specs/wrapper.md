@@ -600,16 +600,17 @@ independent providers the engine does not use, chosen in se-backend#375). Before
 production, staging runs a Solana mainnet-beta (cluster 101) source, the same
 chain as production, with staging keys on two independent providers that
 staging's own engine does not read (an environment's browser endpoints never
-include the provider its own engine reads), Origin-locked to staging's origins,
-so the Solana path runs end to end (RFC-007, Q11; a dependency on the backend,
-se-backend#548, and the infrastructure owner). During the switch its document
-lists the Somnia source (`anvil`, kind `evm`) beside `solana` at `minRpcQuorum`
-1: a document may list sources of both kinds at once, each round is read by its
-own source's kind, and every rule above holds per source (RFC-007, section 1).
-After the engine's switch and drain, `anvil` is dropped and staging sets
-`minRpcQuorum` 2, like production (RFC-007, Q16); then a canary of at least 100
-config rounds over at least 24 hours, each passing the tip check and then
-matching on the verify page, gates production's first document.
+include the provider its own engine reads), Origin-locked to staging's origins
+(or, for one of them, a public keyless endpoint under RFC-007 P-3's staging
+exception), so the Solana path runs end to end (RFC-007, Q11; a dependency on
+the backend, se-backend#548, and the infrastructure owner). During the switch
+its document lists the Somnia source (`anvil`, kind `evm`) beside `solana` at
+`minRpcQuorum` 1: a document may list sources of both kinds at once, each round
+is read by its own source's kind, and every rule above holds per source
+(RFC-007, section 1). After the engine's switch and drain, `anvil` is dropped
+and staging sets `minRpcQuorum` 2, like production (RFC-007, Q16); then a canary
+of at least 100 config rounds over at least 24 hours, each passing the tip check
+and then matching on the verify page, gates production's first document.
 
 The schema, as the Wrapper validates it at boot (`apps/wrapper`,
 `validateEnvironmentConfig`; the chain fields through the shell's

@@ -1200,7 +1200,8 @@ Which items:
 - **staging:** P-1 to P-4 from staging's origins, and P-6 against staging's own
   engine (step 8.2, below). P-5 is production's requirement: a shallower
   provider only limits how far back staging's verify page reaches. The config
-  job enforces P-7.
+  job enforces P-7. One of staging's two endpoints may be a public, keyless
+  endpoint without an Origin allowlist or a cap (P-3's staging exception).
 
 Record the result per provider (its name, the environment, the date, and the
 items passed), never a URL or a key: with the infrastructure owner's provider
@@ -1251,7 +1252,19 @@ rpc getBlock '[<slot>,{"commitment":"finalized","encoding":"json","transactionDe
    the endpoint has an Origin allowlist; never in a query string or a fragment.
    It is the browser's own key, not an engine's, restricted by `Origin` to the
    environment's two origins (P-1's refused preflight shows it), never by
-   `Referer`, with a rate or spend cap in the provider's settings.
+   `Referer`, with a rate or spend cap in the provider's settings. **Staging
+   exception** (the human, 2026-11-24): one of staging's two endpoints may be a
+   public, keyless Solana mainnet-beta endpoint with no Origin allowlist and no
+   cap. `Origin` is a quota control, not integrity (the quorum carries that),
+   and staging's volume is low. The risks are accepted: such an endpoint may
+   answer HTTP 429 when it rate-limits, which fails P-2, so at the quorum one
+   refused call fails the tip check and the round is canceled, or check 6 cannot
+   be verified; and its operator may block or change it without notice. During
+   the canary (step 8.5, below), such a failure of a Coin Flip round restarts
+   the count and its 24 hours, like any other, so a rate-limited endpoint can
+   delay production's gate: accepted, with no exception for a 429 (the human,
+   2026-11-25). P-1, P-2 otherwise, P-4, P-6, and P-7 still apply. Production
+   has no such exception.
 4. **P-4. Methods.** `getGenesisHash` answers exactly the genesis hash pinned
    for cluster 101, mainnet-beta (`packages/shell/src/solana-clusters.ts`);
    `getSlot` at `finalized`, a non-negative integer; `getBlock` at a finalized
@@ -1278,7 +1291,12 @@ rpc getBlock '[<slot>,{"commitment":"finalized","encoding":"json","transactionDe
    infrastructure, and none of them the provider that environment's own engine
    reads (the code owner, 2026-11-18). The kit cannot see the engine's provider:
    confirm it with the backend, for that environment. Staging's pair may differ
-   from production's.
+   from production's. Before an environment's engine is switched to another
+   provider by hand, that provider's browser endpoint in that environment is
+   replaced and redeployed first, and the switch waits until every session
+   opened before that redeploy has ended (the Play API's longest session, as in
+   **Rotating a browser key**, step 6, below), or those players relaunch: the
+   Wrapper reads its configuration once, at boot.
 7. **P-7. The policies.** Each endpoint's origin is in `PAGES_RPC_ORIGINS` and
    passes the headers step's pattern (above; the config job refuses it
    otherwise). After the deploy, each site's `Content-Security-Policy` lists it
@@ -1324,9 +1342,10 @@ with the required cancel once `T_0` is settled) until the player relaunches.
 Q11 and Q16). Staging's one engine moves from Somnia's public testnet to Solana
 mainnet-beta (cluster 101), the same chain as production. Its `solana` source is
 kind `solana`, `entropyChainId` 101, and `tipLagMargin` 64 slots (provisional,
-Q1, until the backend's measurement, se-backend#471), with staging browser keys
-on two independent providers that staging's own engine does not read,
-Origin-locked to staging's Wrapper and verifier origins. The five steps run in
+Q1, until the backend's measurement, se-backend#471), with staging browser
+endpoints on two independent providers that staging's own engine does not read,
+Origin-locked to staging's Wrapper and verifier origins (or, for one of them, a
+public keyless endpoint under P-3's staging exception). The five steps run in
 this order, each once the one before is done. Unlike **Switching staging's
 entropy chain** (above), the new source goes in **before** the backend's switch,
 beside the old one, so no round is refused for an unknown source in a session
@@ -1335,7 +1354,7 @@ opened after step 2.4. A session opened before it keeps the old configuration
 unknown source and fails verification: step 3's switch waits until every such
 session has ended (the Play API's longest session after step 2.4's deploy, as in
 **Rotating a browser key**, step 6), or those players relaunch.
-<!-- TODO(hosting, RFC-007 Q11): staging's two Solana endpoints (staging browser keys on two independent providers staging's engine does not read, Origin-locked to staging's origins), shared out of band; then step 8.2's change. -->
+<!-- TODO(hosting, RFC-007 Q11): staging's two Solana endpoints (on two independent providers staging's engine does not read; staging browser keys Origin-locked to staging's origins, or for one of them a public keyless endpoint under P-3's staging exception), shared out of band; then step 8.2's change. -->
 
 1. **The kit's Solana reader is on staging.** RFC-007's slices 1 to 7 are merged
    to `main`, and the Pages run of the last of those merges ended green (its
