@@ -1259,8 +1259,12 @@ rpc getBlock '[<slot>,{"commitment":"finalized","encoding":"json","transactionDe
    and staging's volume is low. The risks are accepted: such an endpoint may
    answer HTTP 429 when it rate-limits, which fails P-2, so at the quorum one
    refused call fails the tip check and the round is canceled, or check 6 cannot
-   be verified; and its operator may block or change it without notice. P-1, P-2
-   otherwise, P-4, P-6, and P-7 still apply. Production has no such exception.
+   be verified; and its operator may block or change it without notice. During
+   the canary (step 8.5, below), such a failure of a Coin Flip round restarts
+   the count and its 24 hours, like any other, so a rate-limited endpoint can
+   delay production's gate: accepted, with no exception for a 429 (the human,
+   2026-11-25). P-1, P-2 otherwise, P-4, P-6, and P-7 still apply. Production
+   has no such exception.
 4. **P-4. Methods.** `getGenesisHash` answers exactly the genesis hash pinned
    for cluster 101, mainnet-beta (`packages/shell/src/solana-clusters.ts`);
    `getSlot` at `finalized`, a non-negative integer; `getBlock` at a finalized
@@ -1289,7 +1293,10 @@ rpc getBlock '[<slot>,{"commitment":"finalized","encoding":"json","transactionDe
    confirm it with the backend, for that environment. Staging's pair may differ
    from production's. Before an environment's engine is switched to another
    provider by hand, that provider's browser endpoint in that environment is
-   replaced first, or in the same change.
+   replaced and redeployed first, and the switch waits until every session
+   opened before that redeploy has ended (the Play API's longest session, as in
+   **Rotating a browser key**, step 6, below), or those players relaunch: the
+   Wrapper reads its configuration once, at boot.
 7. **P-7. The policies.** Each endpoint's origin is in `PAGES_RPC_ORIGINS` and
    passes the headers step's pattern (above; the config job refuses it
    otherwise). After the deploy, each site's `Content-Security-Policy` lists it

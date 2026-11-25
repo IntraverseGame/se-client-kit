@@ -617,8 +617,11 @@ an endpoint enters a configuration document; the runbook gets the checklist
   owner on 2026-11-18). The kit cannot see the engine's provider, so this one is
   the infrastructure owner's to keep, and the runbook's checklist names it.
   Before an environment's engine is switched to another provider by hand, that
-  provider's browser endpoint in that environment is replaced first, or in the
-  same change (decided 2026-11-24, [Decisions](#decisions)).
+  provider's browser endpoint in that environment is replaced and redeployed
+  first, and the switch waits until every session opened before that redeploy
+  has ended (the Play API's longest session; the runbook's **Rotating a browser
+  key**, step 6), or those players relaunch: the Wrapper reads its configuration
+  once, at boot (decided 2026-11-24, [Decisions](#decisions)).
 - **P-7. The policies.** Each endpoint's origin is in `PAGES_RPC_ORIGINS`
   (exactly the origins of `PAGES_RPC_ENDPOINTS`' URLs), passes the headers
   step's `origin` pattern, and so reaches both sites' `connect-src`; nothing
@@ -770,8 +773,10 @@ reviewer), writes its rules into the specs in the same change, and keeps
    ended: the Wrapper reads its configuration once, at boot), the procedure for
    **adding** a Solana source beside an existing one on staging (kind `solana`,
    cluster 101, a `tipLagMargin` of 64 slots, the existing source kept until
-   step 8's fourth sub-step, staging keys Origin-locked to staging's origins),
-   step 8's five-step order with its canary, and the release dry run's fixtures.
+   step 8's fourth sub-step, staging keys Origin-locked to staging's origins
+   (or, for one of them, a public keyless endpoint under P-3's staging
+   exception)), step 8's five-step order with its canary, and the release dry
+   run's fixtures.
 
 Two steps follow that are operations, not pull requests (a finding in either
 comes back as a pull request through the same workflow):
@@ -783,8 +788,9 @@ comes back as a pull request through the same workflow):
    `tipLagMargin` 64 slots, provisional, with staging keys on two independent
    providers that staging's own engine does not read (an environment's browser
    endpoints never include the provider its own engine reads, so staging's pair
-   may differ from production's), Origin-locked to staging's origins. In this
-   order (slice 7 writes it into the release runbook):
+   may differ from production's), Origin-locked to staging's origins (or, for
+   one of them, a public keyless endpoint under P-3's staging exception). In
+   this order (slice 7 writes it into the release runbook):
    1. the kit's Solana reader ships to staging: slices 1 to 7 are deployed;
    2. the infrastructure owner adds the `solana` source to staging's secrets
       **beside** `anvil` (Somnia: kind `evm`, `entropyChainId` 50312, its one
@@ -819,7 +825,7 @@ comes back as a pull request through the same workflow):
    kept in a public tracking issue of this repository, opened at step 5, and
    #235 links its result (decided by the code owner on 2026-11-19 and
    2026-11-20).
-   <!-- TODO(backend and infrastructure, Q11): staging's mainnet-beta source: the staging keys on two providers staging's own engine does not read, Origin-locked to staging's origins; the backend's fix, drain, and switch (se-backend#548, planned 2026-11-30 to 2026-12-03); then the change that drops `anvil` and raises `minRpcQuorum` to 2; then the canary's result. -->
+   <!-- TODO(backend and infrastructure, Q11): staging's mainnet-beta source: the staging keys on two providers staging's own engine does not read, Origin-locked to staging's origins (or, for one of them, a public keyless endpoint under P-3's staging exception); the backend's fix, drain, and switch (se-backend#548, planned 2026-11-30 to 2026-12-03); then the change that drops `anvil` and raises `minRpcQuorum` to 2; then the canary's result. -->
 
 9. **Production's first document** (decided by the code owner, 2026-11-18): the
    publish path (se-client-kit#154) stays off until slice 1 is merged and both
@@ -1042,9 +1048,10 @@ comes back as a pull request through the same workflow):
     `entropyChainKind.solana` `solana`, `entropyChainId.solana` 101 (the mainnet
     genesis hash), and `tipLagMargin.solana` 64, provisional. Its endpoints are
     staging keys on two independent providers that staging's own engine does not
-    read, Origin-locked to staging's origins: an environment's browser endpoints
-    never include the provider its own engine reads, so staging's pair may
-    differ from production's (code owner, 2026-11-18). The backend switches
+    read, Origin-locked to staging's origins (or, for one of them, a public
+    keyless endpoint under P-3's staging exception): an environment's browser
+    endpoints never include the provider its own engine reads, so staging's pair
+    may differ from production's (code owner, 2026-11-18). The backend switches
     staging's engine in se-backend#548, planned for 2026-11-30 to 2026-12-03,
     after the kit's reader is on staging. The gate before production is a canary
     on staging: at least 100 config rounds over at least 24 hours, each passing
@@ -1126,18 +1133,23 @@ comes back as a pull request through the same workflow):
   browser endpoints may be a public, keyless Solana mainnet-beta endpoint with
   no Origin allowlist and no rate or spend cap, as a recorded exception to P-3.
   `Origin` is a quota control, not integrity (P-3): the tip check and check 6
-  rest on the quorum; staging's volume is low, and a failed call costs only a
-  staging round. The risks are accepted: such an endpoint may answer HTTP 429
-  when it rate-limits, which fails P-2, so at the source's quorum one refused
-  call fails the tip check and the round is canceled, or check 6 cannot be
-  verified; and its operator may block or change it without notice. P-1, P-2
-  otherwise, P-4, P-6, and P-7 still apply; P-3's key-in-the-path rule is moot.
+  rest on the quorum; staging's volume is low, and a failed call costs a staging
+  round (during the canary, its count too, below). The risks are accepted: such
+  an endpoint may answer HTTP 429 when it rate-limits, which fails P-2, so at
+  the source's quorum one refused call fails the tip check and the round is
+  canceled, or check 6 cannot be verified; and its operator may block or change
+  it without notice. During the canary (section 9, step 8), such a failure of a
+  Coin Flip round restarts the count and its 24 hours, like any other, so a
+  rate-limited endpoint can delay production's gate: accepted, and the canary's
+  rules have no exception for a 429 (the human, 2026-11-25). P-1, P-2 otherwise,
+  P-4, P-6, and P-7 still apply; P-3's key-in-the-path rule is moot.
   **Production is unchanged**: every production browser endpoint passes P-1 to
   P-7 as written, so a public endpoint without an allowlist is never one of
   them. Section 6 (P-3) points here. With it, P-6 per environment: before an
   environment's engine is switched to another provider by hand, that provider's
-  browser endpoint in that environment is replaced first, or in the same change
-  (section 6, P-6).
+  browser endpoint in that environment is replaced and redeployed first, and the
+  switch waits until every session opened before that redeploy has ended (the
+  Play API's longest session), or those players relaunch (section 6, P-6).
 
 ## Unresolved questions
 
@@ -1164,7 +1176,9 @@ RFC waits on, not questions):
   a vendored signature.
 - **Staging's switch to mainnet-beta** (Q11, Q16; section 9, step 8): the
   staging keys on two providers staging's own engine does not read,
-  Origin-locked to staging's origins, and staging's secrets (the infrastructure
-  owner); the backend's fix, drain, and switch in se-backend#548 (planned for
-  2026-11-30 to 2026-12-03); the change that drops `anvil` and raises
-  `minRpcQuorum` to 2; and the canary's result (the client kit's engineer).
+  Origin-locked to staging's origins (or, for one of them, a public keyless
+  endpoint under P-3's staging exception), and staging's secrets (the
+  infrastructure owner); the backend's fix, drain, and switch in se-backend#548
+  (planned for 2026-11-30 to 2026-12-03); the change that drops `anvil` and
+  raises `minRpcQuorum` to 2; and the canary's result (the client kit's
+  engineer).
