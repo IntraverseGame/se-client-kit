@@ -354,7 +354,7 @@
     "openapi-typescript": "6.7.6",
     "oxfmt": "0.78.0",
     "oxlint": "1.91.0",
-    "stylelint": "17.16.0",
+    "stylelint": "18.0.0",
     "tsdown": "0.23.7",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
