@@ -61,17 +61,18 @@ round is awaiting its signed start:
 
 - `secretHash` is `H(s)`, the engine's commitment to this round's secret.
 - `fallback` is the engine's finalized slot and blockhash for this round.
-- `expiresAt` is the backend's start deadline. The signature uses Unix seconds.
+- `expiresAt` is the backend's start deadline as an RFC 3339 timestamp.
 - `issued` is the runtime's signature over
   `StartIssued(bytes32 round,bytes32 secretHash,uint64 expiresAt)` under the
   operator's draw registry EIP-712 domain.
 
 Before generating or binding a client seed, verify `StartIssued` with the
-trusted runtime signer for that domain, using the current round's registry ID
-and the commitment and deadline in `start`. Retain the verified issuance. A
-missing or invalid issuance is not a basis to sign. `StartIssued` proves the
-engine issued that commitment for the round by `expiresAt`, not whether or when
-the debit was sent.
+trusted runtime signer for that domain. Use the current round's registry ID,
+`start.secretHash`, and `start.expiresAt` converted to integer Unix seconds
+(discard any fractional seconds) for the signed `uint64`. Retain the verified
+issuance; do not sign a start on missing or invalid evidence. The receipt binds
+the commitment to the round and its deadline, not to when it was issued or when
+a debit was sent.
 
 The member is additive within `se.snapshot/1`. The kit adopts the published
 schema through the usual vendored copy and pin.
