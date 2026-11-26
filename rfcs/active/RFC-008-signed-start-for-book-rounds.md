@@ -37,31 +37,30 @@ round take several seconds.
 
 ## Proposed solution
 
-### 1. What the shell receives
+### 1. What the shell knows before a bet
 
-`rounds:start` allocates the round and returns its id and a Snapshot with an
-optional top-level `start` member:
+The published session contract tells the shell whether the game uses
+signed-start book rounds. A signed-start book round begins with
+`POST /play/v1/rounds:submitStart` (RT1); there is no allocation request first.
+RT1 carries the bet, action key and optional delegation or grant that would
+otherwise go to `rounds:start`, plus the kit's round ID and signed
+`PlayerStart`. The normal/config flow still uses `rounds:start` unchanged.
 
-```json
-"start": {
-  "fallback": { "slot": "312345678", "blockhash": "0x…" },
-  "expiresAt": "2026-11-26T10:00:10Z"
-}
-```
+The authenticated backend derives the currency and stake from the session and
+bet, checks the signed terms against them, and atomically claims the round ID
+globally for that session and normalized request before any debit. The usual
+funding and one-open-round checks still apply. The preparation deadline starts
+at the backend's first acceptance of RT1, not at the time encoded in the ID.
 
-- `fallback` is the engine's latest finalized slot and block hash, used only
-  when the shell's own reads fail (section 3).
-- `expiresAt` is the pre-bind start deadline, not the engine's reveal deadline.
-- Only after bind does `start` carry `secretHash` (`H(s)`) and `bound` (the
-  engine's `StartBound` signature).
-
-The member is additive within `se.snapshot/1`. This repository adopts it when
-the backend publishes the schema change, through the usual vendored copy and
-pin.
+A successful RT1 returns the binding in the Snapshot's optional top-level
+`start` member: `secretHash` (`H(s)`) and `bound` (the engine's `StartBound`
+signature). The member does not supply a fallback sample or a deadline before
+RT1. It is additive within `se.snapshot/1`; the kit adopts it through the usual
+vendored schema copy and pin.
 
 ### 2. The client seed
 
-- Before sending the first commitment, generate 32 fresh bytes with
+- For each new start intent, generate 32 fresh bytes with
   `crypto.getRandomValues`. Without custom input, those bytes are the effective
   `clientSeed`. With custom input, derive the effective seed by hashing the
   ASCII tag `RFC008/client-seed/v1`, the 32 fresh bytes, and the UTF-8 bytes of
@@ -69,31 +68,39 @@ pin.
   custom input, is both the opening and the draw input.
 - Sign `SHA-256(clientSeed)`, never the plaintext seed. Never reuse a seed or
   send it to the operator page, telemetry, or the engine before the verified
-  bind. Show the effective seed in the round details after bind.
-- Before RT1, atomically insert the signed request and effective seed in
-  kit-origin IndexedDB, keyed by deployment, session and round. If another tab
-  already inserted one, use that record, never the competing start. If storage
-  fails, do not submit. Reloads and retries reuse the stored signed bytes and
-  seed for that round.
+  bind. Show the effective seed in the round details after verifying the bind.
 
 ### 3. The slot
 
 - The shell reads Solana's latest **finalized** slot that has a block, and that
   block's hash, from its own endpoints. It reuses the Solana read path from
   RFC-007 and ADR-013 (the tip check's endpoints and quorum, W-26b).
-- The shell may prefetch the slot before `rounds:start`. Before signing, check
-  its age against the kit's current finalized head. If it is more than five
-  slots old, refresh it; if the freshness check or refresh fails, use the
-  fallback rather than signing the stale cache entry.
-- **Fallback.** If its own reads fail (fewer than the quorum answer, or they
-  disagree), the shell uses `start.fallback` and marks the start with
-  `slotSource = 2`. Otherwise it uses its own slot with `slotSource = 1`. The
-  shell never chooses the fallback when its own read succeeded.
+- The shell may prefetch independently of any bet. Before signing, check the
+  sample against the kit's current finalized head. If it is more than five slots
+  old, refresh it. If the freshness check or refresh fails, do not sign that
+  cached sample.
+- **Fallback.** Ordinary session bootstrap (`sessions:redeem`) and scheduled
+  token refresh (`sessions:refresh`) responses may carry
+  `bookEntropyFallback: {slot, blockhash, expiresAt}`. Cache the engine's
+  finalized sample for that deployment, session and pinned cluster. Use it only
+  before its `expiresAt`; omission on refresh does not extend that time. Expiry
+  is a local availability hint, not a promise that the engine will accept the
+  slot. Do not fetch a fallback or trigger a session refresh on demand for a
+  round.
+- Prefer a usable kit sample (`slotSource = 1`). If the kit cannot obtain one
+  (for example, the quorum does not answer or disagrees), use a usable cached
+  engine sample (`slotSource = 2`). If neither is usable, fail locally before
+  sending RT1 or requesting a debit.
 - The backend checks the signed slot against its finalized view
   (`head − 10 ≤ slot ≤ head + 8` in the proposal). It waits for a permitted
   ahead slot to finalize before checking the hash.
 
 ### 4. The signed start
+
+For a new intent, the shell generates a canonical lowercase UUIDv7 before
+signing. Browser `crypto.randomUUID()` produces a v4 UUID, not a v7 UUID; use an
+RFC 9562 UUIDv7 generator with cryptographic randomness. The timestamp in the
+UUID is not a trusted clock or a deadline.
 
 The shell signs a `PlayerStart` with the round's action key, as for the other
 signed actions, under the **draw registry's** EIP-712 domain:
@@ -105,19 +112,37 @@ PlayerStart(bytes32 round,bytes32 session,bytes32 currency,uint128 stake,
 ```
 
 - `round`, `session`, `currency` and `stake` use the same encodings as the other
-  signed actions.
+  signed actions. The signed `round` bytes encode the exact UUIDv7 sent in RT1's
+  `roundId`; a request path or body that names the round uses the same ID.
 - `cluster` is the pinned Solana genesis hash; `clientSeedHash` is the SHA-256
   digest of the effective seed.
 - The accepted backend contract supplies field encodings, canonical type strings
   and vectors.
 
+Before sending RT1, atomically record the exact request body (including the bet,
+action key, any delegation or grant, and signed `PlayerStart`) and the effective
+seed in kit-origin IndexedDB, keyed by deployment, session and round. In the
+same transaction, claim the pending start for that deployment and session. If
+another tab already recorded the pending start, adopt that record for recovery
+rather than sending the competing start. If the transaction fails, do not
+submit. Do not store the play token with the record; authenticate the replay
+with the current authorized token.
+
+A retry or reload of an unresolved start reuses the stored round ID, request
+bytes and seed. Do not re-sign or refresh the slot in a stored request. Only an
+explicit new bet after the pending start is authoritatively resolved creates a
+new intent, even if the bet terms are identical. It gets a fresh UUIDv7 and
+seed. A response lost in transit never creates a new intent.
+
 ### 5. Commit, reveal, and recovery
 
-1. **Commit.** Send the persisted request to `POST /play/v1/rounds:submitStart`.
-   On a lost response, replay the identical request to recover the same binding.
-   Do not infer a void from local time or a network failure; require an
-   authoritative pre-bind void. On `SECOND_START`, do not generate a replacement
-   commitment for that round.
+1. **Commit (RT1).** Send the persisted request to
+   `POST /play/v1/rounds:submitStart`. On a lost response, replay the identical
+   request to recover the same binding or outcome. A changed request for that
+   round in the same session is `SECOND_START`; a foreign-session collision is
+   `NOT_FOUND` without mutation. Do not generate a replacement commitment for
+   that round or infer a void from local time or a network failure; require an
+   authoritative pre-bind void.
 2. **Verify the binding.** Verify `StartBound` under the draw-registry domain
    against a trusted runtime signer and the persisted `PlayerStart`. Require it
    to bind the saved round, stake, slot, block hash and seed commitment to
@@ -125,7 +150,7 @@ PlayerStart(bytes32 round,bytes32 session,bytes32 currency,uint128 stake,
    missing signature leaves the opening private. If the backend adds a signed
    absolute `s` publication deadline, preserve it with the receipt; do not infer
    it from an unsigned Snapshot or the local clock.
-3. **Reveal.** Send the same `{roundId, clientSeed}` to
+3. **Reveal (RT2).** Send the same `{roundId, clientSeed}` to
    `POST /play/v1/rounds:revealSeed`. Retry transient failures with backoff
    while the kit is open and resume on reload or reconnect when authorized for
    the round. `SEED_MISMATCH` does not change the round; stop automatic retries
@@ -176,24 +201,29 @@ opening it shows no verified draw or payout.
   block before it commits, so it could choose a secret that loses on all of
   them.
 - **A client seed with no slot.** Equally fair and simpler for the kit. The
-  backend keeps the slot as a public third input, so it is in this RFC.
+  proposal keeps the signed slot as a public third input pending the lab
+  decision.
 
 ## Tradeoffs
 
 - **Kit integrity.** Predictable randomness or leaking the effective seed before
   bind defeats the hiding commitment. Public source alone does not establish
   which bundle the player ran.
-- **Three requests end to end:** `rounds:start`, `rounds:submitStart`, and
-  `rounds:revealSeed`. Measure the full path, including the debit inside RT1.
+- **Two Play API requests on the successful round path:** `rounds:submitStart`
+  (including debit and bind) and `rounds:revealSeed`. There is no per-round
+  allocation or fallback request. Measure the full bet-to-result path, including
+  any kit Solana reads on that path, not just network time for RT1 and RT2.
 - **More state in the shell.** Persist the opening and signed evidence or a
   reload can turn a recoverable round into an unrevealed one.
 
 ## Impact
 
-- **`shell`:** seed generation, slot selection, durable recovery and replay.
+- **`shell`:** UUIDv7 and seed generation, slot selection, the session fallback
+  cache, durable recovery and replay.
 - **`signing`:** `PlayerStart` and `StartBound` verification under the published
   draw-registry domain and signer.
-- **`contracts`:** the published Snapshot, Play API and signing contracts.
+- **`contracts`:** the published session, Snapshot, Play API and signing
+  contracts.
 - **`play-client`:** `rounds:submitStart` and `rounds:revealSeed`.
 - **The Wrapper:** commit–reveal, recovery export and import, refusal and
   unconfirmed-settlement states.
@@ -202,18 +232,19 @@ opening it shows no verified draw or payout.
 ## Migration considerations
 
 - **Release order:**
-  1. This repository ships support for `start`, the client seed and the signing.
-  2. The backend publishes the schema change.
+  1. The backend publishes the session, Play API, Snapshot and signing
+     contracts.
+  2. The kit vendors them and ships signed-start support.
   3. The backend enables signed-start book games per operator, once that
      operator's Wrapper supports them.
-- **Old Wrappers fail closed:** a Wrapper that predates `start` refuses a
-  Snapshot that carries it.
+- **Old Wrappers fail closed:** do not enable this flow for an unsupported
+  Wrapper. A Wrapper that predates `start` still refuses a Snapshot carrying it.
 - Book rounds already bound under the future-block mode are unaffected.
 
 ## Unresolved questions
 
-1. **The draw registry's domain.** Where does the shell get it: in the Snapshot
-   next to the config registry's domain, or in the environment configuration?
+1. **The draw registry's domain.** How does the shell obtain it before signing
+   RT1: from the session's initial Snapshot or the environment configuration?
 2. **Independent reveal intake.** If timely delivery must be provable, which
    service will attest to receipt and make the opening retrievable without the
    engine?
