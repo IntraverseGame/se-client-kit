@@ -81,8 +81,10 @@ pin.
 - The shell reads Solana's latest **finalized** slot that has a block, and that
   block's hash, from its own endpoints. It reuses the Solana read path from
   RFC-007 and ADR-013 (the tip check's endpoints and quorum, W-26b).
-- The shell may prefetch and cache the slot before `rounds:start` and refreshes
-  it once it is more than five slots old.
+- The shell may prefetch the slot before `rounds:start`. Before signing, check
+  its age against the kit's current finalized head. If it is more than five
+  slots old, refresh it; if the freshness check or refresh fails, use the
+  fallback rather than signing the stale cache entry.
 - **Fallback.** If its own reads fail (fewer than the quorum answer, or they
   disagree), the shell uses `start.fallback` and marks the start with
   `slotSource = 2`. Otherwise it uses its own slot with `slotSource = 1`. The
@@ -150,8 +152,9 @@ acknowledgement the kit can retain. Until one exists, the kit reports
 
 For a signed-start book round, the verify page:
 
-1. checks the `PlayerStart` signature against the round's action key, and the
-   key delegation when one is present;
+1. compares the signed round ID, session, currency and stake with the round
+   evidence; checks the `PlayerStart` signature against the round's action key,
+   and verifies the key delegation when present;
 2. checks `StartBound` against the saved start and trusted runtime signer, and
    checks that `s` and the effective seed open their respective hashes;
 3. reads `blockhash(slot)` at `finalized` on the signed cluster and compares it
